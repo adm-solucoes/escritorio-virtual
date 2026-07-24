@@ -1,4 +1,4 @@
-import type { Empresa, Gc, Oportunidade } from "./types";
+import type { ConfiguracaoRelatorio, Empresa, Gc, Oportunidade } from "./types";
 import {
   evolucaoPipeline,
   relatorioMensal,
@@ -6,6 +6,19 @@ import {
   relatorioPorOrigem,
   relatorioPorResponsavel,
 } from "./relatorios";
+
+type SecoesRelatorio = Pick<
+  ConfiguracaoRelatorio,
+  "incluir_vendas" | "incluir_perdas" | "incluir_origem" | "incluir_responsavel" | "incluir_evolucao"
+>;
+
+const TODAS_SECOES: SecoesRelatorio = {
+  incluir_vendas: true,
+  incluir_perdas: true,
+  incluir_origem: true,
+  incluir_responsavel: true,
+  incluir_evolucao: true,
+};
 
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -29,48 +42,59 @@ function secao(titulo: string, conteudoHtml: string) {
   return `<h2 style="font-size:15px;color:#150638;margin:24px 0 8px">${titulo}</h2>${conteudoHtml}`;
 }
 
-export function montarRelatorioHtml(empresas: Empresa[], oportunidades: Oportunidade[], gcs: Gc[]) {
-  const mensal = relatorioMensal(oportunidades);
-  const perdas = relatorioPerdas(oportunidades);
-  const origem = relatorioPorOrigem(empresas, oportunidades);
-  const responsavel = relatorioPorResponsavel(oportunidades, gcs);
-  const evolucao = evolucaoPipeline(empresas, oportunidades);
-
+export function montarRelatorioHtml(
+  empresas: Empresa[],
+  oportunidades: Oportunidade[],
+  gcs: Gc[],
+  secoes: SecoesRelatorio = TODAS_SECOES
+) {
   const hoje = new Date().toLocaleDateString("pt-BR");
 
-  return `
-  <div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#150638">
-    <div style="background:#150638;padding:16px 20px;border-radius:10px 10px 0 0">
-      <span style="color:#fbf3e7;font-weight:800;font-size:16px">ADM Soluções · Relatório Comercial</span>
-    </div>
-    <div style="border:1px solid #eee;border-top:0;border-radius:0 0 10px 10px;padding:20px">
-      <p style="font-size:12px;color:#888;margin:0 0 8px">Gerado em ${hoje}</p>
+  const blocos: string[] = [];
 
-      ${secao(
+  if (secoes.incluir_vendas) {
+    const mensal = relatorioMensal(oportunidades);
+    blocos.push(
+      secao(
         "Relatório mensal de vendas",
         tabela(
           ["Mês", "Ganhas", "Valor ganho", "Perdidas", "Valor perdido"],
           mensal.map((m) => [m.label, m.qtdGanhas, moeda(m.valorGanho), m.qtdPerdidas, moeda(m.valorPerdido)])
         )
-      )}
+      )
+    );
+  }
 
-      ${secao(
+  if (secoes.incluir_perdas) {
+    const perdas = relatorioPerdas(oportunidades);
+    blocos.push(
+      secao(
         "Relatório de perdas por motivo",
         tabela(
           ["Motivo", "Qtd", "Valor"],
           perdas.map((p) => [p.motivo, p.qtd, moeda(p.valor)])
         )
-      )}
+      )
+    );
+  }
 
-      ${secao(
+  if (secoes.incluir_origem) {
+    const origem = relatorioPorOrigem(empresas, oportunidades);
+    blocos.push(
+      secao(
         "Relatório por origem de lead",
         tabela(
           ["Origem", "Leads", "Oportunidades", "Valor ganho"],
           origem.map((o) => [o.origem, o.leads, o.oportunidades, moeda(o.valorGanho)])
         )
-      )}
+      )
+    );
+  }
 
-      ${secao(
+  if (secoes.incluir_responsavel) {
+    const responsavel = relatorioPorResponsavel(oportunidades, gcs);
+    blocos.push(
+      secao(
         "Relatório por responsável",
         tabela(
           ["GC", "Em aberto", "Ganhas", "Perdidas", "Pipeline aberto", "Valor ganho", "Conversão"],
@@ -84,15 +108,32 @@ export function montarRelatorioHtml(empresas: Empresa[], oportunidades: Oportuni
             `${r.taxaConversao.toFixed(0)}%`,
           ])
         )
-      )}
+      )
+    );
+  }
 
-      ${secao(
+  if (secoes.incluir_evolucao) {
+    const evolucao = evolucaoPipeline(empresas, oportunidades);
+    blocos.push(
+      secao(
         "Evolução (novos leads e oportunidades por mês)",
         tabela(
           ["Mês", "Novas empresas", "Novas oportunidades"],
           evolucao.map((e) => [e.label, e.novasEmpresas, e.novasOportunidades])
         )
-      )}
+      )
+    );
+  }
+
+  return `
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#150638">
+    <div style="background:#150638;padding:16px 20px;border-radius:10px 10px 0 0">
+      <span style="color:#fbf3e7;font-weight:800;font-size:16px">ADM Soluções · Relatório Comercial</span>
+    </div>
+    <div style="border:1px solid #eee;border-top:0;border-radius:0 0 10px 10px;padding:20px">
+      <p style="font-size:12px;color:#888;margin:0 0 8px">Gerado em ${hoje}</p>
+
+      ${blocos.join("\n") || '<p style="color:#666;font-size:13px">Nenhuma seção selecionada nas configurações.</p>'}
 
       <p style="font-size:11px;color:#999;margin-top:24px">Relatório automático do CRM ADM Soluções.</p>
     </div>

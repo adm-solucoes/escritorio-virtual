@@ -63,6 +63,17 @@ export const PROBABILIDADE_POR_ETAPA: Record<EtapaFunil, number> = {
   Perdido: 0.0,
 };
 
+export interface ConfiguracaoRelatorio {
+  id: number;
+  email_destino: string | null;
+  envio_automatico: boolean;
+  incluir_vendas: boolean;
+  incluir_perdas: boolean;
+  incluir_origem: boolean;
+  incluir_responsavel: boolean;
+  incluir_evolucao: boolean;
+}
+
 export interface EtapaFunilConfig {
   id: number;
   nome: EtapaFunil;
