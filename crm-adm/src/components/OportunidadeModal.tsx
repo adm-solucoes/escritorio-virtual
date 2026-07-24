@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
 import { ETAPAS_FUNIL, MOTIVOS_PERDA, type Empresa, type EtapaFunil, type Oportunidade } from "@/lib/types";
 
 interface Props {
@@ -63,15 +64,22 @@ export default function OportunidadeModal({
       motivo_perda: etapa === "Perdido" ? motivoPerda : null,
     };
 
-    const { error } = oportunidade
-      ? await supabase.from("oportunidades").update(payload).eq("id", oportunidade.id)
-      : await supabase.from("oportunidades").insert(payload);
+    const etapaAnterior = oportunidade?.etapa_atual;
+
+    const { data, error } = oportunidade
+      ? await supabase.from("oportunidades").update(payload).eq("id", oportunidade.id).select("id, gc_responsavel_id").single()
+      : await supabase.from("oportunidades").insert(payload).select("id, gc_responsavel_id").single();
 
     setSaving(false);
     if (error) {
       setError(error.message);
       return;
     }
+
+    if (data && etapa !== "Perdido" && etapa !== etapaAnterior) {
+      await criarTarefaAutomaticaSeConfigurada({ id: data.id, empresa_id: empresaId, gc_responsavel_id: data.gc_responsavel_id }, etapa);
+    }
+
     onSaved();
   }
 

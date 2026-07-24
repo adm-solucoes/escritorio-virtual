@@ -15,6 +15,7 @@ const RELATORIO_PADRAO: ConfiguracaoRelatorio = {
   incluir_origem: true,
   incluir_responsavel: true,
   incluir_evolucao: true,
+  notificar_atividades_atrasadas: true,
 };
 
 const SECOES_RELATORIO: { campo: keyof ConfiguracaoRelatorio; label: string }[] = [
@@ -69,7 +70,11 @@ export default function ConfiguracoesPage() {
     };
   }, []);
 
-  function atualizarCampo(id: number, campo: "probabilidade" | "dias_alerta_followup", valor: number) {
+  function atualizarCampo(
+    id: number,
+    campo: "probabilidade" | "dias_alerta_followup" | "tarefa_padrao",
+    valor: number | string
+  ) {
     setEtapas((prev) => prev.map((e) => (e.id === id ? { ...e, [campo]: valor } : e)));
   }
 
@@ -80,6 +85,7 @@ export default function ConfiguracoesPage() {
       .update({
         probabilidade: etapa.probabilidade,
         dias_alerta_followup: etapa.dias_alerta_followup,
+        tarefa_padrao: etapa.tarefa_padrao || null,
       })
       .eq("id", etapa.id);
     if (error) {
@@ -118,8 +124,8 @@ export default function ConfiguracoesPage() {
         <div>
           <h1 className="text-xl font-extrabold text-navy">Configurações do funil</h1>
           <p className="text-sm text-navy/60">
-            Ajuste a probabilidade de fechamento e o prazo de alerta de follow-up de cada etapa. Isso afeta o cálculo
-            de receita ponderada no pipeline e a geração automática de atividades.
+            Ajuste a probabilidade de fechamento, o prazo de alerta de follow-up e a tarefa criada automaticamente
+            quando uma oportunidade entra em cada etapa (deixe em branco pra não criar nenhuma).
           </p>
         </div>
 
@@ -133,6 +139,7 @@ export default function ConfiguracoesPage() {
                   <th className="px-4 py-3 font-semibold">Etapa</th>
                   <th className="px-4 py-3 font-semibold">Probabilidade (%)</th>
                   <th className="px-4 py-3 font-semibold">Alerta de follow-up (dias sem interação)</th>
+                  <th className="px-4 py-3 font-semibold">Tarefa automática ao entrar na etapa</th>
                   <th className="px-4 py-3 font-semibold"></th>
                 </tr>
               </thead>
@@ -162,6 +169,14 @@ export default function ConfiguracoesPage() {
                         step={1}
                         value={etapa.dias_alerta_followup}
                         onChange={(e) => atualizarCampo(etapa.id, "dias_alerta_followup", Number(e.target.value))}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        className="input w-56"
+                        placeholder="Nenhuma"
+                        value={etapa.tarefa_padrao ?? ""}
+                        onChange={(e) => atualizarCampo(etapa.id, "tarefa_padrao", e.target.value)}
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -227,7 +242,17 @@ export default function ConfiguracoesPage() {
                   onChange={(e) => setRelatorio({ ...relatorio, envio_automatico: e.target.checked })}
                   className="w-4 h-4"
                 />
-                <span className="text-navy/70 font-medium">Enviar automaticamente todo dia 1 do mês</span>
+                <span className="text-navy/70 font-medium">Enviar relatório automaticamente todo dia 1 do mês</span>
+              </label>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={relatorio.notificar_atividades_atrasadas}
+                  onChange={(e) => setRelatorio({ ...relatorio, notificar_atividades_atrasadas: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span className="text-navy/70 font-medium">Avisar por e-mail toda segunda-feira sobre atividades atrasadas</span>
               </label>
 
               <div className="flex flex-col gap-2 pt-2 border-t border-navy/5">

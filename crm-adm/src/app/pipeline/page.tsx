@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { supabase } from "@/lib/supabase";
+import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
 import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type EtapaFunilConfig, type Oportunidade } from "@/lib/types";
 import KanbanColumn from "@/components/KanbanColumn";
 import OportunidadeModal from "@/components/OportunidadeModal";
@@ -84,7 +85,10 @@ export default function PipelinePage() {
 
     if (novaEtapa === "Perdido") {
       abrirEdicao({ ...oportunidade, etapa_atual: novaEtapa });
+      return;
     }
+
+    await criarTarefaAutomaticaSeConfigurada(oportunidade, novaEtapa);
   }
 
   function abrirNova(etapa: EtapaFunil) {

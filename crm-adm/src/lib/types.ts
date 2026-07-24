@@ -72,6 +72,7 @@ export interface ConfiguracaoRelatorio {
   incluir_origem: boolean;
   incluir_responsavel: boolean;
   incluir_evolucao: boolean;
+  notificar_atividades_atrasadas: boolean;
 }
 
 export interface EtapaFunilConfig {
@@ -80,6 +81,7 @@ export interface EtapaFunilConfig {
   ordem: number;
   probabilidade: number;
   dias_alerta_followup: number;
+  tarefa_padrao: string | null;
 }
 
 export interface Oportunidade {

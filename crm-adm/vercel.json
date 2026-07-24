@@ -3,6 +3,10 @@
     {
       "path": "/api/relatorios/enviar",
       "schedule": "0 8 1 * *"
+    },
+    {
+      "path": "/api/atividades/alertar",
+      "schedule": "0 8 * * 1"
     }
   ]
 }
