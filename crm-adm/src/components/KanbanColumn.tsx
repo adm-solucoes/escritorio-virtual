@@ -23,17 +23,17 @@ export default function KanbanColumn({
   const total = oportunidades.reduce((acc, o) => acc + (o.valor_estimado ?? 0), 0);
 
   return (
-    <div className="flex flex-col w-72 shrink-0 bg-neutral-100 rounded-xl">
+    <div className="flex flex-col w-72 shrink-0 bg-navy/[0.04] rounded-xl border border-navy/5">
       <div className="px-3 py-2.5 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold">{etapa}</h3>
-          <p className="text-xs text-black/50">
+          <h3 className="text-sm font-bold text-navy">{etapa}</h3>
+          <p className="text-xs text-navy/50">
             {oportunidades.length} · {total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           </p>
         </div>
         <button
           onClick={onAddClick}
-          className="p-1 rounded-md hover:bg-black/10 text-black/50"
+          className="p-1 rounded-md hover:bg-navy/10 text-navy/50"
           title="Nova oportunidade nesta etapa"
         >
           <Plus size={16} />
@@ -42,7 +42,7 @@ export default function KanbanColumn({
       <div
         ref={setNodeRef}
         className={`flex flex-col gap-2 p-2 pt-0 min-h-24 flex-1 rounded-b-xl transition-colors ${
-          isOver ? "bg-black/5" : ""
+          isOver ? "bg-blue/10" : ""
         }`}
       >
         {oportunidades.map((o) => (

@@ -80,3 +80,19 @@ export interface Oportunidade {
   criado_em: string;
   empresas?: Empresa;
 }
+
+export type StatusAtividade = "Pendente" | "Em andamento" | "Concluído" | "Atrasado";
+
+export interface Atividade {
+  id: string;
+  empresa_id: string | null;
+  oportunidade_id: string | null;
+  tipo_atividade: string;
+  responsavel_id: string | null;
+  status: StatusAtividade;
+  prazo: string | null;
+  data_criacao: string;
+  alerta_disparado: boolean;
+  empresas?: Empresa;
+  oportunidades?: Oportunidade;
+}

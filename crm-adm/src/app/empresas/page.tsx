@@ -74,8 +74,8 @@ export default function EmpresasPage() {
     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Empresas</h1>
-          <p className="text-sm text-black/60">{empresas.length} empresas cadastradas</p>
+          <h1 className="text-xl font-extrabold text-navy">Empresas</h1>
+          <p className="text-sm text-navy/60">{empresas.length} empresas cadastradas</p>
         </div>
         <div className="flex gap-2">
           <input
@@ -84,45 +84,42 @@ export default function EmpresasPage() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
-          <button
-            onClick={abrirNovo}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium bg-black text-white hover:bg-black/80 whitespace-nowrap"
-          >
+          <button onClick={abrirNovo} className="btn-primary whitespace-nowrap">
             <Plus size={16} /> Nova empresa
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-black/10 overflow-x-auto">
+      <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
         {loading ? (
-          <p className="p-6 text-sm text-black/50">Carregando...</p>
+          <p className="p-6 text-sm text-navy/50">Carregando...</p>
         ) : filtradas.length === 0 ? (
-          <p className="p-6 text-sm text-black/50">Nenhuma empresa encontrada.</p>
+          <p className="p-6 text-sm text-navy/50">Nenhuma empresa encontrada.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-black/50 border-b border-black/10">
-                <th className="px-4 py-3 font-medium">Empresa</th>
-                <th className="px-4 py-3 font-medium">Contato</th>
-                <th className="px-4 py-3 font-medium">Cidade</th>
-                <th className="px-4 py-3 font-medium">ICP</th>
-                <th className="px-4 py-3 font-medium">Temperatura</th>
-                <th className="px-4 py-3 font-medium">GC</th>
-                <th className="px-4 py-3 font-medium"></th>
+              <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                <th className="px-4 py-3 font-semibold">Empresa</th>
+                <th className="px-4 py-3 font-semibold">Contato</th>
+                <th className="px-4 py-3 font-semibold">Cidade</th>
+                <th className="px-4 py-3 font-semibold">ICP</th>
+                <th className="px-4 py-3 font-semibold">Temperatura</th>
+                <th className="px-4 py-3 font-semibold">GC</th>
+                <th className="px-4 py-3 font-semibold"></th>
               </tr>
             </thead>
             <tbody>
               {filtradas.map((empresa) => {
                 const wa = linkWhatsapp(empresa.telefone);
                 return (
-                  <tr key={empresa.id} className="border-b border-black/5 last:border-0 hover:bg-black/[0.02]">
+                  <tr key={empresa.id} className="border-b border-navy/5 last:border-0 hover:bg-navy/[0.02]">
                     <td className="px-4 py-3">
-                      <div className="font-medium">{empresa.nome_empresa}</div>
-                      <div className="text-black/50 text-xs">{empresa.segmento}</div>
+                      <div className="font-semibold text-navy">{empresa.nome_empresa}</div>
+                      <div className="text-navy/50 text-xs">{empresa.segmento}</div>
                     </td>
                     <td className="px-4 py-3">
                       <div>{empresa.nome_contato}</div>
-                      <div className="text-black/50 text-xs">{empresa.cargo}</div>
+                      <div className="text-navy/50 text-xs">{empresa.cargo}</div>
                     </td>
                     <td className="px-4 py-3">
                       {empresa.cidade}
@@ -130,7 +127,7 @@ export default function EmpresasPage() {
                     </td>
                     <td className="px-4 py-3">
                       {empresa.icp && (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/5 text-xs font-semibold">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue/10 text-blue text-xs font-bold">
                           {empresa.icp}
                         </span>
                       )}
@@ -138,7 +135,7 @@ export default function EmpresasPage() {
                     <td className="px-4 py-3">
                       {empresa.temperatura && <Badge temperatura={empresa.temperatura} />}
                     </td>
-                    <td className="px-4 py-3 text-black/70">
+                    <td className="px-4 py-3 text-navy/70">
                       {empresa.gc_responsavel_id ? gcPorId.get(empresa.gc_responsavel_id) : "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -156,14 +153,14 @@ export default function EmpresasPage() {
                         )}
                         <button
                           onClick={() => abrirEdicao(empresa)}
-                          className="p-1.5 rounded-md hover:bg-black/5 text-black/60"
+                          className="p-1.5 rounded-md hover:bg-blue/10 text-blue"
                           title="Editar"
                         >
                           <Pencil size={16} />
                         </button>
                         <button
                           onClick={() => excluir(empresa)}
-                          className="p-1.5 rounded-md hover:bg-red-50 text-red-500"
+                          className="p-1.5 rounded-md hover:bg-red/10 text-red"
                           title="Excluir"
                         >
                           <Trash2 size={16} />
@@ -196,12 +193,12 @@ export default function EmpresasPage() {
 
 function Badge({ temperatura }: { temperatura: string }) {
   const cores: Record<string, string> = {
-    Frio: "bg-blue-50 text-blue-600",
-    Morno: "bg-amber-50 text-amber-700",
-    Quente: "bg-red-50 text-red-600",
+    Frio: "bg-blue/10 text-blue",
+    Morno: "bg-amber-100 text-amber-700",
+    Quente: "bg-red/10 text-red",
   };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cores[temperatura] ?? "bg-black/5"}`}>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cores[temperatura] ?? "bg-navy/5"}`}>
       {temperatura}
     </span>
   );

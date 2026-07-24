@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, Bree_Serif } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const breeSerif = Bree_Serif({
+  variable: "--font-bree-serif",
   subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -26,9 +28,9 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${breeSerif.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-neutral-50">
+      <body className="min-h-full flex flex-col bg-cream text-navy">
         <Nav />
         <main className="flex-1 flex flex-col">{children}</main>
       </body>

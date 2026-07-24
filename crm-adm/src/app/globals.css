@@ -1,39 +1,65 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Paleta ADM Soluções — Branding Book 2026.1 */
+  --adm-navy: #150638; /* Azul institucional */
+  --adm-blue: #2c1479; /* Azul secundário */
+  --adm-red: #c81e1e; /* Vermelho de ação */
+  --adm-cream: #fbf3e7; /* Branco */
+
+  --background: var(--adm-cream);
+  --foreground: var(--adm-navy);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-navy: var(--adm-navy);
+  --color-blue: var(--adm-blue);
+  --color-red: var(--adm-red);
+  --color-cream: var(--adm-cream);
+  --font-sans: var(--font-dm-sans);
+  --font-serif-accent: var(--font-bree-serif);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
 }
 
 .input {
-  border: 1px solid rgb(0 0 0 / 0.15);
+  border: 1px solid rgb(21 6 56 / 0.15);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   outline: none;
   background: white;
+  color: var(--adm-navy);
 }
 
 .input:focus {
-  border-color: rgb(0 0 0 / 0.4);
+  border-color: var(--adm-blue);
+  box-shadow: 0 0 0 3px rgb(44 20 121 / 0.12);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--adm-red);
+  color: white;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  transition: background-color 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: #a81717;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
 }

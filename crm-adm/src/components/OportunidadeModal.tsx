@@ -81,20 +81,20 @@ export default function OportunidadeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-30 bg-black/40 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-30 bg-navy/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-black/10 sticky top-0 bg-white">
-          <h2 className="font-semibold text-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/10 sticky top-0 bg-white">
+          <h2 className="font-extrabold text-lg text-navy">
             {oportunidade ? "Editar oportunidade" : "Nova oportunidade"}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-md hover:bg-black/5 text-black/60" aria-label="Fechar">
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-navy/5 text-navy/60" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="text-black/60 font-medium">Empresa *</span>
+            <span className="text-navy/60 font-medium">Empresa *</span>
             <select className="input" value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} required>
               <option value="">Selecione...</option>
               {empresas.map((e) => (
@@ -106,17 +106,17 @@ export default function OportunidadeModal({
           </label>
 
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="text-black/60 font-medium">Projeto / Oportunidade</span>
+            <span className="text-navy/60 font-medium">Projeto / Oportunidade</span>
             <input className="input" value={projeto} onChange={(e) => setProjeto(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-black/60 font-medium">Valor estimado (R$)</span>
+            <span className="text-navy/60 font-medium">Valor estimado (R$)</span>
             <input className="input" type="number" min="0" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-black/60 font-medium">Etapa</span>
+            <span className="text-navy/60 font-medium">Etapa</span>
             <select className="input" value={etapa} onChange={(e) => setEtapa(e.target.value as EtapaFunil)}>
               {ETAPAS_FUNIL.map((et) => (
                 <option key={et} value={et}>
@@ -127,44 +127,40 @@ export default function OportunidadeModal({
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-black/60 font-medium">Última interação</span>
+            <span className="text-navy/60 font-medium">Última interação</span>
             <input className="input" type="date" value={ultimaInteracao} onChange={(e) => setUltimaInteracao(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-black/60 font-medium">Data da próxima ação</span>
+            <span className="text-navy/60 font-medium">Data da próxima ação</span>
             <input className="input" type="date" value={dataProximaAcao} onChange={(e) => setDataProximaAcao(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="text-black/60 font-medium">Próxima ação</span>
+            <span className="text-navy/60 font-medium">Próxima ação</span>
             <input className="input" value={proximaAcao} onChange={(e) => setProximaAcao(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="text-black/60 font-medium">Observações</span>
+            <span className="text-navy/60 font-medium">Observações</span>
             <textarea className="input" rows={3} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
           </label>
 
-          {error && <p className="sm:col-span-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="sm:col-span-2 text-sm text-red">{error}</p>}
 
           <div className="sm:col-span-2 flex justify-between items-center pt-2">
             {oportunidade ? (
-              <button type="button" onClick={handleDelete} className="text-sm font-medium text-red-600 hover:underline">
+              <button type="button" onClick={handleDelete} className="text-sm font-semibold text-red hover:underline">
                 Excluir
               </button>
             ) : (
               <span />
             )}
             <div className="flex gap-2">
-              <button type="button" onClick={onClose} className="px-4 py-2 rounded-md text-sm font-medium text-black/70 hover:bg-black/5">
+              <button type="button" onClick={onClose} className="px-4 py-2 rounded-md text-sm font-semibold text-navy/70 hover:bg-navy/5">
                 Cancelar
               </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-4 py-2 rounded-md text-sm font-medium bg-black text-white hover:bg-black/80 disabled:opacity-50"
-              >
+              <button type="submit" disabled={saving} className="btn-primary">
                 {saving ? "Salvando..." : "Salvar"}
               </button>
             </div>

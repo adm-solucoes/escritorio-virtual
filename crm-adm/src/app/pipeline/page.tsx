@@ -86,13 +86,13 @@ export default function PipelinePage() {
     <div className="flex flex-col flex-1 w-full">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Pipeline</h1>
-          <p className="text-sm text-black/60">{oportunidades.length} oportunidades no funil</p>
+          <h1 className="text-xl font-extrabold text-navy">Pipeline</h1>
+          <p className="text-sm text-navy/60">{oportunidades.length} oportunidades no funil</p>
         </div>
       </div>
 
       {loading ? (
-        <p className="px-6 text-sm text-black/50">Carregando...</p>
+        <p className="px-6 text-sm text-navy/50">Carregando...</p>
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-6 flex-1">

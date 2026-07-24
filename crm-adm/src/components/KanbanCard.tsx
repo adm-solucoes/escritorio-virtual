@@ -6,9 +6,9 @@ import type { Empresa, Oportunidade } from "@/lib/types";
 import { linkWhatsapp } from "@/lib/whatsapp";
 
 const TEMP_COLOR: Record<string, string> = {
-  Frio: "border-l-blue-400",
+  Frio: "border-l-blue",
   Morno: "border-l-amber-400",
-  Quente: "border-l-red-400",
+  Quente: "border-l-red",
 };
 
 export default function KanbanCard({
@@ -25,7 +25,7 @@ export default function KanbanCard({
   });
 
   const wa = linkWhatsapp(empresa?.telefone);
-  const borderColor = empresa?.temperatura ? TEMP_COLOR[empresa.temperatura] : "border-l-black/10";
+  const borderColor = empresa?.temperatura ? TEMP_COLOR[empresa.temperatura] : "border-l-navy/10";
 
   // relative "days since" display, recomputing per render is intentional
   /* eslint-disable-next-line react-hooks/purity */
@@ -45,15 +45,15 @@ export default function KanbanCard({
           ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 }
           : undefined
       }
-      className={`bg-white rounded-lg border border-black/10 border-l-4 ${borderColor} p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
+      className={`bg-white rounded-lg border border-navy/10 border-l-4 ${borderColor} p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
         isDragging ? "opacity-50" : ""
       }`}
     >
-      <div className="font-medium text-sm">{empresa?.nome_empresa ?? "—"}</div>
-      {oportunidade.projeto && <div className="text-xs text-black/50 mt-0.5">{oportunidade.projeto}</div>}
+      <div className="font-semibold text-sm text-navy">{empresa?.nome_empresa ?? "—"}</div>
+      {oportunidade.projeto && <div className="text-xs text-navy/50 mt-0.5">{oportunidade.projeto}</div>}
 
       <div className="flex items-center justify-between mt-2">
-        <span className="text-sm font-semibold">
+        <span className="text-sm font-bold text-navy">
           {oportunidade.valor_estimado
             ? oportunidade.valor_estimado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
             : "—"}
