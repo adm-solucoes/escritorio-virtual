@@ -87,6 +87,7 @@ export interface Oportunidade {
   observacoes: string | null;
   motivo_perda: string | null;
   criado_em: string;
+  atualizado_em: string;
   empresas?: Empresa;
 }
 
