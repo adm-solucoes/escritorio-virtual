@@ -1,0 +1,183 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { ETAPAS_FUNIL, type Empresa, type EtapaFunilConfig, type Oportunidade } from "@/lib/types";
+
+const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+export default function DashboardPage() {
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
+  const [etapas, setEtapas] = useState<EtapaFunilConfig[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelado = false;
+    Promise.all([
+      supabase.from("empresas").select("*"),
+      supabase.from("oportunidades").select("*"),
+      supabase.from("etapas_funil").select("*").order("ordem"),
+    ]).then(([{ data: empData }, { data: opsData }, { data: etapasData }]) => {
+      if (cancelado) return;
+      setEmpresas(empData ?? []);
+      setOportunidades(opsData ?? []);
+      setEtapas((etapasData as EtapaFunilConfig[]) ?? []);
+      setLoading(false);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  const metricas = useMemo(() => {
+    const ganhas = oportunidades.filter((o) => (o.probabilidade ?? 0) >= 1 && o.etapa_atual !== "Perdido");
+    const perdidas = oportunidades.filter((o) => o.etapa_atual === "Perdido");
+    const abertas = oportunidades.filter((o) => o.etapa_atual !== "Perdido" && (o.probabilidade ?? 0) < 1);
+
+    const valorPipeline = abertas.reduce((acc, o) => acc + (o.valor_estimado ?? 0), 0);
+    const valorPonderado = abertas.reduce((acc, o) => acc + (o.receita_ponderada ?? 0), 0);
+    const receitaFechada = ganhas.reduce((acc, o) => acc + (o.valor_estimado ?? 0), 0);
+    const comValor = oportunidades.filter((o) => o.valor_estimado);
+    const ticketMedio = comValor.length ? comValor.reduce((acc, o) => acc + (o.valor_estimado ?? 0), 0) / comValor.length : 0;
+    const totalDecididas = ganhas.length + perdidas.length;
+    const taxaConversao = totalDecididas ? (ganhas.length / totalDecididas) * 100 : 0;
+
+    return { valorPipeline, valorPonderado, receitaFechada, ticketMedio, taxaConversao, ganhas: ganhas.length, perdidas: perdidas.length };
+  }, [oportunidades]);
+
+  const porTemperatura = useMemo(() => {
+    const contagem: Record<string, number> = { Frio: 0, Morno: 0, Quente: 0, "Sem dados": 0 };
+    for (const e of empresas) {
+      contagem[e.temperatura ?? "Sem dados"] = (contagem[e.temperatura ?? "Sem dados"] ?? 0) + 1;
+    }
+    return contagem;
+  }, [empresas]);
+
+  const porIcp = useMemo(() => {
+    const contagem: Record<string, number> = { A: 0, B: 0, C: 0, "Sem dados": 0 };
+    for (const e of empresas) {
+      contagem[e.icp ?? "Sem dados"] = (contagem[e.icp ?? "Sem dados"] ?? 0) + 1;
+    }
+    return contagem;
+  }, [empresas]);
+
+  const porEtapa = useMemo(() => {
+    const map = new Map<string, { count: number; valor: number }>();
+    for (const etapa of ETAPAS_FUNIL) map.set(etapa, { count: 0, valor: 0 });
+    for (const o of oportunidades) {
+      const atual = map.get(o.etapa_atual) ?? { count: 0, valor: 0 };
+      atual.count += 1;
+      atual.valor += o.valor_estimado ?? 0;
+      map.set(o.etapa_atual, atual);
+    }
+    return map;
+  }, [oportunidades]);
+
+  if (loading) {
+    return <p className="p-6 text-sm text-navy/50">Carregando...</p>;
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-extrabold text-navy">Dashboard comercial</h1>
+        <p className="text-sm text-navy/60">Visão geral do funil e da carteira de empresas</p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Card label="Total de leads" value={empresas.length.toString()} />
+        <Card label="Oportunidades" value={oportunidades.length.toString()} />
+        <Card label="Pipeline aberto" value={moeda(metricas.valorPipeline)} />
+        <Card label="Pipeline ponderado" value={moeda(metricas.valorPonderado)} destaque />
+        <Card label="Receita fechada" value={moeda(metricas.receitaFechada)} />
+        <Card label="Ticket médio" value={moeda(metricas.ticketMedio)} />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card label="Taxa de conversão" value={`${metricas.taxaConversao.toFixed(0)}%`} sub={`${metricas.ganhas} ganhas · ${metricas.perdidas} perdidas`} />
+        <Card label="Oportunidades ganhas" value={metricas.ganhas.toString()} />
+        <Card label="Oportunidades perdidas" value={metricas.perdidas.toString()} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-navy mb-3">Empresas por temperatura</h2>
+          <div className="flex flex-col gap-2">
+            {Object.entries(porTemperatura)
+              .filter(([, v]) => v > 0)
+              .map(([temp, v]) => (
+                <Barra key={temp} label={temp} valor={v} total={empresas.length} />
+              ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-navy mb-3">Empresas por ICP</h2>
+          <div className="flex flex-col gap-2">
+            {Object.entries(porIcp)
+              .filter(([, v]) => v > 0)
+              .map(([icp, v]) => (
+                <Barra key={icp} label={icp} valor={v} total={empresas.length} />
+              ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+        <h2 className="text-sm font-bold text-navy px-4 pt-4">Oportunidades por etapa</h2>
+        <table className="w-full text-sm mt-2">
+          <thead>
+            <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+              <th className="px-4 py-2 font-semibold">Etapa</th>
+              <th className="px-4 py-2 font-semibold">Probabilidade</th>
+              <th className="px-4 py-2 font-semibold">Qtd</th>
+              <th className="px-4 py-2 font-semibold">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ETAPAS_FUNIL.map((etapa) => {
+              const dados = porEtapa.get(etapa) ?? { count: 0, valor: 0 };
+              const config = etapas.find((e) => e.nome === etapa);
+              return (
+                <tr key={etapa} className="border-b border-navy/5 last:border-0">
+                  <td className="px-4 py-2 font-medium text-navy">{etapa}</td>
+                  <td className="px-4 py-2 text-navy/60">{config ? `${Math.round(config.probabilidade * 100)}%` : "—"}</td>
+                  <td className="px-4 py-2 text-navy/60">{dados.count}</td>
+                  <td className="px-4 py-2 text-navy/60">{moeda(dados.valor)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function Card({ label, value, sub, destaque }: { label: string; value: string; sub?: string; destaque?: boolean }) {
+  return (
+    <div className={`rounded-xl border p-4 shadow-sm ${destaque ? "bg-navy border-navy" : "bg-white border-navy/10"}`}>
+      <p className={`text-xs font-semibold ${destaque ? "text-cream/60" : "text-navy/50"}`}>{label}</p>
+      <p className={`text-lg font-extrabold mt-1 ${destaque ? "text-cream" : "text-navy"}`}>{value}</p>
+      {sub && <p className={`text-[11px] mt-0.5 ${destaque ? "text-cream/50" : "text-navy/40"}`}>{sub}</p>}
+    </div>
+  );
+}
+
+function Barra({ label, valor, total }: { label: string; valor: number; total: number }) {
+  const pct = total ? Math.round((valor / total) * 100) : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-xs text-navy/70 mb-1">
+        <span className="font-medium">{label}</span>
+        <span>
+          {valor} ({pct}%)
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-navy/5 overflow-hidden">
+        <div className="h-full bg-blue rounded-full" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}

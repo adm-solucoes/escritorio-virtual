@@ -85,9 +85,20 @@ export interface Oportunidade {
   data_proxima_acao: string | null;
   gc_responsavel_id: string | null;
   observacoes: string | null;
+  motivo_perda: string | null;
   criado_em: string;
   empresas?: Empresa;
 }
+
+export const MOTIVOS_PERDA = [
+  "Preço",
+  "Concorrência",
+  "Sem orçamento",
+  "Não é decisor",
+  "Timing / não é o momento",
+  "Perdeu contato",
+  "Outro",
+] as const;
 
 export type StatusAtividade = "Pendente" | "Em andamento" | "Concluído" | "Atrasado";
 

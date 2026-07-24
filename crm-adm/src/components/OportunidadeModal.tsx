@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type Oportunidade } from "@/lib/types";
+import { ETAPAS_FUNIL, MOTIVOS_PERDA, type Empresa, type EtapaFunil, type Oportunidade } from "@/lib/types";
 
 interface Props {
   oportunidade: Oportunidade | null;
@@ -34,6 +34,7 @@ export default function OportunidadeModal({
   const [proximaAcao, setProximaAcao] = useState(oportunidade?.proxima_acao ?? "");
   const [dataProximaAcao, setDataProximaAcao] = useState(oportunidade?.data_proxima_acao ?? "");
   const [observacoes, setObservacoes] = useState(oportunidade?.observacoes ?? "");
+  const [motivoPerda, setMotivoPerda] = useState(oportunidade?.motivo_perda ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +42,10 @@ export default function OportunidadeModal({
     e.preventDefault();
     if (!empresaId) {
       setError("Selecione a empresa.");
+      return;
+    }
+    if (etapa === "Perdido" && !motivoPerda) {
+      setError("Selecione o motivo da perda.");
       return;
     }
     setSaving(true);
@@ -55,6 +60,7 @@ export default function OportunidadeModal({
       proxima_acao: proximaAcao || null,
       data_proxima_acao: dataProximaAcao || null,
       observacoes: observacoes || null,
+      motivo_perda: etapa === "Perdido" ? motivoPerda : null,
     };
 
     const { error } = oportunidade
@@ -145,6 +151,20 @@ export default function OportunidadeModal({
             <span className="text-navy/60 font-medium">Observações</span>
             <textarea className="input" rows={3} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
           </label>
+
+          {etapa === "Perdido" && (
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="text-red font-medium">Motivo da perda *</span>
+              <select className="input" value={motivoPerda} onChange={(e) => setMotivoPerda(e.target.value)} required>
+                <option value="">Selecione...</option>
+                {MOTIVOS_PERDA.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {error && <p className="sm:col-span-2 text-sm text-red">{error}</p>}
 

@@ -80,6 +80,12 @@ export default function KanbanCard({
         )}
       </div>
 
+      {oportunidade.motivo_perda && (
+        <div className="mt-1.5 text-[11px] font-medium text-red bg-red/10 rounded px-1.5 py-0.5 inline-block">
+          Perdido: {oportunidade.motivo_perda}
+        </div>
+      )}
+
       {diasSemInteracao !== null && diasSemInteracao >= 5 && (
         <div className="mt-1.5 text-[11px] font-medium text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 inline-block">
           {diasSemInteracao}d sem interação

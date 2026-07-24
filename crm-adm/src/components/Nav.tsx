@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Settings } from "lucide-react";
 
 const links = [
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/empresas", label: "Empresas" },
   { href: "/pipeline", label: "Pipeline" },
   { href: "/atividades", label: "Atividades" },

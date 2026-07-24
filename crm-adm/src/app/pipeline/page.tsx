@@ -79,6 +79,11 @@ export default function PipelinePage() {
     if (error) {
       alert("Erro ao mover oportunidade: " + error.message);
       carregar();
+      return;
+    }
+
+    if (novaEtapa === "Perdido") {
+      abrirEdicao({ ...oportunidade, etapa_atual: novaEtapa });
     }
   }
 
