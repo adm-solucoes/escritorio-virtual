@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Settings } from "lucide-react";
 
 const links = [
   { href: "/empresas", label: "Empresas" },
   { href: "/pipeline", label: "Pipeline" },
   { href: "/atividades", label: "Atividades" },
-  { href: "/configuracoes", label: "Configurações" },
 ];
 
 export default function Nav() {
   const pathname = usePathname();
+  const configAtiva = pathname?.startsWith("/configuracoes");
 
   return (
     <header className="bg-navy sticky top-0 z-20 shadow-sm">
@@ -44,6 +45,15 @@ export default function Nav() {
             );
           })}
         </nav>
+        <Link
+          href="/configuracoes"
+          className={`ml-auto p-2 rounded-md transition-colors ${
+            configAtiva ? "bg-red text-white" : "text-cream/70 hover:bg-white/10 hover:text-cream"
+          }`}
+          title="Configurações"
+        >
+          <Settings size={18} />
+        </Link>
       </div>
     </header>
   );
