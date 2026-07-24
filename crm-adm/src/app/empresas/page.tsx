@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowUpDown, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { Empresa, Gc } from "@/lib/types";
+import type { Empresa, Gc, Oportunidade } from "@/lib/types";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { calcularScoreLead, classificarScore } from "@/lib/score";
 import EmpresaModal from "@/components/EmpresaModal";
 
 export default function EmpresasPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
+  const [ordenarPorScore, setOrdenarPorScore] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [empresaEditando, setEmpresaEditando] = useState<Empresa | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -24,10 +27,12 @@ export default function EmpresasPage() {
     let cancelado = false;
     Promise.all([
       supabase.from("empresas").select("*").order("nome_empresa"),
+      supabase.from("oportunidades").select("*"),
       supabase.from("gcs").select("*").order("nome"),
-    ]).then(([{ data: empresasData }, { data: gcsData }]) => {
+    ]).then(([{ data: empresasData }, { data: opsData }, { data: gcsData }]) => {
       if (cancelado) return;
       setEmpresas(empresasData ?? []);
+      setOportunidades(opsData ?? []);
       setGcs(gcsData ?? []);
       setLoading(false);
     });
@@ -38,15 +43,39 @@ export default function EmpresasPage() {
 
   const gcPorId = useMemo(() => new Map(gcs.map((g) => [g.id, g.nome])), [gcs]);
 
+  const oportunidadesPorEmpresa = useMemo(() => {
+    const map = new Map<string, Oportunidade[]>();
+    for (const o of oportunidades) {
+      const arr = map.get(o.empresa_id) ?? [];
+      arr.push(o);
+      map.set(o.empresa_id, arr);
+    }
+    return map;
+  }, [oportunidades]);
+
+  const scorePorEmpresa = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of empresas) {
+      map.set(e.id, calcularScoreLead(e, oportunidadesPorEmpresa.get(e.id) ?? []).pontos);
+    }
+    return map;
+  }, [empresas, oportunidadesPorEmpresa]);
+
   const filtradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    if (!termo) return empresas;
-    return empresas.filter((e) =>
-      [e.nome_empresa, e.nome_contato, e.cidade, e.segmento]
-        .filter(Boolean)
-        .some((v) => v!.toLowerCase().includes(termo))
-    );
-  }, [empresas, busca]);
+    let lista = empresas;
+    if (termo) {
+      lista = lista.filter((e) =>
+        [e.nome_empresa, e.nome_contato, e.cidade, e.segmento]
+          .filter(Boolean)
+          .some((v) => v!.toLowerCase().includes(termo))
+      );
+    }
+    if (ordenarPorScore) {
+      lista = [...lista].sort((a, b) => (scorePorEmpresa.get(b.id) ?? 0) - (scorePorEmpresa.get(a.id) ?? 0));
+    }
+    return lista;
+  }, [empresas, busca, ordenarPorScore, scorePorEmpresa]);
 
   function abrirNovo() {
     setEmpresaEditando(null);
@@ -104,6 +133,15 @@ export default function EmpresasPage() {
                 <th className="px-4 py-3 font-semibold">Cidade</th>
                 <th className="px-4 py-3 font-semibold">ICP</th>
                 <th className="px-4 py-3 font-semibold">Temperatura</th>
+                <th className="px-4 py-3 font-semibold">
+                  <button
+                    onClick={() => setOrdenarPorScore((v) => !v)}
+                    className={`flex items-center gap-1 hover:text-navy ${ordenarPorScore ? "text-navy" : ""}`}
+                    title="Ordenar por score"
+                  >
+                    Score <ArrowUpDown size={12} />
+                  </button>
+                </th>
                 <th className="px-4 py-3 font-semibold">GC</th>
                 <th className="px-4 py-3 font-semibold"></th>
               </tr>
@@ -111,6 +149,8 @@ export default function EmpresasPage() {
             <tbody>
               {filtradas.map((empresa) => {
                 const wa = linkWhatsapp(empresa.telefone);
+                const score = scorePorEmpresa.get(empresa.id) ?? 0;
+                const classificacao = classificarScore(score);
                 return (
                   <tr key={empresa.id} className="border-b border-navy/5 last:border-0 hover:bg-navy/[0.02]">
                     <td className="px-4 py-3">
@@ -134,6 +174,11 @@ export default function EmpresasPage() {
                     </td>
                     <td className="px-4 py-3">
                       {empresa.temperatura && <Badge temperatura={empresa.temperatura} />}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${classificacao.cor}`}>
+                        {score} · {classificacao.label}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-navy/70">
                       {empresa.gc_responsavel_id ? gcPorId.get(empresa.gc_responsavel_id) : "—"}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ETAPAS_FUNIL, type Empresa, type EtapaFunilConfig, type Oportunidade } from "@/lib/types";
+import { calcularScoreLead, classificarScore } from "@/lib/score";
 
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -61,6 +62,19 @@ export default function DashboardPage() {
     }
     return contagem;
   }, [empresas]);
+
+  const topLeads = useMemo(() => {
+    const oportunidadesPorEmpresa = new Map<string, Oportunidade[]>();
+    for (const o of oportunidades) {
+      const arr = oportunidadesPorEmpresa.get(o.empresa_id) ?? [];
+      arr.push(o);
+      oportunidadesPorEmpresa.set(o.empresa_id, arr);
+    }
+    return [...empresas]
+      .map((e) => ({ empresa: e, score: calcularScoreLead(e, oportunidadesPorEmpresa.get(e.id) ?? []).pontos }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  }, [empresas, oportunidades]);
 
   const porEtapa = useMemo(() => {
     const map = new Map<string, { count: number; valor: number }>();
@@ -121,6 +135,23 @@ export default function DashboardPage() {
                 <Barra key={icp} label={icp} valor={v} total={empresas.length} />
               ))}
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+        <h2 className="text-sm font-bold text-navy mb-3">Top 5 leads (score)</h2>
+        <div className="flex flex-col gap-2">
+          {topLeads.map(({ empresa, score }) => {
+            const classificacao = classificarScore(score);
+            return (
+              <div key={empresa.id} className="flex items-center justify-between text-sm">
+                <span className="text-navy font-medium">{empresa.nome_empresa}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${classificacao.cor}`}>
+                  {score} · {classificacao.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
