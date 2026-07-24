@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Check, Plus, RefreshCw, Trash2, Zap } from "lucide-react";
+import { AlertTriangle, Pencil, Plus, RefreshCw, Trash2, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Atividade, Empresa, Gc, Oportunidade, StatusAtividade } from "@/lib/types";
 import AtividadeModal from "@/components/AtividadeModal";
+
+const STATUS_OPCOES: StatusAtividade[] = ["Pendente", "Em andamento", "Concluído", "Atrasado"];
 
 const FILTROS: { label: string; status: StatusAtividade | "Todas" }[] = [
   { label: "Todas", status: "Todas" },
@@ -22,6 +24,7 @@ export default function AtividadesPage() {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<StatusAtividade | "Todas">("Todas");
   const [modalAberto, setModalAberto] = useState(false);
+  const [editando, setEditando] = useState<Atividade | null>(null);
   const [gerandoFollowups, setGerandoFollowups] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -68,13 +71,13 @@ export default function AtividadesPage() {
     [atividades, hoje]
   );
 
-  async function concluir(atividade: Atividade) {
-    const { error } = await supabase.from("atividades").update({ status: "Concluído" }).eq("id", atividade.id);
+  async function mudarStatus(atividade: Atividade, novoStatus: StatusAtividade) {
+    setAtividades((prev) => prev.map((a) => (a.id === atividade.id ? { ...a, status: novoStatus } : a)));
+    const { error } = await supabase.from("atividades").update({ status: novoStatus }).eq("id", atividade.id);
     if (error) {
-      alert("Erro ao concluir: " + error.message);
-      return;
+      alert("Erro ao atualizar status: " + error.message);
+      carregar();
     }
-    carregar();
   }
 
   async function excluir(atividade: Atividade) {
@@ -96,6 +99,16 @@ export default function AtividadesPage() {
       return;
     }
     carregar();
+  }
+
+  function abrirNova() {
+    setEditando(null);
+    setModalAberto(true);
+  }
+
+  function abrirEdicao(atividade: Atividade) {
+    setEditando(atividade);
+    setModalAberto(true);
   }
 
   return (
@@ -120,7 +133,7 @@ export default function AtividadesPage() {
             <RefreshCw size={15} className={gerandoFollowups ? "animate-spin" : ""} />
             Gerar follow-ups
           </button>
-          <button onClick={() => setModalAberto(true)} className="btn-primary whitespace-nowrap">
+          <button onClick={abrirNova} className="btn-primary whitespace-nowrap">
             <Plus size={16} /> Nova atividade
           </button>
         </div>
@@ -154,19 +167,6 @@ export default function AtividadesPage() {
                   key={atividade.id}
                   className="flex items-start gap-3 px-4 py-3 border-b border-navy/5 last:border-0 hover:bg-navy/[0.02]"
                 >
-                  <button
-                    onClick={() => concluir(atividade)}
-                    disabled={atividade.status === "Concluído"}
-                    className={`mt-0.5 shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                      atividade.status === "Concluído"
-                        ? "bg-green-500 border-green-500 text-white"
-                        : "border-navy/30 hover:border-blue hover:bg-blue/10 text-transparent hover:text-blue"
-                    }`}
-                    title="Marcar como concluído"
-                  >
-                    <Check size={13} />
-                  </button>
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-sm font-semibold ${atividade.status === "Concluído" ? "text-navy/40 line-through" : "text-navy"}`}>
@@ -191,8 +191,25 @@ export default function AtividadesPage() {
                     </div>
                   </div>
 
-                  <StatusBadge status={atividade.status} />
+                  <select
+                    value={atividade.status}
+                    onChange={(e) => mudarStatus(atividade, e.target.value as StatusAtividade)}
+                    className={`shrink-0 text-xs font-semibold rounded-full px-2.5 py-1 border-0 cursor-pointer ${STATUS_CORES[atividade.status]}`}
+                  >
+                    {STATUS_OPCOES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
 
+                  <button
+                    onClick={() => abrirEdicao(atividade)}
+                    className="p-1.5 rounded-md hover:bg-blue/10 text-blue shrink-0"
+                    title="Editar"
+                  >
+                    <Pencil size={15} />
+                  </button>
                   <button
                     onClick={() => excluir(atividade)}
                     className="p-1.5 rounded-md hover:bg-red/10 text-red/70 hover:text-red shrink-0"
@@ -209,11 +226,17 @@ export default function AtividadesPage() {
 
       {modalAberto && (
         <AtividadeModal
+          key={editando?.id ?? "novo"}
+          atividade={editando}
           empresas={empresas}
           oportunidades={oportunidades}
           gcs={gcs}
           onClose={() => setModalAberto(false)}
           onSaved={() => {
+            setModalAberto(false);
+            carregar();
+          }}
+          onDeleted={() => {
             setModalAberto(false);
             carregar();
           }}
@@ -228,14 +251,9 @@ function formatarData(iso: string) {
   return `${dia}/${mes}/${ano}`;
 }
 
-function StatusBadge({ status }: { status: StatusAtividade }) {
-  const cores: Record<StatusAtividade, string> = {
-    Pendente: "bg-amber-100 text-amber-700",
-    "Em andamento": "bg-blue/10 text-blue",
-    Concluído: "bg-green-100 text-green-700",
-    Atrasado: "bg-red/10 text-red",
-  };
-  return (
-    <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${cores[status]}`}>{status}</span>
-  );
-}
+const STATUS_CORES: Record<StatusAtividade, string> = {
+  Pendente: "bg-amber-100 text-amber-700",
+  "Em andamento": "bg-blue/10 text-blue",
+  Concluído: "bg-green-100 text-green-700",
+  Atrasado: "bg-red/10 text-red",
+};

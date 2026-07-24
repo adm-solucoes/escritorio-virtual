@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { supabase } from "@/lib/supabase";
-import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type Oportunidade } from "@/lib/types";
+import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type EtapaFunilConfig, type Oportunidade } from "@/lib/types";
 import KanbanColumn from "@/components/KanbanColumn";
 import OportunidadeModal from "@/components/OportunidadeModal";
 
 export default function PipelinePage() {
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [etapas, setEtapas] = useState<EtapaFunilConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState<Oportunidade | null>(null);
@@ -27,10 +28,12 @@ export default function PipelinePage() {
     Promise.all([
       supabase.from("oportunidades").select("*").order("criado_em", { ascending: false }),
       supabase.from("empresas").select("*").order("nome_empresa"),
-    ]).then(([{ data: opsData }, { data: empData }]) => {
+      supabase.from("etapas_funil").select("*").order("ordem"),
+    ]).then(([{ data: opsData }, { data: empData }, { data: etapasData }]) => {
       if (cancelado) return;
       setOportunidades(opsData ?? []);
       setEmpresas(empData ?? []);
+      setEtapas((etapasData as EtapaFunilConfig[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -39,6 +42,7 @@ export default function PipelinePage() {
   }, [refreshKey]);
 
   const empresasPorId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
+  const probabilidadePorEtapa = useMemo(() => new Map(etapas.map((e) => [e.nome, e.probabilidade])), [etapas]);
 
   const porEtapa = useMemo(() => {
     const map = new Map<EtapaFunil, Oportunidade[]>();
@@ -56,8 +60,15 @@ export default function PipelinePage() {
     const oportunidade = oportunidades.find((o) => o.id === active.id);
     if (!oportunidade || oportunidade.etapa_atual === novaEtapa) return;
 
+    const novaProbabilidade = probabilidadePorEtapa.get(novaEtapa) ?? oportunidade.probabilidade;
+    const novaReceitaPonderada = (oportunidade.valor_estimado ?? 0) * (novaProbabilidade ?? 0);
+
     setOportunidades((prev) =>
-      prev.map((o) => (o.id === oportunidade.id ? { ...o, etapa_atual: novaEtapa } : o))
+      prev.map((o) =>
+        o.id === oportunidade.id
+          ? { ...o, etapa_atual: novaEtapa, probabilidade: novaProbabilidade, receita_ponderada: novaReceitaPonderada }
+          : o
+      )
     );
 
     const { error } = await supabase
@@ -100,6 +111,7 @@ export default function PipelinePage() {
               <KanbanColumn
                 key={etapa}
                 etapa={etapa}
+                probabilidade={probabilidadePorEtapa.get(etapa) ?? null}
                 oportunidades={porEtapa.get(etapa) ?? []}
                 empresasPorId={empresasPorId}
                 onCardClick={abrirEdicao}

@@ -7,6 +7,7 @@ const links = [
   { href: "/empresas", label: "Empresas" },
   { href: "/pipeline", label: "Pipeline" },
   { href: "/atividades", label: "Atividades" },
+  { href: "/configuracoes", label: "Configurações" },
 ];
 
 export default function Nav() {

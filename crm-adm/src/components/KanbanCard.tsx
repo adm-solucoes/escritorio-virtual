@@ -53,11 +53,18 @@ export default function KanbanCard({
       {oportunidade.projeto && <div className="text-xs text-navy/50 mt-0.5">{oportunidade.projeto}</div>}
 
       <div className="flex items-center justify-between mt-2">
-        <span className="text-sm font-bold text-navy">
-          {oportunidade.valor_estimado
-            ? oportunidade.valor_estimado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-            : "—"}
-        </span>
+        <div>
+          <span className="text-sm font-bold text-navy">
+            {oportunidade.valor_estimado
+              ? oportunidade.valor_estimado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+              : "—"}
+          </span>
+          {oportunidade.probabilidade !== null && (
+            <span className="ml-1.5 text-[10px] font-bold text-blue bg-blue/10 rounded-full px-1.5 py-0.5">
+              {Math.round(oportunidade.probabilidade * 100)}%
+            </span>
+          )}
+        </div>
         {wa && (
           <a
             href={wa}
