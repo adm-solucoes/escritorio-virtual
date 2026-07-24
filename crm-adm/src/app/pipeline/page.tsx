@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { supabase } from "@/lib/supabase";
 import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
-import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type EtapaFunilConfig, type Oportunidade } from "@/lib/types";
+import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type EtapaFunilConfig, type Gc, type Oportunidade } from "@/lib/types";
 import KanbanColumn from "@/components/KanbanColumn";
 import OportunidadeModal from "@/components/OportunidadeModal";
 
 export default function PipelinePage() {
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [gcs, setGcs] = useState<Gc[]>([]);
   const [etapas, setEtapas] = useState<EtapaFunilConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
@@ -30,11 +31,13 @@ export default function PipelinePage() {
       supabase.from("oportunidades").select("*").order("criado_em", { ascending: false }),
       supabase.from("empresas").select("*").order("nome_empresa"),
       supabase.from("etapas_funil").select("*").order("ordem"),
-    ]).then(([{ data: opsData }, { data: empData }, { data: etapasData }]) => {
+      supabase.from("gcs").select("*").order("nome"),
+    ]).then(([{ data: opsData }, { data: empData }, { data: etapasData }, { data: gcsData }]) => {
       if (cancelado) return;
       setOportunidades(opsData ?? []);
       setEmpresas(empData ?? []);
       setEtapas((etapasData as EtapaFunilConfig[]) ?? []);
+      setGcs(gcsData ?? []);
       setLoading(false);
     });
     return () => {
@@ -136,6 +139,7 @@ export default function PipelinePage() {
           key={editando?.id ?? `novo-${etapaNova}`}
           oportunidade={editando}
           empresas={empresas}
+          gcs={gcs}
           etapaInicial={etapaNova}
           onClose={() => setModalAberto(false)}
           onSaved={() => {

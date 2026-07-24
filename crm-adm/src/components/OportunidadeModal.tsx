@@ -1,25 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ClipboardList, Plus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
-import { ETAPAS_FUNIL, MOTIVOS_PERDA, type Empresa, type EtapaFunil, type Oportunidade } from "@/lib/types";
+import { ETAPAS_FUNIL, MOTIVOS_PERDA, type Empresa, type EtapaFunil, type Gc, type Oportunidade, type Solicitacao } from "@/lib/types";
+import SolicitacaoModal from "./SolicitacaoModal";
 
 interface Props {
   oportunidade: Oportunidade | null;
   empresas: Empresa[];
+  gcs: Gc[];
   etapaInicial?: EtapaFunil;
   onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
 }
 
+const STATUS_SOLICITACAO_CORES: Record<string, string> = {
+  Pendente: "bg-amber-100 text-amber-700",
+  "Em andamento": "bg-blue/10 text-blue",
+  Atendida: "bg-green-100 text-green-700",
+  Recusada: "bg-red/10 text-red",
+};
+
 // Parent must remount this component (e.g. via `key`) when switching between
 // creating a new oportunidade and editing an existing one, so this initial state stays fresh.
 export default function OportunidadeModal({
   oportunidade,
   empresas,
+  gcs,
   etapaInicial,
   onClose,
   onSaved,
@@ -38,6 +48,26 @@ export default function OportunidadeModal({
   const [motivoPerda, setMotivoPerda] = useState(oportunidade?.motivo_perda ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
+  const [modalSolicitacaoAberto, setModalSolicitacaoAberto] = useState(false);
+
+  useEffect(() => {
+    if (!oportunidade) return;
+    let cancelado = false;
+    supabase
+      .from("solicitacoes")
+      .select("*")
+      .eq("oportunidade_id", oportunidade.id)
+      .order("data_solicitacao", { ascending: false })
+      .then(({ data }) => {
+        if (cancelado) return;
+        setSolicitacoes((data as Solicitacao[]) ?? []);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [oportunidade]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -194,7 +224,61 @@ export default function OportunidadeModal({
             </div>
           </div>
         </form>
+
+        {oportunidade && (
+          <div className="px-6 pb-6">
+            <div className="flex items-center justify-between border-t border-navy/10 pt-4">
+              <h3 className="text-sm font-bold text-navy flex items-center gap-1.5">
+                <ClipboardList size={15} /> Solicitações
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalSolicitacaoAberto(true)}
+                className="flex items-center gap-1 text-xs font-semibold text-blue hover:underline"
+              >
+                <Plus size={13} /> Nova solicitação
+              </button>
+            </div>
+
+            {solicitacoes.length === 0 ? (
+              <p className="text-xs text-navy/40 mt-2">Nenhuma solicitação registrada para esta oportunidade.</p>
+            ) : (
+              <ul className="mt-2 flex flex-col gap-2">
+                {solicitacoes.map((s) => (
+                  <li key={s.id} className="flex items-center justify-between gap-2 bg-navy/[0.03] rounded-lg px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-navy truncate">{s.nome_evento_projeto}</div>
+                      <div className="text-xs text-navy/50">
+                        {[...s.tipo_apoio, s.tipo_apoio_outro].filter(Boolean).join(", ") || "—"}
+                      </div>
+                    </div>
+                    <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_SOLICITACAO_CORES[s.status] ?? ""}`}>
+                      {s.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
+
+      {modalSolicitacaoAberto && oportunidade && (
+        <SolicitacaoModal
+          oportunidadeId={oportunidade.id}
+          gcs={gcs}
+          onClose={() => setModalSolicitacaoAberto(false)}
+          onSaved={() => {
+            setModalSolicitacaoAberto(false);
+            supabase
+              .from("solicitacoes")
+              .select("*")
+              .eq("oportunidade_id", oportunidade.id)
+              .order("data_solicitacao", { ascending: false })
+              .then(({ data }) => setSolicitacoes((data as Solicitacao[]) ?? []));
+          }}
+        />
+      )}
     </div>
   );
 }

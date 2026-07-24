@@ -129,3 +129,26 @@ export interface Atividade {
   empresas?: Empresa;
   oportunidades?: Oportunidade;
 }
+
+export const TIPOS_APOIO = ["Financeiro", "Divulgação", "Material", "Espaço", "Pessoas"] as const;
+export type TipoApoio = (typeof TIPOS_APOIO)[number];
+
+export type StatusSolicitacao = "Pendente" | "Em andamento" | "Atendida" | "Recusada";
+
+export interface Solicitacao {
+  id: string;
+  oportunidade_id: string;
+  nome_evento_projeto: string;
+  objetivo: string | null;
+  tipo_apoio: string[];
+  tipo_apoio_outro: string | null;
+  justificativa: string | null;
+  data_evento: string | null;
+  prazo: string | null;
+  responsavel_solicitacao_id: string | null;
+  recursos_necessarios: string | null;
+  email_responsavel_atendimento: string;
+  status: StatusSolicitacao;
+  data_solicitacao: string;
+  data_resposta: string | null;
+}
