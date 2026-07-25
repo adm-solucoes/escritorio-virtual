@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Save } from "lucide-react";
+import { ExternalLink, Save, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { META_EQUIPE_ID, type ConfiguracaoRelatorio, type EtapaFunilConfig, type Gc, type Meta } from "@/lib/types";
 
@@ -51,6 +51,12 @@ export default function ConfiguracoesPage() {
   const [salvandoMeta, setSalvandoMeta] = useState<string | null>(null);
   const [refreshMetasKey, setRefreshMetasKey] = useState(0);
 
+  const [refreshGcsKey, setRefreshGcsKey] = useState(0);
+  const [nomeConvite, setNomeConvite] = useState("");
+  const [emailConvite, setEmailConvite] = useState("");
+  const [convidando, setConvidando] = useState(false);
+  const [mensagemConvite, setMensagemConvite] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelado = false;
     supabase
@@ -64,7 +70,41 @@ export default function ConfiguracoesPage() {
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [refreshGcsKey]);
+
+  async function convidarMembro(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nomeConvite.trim() || !emailConvite.trim()) return;
+    setConvidando(true);
+    setMensagemConvite(null);
+    try {
+      const res = await fetch("/api/membros/convidar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: nomeConvite.trim(), email: emailConvite.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erro ao convidar");
+      setMensagemConvite(data.jaExistia ? "Esse e-mail já tinha uma conta; dados atualizados." : "Convite enviado por e-mail!");
+      setNomeConvite("");
+      setEmailConvite("");
+      setRefreshGcsKey((k) => k + 1);
+    } catch (e) {
+      setMensagemConvite("Erro: " + (e instanceof Error ? e.message : "desconhecido"));
+    } finally {
+      setConvidando(false);
+    }
+  }
+
+  async function alternarStatus(gc: Gc) {
+    const novoStatus = gc.status === "Ativo" ? "Inativo" : "Ativo";
+    const { error } = await supabase.from("gcs").update({ status: novoStatus }).eq("id", gc.id);
+    if (error) {
+      alert("Erro ao atualizar: " + error.message);
+      return;
+    }
+    setRefreshGcsKey((k) => k + 1);
+  }
 
   useEffect(() => {
     let cancelado = false;
@@ -190,7 +230,70 @@ export default function ConfiguracoesPage() {
     <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-8">
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-navy">Configurações do funil</h1>
+          <h1 className="text-xl font-extrabold text-navy">Membros</h1>
+          <p className="text-sm text-navy/60">
+            Convide novos gerentes de conta (GCs) — eles recebem um e-mail para criar a própria senha e passam a
+            aparecer como opção de responsável em toda a plataforma.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                <th className="px-4 py-3 font-semibold">Nome</th>
+                <th className="px-4 py-3 font-semibold">E-mail</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {gcs.map((gc) => (
+                <tr key={gc.id} className="border-b border-navy/5 last:border-0">
+                  <td className="px-4 py-3 font-semibold text-navy">{gc.nome}</td>
+                  <td className="px-4 py-3 text-navy/70">{gc.email}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        gc.status === "Ativo" ? "bg-green-100 text-green-700" : "bg-navy/5 text-navy/50"
+                      }`}
+                    >
+                      {gc.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => alternarStatus(gc)}
+                      className="text-xs font-semibold text-blue hover:underline"
+                    >
+                      {gc.status === "Ativo" ? "Desativar" : "Ativar"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <form onSubmit={convidarMembro} className="p-4 border-t border-navy/10 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-navy/60 font-medium">Nome</span>
+              <input className="input w-48" value={nomeConvite} onChange={(e) => setNomeConvite(e.target.value)} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-navy/60 font-medium">E-mail</span>
+              <input className="input w-56" type="email" value={emailConvite} onChange={(e) => setEmailConvite(e.target.value)} />
+            </label>
+            <button type="submit" disabled={convidando} className="btn-primary">
+              <UserPlus size={15} /> {convidando ? "Convidando..." : "Convidar membro"}
+            </button>
+            {mensagemConvite && <span className="text-xs text-navy/60 sm:ml-2">{mensagemConvite}</span>}
+          </form>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-extrabold text-navy">Configurações do funil</h2>
           <p className="text-sm text-navy/60">
             Ajuste a probabilidade de fechamento, o prazo de alerta de follow-up e a tarefa criada automaticamente
             quando uma oportunidade entra em cada etapa (deixe em branco pra não criar nenhuma).

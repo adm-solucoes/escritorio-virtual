@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Settings } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LogOut, Settings } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
@@ -13,7 +14,18 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const configAtiva = pathname?.startsWith("/configuracoes");
+
+  if (pathname?.startsWith("/login")) {
+    return null;
+  }
+
+  async function sair() {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="bg-navy sticky top-0 z-20 shadow-sm">
@@ -46,15 +58,24 @@ export default function Nav() {
             );
           })}
         </nav>
-        <Link
-          href="/configuracoes"
-          className={`ml-auto p-2 rounded-md transition-colors ${
-            configAtiva ? "bg-red text-white" : "text-cream/70 hover:bg-white/10 hover:text-cream"
-          }`}
-          title="Configurações"
-        >
-          <Settings size={18} />
-        </Link>
+        <div className="ml-auto flex items-center gap-1">
+          <Link
+            href="/configuracoes"
+            className={`p-2 rounded-md transition-colors ${
+              configAtiva ? "bg-red text-white" : "text-cream/70 hover:bg-white/10 hover:text-cream"
+            }`}
+            title="Configurações"
+          >
+            <Settings size={18} />
+          </Link>
+          <button
+            onClick={sair}
+            className="p-2 rounded-md text-cream/70 hover:bg-white/10 hover:text-cream transition-colors"
+            title="Sair"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
       </div>
     </header>
   );
