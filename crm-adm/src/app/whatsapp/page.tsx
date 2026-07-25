@@ -62,6 +62,11 @@ function WhatsappPageConteudo() {
   const canceladaGravacaoRef = useRef(false);
   const intervaloGravacaoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const canvasOndaRef = useRef<HTMLCanvasElement>(null);
+  const analiserRef = useRef<AnalyserNode | null>(null);
+  const streamVisualizacaoRef = useRef<MediaStream | null>(null);
+  const audioContextVisualizacaoRef = useRef<AudioContext | null>(null);
+  const animacaoOndaRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -244,6 +249,64 @@ function WhatsappPageConteudo() {
     carregarConversas();
   }
 
+  function desenharOnda() {
+    const canvas = canvasOndaRef.current;
+    const analiser = analiserRef.current;
+    if (!canvas || !analiser) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const bufferLength = analiser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const desenhar = () => {
+      if (!analiserRef.current) return;
+      animacaoOndaRef.current = requestAnimationFrame(desenhar);
+      analiser.getByteTimeDomainData(dataArray);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#dc2626";
+      ctx.beginPath();
+      const sliceWidth = canvas.width / bufferLength;
+      let x = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128;
+        const y = (v * canvas.height) / 2;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        x += sliceWidth;
+      }
+      ctx.stroke();
+    };
+    desenhar();
+  }
+
+  async function iniciarVisualizacao() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamVisualizacaoRef.current = stream;
+      const audioCtx = new AudioContext();
+      audioContextVisualizacaoRef.current = audioCtx;
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analiser = audioCtx.createAnalyser();
+      analiser.fftSize = 256;
+      source.connect(analiser);
+      analiserRef.current = analiser;
+      desenharOnda();
+    } catch {
+      // a forma de onda é só visual — se falhar, a gravação em si continua normalmente
+    }
+  }
+
+  function pararVisualizacao() {
+    if (animacaoOndaRef.current) cancelAnimationFrame(animacaoOndaRef.current);
+    animacaoOndaRef.current = null;
+    analiserRef.current = null;
+    streamVisualizacaoRef.current?.getTracks().forEach((t) => t.stop());
+    streamVisualizacaoRef.current = null;
+    audioContextVisualizacaoRef.current?.close().catch(() => {});
+    audioContextVisualizacaoRef.current = null;
+  }
+
   async function iniciarGravacao() {
     if (!conversaId) return;
     setErroEnvio(null);
@@ -261,6 +324,7 @@ function WhatsappPageConteudo() {
         chunksGravacaoRef.current.push(typedArray);
       };
       recorder.onstop = () => {
+        pararVisualizacao();
         if (!canceladaGravacaoRef.current && chunksGravacaoRef.current.length > 0) {
           const tipoOgg = "audio/ogg; codecs=opus";
           const blob = new Blob(chunksGravacaoRef.current as BlobPart[], { type: tipoOgg });
@@ -274,6 +338,7 @@ function WhatsappPageConteudo() {
       setGravando(true);
       setDuracaoGravacao(0);
       intervaloGravacaoRef.current = setInterval(() => setDuracaoGravacao((d) => d + 1), 1000);
+      iniciarVisualizacao();
     } catch {
       setErroEnvio("Não foi possível acessar o microfone. Verifique a permissão do navegador.");
     }
@@ -519,7 +584,7 @@ function WhatsappPageConteudo() {
                   <div className="flex-1 flex items-center gap-3 bg-red/5 border border-red/20 rounded-md px-3 py-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-red animate-pulse shrink-0" />
                     <span className="text-sm font-semibold text-navy tabular-nums">{formatarDuracao(duracaoGravacao)}</span>
-                    <span className="text-xs text-navy/50 flex-1">Gravando áudio...</span>
+                    <canvas ref={canvasOndaRef} width={240} height={32} className="flex-1 h-8" />
                   </div>
                 ) : (
                   <input
