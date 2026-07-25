@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Bree_Serif } from "next/font/google";
 import "./globals.css";
-import Nav from "@/components/Nav";
+import Sidebar from "@/components/Sidebar";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -30,9 +30,9 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${dmSans.variable} ${breeSerif.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-cream text-navy">
-        <Nav />
-        <main className="flex-1 flex flex-col">{children}</main>
+      <body className="min-h-full flex flex-col md:flex-row bg-cream text-navy">
+        <Sidebar />
+        <main className="flex-1 flex flex-col min-w-0">{children}</main>
       </body>
     </html>
   );
