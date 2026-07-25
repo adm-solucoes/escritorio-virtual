@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpDown, MessageCircle, MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, Oportunidade } from "@/lib/types";
 import { linkWhatsapp } from "@/lib/whatsapp";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
 import EmpresaModal from "@/components/EmpresaModal";
 
+function normalizarParaE164(telefone: string) {
+  const cleaned = telefone.split("/")[0].replace(/\D/g, "");
+  if (!cleaned || cleaned.length < 8) return null;
+  return cleaned.startsWith("55") ? cleaned : `55${cleaned}`;
+}
+
 export default function EmpresasPage() {
+  const router = useRouter();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
@@ -85,6 +93,38 @@ export default function EmpresasPage() {
   function abrirEdicao(empresa: Empresa) {
     setEmpresaEditando(empresa);
     setModalAberto(true);
+  }
+
+  async function abrirConversaWhatsapp(empresa: Empresa) {
+    const telefoneE164 = normalizarParaE164(empresa.telefone ?? "");
+    if (!telefoneE164) {
+      alert("Essa empresa não tem um telefone válido cadastrado.");
+      return;
+    }
+
+    const { data: existente } = await supabase
+      .from("whatsapp_conversas")
+      .select("id")
+      .eq("telefone", telefoneE164)
+      .maybeSingle();
+
+    if (existente) {
+      router.push(`/whatsapp?conversa=${existente.id}`);
+      return;
+    }
+
+    const { data: nova, error } = await supabase
+      .from("whatsapp_conversas")
+      .insert({ telefone: telefoneE164, empresa_id: empresa.id })
+      .select("id")
+      .single();
+
+    if (error || !nova) {
+      alert("Erro ao abrir conversa: " + (error?.message ?? "desconhecido"));
+      return;
+    }
+
+    router.push(`/whatsapp?conversa=${nova.id}`);
   }
 
   async function excluir(empresa: Empresa) {
@@ -191,11 +231,18 @@ export default function EmpresasPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 rounded-md hover:bg-green-50 text-green-600"
-                            title="Conversar no WhatsApp"
+                            title="Abrir no WhatsApp (celular)"
                           >
                             <MessageCircle size={16} />
                           </a>
                         )}
+                        <button
+                          onClick={() => abrirConversaWhatsapp(empresa)}
+                          className="p-1.5 rounded-md hover:bg-blue/10 text-blue"
+                          title="Enviar WhatsApp pelo CRM"
+                        >
+                          <MessagesSquare size={16} />
+                        </button>
                         <button
                           onClick={() => abrirEdicao(empresa)}
                           className="p-1.5 rounded-md hover:bg-blue/10 text-blue"

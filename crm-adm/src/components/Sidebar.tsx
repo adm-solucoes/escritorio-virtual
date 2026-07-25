@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Building2, KanbanSquare, ListChecks, Settings, LogOut, Menu, X, User } from "lucide-react";
+import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Settings, LogOut, Menu, X, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 const links = [
@@ -11,6 +11,7 @@ const links = [
   { href: "/empresas", label: "Empresas", icon: Building2 },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { href: "/atividades", label: "Atividades", icon: ListChecks },
+  { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
 ];
 
 export default function Sidebar() {

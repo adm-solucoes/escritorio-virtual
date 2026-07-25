@@ -163,3 +163,32 @@ export interface Meta {
   valor_meta: number;
   criado_em: string;
 }
+
+export type StatusConversaWhatsapp = "Aberta" | "Arquivada";
+
+export interface WhatsappConversa {
+  id: string;
+  empresa_id: string | null;
+  telefone: string;
+  ultima_mensagem_em: string | null;
+  status: StatusConversaWhatsapp;
+  nao_lidas: number;
+  criado_em: string;
+  empresas?: Empresa;
+}
+
+export type DirecaoMensagemWhatsapp = "enviada" | "recebida";
+export type TipoMensagemWhatsapp = "texto" | "template" | "midia";
+export type StatusEntregaWhatsapp = "enviando" | "enviado" | "entregue" | "lido" | "falhou" | null;
+
+export interface WhatsappMensagem {
+  id: string;
+  conversa_id: string;
+  direcao: DirecaoMensagemWhatsapp;
+  conteudo: string;
+  tipo: TipoMensagemWhatsapp;
+  enviado_por_gc_id: string | null;
+  whatsapp_message_id: string | null;
+  status_entrega: StatusEntregaWhatsapp;
+  criado_em: string;
+}
