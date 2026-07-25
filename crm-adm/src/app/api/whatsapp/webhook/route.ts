@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-admin";
+import { enviarMidia } from "@/lib/whatsapp-api";
 
 export const dynamic = "force-dynamic";
 
@@ -126,6 +127,58 @@ export async function POST(request: Request) {
       const statusMapeado = mapaStatus[status.status];
       if (!statusMapeado) continue;
       await admin.from("whatsapp_mensagens").update({ status_entrega: statusMapeado }).eq("whatsapp_message_id", status.id);
+
+      // Alguns navegadores gravam áudio num formato que a Meta aceita no envio mas rejeita
+      // depois, na validação assíncrona (status "failed"). Quando isso acontece, reenvia o
+      // mesmo arquivo como documento pra garantir que a mensagem não se perca de vez.
+      if (statusMapeado === "falhou") {
+        const { data: mensagemFalha } = await admin
+          .from("whatsapp_mensagens")
+          .select("*")
+          .eq("whatsapp_message_id", status.id)
+          .maybeSingle();
+
+        if (mensagemFalha?.tipo === "audio" && mensagemFalha.midia_url) {
+          const { data: conversaFalha } = await admin
+            .from("whatsapp_conversas")
+            .select("telefone")
+            .eq("id", mensagemFalha.conversa_id)
+            .maybeSingle();
+          const { data: numeroAtivo } = await admin
+            .from("whatsapp_numeros")
+            .select("phone_number_id")
+            .eq("ativo", true)
+            .maybeSingle();
+
+          if (conversaFalha?.telefone) {
+            const reenvio = await enviarMidia(
+              conversaFalha.telefone,
+              "document",
+              mensagemFalha.midia_url,
+              undefined,
+              mensagemFalha.midia_nome,
+              numeroAtivo?.phone_number_id
+            );
+            if (reenvio.ok) {
+              await admin.from("whatsapp_mensagens").insert({
+                conversa_id: mensagemFalha.conversa_id,
+                direcao: "enviada",
+                conteudo: mensagemFalha.midia_nome ?? "[documento]",
+                tipo: "documento",
+                midia_url: mensagemFalha.midia_url,
+                midia_nome: mensagemFalha.midia_nome,
+                enviado_por_gc_id: mensagemFalha.enviado_por_gc_id,
+                whatsapp_message_id: reenvio.messageId,
+                status_entrega: "enviado",
+              });
+              await admin
+                .from("whatsapp_conversas")
+                .update({ ultima_mensagem_em: new Date().toISOString() })
+                .eq("id", mensagemFalha.conversa_id);
+            }
+          }
+        }
+      }
     }
 
     return Response.json({ ok: true });
