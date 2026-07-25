@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Save } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { ConfiguracaoRelatorio, EtapaFunilConfig } from "@/lib/types";
+import { META_EQUIPE_ID, type ConfiguracaoRelatorio, type EtapaFunilConfig, type Gc, type Meta } from "@/lib/types";
+
+const MESES_LABEL = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 const RELATORIO_PADRAO: ConfiguracaoRelatorio = {
   id: 1,
@@ -36,6 +41,69 @@ export default function ConfiguracoesPage() {
   const [loadingRelatorio, setLoadingRelatorio] = useState(true);
   const [salvandoRelatorio, setSalvandoRelatorio] = useState(false);
   const [mensagemRelatorio, setMensagemRelatorio] = useState<string | null>(null);
+
+  const hoje = useMemo(() => new Date(), []);
+  const [gcs, setGcs] = useState<Gc[]>([]);
+  const [mesSelecionado, setMesSelecionado] = useState(hoje.getMonth() + 1);
+  const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
+  const [valoresMeta, setValoresMeta] = useState<Record<string, string>>({});
+  const [loadingMetas, setLoadingMetas] = useState(true);
+  const [salvandoMeta, setSalvandoMeta] = useState<string | null>(null);
+  const [refreshMetasKey, setRefreshMetasKey] = useState(0);
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase
+      .from("gcs")
+      .select("*")
+      .order("nome")
+      .then(({ data }) => {
+        if (cancelado) return;
+        setGcs((data as Gc[]) ?? []);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase
+      .from("metas")
+      .select("*")
+      .eq("mes", mesSelecionado)
+      .eq("ano", anoSelecionado)
+      .then(({ data }) => {
+        if (cancelado) return;
+        const metas = (data as Meta[]) ?? [];
+        const mapa: Record<string, string> = {};
+        for (const m of metas) {
+          mapa[m.gc_id] = m.valor_meta.toString();
+        }
+        setValoresMeta(mapa);
+        setLoadingMetas(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [mesSelecionado, anoSelecionado, refreshMetasKey]);
+
+  async function salvarMeta(gcId: string) {
+    setSalvandoMeta(gcId);
+    const valor = Number(valoresMeta[gcId] || 0);
+    const { error } = await supabase
+      .from("metas")
+      .upsert(
+        { gc_id: gcId, mes: mesSelecionado, ano: anoSelecionado, valor_meta: valor },
+        { onConflict: "gc_id,mes,ano" }
+      );
+    setSalvandoMeta(null);
+    if (error) {
+      alert("Erro ao salvar meta: " + error.message);
+      return;
+    }
+    setRefreshMetasKey((k) => k + 1);
+  }
 
   useEffect(() => {
     let cancelado = false;
@@ -200,6 +268,101 @@ export default function ConfiguracoesPage() {
           Ao salvar, todas as oportunidades que já estão nessa etapa são atualizadas com a nova porcentagem
           imediatamente (a receita ponderada é recalculada sozinha).
         </p>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-extrabold text-navy">Metas</h2>
+            <p className="text-sm text-navy/60">
+              Meta de receita fechada da equipe e de cada GC, por mês. O Dashboard compara com o que já foi
+              realizado.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <select
+              className="input"
+              value={mesSelecionado}
+              onChange={(e) => setMesSelecionado(Number(e.target.value))}
+            >
+              {MESES_LABEL.map((label, i) => (
+                <option key={label} value={i + 1}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <input
+              className="input w-24"
+              type="number"
+              value={anoSelecionado}
+              onChange={(e) => setAnoSelecionado(Number(e.target.value))}
+            />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+          {loadingMetas ? (
+            <p className="p-6 text-sm text-navy/50">Carregando...</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                  <th className="px-4 py-3 font-semibold">Quem</th>
+                  <th className="px-4 py-3 font-semibold">Meta de receita (R$)</th>
+                  <th className="px-4 py-3 font-semibold"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-navy/5">
+                  <td className="px-4 py-3 font-semibold text-navy">Equipe (total)</td>
+                  <td className="px-4 py-3">
+                    <input
+                      className="input w-32"
+                      type="number"
+                      min={0}
+                      value={valoresMeta[META_EQUIPE_ID] ?? ""}
+                      onChange={(e) => setValoresMeta({ ...valoresMeta, [META_EQUIPE_ID]: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => salvarMeta(META_EQUIPE_ID)}
+                      disabled={salvandoMeta === META_EQUIPE_ID}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-blue border border-blue/30 hover:bg-blue/5 disabled:opacity-50"
+                    >
+                      <Save size={13} />
+                      {salvandoMeta === META_EQUIPE_ID ? "Salvando..." : "Salvar"}
+                    </button>
+                  </td>
+                </tr>
+                {gcs.map((gc) => (
+                  <tr key={gc.id} className="border-b border-navy/5 last:border-0">
+                    <td className="px-4 py-3 text-navy">{gc.nome}</td>
+                    <td className="px-4 py-3">
+                      <input
+                        className="input w-32"
+                        type="number"
+                        min={0}
+                        value={valoresMeta[gc.id] ?? ""}
+                        onChange={(e) => setValoresMeta({ ...valoresMeta, [gc.id]: e.target.value })}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => salvarMeta(gc.id)}
+                        disabled={salvandoMeta === gc.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-blue border border-blue/30 hover:bg-blue/5 disabled:opacity-50"
+                      >
+                        <Save size={13} />
+                        {salvandoMeta === gc.id ? "Salvando..." : "Salvar"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">

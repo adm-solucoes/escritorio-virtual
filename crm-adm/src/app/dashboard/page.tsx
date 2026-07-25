@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ETAPAS_FUNIL, type Empresa, type EtapaFunilConfig, type Oportunidade } from "@/lib/types";
+import { ETAPAS_FUNIL, META_EQUIPE_ID, type Empresa, type EtapaFunilConfig, type Gc, type Meta, type Oportunidade } from "@/lib/types";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
+import { realizadoNoMes } from "@/lib/metas";
 
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -11,25 +12,39 @@ export default function DashboardPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [etapas, setEtapas] = useState<EtapaFunilConfig[]>([]);
+  const [gcs, setGcs] = useState<Gc[]>([]);
+  const [metas, setMetas] = useState<Meta[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelado = false;
+    const agora = new Date();
     Promise.all([
       supabase.from("empresas").select("*"),
       supabase.from("oportunidades").select("*"),
       supabase.from("etapas_funil").select("*").order("ordem"),
-    ]).then(([{ data: empData }, { data: opsData }, { data: etapasData }]) => {
+      supabase.from("gcs").select("*").order("nome"),
+      supabase.from("metas").select("*").eq("mes", agora.getMonth() + 1).eq("ano", agora.getFullYear()),
+    ]).then(([{ data: empData }, { data: opsData }, { data: etapasData }, { data: gcsData }, { data: metasData }]) => {
       if (cancelado) return;
       setEmpresas(empData ?? []);
       setOportunidades(opsData ?? []);
       setEtapas((etapasData as EtapaFunilConfig[]) ?? []);
+      setGcs(gcsData ?? []);
+      setMetas((metasData as Meta[]) ?? []);
       setLoading(false);
     });
     return () => {
       cancelado = true;
     };
   }, []);
+
+  const metaEquipe = useMemo(() => metas.find((m) => m.gc_id === META_EQUIPE_ID), [metas]);
+  const mesAtual = useMemo(() => new Date(), []);
+  const realizadoEquipe = useMemo(
+    () => realizadoNoMes(oportunidades, mesAtual.getMonth() + 1, mesAtual.getFullYear()),
+    [oportunidades, mesAtual]
+  );
 
   const metricas = useMemo(() => {
     const ganhas = oportunidades.filter((o) => (o.probabilidade ?? 0) >= 1 && o.etapa_atual !== "Perdido");
@@ -114,6 +129,30 @@ export default function DashboardPage() {
         <Card label="Oportunidades perdidas" value={metricas.perdidas.toString()} />
       </div>
 
+      {(metaEquipe || gcs.length > 0) && (
+        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-navy mb-3">
+            Metas de {mesAtual.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+          </h2>
+          <div className="flex flex-col gap-3">
+            {metaEquipe && (
+              <BarraMeta label="Equipe (total)" realizado={realizadoEquipe} meta={metaEquipe.valor_meta} destaque />
+            )}
+            {gcs.map((gc) => {
+              const meta = metas.find((m) => m.gc_id === gc.id);
+              if (!meta) return null;
+              const realizado = realizadoNoMes(oportunidades, mesAtual.getMonth() + 1, mesAtual.getFullYear(), gc.id);
+              return <BarraMeta key={gc.id} label={gc.nome} realizado={realizado} meta={meta.valor_meta} />;
+            })}
+            {!metaEquipe && gcs.every((gc) => !metas.find((m) => m.gc_id === gc.id)) && (
+              <p className="text-xs text-navy/40">
+                Nenhuma meta definida para este mês. Configure em Configurações → Metas.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
           <h2 className="text-sm font-bold text-navy mb-3">Empresas por temperatura</h2>
@@ -192,6 +231,34 @@ function Card({ label, value, sub, destaque }: { label: string; value: string; s
       <p className={`text-xs font-semibold ${destaque ? "text-cream/60" : "text-navy/50"}`}>{label}</p>
       <p className={`text-lg font-extrabold mt-1 ${destaque ? "text-cream" : "text-navy"}`}>{value}</p>
       {sub && <p className={`text-[11px] mt-0.5 ${destaque ? "text-cream/50" : "text-navy/40"}`}>{sub}</p>}
+    </div>
+  );
+}
+
+function BarraMeta({
+  label,
+  realizado,
+  meta,
+  destaque,
+}: {
+  label: string;
+  realizado: number;
+  meta: number;
+  destaque?: boolean;
+}) {
+  const pct = meta ? Math.min(Math.round((realizado / meta) * 100), 100) : 0;
+  const bateu = meta > 0 && realizado >= meta;
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1">
+        <span className={`font-semibold ${destaque ? "text-navy" : "text-navy/70"}`}>{label}</span>
+        <span className="text-navy/60">
+          {moeda(realizado)} / {moeda(meta)} ({pct}%)
+        </span>
+      </div>
+      <div className="h-2.5 rounded-full bg-navy/5 overflow-hidden">
+        <div className={`h-full rounded-full ${bateu ? "bg-green-500" : "bg-red"}`} style={{ width: `${pct}%` }} />
+      </div>
     </div>
   );
 }
