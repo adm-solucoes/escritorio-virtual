@@ -170,6 +170,7 @@ export interface WhatsappConversa {
   id: string;
   empresa_id: string | null;
   telefone: string;
+  nome_perfil_whatsapp: string | null;
   ultima_mensagem_em: string | null;
   status: StatusConversaWhatsapp;
   nao_lidas: number;
@@ -178,7 +179,7 @@ export interface WhatsappConversa {
 }
 
 export type DirecaoMensagemWhatsapp = "enviada" | "recebida";
-export type TipoMensagemWhatsapp = "texto" | "template" | "midia";
+export type TipoMensagemWhatsapp = "texto" | "template" | "midia" | "imagem" | "documento" | "audio" | "nota";
 export type StatusEntregaWhatsapp = "enviando" | "enviado" | "entregue" | "lido" | "falhou" | null;
 
 export interface WhatsappMensagem {
@@ -187,8 +188,12 @@ export interface WhatsappMensagem {
   direcao: DirecaoMensagemWhatsapp;
   conteudo: string;
   tipo: TipoMensagemWhatsapp;
+  interna: boolean;
+  midia_url: string | null;
+  midia_nome: string | null;
   enviado_por_gc_id: string | null;
   whatsapp_message_id: string | null;
   status_entrega: StatusEntregaWhatsapp;
   criado_em: string;
+  gcs?: { nome: string };
 }

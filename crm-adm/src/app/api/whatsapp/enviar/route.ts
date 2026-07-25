@@ -1,13 +1,19 @@
 import { createAdminClient } from "@/lib/supabase-admin";
-import { enviarTemplate, enviarTexto } from "@/lib/whatsapp-api";
+import { enviarMidia, enviarTemplate, enviarTexto } from "@/lib/whatsapp-api";
 
 export const dynamic = "force-dynamic";
 
 const JANELA_24H_MS = 24 * 60 * 60 * 1000;
 
+const TIPO_MIDIA_PARA_GRAPH: Record<string, "image" | "document" | "audio"> = {
+  imagem: "image",
+  documento: "document",
+  audio: "audio",
+};
+
 export async function POST(request: Request) {
   try {
-    const { conversaId, texto, template, gcId } = await request.json();
+    const { conversaId, texto, template, midia, nota, gcId } = await request.json();
     if (!conversaId) {
       return Response.json({ error: "conversaId é obrigatório" }, { status: 400 });
     }
@@ -24,7 +30,23 @@ export async function POST(request: Request) {
       return Response.json({ error: "Conversa não encontrada" }, { status: 404 });
     }
 
-    // Janela de 24h da Meta: só dá pra mandar texto livre se o cliente
+    const gc = gcId ? (await admin.from("gcs").select("nome").eq("id", gcId).maybeSingle()).data : null;
+
+    // Nota interna: fica só no CRM, nunca é enviada pra Meta/cliente.
+    if (nota) {
+      await admin.from("whatsapp_mensagens").insert({
+        conversa_id: conversaId,
+        direcao: "enviada",
+        conteudo: nota,
+        tipo: "nota",
+        interna: true,
+        enviado_por_gc_id: gcId ?? null,
+      });
+      await admin.from("whatsapp_conversas").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", conversaId);
+      return Response.json({ ok: true });
+    }
+
+    // Janela de 24h da Meta: só dá pra mandar texto/mídia livre se o cliente
     // mandou mensagem nas últimas 24h. Fora disso, só template aprovado.
     const { data: ultimaRecebida } = await admin
       .from("whatsapp_mensagens")
@@ -46,9 +68,32 @@ export async function POST(request: Request) {
       );
     }
 
-    const resultado = template
-      ? await enviarTemplate(conversa.telefone, template.nome, template.idioma, template.parametros ?? [])
-      : await enviarTexto(conversa.telefone, texto);
+    const assinatura = gc?.nome ? `*${gc.nome} • ADM Soluções*` : null;
+
+    let resultado;
+    let conteudo: string;
+    let tipo: string;
+    let midiaUrl: string | null = null;
+    let midiaNome: string | null = null;
+
+    if (midia) {
+      const tipoGraph = TIPO_MIDIA_PARA_GRAPH[midia.tipo];
+      if (!tipoGraph) return Response.json({ error: "Tipo de mídia inválido" }, { status: 400 });
+      resultado = await enviarMidia(conversa.telefone, tipoGraph, midia.url, assinatura ?? undefined, midia.nome);
+      conteudo = midia.nome ?? `[${midia.tipo}]`;
+      tipo = midia.tipo;
+      midiaUrl = midia.url;
+      midiaNome = midia.nome ?? null;
+    } else if (template) {
+      resultado = await enviarTemplate(conversa.telefone, template.nome, template.idioma, template.parametros ?? []);
+      conteudo = `[template] ${template.nome}`;
+      tipo = "template";
+    } else {
+      const textoFinal = assinatura ? `${assinatura}\n${texto}` : texto;
+      resultado = await enviarTexto(conversa.telefone, textoFinal);
+      conteudo = texto;
+      tipo = "texto";
+    }
 
     if (!resultado.ok) {
       return Response.json({ error: resultado.error }, { status: 400 });
@@ -57,8 +102,10 @@ export async function POST(request: Request) {
     await admin.from("whatsapp_mensagens").insert({
       conversa_id: conversaId,
       direcao: "enviada",
-      conteudo: template ? `[template] ${template.nome}` : texto,
-      tipo: template ? "template" : "texto",
+      conteudo,
+      tipo,
+      midia_url: midiaUrl,
+      midia_nome: midiaNome,
       enviado_por_gc_id: gcId ?? null,
       whatsapp_message_id: resultado.messageId,
       status_entrega: "enviado",

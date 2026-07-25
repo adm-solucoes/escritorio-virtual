@@ -22,9 +22,20 @@ function normalizarTelefone(telefone: string) {
   return digitos.startsWith("55") ? digitos.slice(2) : digitos;
 }
 
-async function encontrarOuCriarConversa(admin: ReturnType<typeof createAdminClient>, telefoneE164: string) {
+async function encontrarOuCriarConversa(
+  admin: ReturnType<typeof createAdminClient>,
+  telefoneE164: string,
+  nomePerfilWhatsapp?: string
+) {
   const { data: existente } = await admin.from("whatsapp_conversas").select("*").eq("telefone", telefoneE164).maybeSingle();
-  if (existente) return existente;
+  if (existente) {
+    // atualiza o nome de perfil caso o cliente tenha mudado (ou ainda não tínhamos salvo)
+    if (nomePerfilWhatsapp && existente.nome_perfil_whatsapp !== nomePerfilWhatsapp) {
+      await admin.from("whatsapp_conversas").update({ nome_perfil_whatsapp: nomePerfilWhatsapp }).eq("id", existente.id);
+      existente.nome_perfil_whatsapp = nomePerfilWhatsapp;
+    }
+    return existente;
+  }
 
   // tenta casar com uma empresa cadastrada pelo telefone
   const { data: empresas } = await admin.from("empresas").select("id, telefone");
@@ -41,7 +52,7 @@ async function encontrarOuCriarConversa(admin: ReturnType<typeof createAdminClie
 
   const { data: nova } = await admin
     .from("whatsapp_conversas")
-    .insert({ telefone: telefoneE164, empresa_id: empresa?.id ?? null })
+    .insert({ telefone: telefoneE164, empresa_id: empresa?.id ?? null, nome_perfil_whatsapp: nomePerfilWhatsapp ?? null })
     .select("*")
     .single();
 
@@ -70,9 +81,11 @@ export async function POST(request: Request) {
 
     const mensagens: MensagemRecebida[] = changes.messages ?? [];
     const statuses: StatusRecebido[] = changes.statuses ?? [];
+    const contatos: { wa_id: string; profile?: { name?: string } }[] = changes.contacts ?? [];
 
     for (const msg of mensagens) {
-      const conversa = await encontrarOuCriarConversa(admin, msg.from);
+      const nomePerfil = contatos.find((c) => c.wa_id === msg.from)?.profile?.name;
+      const conversa = await encontrarOuCriarConversa(admin, msg.from, nomePerfil);
       if (!conversa) continue;
 
       const conteudo = msg.type === "text" ? (msg.text?.body ?? "") : `[${msg.type}]`;

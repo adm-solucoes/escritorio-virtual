@@ -74,6 +74,25 @@ export async function enviarTemplate(
   });
 }
 
+/** Envia uma imagem, documento ou áudio a partir de uma URL pública (ex: Supabase Storage). */
+export async function enviarMidia(
+  paraTelefone: string,
+  tipo: "image" | "document" | "audio",
+  link: string,
+  legenda?: string,
+  nomeArquivo?: string
+): Promise<RespostaEnvio> {
+  const corpo: Record<string, unknown> = { to: paraTelefone, type: tipo };
+  if (tipo === "document") {
+    corpo.document = { link, ...(legenda ? { caption: legenda } : {}), ...(nomeArquivo ? { filename: nomeArquivo } : {}) };
+  } else if (tipo === "image") {
+    corpo.image = { link, ...(legenda ? { caption: legenda } : {}) };
+  } else {
+    corpo.audio = { link };
+  }
+  return chamarGraphApi(corpo);
+}
+
 /** Marca uma mensagem recebida como lida (check azul do lado do cliente). */
 export async function marcarComoLida(messageId: string): Promise<RespostaEnvio> {
   try {
