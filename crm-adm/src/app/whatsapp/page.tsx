@@ -17,6 +17,7 @@ import {
   File as FileIcon,
   Trash2,
 } from "lucide-react";
+import Recorder from "opus-recorder";
 import { supabase } from "@/lib/supabase";
 import type { Gc, WhatsappConversa, WhatsappMensagem } from "@/lib/types";
 
@@ -56,8 +57,8 @@ function WhatsappPageConteudo() {
   const menuAnexoRef = useRef<HTMLDivElement>(null);
   const imagemInputRef = useRef<HTMLInputElement>(null);
   const documentoInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksGravacaoRef = useRef<Blob[]>([]);
+  const recorderRef = useRef<Recorder | null>(null);
+  const chunksGravacaoRef = useRef<Uint8Array[]>([]);
   const canceladaGravacaoRef = useRef(false);
   const intervaloGravacaoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -243,45 +244,33 @@ function WhatsappPageConteudo() {
     carregarConversas();
   }
 
-  function escolherFormatoGravacao() {
-    const candidatos = [
-      { mime: "audio/mp4", ext: "m4a" },
-      { mime: "audio/ogg;codecs=opus", ext: "ogg" },
-      { mime: "audio/webm;codecs=opus", ext: "webm" },
-      { mime: "audio/webm", ext: "webm" },
-    ];
-    return (
-      candidatos.find((c) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c.mime)) ?? {
-        mime: "",
-        ext: "webm",
-      }
-    );
-  }
-
   async function iniciarGravacao() {
     if (!conversaId) return;
     setErroEnvio(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const formato = escolherFormatoGravacao();
-      const recorder = formato.mime ? new MediaRecorder(stream, { mimeType: formato.mime }) : new MediaRecorder(stream);
+      const recorder = new Recorder({
+        encoderPath: "/encoderWorker.min.js",
+        numberOfChannels: 1,
+        encoderSampleRate: 24000,
+        encoderBitRate: 24000,
+      });
       chunksGravacaoRef.current = [];
       canceladaGravacaoRef.current = false;
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksGravacaoRef.current.push(e.data);
+      recorder.ondataavailable = (typedArray: Uint8Array) => {
+        chunksGravacaoRef.current.push(typedArray);
       };
       recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
         if (!canceladaGravacaoRef.current && chunksGravacaoRef.current.length > 0) {
-          const blob = new Blob(chunksGravacaoRef.current, { type: formato.mime || "audio/webm" });
-          const arquivo = new File([blob], `audio-${Date.now()}.${formato.ext}`, { type: blob.type });
+          const tipoOgg = "audio/ogg; codecs=opus";
+          const blob = new Blob(chunksGravacaoRef.current as BlobPart[], { type: tipoOgg });
+          const arquivo = new File([blob], `audio-${Date.now()}.ogg`, { type: tipoOgg });
           enviarArquivo("audio", arquivo);
         }
       };
 
-      recorder.start();
-      mediaRecorderRef.current = recorder;
+      await recorder.start();
+      recorderRef.current = recorder;
       setGravando(true);
       setDuracaoGravacao(0);
       intervaloGravacaoRef.current = setInterval(() => setDuracaoGravacao((d) => d + 1), 1000);
@@ -293,14 +282,14 @@ function WhatsappPageConteudo() {
   function pararESalvarGravacao() {
     if (intervaloGravacaoRef.current) clearInterval(intervaloGravacaoRef.current);
     setGravando(false);
-    mediaRecorderRef.current?.stop();
+    recorderRef.current?.stop();
   }
 
   function cancelarGravacao() {
     canceladaGravacaoRef.current = true;
     if (intervaloGravacaoRef.current) clearInterval(intervaloGravacaoRef.current);
     setGravando(false);
-    mediaRecorderRef.current?.stop();
+    recorderRef.current?.stop();
   }
 
   function formatarDuracao(segundos: number) {
