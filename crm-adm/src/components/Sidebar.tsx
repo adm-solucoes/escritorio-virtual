@@ -86,8 +86,11 @@ export default function Sidebar() {
 
       <aside
         onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
-        className={`fixed md:sticky top-0 left-0 h-screen bg-navy flex flex-col z-50 transition-[width,transform] duration-200 ease-in-out overflow-hidden ${
+        onMouseLeave={() => {
+          setExpanded(false);
+          setProfileOpen(false);
+        }}
+        className={`fixed md:sticky top-0 left-0 h-screen bg-navy flex flex-col z-50 transition-[width,transform] duration-200 ease-in-out ${
           mobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0"
         } ${expanded ? "md:w-64" : "md:w-16"} ${!mobileOpen ? "w-64" : ""}`}
       >

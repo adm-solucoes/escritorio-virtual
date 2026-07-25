@@ -22,7 +22,11 @@ export async function updateSession(request: NextRequest) {
 
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
 
-  if (!user && !isLoginPage) {
+  // LOGIN DESATIVADO TEMPORARIAMENTE — reative removendo este "if (false"
+  // e voltando o "if (!user..." original abaixo.
+  const loginObrigatorio = false;
+
+  if (loginObrigatorio && !user && !isLoginPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
