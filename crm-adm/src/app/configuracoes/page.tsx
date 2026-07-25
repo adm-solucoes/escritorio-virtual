@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExternalLink, Save, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { META_EQUIPE_ID, type ConfiguracaoRelatorio, type EtapaFunilConfig, type Gc, type Meta } from "@/lib/types";
+import TrocarSenha from "@/components/TrocarSenha";
 
 const MESES_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -230,7 +231,15 @@ export default function ConfiguracoesPage() {
     <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-8">
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-navy">Membros</h1>
+          <h1 className="text-xl font-extrabold text-navy">Minha conta</h1>
+          <p className="text-sm text-navy/60">Troque sua senha de acesso ao sistema.</p>
+        </div>
+        <TrocarSenha />
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-extrabold text-navy">Membros</h2>
           <p className="text-sm text-navy/60">
             Convide novos gerentes de conta (GCs) — eles recebem um e-mail para criar a própria senha e passam a
             aparecer como opção de responsável em toda a plataforma.

@@ -12,18 +12,24 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    const redirectTo = `${siteUrl}/auth/confirm?next=/redefinir-senha`;
 
     // Tenta criar um convite novo; se o e-mail já existir no Auth (reenvio),
     // gera um link de recuperação de senha em vez disso — serve pro mesmo
     // fim (a pessoa define/redefine a senha) e funciona pra usuários já
     // existentes, mesmo que ainda não tenham confirmado o convite anterior.
-    let actionLink: string | null = null;
+    //
+    // Importante: montamos o link apontando pro NOSSO /auth/confirm com
+    // token_hash + type, em vez de usar o "action_link" pronto do Supabase
+    // (que aponta pro endpoint hospedado deles e devolve a sessão via
+    // fragmento de URL "#access_token=...", que o nosso servidor não
+    // consegue ler — por isso o link antigo caía direto na tela de login).
+    let hashedToken: string | undefined;
+    let verificationType: string | undefined;
 
     const convite = await admin.auth.admin.generateLink({
       type: "invite",
       email,
-      options: { redirectTo, data: { nome } },
+      options: { data: { nome } },
     });
 
     if (convite.error) {
@@ -31,18 +37,22 @@ export async function POST(request: Request) {
       if (!jaExiste) {
         return Response.json({ error: convite.error.message }, { status: 400 });
       }
-      const recuperacao = await admin.auth.admin.generateLink({
-        type: "recovery",
-        email,
-        options: { redirectTo },
-      });
+      const recuperacao = await admin.auth.admin.generateLink({ type: "recovery", email });
       if (recuperacao.error) {
         return Response.json({ error: recuperacao.error.message }, { status: 400 });
       }
-      actionLink = recuperacao.data.properties.action_link;
+      hashedToken = recuperacao.data.properties.hashed_token;
+      verificationType = recuperacao.data.properties.verification_type;
     } else {
-      actionLink = convite.data.properties.action_link;
+      hashedToken = convite.data.properties.hashed_token;
+      verificationType = convite.data.properties.verification_type;
     }
+
+    if (!hashedToken || !verificationType) {
+      return Response.json({ error: "Não foi possível gerar o link de acesso." }, { status: 500 });
+    }
+
+    const actionLink = `${siteUrl}/auth/confirm?token_hash=${hashedToken}&type=${verificationType}&next=/redefinir-senha`;
 
     const { error: erroGc } = await admin.from("gcs").upsert({ nome, email, status: "Ativo" }, { onConflict: "email" });
     if (erroGc) {
@@ -50,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey && actionLink) {
+    if (resendApiKey) {
       const resend = new Resend(resendApiKey);
       await resend.emails.send({
         from: "ADM Soluções <onboarding@resend.dev>",

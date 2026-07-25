@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { REGRAS_SENHA_TEXTO, validarSenha } from "@/lib/senha";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function RedefinirSenhaPage() {
   const router = useRouter();
@@ -13,8 +15,9 @@ export default function RedefinirSenhaPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (senha.length < 6) {
-      setError("A senha precisa ter pelo menos 6 caracteres.");
+    const erroRegra = validarSenha(senha);
+    if (erroRegra) {
+      setError(erroRegra);
       return;
     }
     if (senha !== confirmar) {
@@ -45,12 +48,13 @@ export default function RedefinirSenhaPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-navy/60 font-medium">Nova senha</span>
-            <input className="input" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required autoFocus />
+            <PasswordInput value={senha} onChange={setSenha} required autoFocus autoComplete="new-password" />
+            <span className="text-xs text-navy/40">{REGRAS_SENHA_TEXTO}</span>
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-navy/60 font-medium">Confirmar senha</span>
-            <input className="input" type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} required />
+            <PasswordInput value={confirmar} onChange={setConfirmar} required autoComplete="new-password" />
           </label>
 
           {error && <p className="text-sm text-red">{error}</p>}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,7 +60,7 @@ export default function LoginPage() {
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-navy/60 font-medium">Senha</span>
-            <input className="input" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+            <PasswordInput value={senha} onChange={setSenha} required autoComplete="current-password" />
           </label>
 
           {error && <p className="text-sm text-red">{error}</p>}
