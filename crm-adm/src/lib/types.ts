@@ -164,6 +164,16 @@ export interface Meta {
   criado_em: string;
 }
 
+export interface WhatsappNumero {
+  id: string;
+  phone_number_id: string;
+  numero: string;
+  nome_exibicao: string | null;
+  status: "pendente" | "verificado";
+  ativo: boolean;
+  criado_em: string;
+}
+
 export type StatusConversaWhatsapp = "Aberta" | "Arquivada";
 
 export interface WhatsappConversa {

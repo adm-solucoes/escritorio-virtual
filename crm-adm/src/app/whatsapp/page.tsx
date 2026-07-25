@@ -15,6 +15,7 @@ import {
   StickyNote,
   X,
   File as FileIcon,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Gc, WhatsappConversa, WhatsappMensagem } from "@/lib/types";
@@ -49,10 +50,16 @@ function WhatsappPageConteudo() {
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [notaAberta, setNotaAberta] = useState(false);
   const [notaTexto, setNotaTexto] = useState("");
+  const [gravando, setGravando] = useState(false);
+  const [duracaoGravacao, setDuracaoGravacao] = useState(0);
   const fimDasMensagensRef = useRef<HTMLDivElement>(null);
   const menuAnexoRef = useRef<HTMLDivElement>(null);
   const imagemInputRef = useRef<HTMLInputElement>(null);
   const documentoInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksGravacaoRef = useRef<Blob[]>([]);
+  const canceladaGravacaoRef = useRef(false);
+  const intervaloGravacaoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -236,6 +243,72 @@ function WhatsappPageConteudo() {
     carregarConversas();
   }
 
+  function escolherFormatoGravacao() {
+    const candidatos = [
+      { mime: "audio/mp4", ext: "m4a" },
+      { mime: "audio/ogg;codecs=opus", ext: "ogg" },
+      { mime: "audio/webm;codecs=opus", ext: "webm" },
+      { mime: "audio/webm", ext: "webm" },
+    ];
+    return (
+      candidatos.find((c) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c.mime)) ?? {
+        mime: "",
+        ext: "webm",
+      }
+    );
+  }
+
+  async function iniciarGravacao() {
+    if (!conversaId) return;
+    setErroEnvio(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const formato = escolherFormatoGravacao();
+      const recorder = formato.mime ? new MediaRecorder(stream, { mimeType: formato.mime }) : new MediaRecorder(stream);
+      chunksGravacaoRef.current = [];
+      canceladaGravacaoRef.current = false;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksGravacaoRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (!canceladaGravacaoRef.current && chunksGravacaoRef.current.length > 0) {
+          const blob = new Blob(chunksGravacaoRef.current, { type: formato.mime || "audio/webm" });
+          const arquivo = new File([blob], `audio-${Date.now()}.${formato.ext}`, { type: blob.type });
+          enviarArquivo("audio", arquivo);
+        }
+      };
+
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setGravando(true);
+      setDuracaoGravacao(0);
+      intervaloGravacaoRef.current = setInterval(() => setDuracaoGravacao((d) => d + 1), 1000);
+    } catch {
+      setErroEnvio("Não foi possível acessar o microfone. Verifique a permissão do navegador.");
+    }
+  }
+
+  function pararESalvarGravacao() {
+    if (intervaloGravacaoRef.current) clearInterval(intervaloGravacaoRef.current);
+    setGravando(false);
+    mediaRecorderRef.current?.stop();
+  }
+
+  function cancelarGravacao() {
+    canceladaGravacaoRef.current = true;
+    if (intervaloGravacaoRef.current) clearInterval(intervaloGravacaoRef.current);
+    setGravando(false);
+    mediaRecorderRef.current?.stop();
+  }
+
+  function formatarDuracao(segundos: number) {
+    const m = Math.floor(segundos / 60).toString().padStart(2, "0");
+    const s = (segundos % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
   async function enviarNotaInterna() {
     if (!conversaId || !notaTexto.trim()) return;
     const res = await fetch("/api/whatsapp/enviar", {
@@ -377,8 +450,8 @@ function WhatsappPageConteudo() {
                   <button
                     type="button"
                     onClick={() => setMenuAnexoAberto((v) => !v)}
-                    disabled={enviando}
-                    className="p-2.5 rounded-md hover:bg-navy/5 text-navy/60"
+                    disabled={enviando || gravando}
+                    className="p-2.5 rounded-md hover:bg-navy/5 text-navy/60 disabled:opacity-40"
                     title="Anexar"
                   >
                     <Paperclip size={18} />
@@ -453,16 +526,51 @@ function WhatsappPageConteudo() {
                   />
                 </div>
 
-                <input
-                  className="input flex-1"
-                  placeholder={dentroDaJanela ? "Digite uma mensagem..." : "Envie um template pra reabrir a conversa"}
-                  value={texto}
-                  onChange={(e) => setTexto(e.target.value)}
-                  disabled={!dentroDaJanela}
-                />
-                <button type="submit" disabled={enviando} className="btn-primary">
-                  <Send size={15} /> {enviando ? "Enviando..." : "Enviar"}
-                </button>
+                {gravando ? (
+                  <div className="flex-1 flex items-center gap-3 bg-red/5 border border-red/20 rounded-md px-3 py-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red animate-pulse shrink-0" />
+                    <span className="text-sm font-semibold text-navy tabular-nums">{formatarDuracao(duracaoGravacao)}</span>
+                    <span className="text-xs text-navy/50 flex-1">Gravando áudio...</span>
+                  </div>
+                ) : (
+                  <input
+                    className="input flex-1"
+                    placeholder={dentroDaJanela ? "Digite uma mensagem..." : "Envie um template pra reabrir a conversa"}
+                    value={texto}
+                    onChange={(e) => setTexto(e.target.value)}
+                    disabled={!dentroDaJanela}
+                  />
+                )}
+
+                {gravando ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={cancelarGravacao}
+                      className="p-2.5 rounded-md hover:bg-red/5 text-red"
+                      title="Cancelar gravação"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                    <button type="button" onClick={pararESalvarGravacao} className="btn-primary">
+                      <Send size={15} /> Enviar áudio
+                    </button>
+                  </>
+                ) : dentroDaJanela && !texto.trim() ? (
+                  <button
+                    type="button"
+                    onClick={iniciarGravacao}
+                    disabled={enviando}
+                    className="p-2.5 rounded-md hover:bg-navy/5 text-navy/60"
+                    title="Gravar áudio"
+                  >
+                    <Mic size={18} />
+                  </button>
+                ) : (
+                  <button type="submit" disabled={enviando} className="btn-primary">
+                    <Send size={15} /> {enviando ? "Enviando..." : "Enviar"}
+                  </button>
+                )}
               </div>
 
               {erroEnvio && <p className="text-xs text-red">{erroEnvio}</p>}

@@ -2,9 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Save, UserPlus } from "lucide-react";
+import { ExternalLink, MessageCircle, Save, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { META_EQUIPE_ID, type ConfiguracaoRelatorio, type EtapaFunilConfig, type Gc, type Meta } from "@/lib/types";
+import {
+  META_EQUIPE_ID,
+  type ConfiguracaoRelatorio,
+  type EtapaFunilConfig,
+  type Gc,
+  type Meta,
+  type WhatsappNumero,
+} from "@/lib/types";
 import TrocarSenha from "@/components/TrocarSenha";
 
 const MESES_LABEL = [
@@ -58,6 +65,19 @@ export default function ConfiguracoesPage() {
   const [convidando, setConvidando] = useState(false);
   const [mensagemConvite, setMensagemConvite] = useState<string | null>(null);
 
+  const [numeros, setNumeros] = useState<WhatsappNumero[]>([]);
+  const [loadingNumeros, setLoadingNumeros] = useState(true);
+  const [refreshNumerosKey, setRefreshNumerosKey] = useState(0);
+  const [modalNumeroAberto, setModalNumeroAberto] = useState(false);
+  const [etapaModalNumero, setEtapaModalNumero] = useState<"dados" | "codigo">("dados");
+  const [ccNovo, setCcNovo] = useState("55");
+  const [numeroNovo, setNumeroNovo] = useState("");
+  const [nomeNovo, setNomeNovo] = useState("");
+  const [phoneNumberIdPendente, setPhoneNumberIdPendente] = useState<string | null>(null);
+  const [codigoVerificacao, setCodigoVerificacao] = useState("");
+  const [enviandoNumero, setEnviandoNumero] = useState(false);
+  const [erroNumero, setErroNumero] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelado = false;
     supabase
@@ -95,6 +115,89 @@ export default function ConfiguracoesPage() {
     } finally {
       setConvidando(false);
     }
+  }
+
+  useEffect(() => {
+    let cancelado = false;
+    fetch("/api/whatsapp/numeros")
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelado) return;
+        setNumeros(d.numeros ?? []);
+        setLoadingNumeros(false);
+      })
+      .catch(() => setLoadingNumeros(false));
+    return () => {
+      cancelado = true;
+    };
+  }, [refreshNumerosKey]);
+
+  function fecharModalNumero() {
+    setModalNumeroAberto(false);
+    setEtapaModalNumero("dados");
+    setCcNovo("55");
+    setNumeroNovo("");
+    setNomeNovo("");
+    setPhoneNumberIdPendente(null);
+    setCodigoVerificacao("");
+    setErroNumero(null);
+  }
+
+  async function solicitarNovoNumero() {
+    if (!ccNovo.trim() || !numeroNovo.trim() || !nomeNovo.trim()) return;
+    setEnviandoNumero(true);
+    setErroNumero(null);
+    try {
+      const res = await fetch("/api/whatsapp/numeros", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cc: ccNovo.trim(), numero: numeroNovo.trim(), nomeExibicao: nomeNovo.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erro ao adicionar número");
+      setPhoneNumberIdPendente(data.phoneNumberId);
+      setEtapaModalNumero("codigo");
+      setRefreshNumerosKey((k) => k + 1);
+    } catch (e) {
+      setErroNumero(e instanceof Error ? e.message : "Erro desconhecido");
+    } finally {
+      setEnviandoNumero(false);
+    }
+  }
+
+  async function confirmarCodigoNumero() {
+    if (!phoneNumberIdPendente || !codigoVerificacao.trim()) return;
+    setEnviandoNumero(true);
+    setErroNumero(null);
+    try {
+      const res = await fetch("/api/whatsapp/numeros/verificar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumberId: phoneNumberIdPendente, codigo: codigoVerificacao.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Código inválido");
+      fecharModalNumero();
+      setRefreshNumerosKey((k) => k + 1);
+    } catch (e) {
+      setErroNumero(e instanceof Error ? e.message : "Erro desconhecido");
+    } finally {
+      setEnviandoNumero(false);
+    }
+  }
+
+  async function ativarNumero(numero: WhatsappNumero) {
+    const res = await fetch("/api/whatsapp/numeros/ativar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumberId: numero.phone_number_id }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert("Erro ao ativar: " + (data.error ?? "desconhecido"));
+      return;
+    }
+    setRefreshNumerosKey((k) => k + 1);
   }
 
   async function alternarStatus(gc: Gc) {
@@ -298,6 +401,138 @@ export default function ConfiguracoesPage() {
             {mensagemConvite && <span className="text-xs text-navy/60 sm:ml-2">{mensagemConvite}</span>}
           </form>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-extrabold text-navy">Números do WhatsApp</h2>
+            <p className="text-sm text-navy/60">
+              Números conectados à API do WhatsApp Business. Só um fica ativo por vez — é o que o CRM usa pra
+              enviar as mensagens.
+            </p>
+          </div>
+          <button onClick={() => setModalNumeroAberto(true)} className="btn-primary whitespace-nowrap">
+            <MessageCircle size={15} /> Adicionar número
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+          {loadingNumeros ? (
+            <p className="p-6 text-sm text-navy/50">Carregando...</p>
+          ) : numeros.length === 0 ? (
+            <p className="p-6 text-sm text-navy/50">Nenhum número cadastrado ainda.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                  <th className="px-4 py-3 font-semibold">Número</th>
+                  <th className="px-4 py-3 font-semibold">Nome</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {numeros.map((n) => (
+                  <tr key={n.id} className="border-b border-navy/5 last:border-0">
+                    <td className="px-4 py-3 font-semibold text-navy">+{n.numero}</td>
+                    <td className="px-4 py-3 text-navy/70">{n.nome_exibicao}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          n.ativo
+                            ? "bg-green-100 text-green-700"
+                            : n.status === "verificado"
+                            ? "bg-blue/10 text-blue"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {n.ativo ? "Ativo" : n.status === "verificado" ? "Verificado" : "Aguardando código"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {!n.ativo && n.status === "verificado" && (
+                        <button onClick={() => ativarNumero(n)} className="text-xs font-semibold text-blue hover:underline">
+                          Tornar ativo
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {modalNumeroAberto && (
+          <div className="fixed inset-0 z-50 bg-navy/40 flex items-center justify-center p-4" onClick={fecharModalNumero}>
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-navy">Adicionar número do WhatsApp</h2>
+                <button onClick={fecharModalNumero} className="text-navy/40 hover:text-navy">
+                  <X size={18} />
+                </button>
+              </div>
+
+              {etapaModalNumero === "dados" ? (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-navy/50">
+                    O número não pode estar em uso num WhatsApp comum/Business no celular ao mesmo tempo — ele fica
+                    exclusivo da API.
+                  </p>
+                  <div className="flex gap-2">
+                    <label className="flex flex-col gap-1 text-sm w-20">
+                      <span className="text-navy/60 font-medium">DDI</span>
+                      <input className="input" value={ccNovo} onChange={(e) => setCcNovo(e.target.value)} />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm flex-1">
+                      <span className="text-navy/60 font-medium">Número (DDD + número)</span>
+                      <input
+                        className="input"
+                        placeholder="85999998888"
+                        value={numeroNovo}
+                        onChange={(e) => setNumeroNovo(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-navy/60 font-medium">Nome de exibição</span>
+                    <input
+                      className="input"
+                      placeholder="Ex: ADM Soluções - Comercial"
+                      value={nomeNovo}
+                      onChange={(e) => setNomeNovo(e.target.value)}
+                    />
+                  </label>
+                  {erroNumero && <p className="text-xs text-red">{erroNumero}</p>}
+                  <button onClick={solicitarNovoNumero} disabled={enviandoNumero} className="btn-primary w-fit">
+                    {enviandoNumero ? "Enviando..." : "Enviar código por SMS"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-navy/50">
+                    Chegou um código por SMS no número {ccNovo}
+                    {numeroNovo}. Digite ele abaixo pra confirmar.
+                  </p>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-navy/60 font-medium">Código de verificação</span>
+                    <input
+                      className="input"
+                      value={codigoVerificacao}
+                      onChange={(e) => setCodigoVerificacao(e.target.value)}
+                      autoFocus
+                    />
+                  </label>
+                  {erroNumero && <p className="text-xs text-red">{erroNumero}</p>}
+                  <button onClick={confirmarCodigoNumero} disabled={enviandoNumero} className="btn-primary w-fit">
+                    {enviandoNumero ? "Confirmando..." : "Confirmar código"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">

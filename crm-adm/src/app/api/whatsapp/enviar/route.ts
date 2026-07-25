@@ -31,6 +31,9 @@ export async function POST(request: Request) {
     }
 
     const gc = gcId ? (await admin.from("gcs").select("nome").eq("id", gcId).maybeSingle()).data : null;
+    const numeroAtivo = (await admin.from("whatsapp_numeros").select("phone_number_id").eq("ativo", true).maybeSingle())
+      .data;
+    const phoneNumberIdOverride = numeroAtivo?.phone_number_id;
 
     // Nota interna: fica só no CRM, nunca é enviada pra Meta/cliente.
     if (nota) {
@@ -68,7 +71,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const assinatura = gc?.nome ? `*${gc.nome} • ADM Soluções*` : null;
+    const primeiroNome = gc?.nome ? gc.nome.trim().split(/\s+/)[0] : null;
+    const assinatura = primeiroNome ? `*${primeiroNome}:*` : null;
 
     let resultado;
     let conteudo: string;
@@ -79,18 +83,45 @@ export async function POST(request: Request) {
     if (midia) {
       const tipoGraph = TIPO_MIDIA_PARA_GRAPH[midia.tipo];
       if (!tipoGraph) return Response.json({ error: "Tipo de mídia inválido" }, { status: 400 });
-      resultado = await enviarMidia(conversa.telefone, tipoGraph, midia.url, assinatura ?? undefined, midia.nome);
-      conteudo = midia.nome ?? `[${midia.tipo}]`;
+      resultado = await enviarMidia(
+        conversa.telefone,
+        tipoGraph,
+        midia.url,
+        assinatura ?? undefined,
+        midia.nome,
+        phoneNumberIdOverride
+      );
       tipo = midia.tipo;
+      // Se o áudio gravado no navegador não for um formato aceito pela Meta (ela só aceita
+      // aac/amr/mp3/mp4/ogg-opus, e o Chrome grava em webm), manda como documento pra não
+      // perder a mensagem — o cliente ainda consegue abrir e ouvir o arquivo.
+      if (!resultado.ok && tipoGraph === "audio") {
+        resultado = await enviarMidia(
+          conversa.telefone,
+          "document",
+          midia.url,
+          assinatura ?? undefined,
+          midia.nome,
+          phoneNumberIdOverride
+        );
+        tipo = "documento";
+      }
+      conteudo = midia.nome ?? `[${midia.tipo}]`;
       midiaUrl = midia.url;
       midiaNome = midia.nome ?? null;
     } else if (template) {
-      resultado = await enviarTemplate(conversa.telefone, template.nome, template.idioma, template.parametros ?? []);
+      resultado = await enviarTemplate(
+        conversa.telefone,
+        template.nome,
+        template.idioma,
+        template.parametros ?? [],
+        phoneNumberIdOverride
+      );
       conteudo = `[template] ${template.nome}`;
       tipo = "template";
     } else {
       const textoFinal = assinatura ? `${assinatura}\n${texto}` : texto;
-      resultado = await enviarTexto(conversa.telefone, textoFinal);
+      resultado = await enviarTexto(conversa.telefone, textoFinal, phoneNumberIdOverride);
       conteudo = texto;
       tipo = "texto";
     }
