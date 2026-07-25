@@ -17,7 +17,8 @@ export default function Nav() {
   const router = useRouter();
   const configAtiva = pathname?.startsWith("/configuracoes");
 
-  if (pathname?.startsWith("/login")) {
+  const paginasSemMenu = ["/login", "/redefinir-senha", "/auth"];
+  if (paginasSemMenu.some((p) => pathname?.startsWith(p))) {
     return null;
   }
 
