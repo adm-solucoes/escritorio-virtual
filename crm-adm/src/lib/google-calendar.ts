@@ -125,3 +125,48 @@ export async function criarEventoReuniao(opcoes: CriarEventoOpcoes): Promise<Res
     return { ok: false, error: e instanceof Error ? e.message : "Erro ao criar evento no Google Calendar" };
   }
 }
+
+export interface EventoAgenda {
+  id: string;
+  titulo: string;
+  inicio: string;
+  fim: string;
+  linkChamada: string | null;
+  linkEvento: string | null;
+}
+
+/** Lista os eventos dos próximos `dias` dias na agenda do GC (usado na agenda compartilhada). */
+export async function listarEventosPeriodo(gcId: string, dias = 7): Promise<{ ok: boolean; eventos?: EventoAgenda[]; error?: string }> {
+  const autenticado = await clientAutenticadoParaGc(gcId);
+  if ("erro" in autenticado) return { ok: false, error: autenticado.erro };
+
+  try {
+    const calendar = google.calendar({ auth: autenticado.client, version: "v3" });
+    const agora = new Date();
+    const fimPeriodo = new Date(agora.getTime() + dias * 86_400_000);
+
+    const { data } = await calendar.events.list({
+      calendarId: "primary",
+      timeMin: agora.toISOString(),
+      timeMax: fimPeriodo.toISOString(),
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: 50,
+    });
+
+    const eventos: EventoAgenda[] = (data.items ?? [])
+      .filter((e) => e.start?.dateTime)
+      .map((e) => ({
+        id: e.id ?? "",
+        titulo: e.summary ?? "(sem título)",
+        inicio: e.start!.dateTime!,
+        fim: e.end?.dateTime ?? e.start!.dateTime!,
+        linkChamada: e.hangoutLink ?? e.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video")?.uri ?? null,
+        linkEvento: e.htmlLink ?? null,
+      }));
+
+    return { ok: true, eventos };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro ao listar eventos do Google Calendar" };
+  }
+}

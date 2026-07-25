@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Settings, LogOut, Menu, X, User, Workflow } from "lucide-react";
+import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Settings, LogOut, Menu, X, User, Workflow, CalendarDays } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 const links = [
@@ -13,6 +13,7 @@ const links = [
   { href: "/atividades", label: "Atividades", icon: ListChecks },
   { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { href: "/automacoes", label: "Automações", icon: Workflow },
+  { href: "/calendario", label: "Agenda da equipe", icon: CalendarDays },
 ];
 
 export default function Sidebar() {

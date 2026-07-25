@@ -77,6 +77,7 @@ function ConfiguracoesConteudo() {
 
   const [gcAtual, setGcAtual] = useState<Gc | null>(null);
   const [googleConectado, setGoogleConectado] = useState<string | null>(null);
+  const [compartilharAgenda, setCompartilharAgenda] = useState(false);
   const [carregandoGoogle, setCarregandoGoogle] = useState(true);
   const [refreshGoogleKey, setRefreshGoogleKey] = useState(0);
   const googleStatus = searchParams.get("google");
@@ -149,11 +150,12 @@ function ConfiguracoesConteudo() {
       }
       const { data: integracao } = await supabase
         .from("integracoes_google")
-        .select("email_google")
+        .select("email_google, compartilhar_agenda")
         .eq("gc_id", gc.id)
         .maybeSingle();
       if (cancelado) return;
       setGoogleConectado(integracao?.email_google ?? null);
+      setCompartilharAgenda(integracao?.compartilhar_agenda ?? false);
       setCarregandoGoogle(false);
     });
     return () => {
@@ -166,6 +168,12 @@ function ConfiguracoesConteudo() {
     if (!confirm("Desconectar sua conta Google? As automações de agenda vão parar de funcionar pra você até reconectar.")) return;
     await supabase.from("integracoes_google").delete().eq("gc_id", gcAtual.id);
     setRefreshGoogleKey((k) => k + 1);
+  }
+
+  async function alternarCompartilharAgenda(valor: boolean) {
+    if (!gcAtual) return;
+    setCompartilharAgenda(valor);
+    await supabase.from("integracoes_google").update({ compartilhar_agenda: valor }).eq("gc_id", gcAtual.id);
   }
 
   useEffect(() => {
@@ -400,7 +408,7 @@ function ConfiguracoesConteudo() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4 flex items-center justify-between gap-3">
+        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4 flex flex-col gap-3">
           {googleStatus === "erro" && (
             <p className="text-xs text-red">Não deu pra conectar sua conta Google. Tente de novo.</p>
           )}
@@ -424,21 +432,38 @@ function ConfiguracoesConteudo() {
             <p className="text-sm text-navy/50">Não encontrei seu usuário de GC pra conectar.</p>
           ) : googleConectado ? (
             <>
-              <div className="flex items-center gap-2 text-sm text-navy/70">
-                <CalendarCheck size={16} className="text-green-600" />
-                Conectado como <strong>{googleConectado}</strong>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm text-navy/70">
+                  <CalendarCheck size={16} className="text-green-600" />
+                  Conectado como <strong>{googleConectado}</strong>
+                </div>
+                <button onClick={desconectarGoogle} className="text-xs font-semibold text-red hover:underline">
+                  Desconectar
+                </button>
               </div>
-              <button onClick={desconectarGoogle} className="text-xs font-semibold text-red hover:underline">
-                Desconectar
-              </button>
+              <label className="flex items-center gap-2 text-sm pt-2 border-t border-navy/5">
+                <input
+                  type="checkbox"
+                  checked={compartilharAgenda}
+                  onChange={(e) => alternarCompartilharAgenda(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-navy/70">
+                  Compartilhar minha agenda com a equipe (aparece em{" "}
+                  <Link href="/calendario" className="underline">
+                    Agenda da equipe
+                  </Link>
+                  )
+                </span>
+              </label>
             </>
           ) : (
-            <>
+            <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-navy/60">Nenhuma conta Google conectada ainda.</p>
               <a href={`/api/google/conectar?gcId=${gcAtual.id}`} className="btn-primary whitespace-nowrap">
                 <CalendarCheck size={15} /> Conectar Google
               </a>
-            </>
+            </div>
           )}
         </div>
       </div>

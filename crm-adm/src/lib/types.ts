@@ -229,6 +229,7 @@ export interface IntegracaoGoogle {
   access_token: string;
   refresh_token: string;
   expira_em: string;
+  compartilhar_agenda: boolean;
   criado_em: string;
   atualizado_em: string;
 }
