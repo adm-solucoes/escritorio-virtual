@@ -5,15 +5,9 @@ import { useRouter } from "next/navigation";
 import { ArrowUpDown, MessageCircle, MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, Oportunidade } from "@/lib/types";
-import { linkWhatsapp } from "@/lib/whatsapp";
+import { linkWhatsapp, normalizarTelefoneE164 } from "@/lib/whatsapp";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
 import EmpresaModal from "@/components/EmpresaModal";
-
-function normalizarParaE164(telefone: string) {
-  const cleaned = telefone.split("/")[0].replace(/\D/g, "");
-  if (!cleaned || cleaned.length < 8) return null;
-  return cleaned.startsWith("55") ? cleaned : `55${cleaned}`;
-}
 
 export default function EmpresasPage() {
   const router = useRouter();
@@ -96,7 +90,7 @@ export default function EmpresasPage() {
   }
 
   async function abrirConversaWhatsapp(empresa: Empresa) {
-    const telefoneE164 = normalizarParaE164(empresa.telefone ?? "");
+    const telefoneE164 = normalizarTelefoneE164(empresa.telefone);
     if (!telefoneE164) {
       alert("Essa empresa não tem um telefone válido cadastrado.");
       return;

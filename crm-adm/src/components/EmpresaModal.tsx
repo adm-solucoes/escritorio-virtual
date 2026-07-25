@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, Icp, Temperatura } from "@/lib/types";
+import { normalizarTelefoneE164 } from "@/lib/whatsapp";
 
 interface Props {
   empresa: Empresa | null;
@@ -83,9 +84,9 @@ export default function EmpresaModal({ empresa, gcs, onClose, onSaved }: Props) 
       gc_responsavel_id: form.gc_responsavel_id || null,
     };
 
-    const { error } = empresa
-      ? await supabase.from("empresas").update(payload).eq("id", empresa.id)
-      : await supabase.from("empresas").insert(payload);
+    const { data: salva, error } = empresa
+      ? await supabase.from("empresas").update(payload).eq("id", empresa.id).select("id").single()
+      : await supabase.from("empresas").insert(payload).select("id").single();
 
     setSaving(false);
 
@@ -93,7 +94,38 @@ export default function EmpresaModal({ empresa, gcs, onClose, onSaved }: Props) 
       setError(error.message);
       return;
     }
+
+    if (salva?.id) {
+      await vincularConversaWhatsapp(salva.id, payload.telefone);
+    }
+
     onSaved();
+  }
+
+  // Assim que uma empresa é cadastrada (ou tem o telefone editado), já deixa a conversa de
+  // WhatsApp pronta na lista — o GC não precisa esperar o cliente mandar mensagem primeiro
+  // nem clicar em "Enviar WhatsApp" pra ela aparecer.
+  async function vincularConversaWhatsapp(empresaId: string, telefone: string | null) {
+    const telefoneE164 = normalizarTelefoneE164(telefone);
+    if (!telefoneE164) return;
+
+    try {
+      const { data: existente } = await supabase
+        .from("whatsapp_conversas")
+        .select("id, empresa_id")
+        .eq("telefone", telefoneE164)
+        .maybeSingle();
+
+      if (existente) {
+        if (existente.empresa_id !== empresaId) {
+          await supabase.from("whatsapp_conversas").update({ empresa_id: empresaId }).eq("id", existente.id);
+        }
+      } else {
+        await supabase.from("whatsapp_conversas").insert({ telefone: telefoneE164, empresa_id: empresaId });
+      }
+    } catch {
+      // best-effort — não trava o cadastro da empresa se isso falhar
+    }
   }
 
   return (
