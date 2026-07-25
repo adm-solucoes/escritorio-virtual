@@ -1,9 +1,10 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
+import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import type { Empresa, Oportunidade } from "@/lib/types";
-import { linkWhatsapp } from "@/lib/whatsapp";
+import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 
 const TEMP_COLOR: Record<string, string> = {
   Frio: "border-l-blue",
@@ -20,11 +21,11 @@ export default function KanbanCard({
   empresa: Empresa | undefined;
   onClick: () => void;
 }) {
+  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: oportunidade.id,
   });
 
-  const wa = linkWhatsapp(empresa?.telefone);
   const borderColor = empresa?.temperatura ? TEMP_COLOR[empresa.temperatura] : "border-l-navy/10";
 
   // relative "days since" display, recomputing per render is intentional
@@ -33,6 +34,17 @@ export default function KanbanCard({
   const diasSemInteracao = oportunidade.ultima_interacao
     ? Math.floor((agora - new Date(oportunidade.ultima_interacao).getTime()) / 86400000)
     : null;
+
+  async function abrirConversa(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!empresa) return;
+    const resultado = await obterOuCriarConversaWhatsapp(empresa.id, empresa.telefone);
+    if ("erro" in resultado) {
+      alert(resultado.erro);
+      return;
+    }
+    router.push(`/whatsapp?conversa=${resultado.id}`);
+  }
 
   return (
     <div
@@ -65,18 +77,15 @@ export default function KanbanCard({
             </span>
           )}
         </div>
-        {wa && (
-          <a
-            href={wa}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
+        {empresa?.telefone && (
+          <button
+            onClick={abrirConversa}
             onPointerDown={(e) => e.stopPropagation()}
             className="p-1 rounded-md hover:bg-green-50 text-green-600"
-            title="Conversar no WhatsApp"
+            title="Conversar no WhatsApp (pelo CRM)"
           >
             <MessageCircle size={14} />
-          </a>
+          </button>
         )}
       </div>
 

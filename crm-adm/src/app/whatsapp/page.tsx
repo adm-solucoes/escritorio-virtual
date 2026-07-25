@@ -16,10 +16,13 @@ import {
   X,
   File as FileIcon,
   Trash2,
+  UserPlus,
+  Search,
 } from "lucide-react";
 import Recorder from "opus-recorder";
 import { supabase } from "@/lib/supabase";
-import type { Gc, WhatsappConversa, WhatsappMensagem } from "@/lib/types";
+import type { Empresa, Gc, WhatsappConversa, WhatsappMensagem } from "@/lib/types";
+import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 
 interface Template {
   name: string;
@@ -53,6 +56,10 @@ function WhatsappPageConteudo() {
   const [notaTexto, setNotaTexto] = useState("");
   const [gravando, setGravando] = useState(false);
   const [duracaoGravacao, setDuracaoGravacao] = useState(0);
+  const [seletorEmpresaAberto, setSeletorEmpresaAberto] = useState(false);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [carregandoEmpresas, setCarregandoEmpresas] = useState(false);
+  const [buscaEmpresa, setBuscaEmpresa] = useState("");
   const fimDasMensagensRef = useRef<HTMLDivElement>(null);
   const menuAnexoRef = useRef<HTMLDivElement>(null);
   const imagemInputRef = useRef<HTMLInputElement>(null);
@@ -177,6 +184,36 @@ function WhatsappPageConteudo() {
   }, []);
 
   const conversaSelecionada = useMemo(() => conversas.find((c) => c.id === conversaId), [conversas, conversaId]);
+
+  const empresasFiltradas = useMemo(() => {
+    const termo = buscaEmpresa.trim().toLowerCase();
+    if (!termo) return empresas;
+    return empresas.filter((e) =>
+      [e.nome_empresa, e.nome_contato, e.telefone].filter(Boolean).some((v) => v!.toLowerCase().includes(termo))
+    );
+  }, [empresas, buscaEmpresa]);
+
+  async function abrirSeletorEmpresa() {
+    setSeletorEmpresaAberto(true);
+    if (empresas.length === 0) {
+      setCarregandoEmpresas(true);
+      const { data } = await supabase.from("empresas").select("*").order("nome_empresa");
+      setEmpresas((data as Empresa[]) ?? []);
+      setCarregandoEmpresas(false);
+    }
+  }
+
+  async function selecionarEmpresa(empresa: Empresa) {
+    const resultado = await obterOuCriarConversaWhatsapp(empresa.id, empresa.telefone);
+    if ("erro" in resultado) {
+      alert(resultado.erro);
+      return;
+    }
+    setSeletorEmpresaAberto(false);
+    setBuscaEmpresa("");
+    setConversaId(resultado.id);
+    carregarConversas();
+  }
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -382,11 +419,21 @@ function WhatsappPageConteudo() {
   }
 
   return (
+    <>
     <div className="flex-1 flex min-h-0">
       <div className="w-72 shrink-0 border-r border-navy/10 bg-white flex flex-col">
-        <div className="px-4 py-4 border-b border-navy/10">
-          <h1 className="text-lg font-extrabold text-navy">WhatsApp</h1>
-          <p className="text-xs text-navy/50">{conversas.length} conversas</p>
+        <div className="px-4 py-4 border-b border-navy/10 flex items-center justify-between gap-2">
+          <div>
+            <h1 className="text-lg font-extrabold text-navy">WhatsApp</h1>
+            <p className="text-xs text-navy/50">{conversas.length} conversas</p>
+          </div>
+          <button
+            onClick={abrirSeletorEmpresa}
+            className="p-2 rounded-md hover:bg-blue/10 text-blue shrink-0"
+            title="Iniciar conversa com uma empresa cadastrada"
+          >
+            <UserPlus size={18} />
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -669,6 +716,57 @@ function WhatsappPageConteudo() {
         )}
       </div>
     </div>
+
+    {seletorEmpresaAberto && (
+      <div
+        className="fixed inset-0 z-50 bg-navy/40 flex items-center justify-center p-4"
+        onClick={() => setSeletorEmpresaAberto(false)}
+      >
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-navy/10">
+            <h2 className="font-bold text-navy">Iniciar conversa</h2>
+            <button onClick={() => setSeletorEmpresaAberto(false)} className="text-navy/40 hover:text-navy">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="px-5 py-3 border-b border-navy/10">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-navy/40" />
+              <input
+                className="input w-full pl-8"
+                placeholder="Buscar empresa por nome, contato ou telefone..."
+                value={buscaEmpresa}
+                onChange={(e) => setBuscaEmpresa(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {carregandoEmpresas ? (
+              <p className="p-4 text-sm text-navy/50">Carregando...</p>
+            ) : empresasFiltradas.length === 0 ? (
+              <p className="p-4 text-sm text-navy/50">Nenhuma empresa encontrada.</p>
+            ) : (
+              empresasFiltradas.map((empresa) => (
+                <button
+                  key={empresa.id}
+                  onClick={() => selecionarEmpresa(empresa)}
+                  disabled={!empresa.telefone}
+                  className="w-full text-left px-5 py-3 border-b border-navy/5 hover:bg-navy/[0.03] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <div className="font-semibold text-sm text-navy">{empresa.nome_empresa}</div>
+                  <div className="text-xs text-navy/50">
+                    {empresa.telefone ?? "Sem telefone cadastrado"}
+                    {empresa.nome_contato ? ` · ${empresa.nome_contato}` : ""}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

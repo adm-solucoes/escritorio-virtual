@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpDown, MessageCircle, MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowUpDown, MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, Oportunidade } from "@/lib/types";
-import { linkWhatsapp, normalizarTelefoneE164 } from "@/lib/whatsapp";
+import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
 import EmpresaModal from "@/components/EmpresaModal";
 
@@ -90,35 +90,12 @@ export default function EmpresasPage() {
   }
 
   async function abrirConversaWhatsapp(empresa: Empresa) {
-    const telefoneE164 = normalizarTelefoneE164(empresa.telefone);
-    if (!telefoneE164) {
-      alert("Essa empresa não tem um telefone válido cadastrado.");
+    const resultado = await obterOuCriarConversaWhatsapp(empresa.id, empresa.telefone);
+    if ("erro" in resultado) {
+      alert(resultado.erro);
       return;
     }
-
-    const { data: existente } = await supabase
-      .from("whatsapp_conversas")
-      .select("id")
-      .eq("telefone", telefoneE164)
-      .maybeSingle();
-
-    if (existente) {
-      router.push(`/whatsapp?conversa=${existente.id}`);
-      return;
-    }
-
-    const { data: nova, error } = await supabase
-      .from("whatsapp_conversas")
-      .insert({ telefone: telefoneE164, empresa_id: empresa.id })
-      .select("id")
-      .single();
-
-    if (error || !nova) {
-      alert("Erro ao abrir conversa: " + (error?.message ?? "desconhecido"));
-      return;
-    }
-
-    router.push(`/whatsapp?conversa=${nova.id}`);
+    router.push(`/whatsapp?conversa=${resultado.id}`);
   }
 
   async function excluir(empresa: Empresa) {
@@ -182,7 +159,6 @@ export default function EmpresasPage() {
             </thead>
             <tbody>
               {filtradas.map((empresa) => {
-                const wa = linkWhatsapp(empresa.telefone);
                 const score = scorePorEmpresa.get(empresa.id) ?? 0;
                 const classificacao = classificarScore(score);
                 return (
@@ -219,21 +195,10 @@ export default function EmpresasPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
-                        {wa && (
-                          <a
-                            href={wa}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-md hover:bg-green-50 text-green-600"
-                            title="Abrir no WhatsApp (celular)"
-                          >
-                            <MessageCircle size={16} />
-                          </a>
-                        )}
                         <button
                           onClick={() => abrirConversaWhatsapp(empresa)}
-                          className="p-1.5 rounded-md hover:bg-blue/10 text-blue"
-                          title="Enviar WhatsApp pelo CRM"
+                          className="p-1.5 rounded-md hover:bg-green-50 text-green-600"
+                          title="Conversar no WhatsApp (pelo CRM)"
                         >
                           <MessagesSquare size={16} />
                         </button>
