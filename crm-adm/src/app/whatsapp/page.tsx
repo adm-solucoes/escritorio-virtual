@@ -286,14 +286,17 @@ function WhatsappPageConteudo() {
       streamVisualizacaoRef.current = stream;
       const audioCtx = new AudioContext();
       audioContextVisualizacaoRef.current = audioCtx;
+      if (audioCtx.state === "suspended") await audioCtx.resume();
       const source = audioCtx.createMediaStreamSource(stream);
       const analiser = audioCtx.createAnalyser();
       analiser.fftSize = 256;
+      analiser.smoothingTimeConstant = 0.4;
       source.connect(analiser);
       analiserRef.current = analiser;
       desenharOnda();
-    } catch {
+    } catch (e) {
       // a forma de onda é só visual — se falhar, a gravação em si continua normalmente
+      console.error("Erro ao iniciar visualização do áudio:", e);
     }
   }
 
