@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, MessageCircle, Save, UserPlus, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { CalendarCheck, ExternalLink, MessageCircle, Save, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   META_EQUIPE_ID,
@@ -40,6 +41,15 @@ const SECOES_RELATORIO: { campo: keyof ConfiguracaoRelatorio; label: string }[] 
 ];
 
 export default function ConfiguracoesPage() {
+  return (
+    <Suspense fallback={<p className="p-6 text-sm text-navy/50">Carregando...</p>}>
+      <ConfiguracoesConteudo />
+    </Suspense>
+  );
+}
+
+function ConfiguracoesConteudo() {
+  const searchParams = useSearchParams();
   const [etapas, setEtapas] = useState<EtapaFunilConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [salvandoId, setSalvandoId] = useState<number | null>(null);
@@ -64,6 +74,12 @@ export default function ConfiguracoesPage() {
   const [emailConvite, setEmailConvite] = useState("");
   const [convidando, setConvidando] = useState(false);
   const [mensagemConvite, setMensagemConvite] = useState<string | null>(null);
+
+  const [gcAtual, setGcAtual] = useState<Gc | null>(null);
+  const [googleConectado, setGoogleConectado] = useState<string | null>(null);
+  const [carregandoGoogle, setCarregandoGoogle] = useState(true);
+  const [refreshGoogleKey, setRefreshGoogleKey] = useState(0);
+  const googleStatus = searchParams.get("google");
 
   const [numeros, setNumeros] = useState<WhatsappNumero[]>([]);
   const [loadingNumeros, setLoadingNumeros] = useState(true);
@@ -115,6 +131,41 @@ export default function ConfiguracoesPage() {
     } finally {
       setConvidando(false);
     }
+  }
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (cancelado || !data.user?.email) {
+        setCarregandoGoogle(false);
+        return;
+      }
+      const { data: gc } = await supabase.from("gcs").select("*").eq("email", data.user.email).maybeSingle();
+      if (cancelado) return;
+      setGcAtual(gc ?? null);
+      if (!gc) {
+        setCarregandoGoogle(false);
+        return;
+      }
+      const { data: integracao } = await supabase
+        .from("integracoes_google")
+        .select("email_google")
+        .eq("gc_id", gc.id)
+        .maybeSingle();
+      if (cancelado) return;
+      setGoogleConectado(integracao?.email_google ?? null);
+      setCarregandoGoogle(false);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [refreshGoogleKey]);
+
+  async function desconectarGoogle() {
+    if (!gcAtual) return;
+    if (!confirm("Desconectar sua conta Google? As automações de agenda vão parar de funcionar pra você até reconectar.")) return;
+    await supabase.from("integracoes_google").delete().eq("gc_id", gcAtual.id);
+    setRefreshGoogleKey((k) => k + 1);
   }
 
   useEffect(() => {
@@ -338,6 +389,58 @@ export default function ConfiguracoesPage() {
           <p className="text-sm text-navy/60">Troque sua senha de acesso ao sistema.</p>
         </div>
         <TrocarSenha />
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-extrabold text-navy">Google Calendar</h2>
+          <p className="text-sm text-navy/60">
+            Conecte sua conta Google (o mesmo e-mail que você usa pra logar aqui) pra automação
+            &quot;Agendar reunião&quot; criar eventos direto na sua agenda, com Google Meet.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4 flex items-center justify-between gap-3">
+          {googleStatus === "erro" && (
+            <p className="text-xs text-red">Não deu pra conectar sua conta Google. Tente de novo.</p>
+          )}
+          {googleStatus === "sem_refresh_token" && (
+            <p className="text-xs text-amber-700">
+              O Google não devolveu permissão renovável. Vá em{" "}
+              <a
+                href="https://myaccount.google.com/permissions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                myaccount.google.com/permissions
+              </a>
+              , remova o acesso do CRM ADM Soluções e conecte de novo.
+            </p>
+          )}
+          {carregandoGoogle ? (
+            <p className="text-sm text-navy/50">Carregando...</p>
+          ) : !gcAtual ? (
+            <p className="text-sm text-navy/50">Não encontrei seu usuário de GC pra conectar.</p>
+          ) : googleConectado ? (
+            <>
+              <div className="flex items-center gap-2 text-sm text-navy/70">
+                <CalendarCheck size={16} className="text-green-600" />
+                Conectado como <strong>{googleConectado}</strong>
+              </div>
+              <button onClick={desconectarGoogle} className="text-xs font-semibold text-red hover:underline">
+                Desconectar
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-navy/60">Nenhuma conta Google conectada ainda.</p>
+              <a href={`/api/google/conectar?gcId=${gcAtual.id}`} className="btn-primary whitespace-nowrap">
+                <CalendarCheck size={15} /> Conectar Google
+              </a>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">

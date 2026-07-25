@@ -7,6 +7,10 @@
     {
       "path": "/api/atividades/alertar",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/automacoes/executar",
+      "schedule": "0 * * * *"
     }
   ]
 }

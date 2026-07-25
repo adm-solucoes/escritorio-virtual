@@ -1,0 +1,444 @@
+// Motor de execução das automações — roda por cron (gatilhos de tempo) e é chamado também
+// a partir de rotas que disparam gatilhos de evento (mudança de etapa, etc).
+// Regras fixas, sem IA: cada nó sabe exatamente o que fazer a partir do `config` salvo no canvas.
+
+import { createAdminClient } from "@/lib/supabase-admin";
+import { enviarTemplate, enviarTexto } from "@/lib/whatsapp-api";
+import { enviarEmail, montarEmailConfirmacaoReuniao } from "@/lib/email";
+import { criarEventoReuniao } from "@/lib/google-calendar";
+import { normalizarTelefoneE164 } from "@/lib/whatsapp";
+import type { AutomacaoConexao, AutomacaoNo, Empresa, EtapaFunil, Oportunidade } from "@/lib/types";
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+interface Alvo {
+  empresaId: string | null;
+  oportunidadeId: string | null;
+  atividadeId: string | null;
+  nomeEmpresa: string | null;
+  telefone: string | null;
+  emailContato: string | null;
+  gcResponsavelId: string | null;
+}
+
+const JANELA_24H_MS = 24 * 60 * 60 * 1000;
+
+function hojeISODate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function jaExecutado(admin: AdminClient, automacaoId: string, noId: string, alvo: Alvo) {
+  let query = admin
+    .from("automacao_execucoes")
+    .select("id")
+    .eq("automacao_id", automacaoId)
+    .eq("no_id", noId)
+    .eq("resultado", "sucesso");
+
+  query = alvo.empresaId ? query.eq("empresa_id", alvo.empresaId) : query.is("empresa_id", null);
+  query = alvo.oportunidadeId ? query.eq("oportunidade_id", alvo.oportunidadeId) : query.is("oportunidade_id", null);
+  query = alvo.atividadeId ? query.eq("atividade_id", alvo.atividadeId) : query.is("atividade_id", null);
+
+  const { data } = await query.maybeSingle();
+  return Boolean(data);
+}
+
+async function registrarExecucao(
+  admin: AdminClient,
+  automacaoId: string,
+  noId: string,
+  alvo: Alvo,
+  resultado: "sucesso" | "erro" | "ignorado",
+  erro?: string
+) {
+  await admin.from("automacao_execucoes").insert({
+    automacao_id: automacaoId,
+    empresa_id: alvo.empresaId,
+    oportunidade_id: alvo.oportunidadeId,
+    atividade_id: alvo.atividadeId,
+    no_id: noId,
+    resultado,
+    erro: erro ?? null,
+  });
+}
+
+// ---------- Encontrar alvos de cada tipo de gatilho ----------
+
+async function encontrarAlvosGatilhoEtapa(admin: AdminClient, etapa: EtapaFunil): Promise<Alvo[]> {
+  const { data } = await admin
+    .from("oportunidades")
+    .select("*, empresas(*)")
+    .eq("etapa_atual", etapa);
+
+  return ((data as (Oportunidade & { empresas: Empresa })[]) ?? []).map((o) => ({
+    empresaId: o.empresa_id,
+    oportunidadeId: o.id,
+    atividadeId: null,
+    nomeEmpresa: o.empresas?.nome_empresa ?? null,
+    telefone: o.empresas?.telefone ?? null,
+    emailContato: o.empresas?.email ?? null,
+    gcResponsavelId: o.gc_responsavel_id,
+  }));
+}
+
+async function encontrarAlvosAtividadeAtrasada(admin: AdminClient): Promise<Alvo[]> {
+  const { data } = await admin
+    .from("atividades")
+    .select("*, empresas(*), oportunidades(*)")
+    .neq("status", "Concluído")
+    .lt("prazo", hojeISODate());
+
+  return (
+    (data as { id: string; empresa_id: string | null; oportunidade_id: string | null; responsavel_id: string | null; empresas: Empresa | null }[]) ?? []
+  ).map((a) => ({
+    empresaId: a.empresa_id,
+    oportunidadeId: a.oportunidade_id,
+    atividadeId: a.id,
+    nomeEmpresa: a.empresas?.nome_empresa ?? null,
+    telefone: a.empresas?.telefone ?? null,
+    emailContato: a.empresas?.email ?? null,
+    gcResponsavelId: a.responsavel_id,
+  }));
+}
+
+async function encontrarAlvosSemContato(admin: AdminClient, dias: number): Promise<Alvo[]> {
+  const { data } = await admin
+    .from("oportunidades")
+    .select("*, empresas(*)")
+    .not("ultima_interacao", "is", null)
+    .not("etapa_atual", "in", '("Contrato Fechado","Perdido","Renovação")');
+
+  const agora = Date.now();
+  return (((data as (Oportunidade & { empresas: Empresa })[]) ?? [])
+    .filter((o) => o.ultima_interacao && (agora - new Date(o.ultima_interacao).getTime()) / 86400000 >= dias)
+    .map((o) => ({
+      empresaId: o.empresa_id,
+      oportunidadeId: o.id,
+      atividadeId: null,
+      nomeEmpresa: o.empresas?.nome_empresa ?? null,
+      telefone: o.empresas?.telefone ?? null,
+      emailContato: o.empresas?.email ?? null,
+      gcResponsavelId: o.gc_responsavel_id,
+    })));
+}
+
+function alvoVazio(): Alvo {
+  return {
+    empresaId: null,
+    oportunidadeId: null,
+    atividadeId: null,
+    nomeEmpresa: null,
+    telefone: null,
+    emailContato: null,
+    gcResponsavelId: null,
+  };
+}
+
+async function encontrarAlvos(admin: AdminClient, gatilho: AutomacaoNo): Promise<Alvo[]> {
+  const config = gatilho.config as Record<string, unknown>;
+  switch (gatilho.tipo) {
+    case "gatilho_etapa":
+      return typeof config.etapa === "string" ? encontrarAlvosGatilhoEtapa(admin, config.etapa as EtapaFunil) : [];
+    case "gatilho_atividade_atrasada":
+      return encontrarAlvosAtividadeAtrasada(admin);
+    case "gatilho_sem_contato":
+      return typeof config.dias === "number" ? encontrarAlvosSemContato(admin, config.dias) : [];
+    case "gatilho_data_hora": {
+      if (typeof config.dataHora !== "string") return [];
+      return new Date(config.dataHora).getTime() <= Date.now() ? [alvoVazio()] : [];
+    }
+    default:
+      return [];
+  }
+}
+
+// ---------- Avaliação de condição ----------
+
+function avaliarCondicao(config: Record<string, unknown>, oportunidade: Oportunidade | null): boolean {
+  const campo = config.campo as string | undefined;
+  const operador = config.operador as string | undefined;
+  const valor = config.valor as string | undefined;
+  if (!campo || !operador || valor === undefined || !oportunidade) return false;
+
+  const atual = campo === "valor_estimado" ? oportunidade.valor_estimado ?? 0 : (oportunidade as unknown as Record<string, unknown>)[campo];
+
+  if (campo === "valor_estimado") {
+    const alvoNum = Number(valor);
+    const atualNum = Number(atual);
+    if (operador === ">") return atualNum > alvoNum;
+    if (operador === "<") return atualNum < alvoNum;
+    if (operador === "=") return atualNum === alvoNum;
+    return atualNum !== alvoNum;
+  }
+
+  if (operador === "=") return atual === valor;
+  if (operador === "!=") return atual !== valor;
+  return false;
+}
+
+// ---------- Execução das ações ----------
+
+async function acharOuCriarConversaServidor(admin: AdminClient, empresaId: string | null, telefone: string) {
+  const telefoneE164 = normalizarTelefoneE164(telefone);
+  if (!telefoneE164) return { erro: "Telefone inválido" };
+
+  const { data: existente } = await admin.from("whatsapp_conversas").select("*").eq("telefone", telefoneE164).maybeSingle();
+  if (existente) return { conversa: existente };
+
+  const { data: nova, error } = await admin
+    .from("whatsapp_conversas")
+    .insert({ telefone: telefoneE164, empresa_id: empresaId })
+    .select("*")
+    .single();
+  if (error || !nova) return { erro: error?.message ?? "Erro ao criar conversa" };
+  return { conversa: nova };
+}
+
+async function executarAcaoWhatsapp(admin: AdminClient, config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  if (!alvo.telefone) return { ok: false, erro: "Empresa sem telefone cadastrado" };
+
+  const resultadoConversa = await acharOuCriarConversaServidor(admin, alvo.empresaId, alvo.telefone);
+  if ("erro" in resultadoConversa) return { ok: false, erro: resultadoConversa.erro };
+  const conversa = resultadoConversa.conversa;
+
+  const { data: numeroAtivo } = await admin.from("whatsapp_numeros").select("phone_number_id").eq("ativo", true).maybeSingle();
+  const phoneNumberIdOverride = numeroAtivo?.phone_number_id;
+
+  const { data: ultimaRecebida } = await admin
+    .from("whatsapp_mensagens")
+    .select("criado_em")
+    .eq("conversa_id", conversa.id)
+    .eq("direcao", "recebida")
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const dentroDaJanela = ultimaRecebida ? Date.now() - new Date(ultimaRecebida.criado_em).getTime() < JANELA_24H_MS : false;
+
+  const modo = config.modo === "template" ? "template" : "texto";
+  if (modo === "texto" && !dentroDaJanela) {
+    return { ok: false, erro: "Fora da janela de 24h — configure essa ação pra usar template aprovado." };
+  }
+
+  const resultado =
+    modo === "template"
+      ? await enviarTemplate(
+          conversa.telefone,
+          String(config.templateNome ?? ""),
+          String(config.templateIdioma ?? "pt_BR"),
+          [],
+          phoneNumberIdOverride
+        )
+      : await enviarTexto(conversa.telefone, String(config.texto ?? ""), phoneNumberIdOverride);
+
+  if (!resultado.ok) return { ok: false, erro: resultado.error };
+
+  await admin.from("whatsapp_mensagens").insert({
+    conversa_id: conversa.id,
+    direcao: "enviada",
+    conteudo: modo === "template" ? `[template] ${config.templateNome}` : String(config.texto ?? ""),
+    tipo: modo,
+    whatsapp_message_id: resultado.messageId,
+    status_entrega: "enviado",
+  });
+  await admin.from("whatsapp_conversas").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", conversa.id);
+
+  return { ok: true };
+}
+
+function proximoHorarioComercial(horarioPadrao: string, diasUteis: boolean, duracaoMinutos: number) {
+  const [hh, mm] = horarioPadrao.split(":").map(Number);
+  const inicio = new Date();
+  inicio.setDate(inicio.getDate() + 1);
+  inicio.setHours(hh || 10, mm || 0, 0, 0);
+
+  if (diasUteis) {
+    while (inicio.getDay() === 0 || inicio.getDay() === 6) {
+      inicio.setDate(inicio.getDate() + 1);
+    }
+  }
+
+  const fim = new Date(inicio.getTime() + duracaoMinutos * 60_000);
+  return { inicio, fim };
+}
+
+async function executarAcaoAgendarReuniao(config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  if (!alvo.gcResponsavelId) return { ok: false, erro: "Oportunidade sem GC responsável" };
+
+  const duracaoMinutos = typeof config.duracaoMinutos === "number" ? config.duracaoMinutos : 30;
+  const horarioPadrao = typeof config.horarioPadrao === "string" ? config.horarioPadrao : "10:00";
+  const diasUteis = config.diasUteis !== false;
+  const { inicio, fim } = proximoHorarioComercial(horarioPadrao, diasUteis, duracaoMinutos);
+
+  const titulo = String(config.tituloTemplate ?? "Reunião com {empresa}").replace("{empresa}", alvo.nomeEmpresa ?? "cliente");
+
+  const resultado = await criarEventoReuniao({
+    gcId: alvo.gcResponsavelId,
+    titulo,
+    descricao: typeof config.descricaoTemplate === "string" ? config.descricaoTemplate : undefined,
+    participanteEmail: alvo.emailContato,
+    inicioISO: inicio.toISOString(),
+    fimISO: fim.toISOString(),
+  });
+
+  if (!resultado.ok) return { ok: false, erro: resultado.error };
+
+  if (alvo.emailContato) {
+    await enviarEmail({
+      para: [alvo.emailContato],
+      assunto: `Reunião agendada · ${alvo.nomeEmpresa ?? "ADM Soluções"}`,
+      html: montarEmailConfirmacaoReuniao({
+        nomeEmpresa: alvo.nomeEmpresa ?? "cliente",
+        dataHora: inicio.toLocaleString("pt-BR", { dateStyle: "full", timeStyle: "short" }),
+        linkChamada: resultado.linkChamada ?? null,
+        nomeGc: "ADM Soluções",
+      }),
+    });
+  }
+
+  return { ok: true };
+}
+
+async function executarAcaoCriarAtividade(admin: AdminClient, config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  const prazoDias = typeof config.prazoDias === "number" ? config.prazoDias : 0;
+  const prazo = new Date();
+  prazo.setDate(prazo.getDate() + prazoDias);
+
+  const { error } = await admin.from("atividades").insert({
+    empresa_id: alvo.empresaId,
+    oportunidade_id: alvo.oportunidadeId,
+    tipo_atividade: String(config.tipoAtividade ?? "Follow-up automático"),
+    responsavel_id: alvo.gcResponsavelId,
+    status: "Pendente",
+    prazo: prazo.toISOString().slice(0, 10),
+    alerta_disparado: true,
+  });
+
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+
+async function executarAcaoNotificarInterno(admin: AdminClient, config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  const { error } = await admin.from("atividades").insert({
+    empresa_id: alvo.empresaId,
+    oportunidade_id: alvo.oportunidadeId,
+    tipo_atividade: `🔔 ${config.mensagem ?? "Aviso da automação"}`,
+    responsavel_id: alvo.gcResponsavelId,
+    status: "Pendente",
+    prazo: hojeISODate(),
+    alerta_disparado: true,
+  });
+
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+
+// ---------- Percorrer a cadeia de nós a partir de um gatilho, pra um alvo específico ----------
+
+async function processarNo(
+  admin: AdminClient,
+  automacaoId: string,
+  nosPorId: Map<string, AutomacaoNo>,
+  conexoes: AutomacaoConexao[],
+  noId: string,
+  alvo: Alvo,
+  oportunidade: Oportunidade | null
+) {
+  const no = nosPorId.get(noId);
+  if (!no) return;
+
+  const filhas = (condicao?: string | null) =>
+    conexoes.filter((c) => c.no_origem_id === noId && (condicao === undefined || c.condicao === condicao));
+
+  if (no.tipo.startsWith("gatilho_")) {
+    for (const conexao of filhas()) {
+      await processarNo(admin, automacaoId, nosPorId, conexoes, conexao.no_destino_id, alvo, oportunidade);
+    }
+    return;
+  }
+
+  if (no.tipo === "condicao") {
+    const passou = avaliarCondicao(no.config, oportunidade);
+    for (const conexao of filhas(passou ? "sim" : "nao")) {
+      await processarNo(admin, automacaoId, nosPorId, conexoes, conexao.no_destino_id, alvo, oportunidade);
+    }
+    return;
+  }
+
+  if (no.tipo === "espera") {
+    const { data: logEspera } = await admin
+      .from("automacao_execucoes")
+      .select("executado_em")
+      .eq("automacao_id", automacaoId)
+      .eq("no_id", no.id)
+      .eq("resultado", "sucesso")
+      .eq("empresa_id", alvo.empresaId ?? "")
+      .maybeSingle();
+
+    if (!logEspera) {
+      await registrarExecucao(admin, automacaoId, no.id, alvo, "sucesso");
+      return;
+    }
+
+    const quantidade = typeof no.config.quantidade === "number" ? no.config.quantidade : 1;
+    const unidade = no.config.unidade === "horas" ? 3_600_000 : 86_400_000;
+    const jaEsperouBastante = Date.now() - new Date(logEspera.executado_em).getTime() >= quantidade * unidade;
+    if (!jaEsperouBastante) return;
+
+    for (const conexao of filhas()) {
+      await processarNo(admin, automacaoId, nosPorId, conexoes, conexao.no_destino_id, alvo, oportunidade);
+    }
+    return;
+  }
+
+  // nó de ação: se já rodou com sucesso pra esse alvo, não repete — mas segue adiante
+  // (o próximo nó tem sua própria verificação de idempotência).
+  const executado = await jaExecutado(admin, automacaoId, no.id, alvo);
+  if (!executado) {
+    let resultado: { ok: boolean; erro?: string };
+    try {
+      if (no.tipo === "acao_whatsapp") resultado = await executarAcaoWhatsapp(admin, no.config, alvo);
+      else if (no.tipo === "acao_agendar_reuniao") resultado = await executarAcaoAgendarReuniao(no.config, alvo);
+      else if (no.tipo === "acao_criar_atividade") resultado = await executarAcaoCriarAtividade(admin, no.config, alvo);
+      else if (no.tipo === "acao_notificar_interno") resultado = await executarAcaoNotificarInterno(admin, no.config, alvo);
+      else resultado = { ok: false, erro: `Tipo de nó desconhecido: ${no.tipo}` };
+    } catch (e) {
+      resultado = { ok: false, erro: e instanceof Error ? e.message : "Erro desconhecido" };
+    }
+
+    await registrarExecucao(admin, automacaoId, no.id, alvo, resultado.ok ? "sucesso" : "erro", resultado.erro);
+    // falha numa ação não trava o fluxo inteiro: registra o erro e simplesmente não avança
+    // essa ramificação específica, mas outras automações/alvos continuam normalmente.
+    if (!resultado.ok) return;
+  }
+
+  for (const conexao of filhas()) {
+    await processarNo(admin, automacaoId, nosPorId, conexoes, conexao.no_destino_id, alvo, oportunidade);
+  }
+}
+
+export async function executarAutomacoesAtivas(): Promise<{ automacoesProcessadas: number }> {
+  const admin = createAdminClient();
+  const { data: automacoes } = await admin.from("automacoes").select("*").eq("status", "ativa");
+
+  for (const automacao of automacoes ?? []) {
+    const [{ data: nos }, { data: conexoes }] = await Promise.all([
+      admin.from("automacao_nos").select("*").eq("automacao_id", automacao.id),
+      admin.from("automacao_conexoes").select("*").eq("automacao_id", automacao.id),
+    ]);
+
+    const nosPorId = new Map<string, AutomacaoNo>((nos ?? []).map((n) => [n.id, n as AutomacaoNo]));
+    const gatilhos = (nos ?? []).filter((n) => n.tipo.startsWith("gatilho_")) as AutomacaoNo[];
+
+    for (const gatilho of gatilhos) {
+      const alvos = await encontrarAlvos(admin, gatilho);
+      for (const alvo of alvos) {
+        let oportunidade: Oportunidade | null = null;
+        if (alvo.oportunidadeId) {
+          const { data } = await admin.from("oportunidades").select("*").eq("id", alvo.oportunidadeId).maybeSingle();
+          oportunidade = (data as Oportunidade) ?? null;
+        }
+        await processarNo(admin, automacao.id, nosPorId, (conexoes as AutomacaoConexao[]) ?? [], gatilho.id, alvo, oportunidade);
+      }
+    }
+  }
+
+  return { automacoesProcessadas: (automacoes ?? []).length };
+}

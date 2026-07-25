@@ -164,6 +164,75 @@ export interface Meta {
   criado_em: string;
 }
 
+// ==========================================================
+// Automações (construtor visual — canvas de nós conectados)
+// ==========================================================
+export type StatusAutomacao = "rascunho" | "ativa";
+
+export interface Automacao {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  status: StatusAutomacao;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export type TipoNoAutomacao =
+  | "gatilho_etapa"
+  | "gatilho_atividade_atrasada"
+  | "gatilho_sem_contato"
+  | "gatilho_data_hora"
+  | "condicao"
+  | "acao_whatsapp"
+  | "acao_agendar_reuniao"
+  | "acao_criar_atividade"
+  | "acao_notificar_interno"
+  | "espera";
+
+export interface AutomacaoNo {
+  id: string;
+  automacao_id: string;
+  tipo: TipoNoAutomacao;
+  posicao_x: number;
+  posicao_y: number;
+  config: Record<string, unknown>;
+  criado_em: string;
+}
+
+export interface AutomacaoConexao {
+  id: string;
+  automacao_id: string;
+  no_origem_id: string;
+  no_destino_id: string;
+  condicao: string | null;
+}
+
+export type ResultadoExecucaoAutomacao = "sucesso" | "erro" | "ignorado";
+
+export interface AutomacaoExecucao {
+  id: string;
+  automacao_id: string | null;
+  empresa_id: string | null;
+  oportunidade_id: string | null;
+  atividade_id: string | null;
+  no_id: string | null;
+  executado_em: string;
+  resultado: ResultadoExecucaoAutomacao;
+  erro: string | null;
+}
+
+export interface IntegracaoGoogle {
+  id: string;
+  gc_id: string;
+  email_google: string;
+  access_token: string;
+  refresh_token: string;
+  expira_em: string;
+  criado_em: string;
+  atualizado_em: string;
+}
+
 export interface WhatsappNumero {
   id: string;
   phone_number_id: string;
