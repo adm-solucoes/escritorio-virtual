@@ -107,6 +107,8 @@ export interface Oportunidade {
   motivo_perda: string | null;
   tipo_pipeline: TipoPipeline;
   health_score: number | null;
+  pausar_automacoes: boolean;
+  data_renovacao: string | null;
   criado_em: string;
   atualizado_em: string;
   empresas?: Empresa;
@@ -224,11 +226,14 @@ export type TipoNoAutomacao =
   | "gatilho_atividade_atrasada"
   | "gatilho_sem_contato"
   | "gatilho_data_hora"
+  | "gatilho_renovacao_proxima"
   | "condicao"
   | "acao_whatsapp"
   | "acao_agendar_reuniao"
   | "acao_criar_atividade"
   | "acao_notificar_interno"
+  | "acao_email"
+  | "acao_alertar_renovacao"
   | "espera";
 
 export interface AutomacaoNo {
@@ -352,4 +357,16 @@ export interface WhatsappMensagem {
   status_entrega: StatusEntregaWhatsapp;
   criado_em: string;
   gcs?: { nome: string };
+}
+
+// ==========================================================
+// Captura pública de leads (item 16 — Fase 3)
+// ==========================================================
+export interface FormularioCaptura {
+  id: string;
+  nome: string;
+  chave_api: string;
+  origem_lead: string | null;
+  ativo: boolean;
+  criado_em: string;
 }

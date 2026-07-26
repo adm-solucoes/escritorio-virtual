@@ -11,6 +11,8 @@ import {
   Workflow,
   AlarmClockCheck,
   CalendarClock,
+  Mail,
+  RefreshCw,
 } from "lucide-react";
 import type { TipoNoAutomacao } from "@/lib/types";
 import { COR_CATEGORIA, definicaoDoTipo } from "@/lib/automacoes-nos";
@@ -20,11 +22,14 @@ const ICONE_POR_TIPO: Record<TipoNoAutomacao, React.ComponentType<{ size?: numbe
   gatilho_atividade_atrasada: AlarmClockCheck,
   gatilho_sem_contato: CalendarClock,
   gatilho_data_hora: Clock,
+  gatilho_renovacao_proxima: RefreshCw,
   condicao: GitBranch,
   acao_whatsapp: MessageCircle,
   acao_agendar_reuniao: CalendarPlus,
   acao_criar_atividade: ListChecks,
   acao_notificar_interno: Bell,
+  acao_email: Mail,
+  acao_alertar_renovacao: RefreshCw,
   espera: Clock,
 };
 

@@ -10,6 +10,7 @@ import {
   type AcaoRapidaContato,
   type ConfiguracaoRelatorio,
   type EtapaFunilConfig,
+  type FormularioCaptura,
   type Gc,
   type Meta,
   type MotivoPerdaConfig,
@@ -215,6 +216,48 @@ function ConfiguracoesConteudo() {
     if (!confirm(`Remover o motivo "${motivo.motivo}"?`)) return;
     await supabase.from("motivos_perda_config").delete().eq("id", motivo.id);
     setRefreshMotivosPerdaKey((k) => k + 1);
+  }
+
+  const [formularios, setFormularios] = useState<FormularioCaptura[]>([]);
+  const [loadingFormularios, setLoadingFormularios] = useState(true);
+  const [refreshFormulariosKey, setRefreshFormulariosKey] = useState(0);
+  const [nomeFormulario, setNomeFormulario] = useState("");
+  const [origemFormulario, setOrigemFormulario] = useState("");
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase
+      .from("formularios_captura")
+      .select("*")
+      .order("criado_em", { ascending: false })
+      .then(({ data }) => {
+        if (cancelado) return;
+        setFormularios((data as FormularioCaptura[]) ?? []);
+        setLoadingFormularios(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [refreshFormulariosKey]);
+
+  async function criarFormulario(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nomeFormulario.trim()) return;
+    await supabase.from("formularios_captura").insert({ nome: nomeFormulario.trim(), origem_lead: origemFormulario.trim() || null });
+    setNomeFormulario("");
+    setOrigemFormulario("");
+    setRefreshFormulariosKey((k) => k + 1);
+  }
+
+  async function alternarFormularioAtivo(formulario: FormularioCaptura) {
+    await supabase.from("formularios_captura").update({ ativo: !formulario.ativo }).eq("id", formulario.id);
+    setRefreshFormulariosKey((k) => k + 1);
+  }
+
+  async function excluirFormulario(formulario: FormularioCaptura) {
+    if (!confirm(`Excluir o formulário "${formulario.nome}"? A chave de API para de funcionar.`)) return;
+    await supabase.from("formularios_captura").delete().eq("id", formulario.id);
+    setRefreshFormulariosKey((k) => k + 1);
   }
 
   useEffect(() => {
@@ -1012,6 +1055,81 @@ function ConfiguracoesConteudo() {
           </p>
         </div>
       </div>
+
+      {souGestor && (
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-lg font-extrabold text-navy">Formulários de captura de leads</h2>
+            <p className="text-sm text-navy/60">
+              Cada formulário gera uma chave de API. Use ela no header <code>x-api-key</code> ao chamar{" "}
+              <code>POST /api/leads/capturar</code> de uma landing page ou ferramenta de formulário externa. Só
+              gestores veem esta seção.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+            {loadingFormularios ? (
+              <p className="p-6 text-sm text-navy/50">Carregando...</p>
+            ) : formularios.length === 0 ? (
+              <p className="p-6 text-sm text-navy/50">Nenhum formulário cadastrado ainda.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                    <th className="px-4 py-3 font-semibold">Nome</th>
+                    <th className="px-4 py-3 font-semibold">Origem do lead</th>
+                    <th className="px-4 py-3 font-semibold">Chave de API</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formularios.map((f) => (
+                    <tr key={f.id} className="border-b border-navy/5 last:border-0">
+                      <td className="px-4 py-3 font-semibold text-navy">{f.nome}</td>
+                      <td className="px-4 py-3 text-navy/70">{f.origem_lead ?? "—"}</td>
+                      <td className="px-4 py-3 text-navy/50 font-mono text-xs">{f.chave_api}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                            f.ativo ? "bg-green-100 text-green-700" : "bg-navy/5 text-navy/50"
+                          }`}
+                        >
+                          {f.ativo ? "Ativo" : "Inativo"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 justify-end">
+                          <button onClick={() => alternarFormularioAtivo(f)} className="text-xs font-semibold text-blue hover:underline">
+                            {f.ativo ? "Desativar" : "Ativar"}
+                          </button>
+                          <button onClick={() => excluirFormulario(f)} className="p-1 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            <form onSubmit={criarFormulario} className="p-4 border-t border-navy/10 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-navy/60 font-medium">Nome do formulário</span>
+                <input className="input w-48" value={nomeFormulario} onChange={(e) => setNomeFormulario(e.target.value)} />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-navy/60 font-medium">Origem do lead</span>
+                <input className="input w-48" placeholder="Ex: Site institucional" value={origemFormulario} onChange={(e) => setOrigemFormulario(e.target.value)} />
+              </label>
+              <button type="submit" className="btn-primary">
+                <Plus size={15} /> Criar formulário
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         <div>

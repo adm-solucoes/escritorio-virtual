@@ -74,6 +74,21 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
           </Campo>
         )}
 
+        {tipo === "gatilho_renovacao_proxima" && (
+          <Campo label="Dias antes da renovação">
+            <input
+              type="number"
+              min={1}
+              className="input"
+              value={Number(config.diasAntes ?? 30)}
+              onChange={(e) => set("diasAntes", Number(e.target.value))}
+            />
+            <span className="text-[11px] text-navy/40">
+              Usa o campo &quot;Data de renovação&quot; da oportunidade (editável nas etapas de CS)
+            </span>
+          </Campo>
+        )}
+
         {tipo === "condicao" && (
           <>
             <Campo label="Campo">
@@ -202,6 +217,28 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
               onChange={(e) => set("mensagem", e.target.value)}
             />
           </Campo>
+        )}
+
+        {tipo === "acao_email" && (
+          <>
+            <Campo label="Assunto">
+              <input className="input" value={String(config.assunto ?? "")} onChange={(e) => set("assunto", e.target.value)} />
+            </Campo>
+            <Campo label="Corpo do e-mail (HTML simples)">
+              <textarea
+                className="input min-h-[120px] resize-none"
+                value={String(config.corpoHtml ?? "")}
+                onChange={(e) => set("corpoHtml", e.target.value)}
+              />
+              <span className="text-[11px] text-navy/40">Use {"{empresa}"} pra inserir o nome da empresa automaticamente</span>
+            </Campo>
+          </>
+        )}
+
+        {tipo === "acao_alertar_renovacao" && (
+          <p className="text-xs text-navy/50">
+            Sem configuração — envia e-mail e cria uma notificação interna pro GC responsável pela oportunidade.
+          </p>
         )}
 
         {tipo === "espera" && (

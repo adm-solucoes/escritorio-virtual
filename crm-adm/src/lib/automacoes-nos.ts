@@ -40,6 +40,13 @@ export const DEFINICOES_NOS: DefinicaoNo[] = [
     configPadrao: { dataHora: "" },
   },
   {
+    tipo: "gatilho_renovacao_proxima",
+    categoria: "gatilho",
+    label: "Renovação se aproximando",
+    descricao: "Dispara quando faltam X dias para a data de renovação da oportunidade",
+    configPadrao: { diasAntes: 30 },
+  },
+  {
     tipo: "condicao",
     categoria: "condicao",
     label: "Condição",
@@ -75,6 +82,20 @@ export const DEFINICOES_NOS: DefinicaoNo[] = [
     configPadrao: { mensagem: "" },
   },
   {
+    tipo: "acao_email",
+    categoria: "acao",
+    label: "Follow-up por e-mail",
+    descricao: "Envia e-mail pro contato da empresa",
+    configPadrao: { assunto: "", corpoHtml: "" },
+  },
+  {
+    tipo: "acao_alertar_renovacao",
+    categoria: "acao",
+    label: "Alertar GC sobre renovação",
+    descricao: "Envia e-mail pro GC responsável e cria notificação interna — não configura nada",
+    configPadrao: {},
+  },
+  {
     tipo: "espera",
     categoria: "espera",
     label: "Espera",
@@ -97,6 +118,8 @@ export function resumoConfig(tipo: TipoNoAutomacao, config: Record<string, unkno
       return `${config.dias ?? "—"} dias sem interação`;
     case "gatilho_data_hora":
       return config.dataHora ? new Date(String(config.dataHora)).toLocaleString("pt-BR") : "Sem data definida";
+    case "gatilho_renovacao_proxima":
+      return `${config.diasAntes ?? 30} dias antes da renovação`;
     case "condicao":
       return `${config.campo ?? "—"} ${config.operador ?? ""} ${config.valor ?? ""}`;
     case "acao_whatsapp":
@@ -107,6 +130,10 @@ export function resumoConfig(tipo: TipoNoAutomacao, config: Record<string, unkno
       return `${config.tipoAtividade ?? "—"} (+${config.prazoDias ?? 0}d)`;
     case "acao_notificar_interno":
       return String(config.mensagem ?? "—");
+    case "acao_email":
+      return String(config.assunto || "—");
+    case "acao_alertar_renovacao":
+      return "E-mail + notificação interna pro GC";
     case "espera":
       return `${config.quantidade ?? 1} ${config.unidade ?? "dias"}`;
     default:

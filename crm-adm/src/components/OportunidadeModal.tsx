@@ -50,6 +50,8 @@ export default function OportunidadeModal({
   const [dataProximaAcao, setDataProximaAcao] = useState(oportunidade?.data_proxima_acao ?? "");
   const [observacoes, setObservacoes] = useState(oportunidade?.observacoes ?? "");
   const [healthScore, setHealthScore] = useState(oportunidade?.health_score?.toString() ?? "");
+  const [dataRenovacao, setDataRenovacao] = useState(oportunidade?.data_renovacao ?? "");
+  const [pausarAutomacoes, setPausarAutomacoes] = useState(oportunidade?.pausar_automacoes ?? false);
   const [motivoSelecionado, setMotivoSelecionado] = useState(() => {
     const atual = oportunidade?.motivo_perda ?? "";
     if (atual.startsWith(`${OUTRO_MOTIVO}: `)) return OUTRO_MOTIVO;
@@ -129,6 +131,8 @@ export default function OportunidadeModal({
       observacoes: observacoes || null,
       motivo_perda: etapa === "Perdido" ? motivoPerdaFinal : null,
       health_score: ["Onboarding", "Adoção", "Renovação"].includes(etapa) && healthScore ? Number(healthScore) : null,
+      data_renovacao: dataRenovacao || null,
+      pausar_automacoes: pausarAutomacoes,
       ...(oportunidade ? {} : { tipo_pipeline: (ETAPAS_CS.includes(etapa) ? "cs" : "comercial") as TipoPipeline }),
     };
 
@@ -229,18 +233,34 @@ export default function OportunidadeModal({
           </label>
 
           {["Onboarding", "Adoção", "Renovação"].includes(etapa) && (
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-navy/60 font-medium">Health Score (0-100)</span>
-              <input
-                className="input"
-                type="number"
-                min={0}
-                max={100}
-                value={healthScore}
-                onChange={(e) => setHealthScore(e.target.value)}
-              />
-            </label>
+            <>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-navy/60 font-medium">Health Score (0-100)</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={healthScore}
+                  onChange={(e) => setHealthScore(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-navy/60 font-medium">Data de renovação</span>
+                <input className="input" type="date" value={dataRenovacao} onChange={(e) => setDataRenovacao(e.target.value)} />
+              </label>
+            </>
           )}
+
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={pausarAutomacoes}
+              onChange={(e) => setPausarAutomacoes(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-navy/70">Pausar automações para esta oportunidade específica</span>
+          </label>
 
           {etapa === "Perdido" && (
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">

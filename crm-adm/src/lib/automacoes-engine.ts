@@ -65,7 +65,8 @@ async function encontrarAlvosGatilhoEtapa(admin: AdminClient, etapa: EtapaFunil)
   const { data } = await admin
     .from("oportunidades")
     .select("*, empresas(*)")
-    .eq("etapa_atual", etapa);
+    .eq("etapa_atual", etapa)
+    .eq("pausar_automacoes", false);
 
   return ((data as (Oportunidade & { empresas: Empresa })[]) ?? []).map((o) => ({
     empresaId: o.empresa_id,
@@ -81,27 +82,39 @@ async function encontrarAlvosGatilhoEtapa(admin: AdminClient, etapa: EtapaFunil)
 async function encontrarAlvosAtividadeAtrasada(admin: AdminClient): Promise<Alvo[]> {
   const { data } = await admin
     .from("atividades")
-    .select("*, empresas(*), oportunidades(*)")
+    .select("*, empresas(*), oportunidades(pausar_automacoes)")
     .neq("status", "Concluído")
     .lt("prazo", hojeISODate());
 
   return (
-    (data as { id: string; empresa_id: string | null; oportunidade_id: string | null; responsavel_id: string | null; empresas: Empresa | null }[]) ?? []
-  ).map((a) => ({
-    empresaId: a.empresa_id,
-    oportunidadeId: a.oportunidade_id,
-    atividadeId: a.id,
-    nomeEmpresa: a.empresas?.nome_empresa ?? null,
-    telefone: a.empresas?.telefone ?? null,
-    emailContato: a.empresas?.email ?? null,
-    gcResponsavelId: a.responsavel_id,
-  }));
+    (
+      (data as {
+        id: string;
+        empresa_id: string | null;
+        oportunidade_id: string | null;
+        responsavel_id: string | null;
+        empresas: Empresa | null;
+        oportunidades: { pausar_automacoes: boolean } | null;
+      }[]) ?? []
+    )
+      .filter((a) => !a.oportunidades?.pausar_automacoes)
+      .map((a) => ({
+        empresaId: a.empresa_id,
+        oportunidadeId: a.oportunidade_id,
+        atividadeId: a.id,
+        nomeEmpresa: a.empresas?.nome_empresa ?? null,
+        telefone: a.empresas?.telefone ?? null,
+        emailContato: a.empresas?.email ?? null,
+        gcResponsavelId: a.responsavel_id,
+      }))
+  );
 }
 
 async function encontrarAlvosSemContato(admin: AdminClient, dias: number): Promise<Alvo[]> {
   const { data } = await admin
     .from("oportunidades")
     .select("*, empresas(*)")
+    .eq("pausar_automacoes", false)
     .not("ultima_interacao", "is", null)
     .not("etapa_atual", "in", '("Contrato Fechado","Perdido","Renovação")');
 
@@ -117,6 +130,30 @@ async function encontrarAlvosSemContato(admin: AdminClient, dias: number): Promi
       emailContato: o.empresas?.email ?? null,
       gcResponsavelId: o.gc_responsavel_id,
     })));
+}
+
+async function encontrarAlvosRenovacaoProxima(admin: AdminClient, diasAntes: number): Promise<Alvo[]> {
+  const { data } = await admin
+    .from("oportunidades")
+    .select("*, empresas(*)")
+    .eq("pausar_automacoes", false)
+    .not("data_renovacao", "is", null);
+
+  const hoje = new Date();
+  return ((data as (Oportunidade & { empresas: Empresa })[]) ?? [])
+    .filter((o) => {
+      const diasRestantes = (new Date(o.data_renovacao!).getTime() - hoje.getTime()) / 86400000;
+      return diasRestantes >= 0 && diasRestantes <= diasAntes;
+    })
+    .map((o) => ({
+      empresaId: o.empresa_id,
+      oportunidadeId: o.id,
+      atividadeId: null,
+      nomeEmpresa: o.empresas?.nome_empresa ?? null,
+      telefone: o.empresas?.telefone ?? null,
+      emailContato: o.empresas?.email ?? null,
+      gcResponsavelId: o.gc_responsavel_id,
+    }));
 }
 
 function alvoVazio(): Alvo {
@@ -144,6 +181,8 @@ async function encontrarAlvos(admin: AdminClient, gatilho: AutomacaoNo): Promise
       if (typeof config.dataHora !== "string") return [];
       return new Date(config.dataHora).getTime() <= Date.now() ? [alvoVazio()] : [];
     }
+    case "gatilho_renovacao_proxima":
+      return encontrarAlvosRenovacaoProxima(admin, typeof config.diasAntes === "number" ? config.diasAntes : 30);
     default:
       return [];
   }
@@ -270,6 +309,45 @@ async function executarAcaoNotificarInterno(admin: AdminClient, config: Record<s
   return error ? { ok: false, erro: error.message } : { ok: true };
 }
 
+async function executarAcaoEmail(config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  if (!alvo.emailContato) return { ok: false, erro: "Empresa sem e-mail cadastrado" };
+  const nome = alvo.nomeEmpresa ?? "cliente";
+  const assunto = String(config.assunto ?? "").replace("{empresa}", nome);
+  const corpoHtml = String(config.corpoHtml ?? "").replace(/\{empresa\}/g, nome);
+  const resultado = await enviarEmail({ para: [alvo.emailContato], assunto, html: `<div>${corpoHtml}</div>` });
+  return resultado.ok ? { ok: true } : { ok: false, erro: resultado.error };
+}
+
+async function executarAcaoAlertarRenovacao(admin: AdminClient, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  if (!alvo.gcResponsavelId) return { ok: false, erro: "Oportunidade sem GC responsável" };
+
+  const { data: gc } = await admin.from("gcs").select("email, nome").eq("id", alvo.gcResponsavelId).maybeSingle();
+
+  const { error: erroAtividade } = await admin.from("atividades").insert({
+    empresa_id: alvo.empresaId,
+    oportunidade_id: alvo.oportunidadeId,
+    tipo_atividade: `🔔 Renovação de ${alvo.nomeEmpresa ?? "cliente"} se aproximando`,
+    responsavel_id: alvo.gcResponsavelId,
+    status: "Pendente",
+    prazo: hojeISODate(),
+    alerta_disparado: true,
+  });
+  if (erroAtividade) return { ok: false, erro: erroAtividade.message };
+
+  // A notificação interna já foi criada acima e é o canal principal — se o e-mail falhar,
+  // não desfaz isso nem marca a ação inteira como erro (senão o motor tentaria de novo no
+  // próximo dia e duplicaria a notificação interna).
+  if (gc?.email) {
+    await enviarEmail({
+      para: [gc.email],
+      assunto: `Renovação se aproximando · ${alvo.nomeEmpresa ?? "cliente"}`,
+      html: `<p>Olá${gc.nome ? ` ${gc.nome}` : ""}, a renovação de <strong>${alvo.nomeEmpresa ?? "cliente"}</strong> está se aproximando. Confira a oportunidade no CRM.</p>`,
+    });
+  }
+
+  return { ok: true };
+}
+
 // ---------- Percorrer a cadeia de nós a partir de um gatilho, pra um alvo específico ----------
 
 async function processarNo(
@@ -338,6 +416,8 @@ async function processarNo(
       else if (no.tipo === "acao_agendar_reuniao") resultado = await executarAcaoAgendarReuniao(no.config, alvo);
       else if (no.tipo === "acao_criar_atividade") resultado = await executarAcaoCriarAtividade(admin, no.config, alvo);
       else if (no.tipo === "acao_notificar_interno") resultado = await executarAcaoNotificarInterno(admin, no.config, alvo);
+      else if (no.tipo === "acao_email") resultado = await executarAcaoEmail(no.config, alvo);
+      else if (no.tipo === "acao_alertar_renovacao") resultado = await executarAcaoAlertarRenovacao(admin, alvo);
       else resultado = { ok: false, erro: `Tipo de nó desconhecido: ${no.tipo}` };
     } catch (e) {
       resultado = { ok: false, erro: e instanceof Error ? e.message : "Erro desconhecido" };
