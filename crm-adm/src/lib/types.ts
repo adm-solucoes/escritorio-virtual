@@ -92,6 +92,17 @@ export type TipoPipeline = "comercial" | "cs";
 
 export type TipoLinkNotificacao = "empresa" | "oportunidade" | "atividade";
 
+export interface LogAlteracao {
+  id: string;
+  registro_tipo: string;
+  registro_id: string;
+  campo_alterado: string;
+  valor_anterior: string | null;
+  valor_novo: string | null;
+  usuario: string | null;
+  data: string;
+}
+
 export type TipoRegistroAnexo = "empresa" | "oportunidade";
 
 export interface Anexo {

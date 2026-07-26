@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Download, History, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useGcAtual } from "@/lib/useGcAtual";
 import type {
@@ -11,6 +11,7 @@ import type {
   Atividade,
   Empresa,
   Gc,
+  LogAlteracao,
   NpsResposta,
   Oportunidade,
   OportunidadeHistoricoEtapa,
@@ -54,6 +55,7 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
   const [nps, setNps] = useState<NpsResposta[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
+  const [logAlteracoes, setLogAlteracoes] = useState<LogAlteracao[]>([]);
   const [vinculoAnexo, setVinculoAnexo] = useState("empresa");
   const [enviandoAnexo, setEnviandoAnexo] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -144,6 +146,26 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
             );
     consulta.order("criado_em", { ascending: false }).then(({ data }) => {
       if (!cancelado) setAnexos((data as Anexo[]) ?? []);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [id, oportunidades, refreshKey]);
+
+  useEffect(() => {
+    let cancelado = false;
+    const idsOportunidades = oportunidades.map((o) => o.id);
+    const consulta =
+      idsOportunidades.length === 0
+        ? supabase.from("log_alteracoes").select("*").eq("registro_tipo", "empresa").eq("registro_id", id)
+        : supabase
+            .from("log_alteracoes")
+            .select("*")
+            .or(
+              `and(registro_tipo.eq.empresa,registro_id.eq.${id}),and(registro_tipo.eq.oportunidade,registro_id.in.(${idsOportunidades.join(",")}))`
+            );
+    consulta.order("data", { ascending: false }).then(({ data }) => {
+      if (!cancelado) setLogAlteracoes((data as LogAlteracao[]) ?? []);
     });
     return () => {
       cancelado = true;
@@ -446,6 +468,28 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
             </label>
           </div>
           <p className="text-[11px] text-navy/40">PDF, Word, Excel ou imagem — até 10MB por arquivo.</p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-bold text-navy flex items-center gap-1.5">
+            <History size={14} /> Histórico de alterações
+          </h2>
+          {logAlteracoes.length === 0 ? (
+            <p className="text-xs text-navy/40">Nenhuma alteração registrada ainda.</p>
+          ) : (
+            <ul className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+              {logAlteracoes.map((l) => (
+                <li key={l.id} className="text-xs text-navy/70 bg-navy/[0.03] rounded px-2.5 py-1.5">
+                  <span className="font-semibold">{l.campo_alterado}</span>{" "}
+                  {l.valor_novo === null
+                    ? `— registro excluído (era "${l.valor_anterior ?? "—"}")`
+                    : `de "${l.valor_anterior ?? "—"}" para "${l.valor_novo}"`}
+                  {" — "}
+                  {new Date(l.data).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {conversa && (
