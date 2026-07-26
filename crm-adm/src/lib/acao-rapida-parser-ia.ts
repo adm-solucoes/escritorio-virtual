@@ -3,10 +3,8 @@
 // manual antes de disparar qualquer ação (calendário/e-mail/WhatsApp) continua obrigatória,
 // então um erro de interpretação da IA nunca dispara nada sozinho.
 
-import Anthropic from "@anthropic-ai/sdk";
+import { chamarClaude, parseJsonIA } from "./ai";
 import type { ComandoParseado } from "./acao-rapida-parser";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SCHEMA = {
   type: "object" as const,
@@ -22,9 +20,16 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-export async function interpretarComandoIA(texto: string): Promise<ComandoParseado | null> {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
+interface RespostaComandoIA {
+  entendido: boolean;
+  hora: string | null;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  dataISO: string | null;
+}
 
+export async function interpretarComandoIA(texto: string): Promise<ComandoParseado | null> {
   const hoje = new Date().toISOString().slice(0, 10);
 
   const system = `Você extrai dados de um comando de agendamento de reunião em português, escrito de forma informal e com possíveis erros de digitação. Hoje é ${hoje} (formato YYYY-MM-DD).
@@ -38,32 +43,16 @@ Extraia e-mail e telefone só se estiverem literalmente no texto (não invente);
 
 Exemplo: "reunião com o caio as 14 no email caio@x.com" -> entendido true, hora 14:00, nome Caio, email caio@x.com, telefone null, dataISO hoje.`;
 
-  const response = await client.messages.create({
-    model: "claude-haiku-4-5",
-    max_tokens: 300,
+  const resultado = await chamarClaude({
+    tarefa: "extrair",
     system,
-    messages: [{ role: "user", content: texto }],
-    output_config: { format: { type: "json_schema", schema: SCHEMA } },
+    mensagem: texto,
+    maxTokens: 300,
+    outputSchema: SCHEMA,
   });
 
-  const bloco = response.content.find((b) => b.type === "text");
-  if (!bloco || bloco.type !== "text") return null;
-
-  let dados: {
-    entendido: boolean;
-    hora: string | null;
-    nome: string | null;
-    email: string | null;
-    telefone: string | null;
-    dataISO: string | null;
-  };
-  try {
-    dados = JSON.parse(bloco.text);
-  } catch {
-    return null;
-  }
-
-  if (!dados.entendido || !dados.hora || !dados.nome || !dados.dataISO) return null;
+  const dados = parseJsonIA<RespostaComandoIA>(resultado);
+  if (!dados || !dados.entendido || !dados.hora || !dados.nome || !dados.dataISO) return null;
 
   return {
     hora: dados.hora,
