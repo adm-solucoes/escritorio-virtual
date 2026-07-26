@@ -15,9 +15,23 @@ import {
 } from "@/lib/types";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
 import { realizadoNoMes } from "@/lib/metas";
-import { cicloVendasComercial, funilConversao, tempoMedioPorEtapa } from "@/lib/relatorios";
+import { cicloVendasComercial, chaveMes, funilConversao, isGanha, isPerdida, mesAno, tempoMedioPorEtapa } from "@/lib/relatorios";
+import { DonutChart } from "@/components/charts/DonutChart";
+import { LineChart } from "@/components/charts/LineChart";
+import { FunnelChart } from "@/components/charts/FunnelChart";
+import { StatCard } from "@/components/charts/StatCard";
+import { CORES_ICP, CORES_TEMPERATURA, COR_GANHOS, COR_PERDAS } from "@/components/charts/chart-colors";
 
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const moedaCompacta = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
+
+function variacaoPercentual(atual: number, anterior: number): number | null {
+  if (anterior === 0) return atual === 0 ? 0 : null;
+  return ((atual - anterior) / anterior) * 100;
+}
+
+const MESES_HISTORICO = 6;
 
 export default function DashboardPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -124,6 +138,39 @@ export default function DashboardPage() {
   const cicloVendas = useMemo(() => cicloVendasComercial(historico), [historico]);
   const tempoPorEtapa = useMemo(() => tempoMedioPorEtapa(historico), [historico]);
 
+  // Série mensal (últimos 6 meses, preenchendo meses sem dados com zero) pro
+  // gráfico de linha Ganhas x Perdidas.
+  const serieMensal = useMemo(() => {
+    const meses: { chave: string; label: string; ganho: number; perdido: number }[] = [];
+    const hoje = new Date();
+    for (let i = MESES_HISTORICO - 1; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      meses.push({ chave: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: mesAno(d.toISOString()), ganho: 0, perdido: 0 });
+    }
+    const porChave = new Map(meses.map((m) => [m.chave, m]));
+    for (const o of oportunidades) {
+      if (!isGanha(o) && !isPerdida(o)) continue;
+      const chave = chaveMes(o.atualizado_em ?? o.criado_em);
+      const m = porChave.get(chave);
+      if (!m) continue;
+      if (isGanha(o)) m.ganho += o.valor_estimado ?? 0;
+      else m.perdido += o.valor_estimado ?? 0;
+    }
+    return meses;
+  }, [oportunidades]);
+
+  const deltaReceita = useMemo(() => {
+    const n = serieMensal.length;
+    if (n < 2) return null;
+    return variacaoPercentual(serieMensal[n - 1].ganho, serieMensal[n - 2].ganho);
+  }, [serieMensal]);
+
+  const deltaPerdas = useMemo(() => {
+    const n = serieMensal.length;
+    if (n < 2) return null;
+    return variacaoPercentual(serieMensal[n - 1].perdido, serieMensal[n - 2].perdido);
+  }, [serieMensal]);
+
   if (loading) {
     return <p className="p-6 text-sm text-navy/50">Carregando...</p>;
   }
@@ -136,18 +183,24 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Card label="Total de leads" value={empresas.length.toString()} />
-        <Card label="Oportunidades" value={oportunidades.length.toString()} />
-        <Card label="Pipeline aberto" value={moeda(metricas.valorPipeline)} />
-        <Card label="Pipeline ponderado" value={moeda(metricas.valorPonderado)} destaque />
-        <Card label="Receita fechada" value={moeda(metricas.receitaFechada)} />
-        <Card label="Ticket médio" value={moeda(metricas.ticketMedio)} />
+        <StatCard label="Total de leads" value={empresas.length.toString()} />
+        <StatCard label="Oportunidades" value={oportunidades.length.toString()} />
+        <StatCard label="Pipeline aberto" value={moeda(metricas.valorPipeline)} />
+        <StatCard label="Pipeline ponderado" value={moeda(metricas.valorPonderado)} destaque />
+        <StatCard label="Receita fechada" value={moeda(metricas.receitaFechada)} delta={deltaReceita} sub="vs. mês anterior" />
+        <StatCard label="Ticket médio" value={moeda(metricas.ticketMedio)} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card label="Taxa de conversão" value={`${metricas.taxaConversao.toFixed(0)}%`} sub={`${metricas.ganhas} ganhas · ${metricas.perdidas} perdidas`} />
-        <Card label="Oportunidades ganhas" value={metricas.ganhas.toString()} />
-        <Card label="Oportunidades perdidas" value={metricas.perdidas.toString()} />
+        <StatCard label="Taxa de conversão" value={`${metricas.taxaConversao.toFixed(0)}%`} sub={`${metricas.ganhas} ganhas · ${metricas.perdidas} perdidas`} />
+        <StatCard label="Oportunidades ganhas" value={metricas.ganhas.toString()} />
+        <StatCard
+          label="Oportunidades perdidas"
+          value={metricas.perdidas.toString()}
+          delta={deltaPerdas}
+          deltaGoodDirection="down"
+          sub="valor perdido vs. mês anterior"
+        />
       </div>
 
       {(metaEquipe || gcs.length > 0) && (
@@ -174,44 +227,64 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
         <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-navy mb-3">Empresas por temperatura</h2>
-          <div className="flex flex-col gap-2">
-            {Object.entries(porTemperatura)
-              .filter(([, v]) => v > 0)
-              .map(([temp, v]) => (
-                <Barra key={temp} label={temp} valor={v} total={empresas.length} />
-              ))}
-          </div>
+          <h2 className="text-sm font-bold text-navy mb-4">Receita por mês — Ganhas × Perdidas</h2>
+          <LineChart
+            series={[
+              { name: "Ganhas", color: COR_GANHOS, valores: serieMensal.map((m) => m.ganho) },
+              { name: "Perdidas", color: COR_PERDAS, valores: serieMensal.map((m) => m.perdido) },
+            ]}
+            categorias={serieMensal.map((m) => m.label)}
+            formatValue={moeda}
+            formatTick={moedaCompacta}
+          />
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-navy mb-3">Empresas por ICP</h2>
-          <div className="flex flex-col gap-2">
-            {Object.entries(porIcp)
-              .filter(([, v]) => v > 0)
-              .map(([icp, v]) => (
-                <Barra key={icp} label={icp} valor={v} total={empresas.length} />
-              ))}
+        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm flex flex-col">
+          <h2 className="text-sm font-bold text-navy mb-3">Top 5 leads (score)</h2>
+          <div className="flex flex-col gap-2.5">
+            {topLeads.map(({ empresa, score }) => {
+              const classificacao = classificarScore(score);
+              return (
+                <div key={empresa.id} className="flex items-center justify-between text-sm gap-2">
+                  <span className="text-navy font-medium truncate">{empresa.nome_empresa}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${classificacao.cor}`}>
+                    {score} · {classificacao.label}
+                  </span>
+                </div>
+              );
+            })}
+            {topLeads.length === 0 && <p className="text-xs text-navy/40">Sem leads cadastrados ainda.</p>}
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
-        <h2 className="text-sm font-bold text-navy mb-3">Top 5 leads (score)</h2>
-        <div className="flex flex-col gap-2">
-          {topLeads.map(({ empresa, score }) => {
-            const classificacao = classificarScore(score);
-            return (
-              <div key={empresa.id} className="flex items-center justify-between text-sm">
-                <span className="text-navy font-medium">{empresa.nome_empresa}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${classificacao.cor}`}>
-                  {score} · {classificacao.label}
-                </span>
-              </div>
-            );
-          })}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-sm font-bold text-navy">Empresas por temperatura</h2>
+            <span className="text-xs text-navy/40">{empresas.length} no total</span>
+          </div>
+          <DonutChart
+            data={Object.entries(porTemperatura)
+              .filter(([, v]) => v > 0)
+              .map(([temp, v]) => ({ label: temp, value: v, color: CORES_TEMPERATURA[temp] ?? "#a8a29e" }))}
+            centerTitle="Empresas"
+          />
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-sm font-bold text-navy">Empresas por ICP</h2>
+            <span className="text-xs text-navy/40">{empresas.length} no total</span>
+          </div>
+          <DonutChart
+            data={Object.entries(porIcp)
+              .filter(([, v]) => v > 0)
+              .map(([icp, v]) => ({ label: icp, value: v, color: CORES_ICP[icp] ?? "#a8a29e" }))}
+            centerTitle="Empresas"
+          />
         </div>
       </div>
 
@@ -249,17 +322,13 @@ export default function DashboardPage() {
           {funil[0]?.qtd === 0 ? (
             <p className="text-xs text-navy/40">Sem oportunidades comerciais suficientes ainda.</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {funil.map((f) => (
-                <BarraFunil key={f.etapa} {...f} />
-              ))}
-            </div>
+            <FunnelChart data={funil} />
           )}
         </div>
 
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
-            <Card
+            <StatCard
               label="Ciclo médio de vendas"
               value={cicloVendas.amostras ? `${cicloVendas.diasMedios} dias` : "—"}
               sub={cicloVendas.amostras ? `${cicloVendas.amostras} oportunidade${cicloVendas.amostras > 1 ? "s" : ""} fechada${cicloVendas.amostras > 1 ? "s" : ""} · Prospect → Contrato Fechado` : "Ainda sem oportunidades fechadas"}
@@ -296,16 +365,6 @@ export default function DashboardPage() {
   );
 }
 
-function Card({ label, value, sub, destaque }: { label: string; value: string; sub?: string; destaque?: boolean }) {
-  return (
-    <div className={`rounded-xl border p-4 shadow-sm ${destaque ? "bg-navy border-navy" : "bg-white border-navy/10"}`}>
-      <p className={`text-xs font-semibold ${destaque ? "text-cream/60" : "text-navy/50"}`}>{label}</p>
-      <p className={`text-lg font-extrabold mt-1 ${destaque ? "text-cream" : "text-navy"}`}>{value}</p>
-      {sub && <p className={`text-[11px] mt-0.5 ${destaque ? "text-cream/50" : "text-navy/40"}`}>{sub}</p>}
-    </div>
-  );
-}
-
 function BarraMeta({
   label,
   realizado,
@@ -334,45 +393,3 @@ function BarraMeta({
   );
 }
 
-function BarraFunil({
-  etapa,
-  qtd,
-  percentualDoTopo,
-  percentualEtapaAnterior,
-}: {
-  etapa: string;
-  qtd: number;
-  percentualDoTopo: number;
-  percentualEtapaAnterior: number | null;
-}) {
-  return (
-    <div>
-      <div className="flex justify-between text-xs mb-1">
-        <span className="font-semibold text-navy/70">{etapa}</span>
-        <span className="text-navy/60">
-          {qtd} · {percentualDoTopo}%{percentualEtapaAnterior !== null ? ` (${percentualEtapaAnterior}% da etapa anterior)` : ""}
-        </span>
-      </div>
-      <div className="h-2.5 rounded-full bg-navy/5 overflow-hidden">
-        <div className="h-full rounded-full bg-blue" style={{ width: `${percentualDoTopo}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function Barra({ label, valor, total }: { label: string; valor: number; total: number }) {
-  const pct = total ? Math.round((valor / total) * 100) : 0;
-  return (
-    <div>
-      <div className="flex justify-between text-xs text-navy/70 mb-1">
-        <span className="font-medium">{label}</span>
-        <span>
-          {valor} ({pct}%)
-        </span>
-      </div>
-      <div className="h-2 rounded-full bg-navy/5 overflow-hidden">
-        <div className="h-full bg-blue rounded-full" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
