@@ -50,15 +50,15 @@ export const DEFINICOES_NOS: DefinicaoNo[] = [
     tipo: "condicao",
     categoria: "condicao",
     label: "Condição",
-    descricao: "Ramifica o fluxo (Sim/Não) com base em valor, etapa ou responsável",
-    configPadrao: { campo: "valor_estimado", operador: ">", valor: "" },
+    descricao: "Ramifica o fluxo (Sim/Não) com base em valor, etapa, responsável ou pergunta pra IA",
+    configPadrao: { campo: "valor_estimado", operador: ">", valor: "", perguntaIA: "" },
   },
   {
     tipo: "acao_whatsapp",
     categoria: "acao",
     label: "Follow-up WhatsApp",
     descricao: "Envia mensagem de WhatsApp pro contato da empresa",
-    configPadrao: { modo: "template", templateNome: "", templateIdioma: "pt_BR", texto: "" },
+    configPadrao: { modo: "template", templateNome: "", templateIdioma: "pt_BR", texto: "", instrucaoIA: "", enviarAutomatico: false },
   },
   {
     tipo: "acao_agendar_reuniao",
@@ -86,13 +86,20 @@ export const DEFINICOES_NOS: DefinicaoNo[] = [
     categoria: "acao",
     label: "Follow-up por e-mail",
     descricao: "Envia e-mail pro contato da empresa",
-    configPadrao: { assunto: "", corpoHtml: "" },
+    configPadrao: { modo: "fixo", assunto: "", corpoHtml: "", instrucaoIA: "", enviarAutomatico: false },
   },
   {
     tipo: "acao_alertar_renovacao",
     categoria: "acao",
     label: "Alertar GC sobre renovação",
     descricao: "Envia e-mail pro GC responsável e cria notificação interna — não configura nada",
+    configPadrao: {},
+  },
+  {
+    tipo: "acao_resumir_ia",
+    categoria: "acao",
+    label: "Resumo e próxima ação (IA)",
+    descricao: "Gera um resumo da situação e sugere a próxima ação — vira nota interna pro GC, nunca fala com o cliente",
     configPadrao: {},
   },
   {
@@ -121,8 +128,11 @@ export function resumoConfig(tipo: TipoNoAutomacao, config: Record<string, unkno
     case "gatilho_renovacao_proxima":
       return `${config.diasAntes ?? 30} dias antes da renovação`;
     case "condicao":
-      return `${config.campo ?? "—"} ${config.operador ?? ""} ${config.valor ?? ""}`;
+      return config.campo === "ia"
+        ? `IA: ${config.perguntaIA ? String(config.perguntaIA).slice(0, 60) : "—"}`
+        : `${config.campo ?? "—"} ${config.operador ?? ""} ${config.valor ?? ""}`;
     case "acao_whatsapp":
+      if (config.modo === "ia") return `IA${config.enviarAutomatico ? " (envio automático)" : " (revisão antes de enviar)"}`;
       return config.modo === "template" ? `Template: ${config.templateNome ?? "—"}` : "Mensagem de texto";
     case "acao_agendar_reuniao":
       return `${config.duracaoMinutos ?? 30}min às ${config.horarioPadrao ?? "10:00"}`;
@@ -131,9 +141,12 @@ export function resumoConfig(tipo: TipoNoAutomacao, config: Record<string, unkno
     case "acao_notificar_interno":
       return String(config.mensagem ?? "—");
     case "acao_email":
+      if (config.modo === "ia") return `IA${config.enviarAutomatico ? " (envio automático)" : " (revisão antes de enviar)"}`;
       return String(config.assunto || "—");
     case "acao_alertar_renovacao":
       return "E-mail + notificação interna pro GC";
+    case "acao_resumir_ia":
+      return "Resumo + próxima ação, como nota interna";
     case "espera":
       return `${config.quantidade ?? 1} ${config.unidade ?? "dias"}`;
     default:

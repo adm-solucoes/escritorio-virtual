@@ -13,6 +13,7 @@ import {
   CalendarClock,
   Mail,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import type { TipoNoAutomacao } from "@/lib/types";
 import { COR_CATEGORIA, definicaoDoTipo } from "@/lib/automacoes-nos";
@@ -30,6 +31,7 @@ const ICONE_POR_TIPO: Record<TipoNoAutomacao, React.ComponentType<{ size?: numbe
   acao_notificar_interno: Bell,
   acao_email: Mail,
   acao_alertar_renovacao: RefreshCw,
+  acao_resumir_ia: Sparkles,
   espera: Clock,
 };
 

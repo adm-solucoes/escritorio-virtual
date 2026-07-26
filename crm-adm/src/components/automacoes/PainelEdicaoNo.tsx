@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { ETAPAS_FUNIL } from "@/lib/types";
 import { definicaoDoTipo } from "@/lib/automacoes-nos";
 import type { TipoNoAutomacao } from "@/lib/types";
@@ -96,19 +96,36 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
                 <option value="valor_estimado">Valor estimado</option>
                 <option value="etapa_atual">Etapa atual</option>
                 <option value="gc_responsavel_id">Responsável</option>
+                <option value="ia">IA (pergunta em linguagem natural)</option>
               </select>
             </Campo>
-            <Campo label="Operador">
-              <select className="input" value={String(config.operador ?? ">")} onChange={(e) => set("operador", e.target.value)}>
-                <option value=">">maior que</option>
-                <option value="<">menor que</option>
-                <option value="=">igual a</option>
-                <option value="!=">diferente de</option>
-              </select>
-            </Campo>
-            <Campo label="Valor">
-              <input className="input" value={String(config.valor ?? "")} onChange={(e) => set("valor", e.target.value)} />
-            </Campo>
+            {config.campo === "ia" ? (
+              <Campo label="Pergunta pra IA">
+                <textarea
+                  className="input min-h-[80px] resize-none"
+                  placeholder="Ex: a empresa parece insatisfeita nas últimas mensagens?"
+                  value={String(config.perguntaIA ?? "")}
+                  onChange={(e) => set("perguntaIA", e.target.value)}
+                />
+                <span className="text-[11px] text-navy/40 flex items-center gap-1">
+                  <Sparkles size={11} /> A IA responde sim/não olhando dados da empresa e últimas mensagens (WhatsApp/Instagram).
+                </span>
+              </Campo>
+            ) : (
+              <>
+                <Campo label="Operador">
+                  <select className="input" value={String(config.operador ?? ">")} onChange={(e) => set("operador", e.target.value)}>
+                    <option value=">">maior que</option>
+                    <option value="<">menor que</option>
+                    <option value="=">igual a</option>
+                    <option value="!=">diferente de</option>
+                  </select>
+                </Campo>
+                <Campo label="Valor">
+                  <input className="input" value={String(config.valor ?? "")} onChange={(e) => set("valor", e.target.value)} />
+                </Campo>
+              </>
+            )}
           </>
         )}
 
@@ -118,9 +135,10 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
               <select className="input" value={String(config.modo ?? "template")} onChange={(e) => set("modo", e.target.value)}>
                 <option value="template">Template aprovado (funciona sempre)</option>
                 <option value="texto">Texto livre (só dentro da janela de 24h)</option>
+                <option value="ia">Gerar com IA (só dentro da janela de 24h)</option>
               </select>
             </Campo>
-            {config.modo === "texto" ? (
+            {config.modo === "texto" && (
               <Campo label="Mensagem">
                 <textarea
                   className="input min-h-[90px] resize-none"
@@ -128,7 +146,8 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
                   onChange={(e) => set("texto", e.target.value)}
                 />
               </Campo>
-            ) : (
+            )}
+            {config.modo === "template" && (
               <Campo label="Template">
                 <select
                   className="input"
@@ -144,6 +163,7 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
                 </select>
               </Campo>
             )}
+            {config.modo === "ia" && <CampoIA config={config} set={set} />}
           </>
         )}
 
@@ -221,23 +241,43 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
 
         {tipo === "acao_email" && (
           <>
-            <Campo label="Assunto">
-              <input className="input" value={String(config.assunto ?? "")} onChange={(e) => set("assunto", e.target.value)} />
+            <Campo label="Tipo de conteúdo">
+              <select className="input" value={String(config.modo ?? "fixo")} onChange={(e) => set("modo", e.target.value)}>
+                <option value="fixo">Texto fixo</option>
+                <option value="ia">Gerar com IA</option>
+              </select>
             </Campo>
-            <Campo label="Corpo do e-mail (HTML simples)">
-              <textarea
-                className="input min-h-[120px] resize-none"
-                value={String(config.corpoHtml ?? "")}
-                onChange={(e) => set("corpoHtml", e.target.value)}
-              />
-              <span className="text-[11px] text-navy/40">Use {"{empresa}"} pra inserir o nome da empresa automaticamente</span>
-            </Campo>
+            {config.modo === "ia" ? (
+              <CampoIA config={config} set={set} />
+            ) : (
+              <>
+                <Campo label="Assunto">
+                  <input className="input" value={String(config.assunto ?? "")} onChange={(e) => set("assunto", e.target.value)} />
+                </Campo>
+                <Campo label="Corpo do e-mail (HTML simples)">
+                  <textarea
+                    className="input min-h-[120px] resize-none"
+                    value={String(config.corpoHtml ?? "")}
+                    onChange={(e) => set("corpoHtml", e.target.value)}
+                  />
+                  <span className="text-[11px] text-navy/40">Use {"{empresa}"} pra inserir o nome da empresa automaticamente</span>
+                </Campo>
+              </>
+            )}
           </>
         )}
 
         {tipo === "acao_alertar_renovacao" && (
           <p className="text-xs text-navy/50">
             Sem configuração — envia e-mail e cria uma notificação interna pro GC responsável pela oportunidade.
+          </p>
+        )}
+
+        {tipo === "acao_resumir_ia" && (
+          <p className="text-xs text-navy/50 flex items-start gap-1.5">
+            <Sparkles size={13} className="shrink-0 mt-0.5" />
+            Sem configuração — a IA lê o histórico da empresa (dados cadastrais, últimas mensagens) e cria uma nota interna
+            com resumo + próxima ação sugerida pro GC responsável. Nunca envia nada pro cliente.
           </p>
         )}
 
@@ -272,6 +312,41 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
         </button>
       </div>
     </div>
+  );
+}
+
+function CampoIA({
+  config,
+  set,
+}: {
+  config: Record<string, unknown>;
+  set: (campo: string, valor: unknown) => void;
+}) {
+  return (
+    <>
+      <Campo label="Instrução pra IA">
+        <textarea
+          className="input min-h-[80px] resize-none"
+          placeholder="Ex: mensagem cordial perguntando se ainda tem interesse na proposta"
+          value={String(config.instrucaoIA ?? "")}
+          onChange={(e) => set("instrucaoIA", e.target.value)}
+        />
+      </Campo>
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={config.enviarAutomatico === true}
+          onChange={(e) => set("enviarAutomatico", e.target.checked)}
+          className="w-4 h-4 mt-0.5"
+        />
+        <span>
+          Enviar automaticamente, sem revisão
+          <span className="block text-[11px] text-navy/40 font-normal">
+            Desmarcado (recomendado): a mensagem gerada vira uma sugestão pendente — um GC revisa e aprova antes de sair.
+          </span>
+        </span>
+      </label>
+    </>
   );
 }
 

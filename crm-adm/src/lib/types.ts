@@ -91,7 +91,7 @@ export interface EtapaFunilConfig {
 
 export type TipoPipeline = "comercial" | "cs";
 
-export type TipoLinkNotificacao = "empresa" | "oportunidade" | "atividade";
+export type TipoLinkNotificacao = "empresa" | "oportunidade" | "atividade" | "sugestao_ia";
 
 export interface LogAlteracao {
   id: string;
@@ -282,6 +282,7 @@ export type TipoNoAutomacao =
   | "acao_notificar_interno"
   | "acao_email"
   | "acao_alertar_renovacao"
+  | "acao_resumir_ia"
   | "espera";
 
 export interface AutomacaoNo {
@@ -314,6 +315,25 @@ export interface AutomacaoExecucao {
   executado_em: string;
   resultado: ResultadoExecucaoAutomacao;
   erro: string | null;
+}
+
+export type CanalSugestaoIa = "whatsapp" | "email";
+export type StatusSugestaoIa = "pendente" | "aprovada" | "descartada";
+
+export interface SugestaoIaAutomacao {
+  id: string;
+  automacao_id: string | null;
+  no_id: string | null;
+  empresa_id: string | null;
+  oportunidade_id: string | null;
+  canal: CanalSugestaoIa;
+  assunto: string | null;
+  conteudo: string;
+  status: StatusSugestaoIa;
+  criado_em: string;
+  revisado_em: string | null;
+  revisado_por_gc_id: string | null;
+  empresas?: Empresa;
 }
 
 export interface IntegracaoGoogle {

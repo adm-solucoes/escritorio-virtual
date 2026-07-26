@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Workflow } from "lucide-react";
+import { Plus, Sparkles, Trash2, Workflow } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Automacao } from "@/lib/types";
 
@@ -14,6 +14,7 @@ const EXEMPLO_FOLLOWUP_PADRAO = {
 export default function AutomacoesPage() {
   const router = useRouter();
   const [automacoes, setAutomacoes] = useState<Automacao[]>([]);
+  const [sugestoesPendentes, setSugestoesPendentes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -28,6 +29,13 @@ export default function AutomacoesPage() {
         if (cancelado) return;
         setAutomacoes((data as Automacao[]) ?? []);
         setLoading(false);
+      });
+    supabase
+      .from("automacao_sugestoes_ia")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pendente")
+      .then(({ count }) => {
+        if (!cancelado) setSugestoesPendentes(count ?? 0);
       });
     return () => {
       cancelado = true;
@@ -119,7 +127,7 @@ export default function AutomacoesPage() {
             <Workflow size={20} /> Automações
           </h1>
           <p className="text-sm text-navy/60">
-            Fluxos automáticos de follow-up: WhatsApp, agenda e atividades — sem IA, regras fixas.
+            Fluxos automáticos de follow-up: WhatsApp, agenda, atividades e nós de IA (mensagem, condição, resumo).
           </p>
         </div>
         <div className="flex gap-2">
@@ -133,6 +141,16 @@ export default function AutomacoesPage() {
           </button>
         </div>
       </div>
+
+      {sugestoesPendentes > 0 && (
+        <button
+          onClick={() => router.push("/automacoes/sugestoes")}
+          className="flex items-center gap-2 bg-blue/10 hover:bg-blue/15 text-blue rounded-xl px-4 py-3 text-sm font-semibold text-left transition-colors"
+        >
+          <Sparkles size={16} className="shrink-0" />
+          {sugestoesPendentes} sugestão{sugestoesPendentes > 1 ? "ões" : ""} de IA aguardando revisão
+        </button>
+      )}
 
       <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
         {loading ? (

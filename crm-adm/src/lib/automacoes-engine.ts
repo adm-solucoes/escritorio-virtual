@@ -1,12 +1,16 @@
 // Motor de execução das automações — roda por cron (gatilhos de tempo) e é chamado também
 // a partir de rotas que disparam gatilhos de evento (mudança de etapa, etc).
-// Regras fixas, sem IA: cada nó sabe exatamente o que fazer a partir do `config` salvo no canvas.
+// A maioria dos nós é regra fixa (config salvo no canvas), mas os nós de IA (condição em
+// linguagem natural, geração de mensagem, resumo) chamam lib/automacao-ia.ts. Mensagem de
+// IA voltada ao cliente não sai sozinha por padrão — vira sugestão pendente de revisão,
+// a menos que o nó tenha "enviarAutomatico" marcado.
 
 import { createAdminClient } from "@/lib/supabase-admin";
 import { enviarEmail, montarEmailConfirmacaoReuniao } from "@/lib/email";
 import { criarEventoReuniao } from "@/lib/google-calendar";
 import { enviarWhatsappGenerico } from "@/lib/whatsapp-envio";
 import { criarNotificacaoSeNaoExiste } from "@/lib/notificacoes";
+import { avaliarCondicaoIA, gerarEmailIA, gerarMensagemWhatsappIA, gerarResumoIA } from "@/lib/automacao-ia";
 import type { AutomacaoConexao, AutomacaoNo, Empresa, EtapaFunil, Oportunidade } from "@/lib/types";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -191,8 +195,24 @@ async function encontrarAlvos(admin: AdminClient, gatilho: AutomacaoNo): Promise
 
 // ---------- Avaliação de condição ----------
 
-function avaliarCondicao(config: Record<string, unknown>, oportunidade: Oportunidade | null): boolean {
+async function avaliarCondicao(
+  admin: AdminClient,
+  config: Record<string, unknown>,
+  oportunidade: Oportunidade | null,
+  alvo: Alvo
+): Promise<boolean> {
   const campo = config.campo as string | undefined;
+
+  if (campo === "ia") {
+    const pergunta = typeof config.perguntaIA === "string" ? config.perguntaIA.trim() : "";
+    if (!pergunta) return false;
+    return avaliarCondicaoIA(admin, pergunta, {
+      empresaId: alvo.empresaId,
+      oportunidadeId: alvo.oportunidadeId,
+      nomeEmpresa: alvo.nomeEmpresa,
+    });
+  }
+
   const operador = config.operador as string | undefined;
   const valor = config.valor as string | undefined;
   if (!campo || !operador || valor === undefined || !oportunidade) return false;
@@ -215,7 +235,66 @@ function avaliarCondicao(config: Record<string, unknown>, oportunidade: Oportuni
 
 // ---------- Execução das ações ----------
 
-async function executarAcaoWhatsapp(config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+async function criarSugestaoIaEAvisar(
+  admin: AdminClient,
+  automacaoId: string,
+  noId: string,
+  alvo: Alvo,
+  canal: "whatsapp" | "email",
+  conteudo: string,
+  assunto?: string
+): Promise<{ ok: boolean; erro?: string }> {
+  const { data: sugestao, error } = await admin
+    .from("automacao_sugestoes_ia")
+    .insert({
+      automacao_id: automacaoId,
+      no_id: noId,
+      empresa_id: alvo.empresaId,
+      oportunidade_id: alvo.oportunidadeId,
+      canal,
+      assunto: assunto ?? null,
+      conteudo,
+    })
+    .select("id")
+    .single();
+  if (error || !sugestao) return { ok: false, erro: error?.message ?? "Erro ao criar sugestão de IA" };
+
+  await criarNotificacaoSeNaoExiste(admin, {
+    gcId: alvo.gcResponsavelId,
+    tipo: "sugestao_ia",
+    mensagem: `Mensagem de ${canal === "whatsapp" ? "WhatsApp" : "e-mail"} gerada por IA pra ${alvo.nomeEmpresa ?? "revisar"} aguardando aprovação`,
+    linkTipo: "sugestao_ia",
+    linkId: sugestao.id,
+  });
+
+  return { ok: true };
+}
+
+async function executarAcaoWhatsapp(
+  admin: AdminClient,
+  automacaoId: string,
+  noId: string,
+  config: Record<string, unknown>,
+  alvo: Alvo
+): Promise<{ ok: boolean; erro?: string }> {
+  if (config.modo === "ia") {
+    const instrucao = typeof config.instrucaoIA === "string" ? config.instrucaoIA.trim() : "";
+    if (!instrucao) return { ok: false, erro: "Instrução pra IA não configurada" };
+    const gerado = await gerarMensagemWhatsappIA(admin, instrucao, {
+      empresaId: alvo.empresaId,
+      oportunidadeId: alvo.oportunidadeId,
+      nomeEmpresa: alvo.nomeEmpresa,
+    });
+    if (!gerado.ok) return { ok: false, erro: gerado.erro };
+
+    if (config.enviarAutomatico === true) {
+      const resultado = await enviarWhatsappGenerico(alvo.telefone, alvo.empresaId, { modo: "texto", texto: gerado.texto });
+      return resultado.ok ? { ok: true } : { ok: false, erro: resultado.erro };
+    }
+
+    return criarSugestaoIaEAvisar(admin, automacaoId, noId, alvo, "whatsapp", gerado.texto);
+  }
+
   const resultado = await enviarWhatsappGenerico(alvo.telefone, alvo.empresaId, {
     modo: config.modo === "template" ? "template" : "texto",
     texto: typeof config.texto === "string" ? config.texto : undefined,
@@ -322,7 +401,32 @@ async function executarAcaoNotificarInterno(admin: AdminClient, config: Record<s
   return { ok: true };
 }
 
-async function executarAcaoEmail(config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+async function executarAcaoEmail(
+  admin: AdminClient,
+  automacaoId: string,
+  noId: string,
+  config: Record<string, unknown>,
+  alvo: Alvo
+): Promise<{ ok: boolean; erro?: string }> {
+  if (config.modo === "ia") {
+    const instrucao = typeof config.instrucaoIA === "string" ? config.instrucaoIA.trim() : "";
+    if (!instrucao) return { ok: false, erro: "Instrução pra IA não configurada" };
+    const gerado = await gerarEmailIA(admin, instrucao, {
+      empresaId: alvo.empresaId,
+      oportunidadeId: alvo.oportunidadeId,
+      nomeEmpresa: alvo.nomeEmpresa,
+    });
+    if (!gerado.ok) return { ok: false, erro: gerado.erro };
+
+    if (config.enviarAutomatico === true) {
+      if (!alvo.emailContato) return { ok: false, erro: "Empresa sem e-mail cadastrado" };
+      const resultado = await enviarEmail({ para: [alvo.emailContato], assunto: gerado.assunto, html: `<div>${gerado.corpoHtml}</div>` });
+      return resultado.ok ? { ok: true } : { ok: false, erro: resultado.error };
+    }
+
+    return criarSugestaoIaEAvisar(admin, automacaoId, noId, alvo, "email", gerado.corpoHtml, gerado.assunto);
+  }
+
   if (!alvo.emailContato) return { ok: false, erro: "Empresa sem e-mail cadastrado" };
   const nome = alvo.nomeEmpresa ?? "cliente";
   const assunto = String(config.assunto ?? "").replace("{empresa}", nome);
@@ -361,6 +465,40 @@ async function executarAcaoAlertarRenovacao(admin: AdminClient, alvo: Alvo): Pro
   return { ok: true };
 }
 
+// Só fala com o time interno (cria atividade + notificação) — nunca envia nada pro
+// cliente, por isso roda direto, sem passar pela fila de revisão de sugestões.
+async function executarAcaoResumirIA(admin: AdminClient, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  const gerado = await gerarResumoIA(admin, {
+    empresaId: alvo.empresaId,
+    oportunidadeId: alvo.oportunidadeId,
+    nomeEmpresa: alvo.nomeEmpresa,
+  });
+  if (!gerado.ok) return { ok: false, erro: gerado.erro };
+
+  const texto = `${gerado.resumo} Próxima ação sugerida: ${gerado.proximaAcao}`;
+
+  const { error } = await admin.from("atividades").insert({
+    empresa_id: alvo.empresaId,
+    oportunidade_id: alvo.oportunidadeId,
+    tipo_atividade: `🧠 Resumo IA — ${texto}`,
+    responsavel_id: alvo.gcResponsavelId,
+    status: "Pendente",
+    prazo: hojeISODate(),
+    alerta_disparado: true,
+  });
+  if (error) return { ok: false, erro: error.message };
+
+  await criarNotificacaoSeNaoExiste(admin, {
+    gcId: alvo.gcResponsavelId,
+    tipo: "resumo_ia",
+    mensagem: `${alvo.nomeEmpresa ? `${alvo.nomeEmpresa}: ` : ""}${gerado.proximaAcao}`,
+    linkTipo: alvo.oportunidadeId ? "oportunidade" : alvo.empresaId ? "empresa" : null,
+    linkId: alvo.oportunidadeId ?? alvo.empresaId ?? null,
+  });
+
+  return { ok: true };
+}
+
 // ---------- Percorrer a cadeia de nós a partir de um gatilho, pra um alvo específico ----------
 
 async function processarNo(
@@ -386,7 +524,7 @@ async function processarNo(
   }
 
   if (no.tipo === "condicao") {
-    const passou = avaliarCondicao(no.config, oportunidade);
+    const passou = await avaliarCondicao(admin, no.config, oportunidade, alvo);
     for (const conexao of filhas(passou ? "sim" : "nao")) {
       await processarNo(admin, automacaoId, nosPorId, conexoes, conexao.no_destino_id, alvo, oportunidade);
     }
@@ -425,12 +563,13 @@ async function processarNo(
   if (!executado) {
     let resultado: { ok: boolean; erro?: string };
     try {
-      if (no.tipo === "acao_whatsapp") resultado = await executarAcaoWhatsapp(no.config, alvo);
+      if (no.tipo === "acao_whatsapp") resultado = await executarAcaoWhatsapp(admin, automacaoId, no.id, no.config, alvo);
       else if (no.tipo === "acao_agendar_reuniao") resultado = await executarAcaoAgendarReuniao(no.config, alvo);
       else if (no.tipo === "acao_criar_atividade") resultado = await executarAcaoCriarAtividade(admin, no.config, alvo);
       else if (no.tipo === "acao_notificar_interno") resultado = await executarAcaoNotificarInterno(admin, no.config, alvo);
-      else if (no.tipo === "acao_email") resultado = await executarAcaoEmail(no.config, alvo);
+      else if (no.tipo === "acao_email") resultado = await executarAcaoEmail(admin, automacaoId, no.id, no.config, alvo);
       else if (no.tipo === "acao_alertar_renovacao") resultado = await executarAcaoAlertarRenovacao(admin, alvo);
+      else if (no.tipo === "acao_resumir_ia") resultado = await executarAcaoResumirIA(admin, alvo);
       else resultado = { ok: false, erro: `Tipo de nó desconhecido: ${no.tipo}` };
     } catch (e) {
       resultado = { ok: false, erro: e instanceof Error ? e.message : "Erro desconhecido" };

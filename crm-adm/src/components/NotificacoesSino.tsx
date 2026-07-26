@@ -14,6 +14,7 @@ function linkDaNotificacao(n: Notificacao): string | null {
   if (n.link_tipo === "empresa") return `/empresas/${n.link_id}`;
   if (n.link_tipo === "oportunidade") return `/pipeline/${n.link_id}`;
   if (n.link_tipo === "atividade") return `/atividades`;
+  if (n.link_tipo === "sugestao_ia") return `/automacoes/sugestoes`;
   return null;
 }
 
