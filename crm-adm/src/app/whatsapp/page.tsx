@@ -396,8 +396,8 @@ function WhatsappPageConteudo() {
 
   return (
     <>
-    <div className="flex-1 flex min-h-0">
-      <div className="w-72 shrink-0 border-r border-navy/10 bg-white flex flex-col">
+    <div className="flex min-h-0 h-[calc(100dvh-56px)] md:h-dvh">
+      <div className="w-72 shrink-0 border-r border-navy/10 bg-white flex flex-col min-h-0">
         <div className="px-4 py-4 border-b border-navy/10 flex items-center justify-between gap-2">
           <div>
             <h1 className="text-lg font-extrabold text-navy">WhatsApp</h1>
@@ -447,7 +447,7 @@ function WhatsappPageConteudo() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {!conversaSelecionada ? (
           <div className="flex-1 flex items-center justify-center text-navy/40 text-sm">
             Selecione uma conversa à esquerda
