@@ -15,6 +15,10 @@
     {
       "path": "/api/pipeline/snapshot",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/notificacoes/gerar",
+      "schedule": "0 8 * * *"
     }
   ]
 }

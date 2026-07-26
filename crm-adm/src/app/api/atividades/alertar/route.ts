@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import type { Atividade, ConfiguracaoRelatorio } from "@/lib/types";
+import { buscarAtividadesAtrasadas } from "@/lib/notificacoes";
 
 export const dynamic = "force-dynamic";
 
@@ -50,20 +51,14 @@ async function gerarEEnviar({ respeitarConfig }: { respeitarConfig: boolean }) {
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
-  const hoje = new Date().toISOString().slice(0, 10);
 
-  const [{ data: atividades, error: e1 }, { data: config, error: e2 }] = await Promise.all([
-    supabase
-      .from("atividades")
-      .select("*, empresas(nome_empresa)")
-      .neq("status", "Concluído")
-      .lt("prazo", hoje)
-      .order("prazo"),
+  const [atividadesAtrasadasQuery, { data: config, error: e2 }] = await Promise.all([
+    buscarAtividadesAtrasadas(supabase),
     supabase.from("configuracoes_relatorio").select("*").eq("id", 1).maybeSingle(),
   ]);
 
-  if (e1 || e2) {
-    throw new Error(e1?.message || e2?.message || "Erro ao buscar dados");
+  if (e2) {
+    throw new Error(e2.message);
   }
 
   const configRelatorio = config as ConfiguracaoRelatorio | null;
@@ -77,7 +72,7 @@ async function gerarEEnviar({ respeitarConfig }: { respeitarConfig: boolean }) {
     return { enviado: false, motivo: "Notificação de atividades atrasadas desativada nas configurações." };
   }
 
-  const atividadesAtrasadas = (atividades as Atividade[]) ?? [];
+  const atividadesAtrasadas = atividadesAtrasadasQuery;
   if (atividadesAtrasadas.length === 0) {
     return { enviado: false, motivo: "Nenhuma atividade atrasada." };
   }

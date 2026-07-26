@@ -3,6 +3,7 @@ import { DM_Sans, Bree_Serif } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import AssistenteComercial from "@/components/AssistenteComercial";
+import NotificacoesSino from "@/components/NotificacoesSino";
 // Ação Rápida (Ctrl+K) desativada por enquanto — componente mantido em
 // src/components/CommandBar.tsx pra religar depois, se fizer sentido.
 // import CommandBar from "@/components/CommandBar";
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col md:flex-row bg-cream text-navy">
         <Sidebar />
         <main className="flex-1 flex flex-col min-w-0">{children}</main>
+        <NotificacoesSino />
         <AssistenteComercial />
       </body>
     </html>

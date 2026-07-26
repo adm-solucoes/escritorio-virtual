@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { enviarEmail, montarEmailConfirmacaoReuniao } from "@/lib/email";
 import { criarEventoReuniao } from "@/lib/google-calendar";
 import { enviarWhatsappGenerico } from "@/lib/whatsapp-envio";
+import { criarNotificacaoSeNaoExiste } from "@/lib/notificacoes";
 import type { AutomacaoConexao, AutomacaoNo, Empresa, EtapaFunil, Oportunidade } from "@/lib/types";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -296,17 +297,29 @@ async function executarAcaoCriarAtividade(admin: AdminClient, config: Record<str
 }
 
 async function executarAcaoNotificarInterno(admin: AdminClient, config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  const mensagem = String(config.mensagem ?? "Aviso da automação");
+
   const { error } = await admin.from("atividades").insert({
     empresa_id: alvo.empresaId,
     oportunidade_id: alvo.oportunidadeId,
-    tipo_atividade: `🔔 ${config.mensagem ?? "Aviso da automação"}`,
+    tipo_atividade: `🔔 ${mensagem}`,
     responsavel_id: alvo.gcResponsavelId,
     status: "Pendente",
     prazo: hojeISODate(),
     alerta_disparado: true,
   });
+  if (error) return { ok: false, erro: error.message };
 
-  return error ? { ok: false, erro: error.message } : { ok: true };
+  // Mesmo gatilho, só adiciona o canal in-app — não muda a detecção que já existia.
+  await criarNotificacaoSeNaoExiste(admin, {
+    gcId: alvo.gcResponsavelId,
+    tipo: "automacao",
+    mensagem: `${alvo.nomeEmpresa ? `${alvo.nomeEmpresa}: ` : ""}${mensagem}`,
+    linkTipo: alvo.oportunidadeId ? "oportunidade" : alvo.empresaId ? "empresa" : null,
+    linkId: alvo.oportunidadeId ?? alvo.empresaId ?? null,
+  });
+
+  return { ok: true };
 }
 
 async function executarAcaoEmail(config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
