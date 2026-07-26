@@ -234,6 +234,41 @@ export interface IntegracaoGoogle {
   atualizado_em: string;
 }
 
+// ==========================================================
+// Ação Rápida (comando por texto — parsing por regex, sem IA)
+// ==========================================================
+export interface AcaoRapidaContato {
+  id: string;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  empresa_id: string | null;
+  ultima_vez_usado: string;
+  quantidade_usos: number;
+  criado_em: string;
+}
+
+export interface AcaoRapidaMotivoRecente {
+  id: string;
+  motivo: string;
+  quantidade_usos: number;
+  ultima_vez_usado: string;
+}
+
+export type CanalAcaoRapida = "calendario" | "email" | "whatsapp";
+
+export interface AcaoRapidaExecucao {
+  id: string;
+  contato_id: string | null;
+  empresa_id: string | null;
+  oportunidade_id: string | null;
+  atividade_id: string | null;
+  canal: CanalAcaoRapida;
+  resultado: "sucesso" | "erro";
+  detalhes: string | null;
+  criado_em: string;
+}
+
 export interface WhatsappNumero {
   id: string;
   phone_number_id: string;

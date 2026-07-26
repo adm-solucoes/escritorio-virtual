@@ -3,10 +3,9 @@
 // Regras fixas, sem IA: cada nó sabe exatamente o que fazer a partir do `config` salvo no canvas.
 
 import { createAdminClient } from "@/lib/supabase-admin";
-import { enviarTemplate, enviarTexto } from "@/lib/whatsapp-api";
 import { enviarEmail, montarEmailConfirmacaoReuniao } from "@/lib/email";
 import { criarEventoReuniao } from "@/lib/google-calendar";
-import { normalizarTelefoneE164 } from "@/lib/whatsapp";
+import { enviarWhatsappGenerico } from "@/lib/whatsapp-envio";
 import type { AutomacaoConexao, AutomacaoNo, Empresa, EtapaFunil, Oportunidade } from "@/lib/types";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -20,8 +19,6 @@ interface Alvo {
   emailContato: string | null;
   gcResponsavelId: string | null;
 }
-
-const JANELA_24H_MS = 24 * 60 * 60 * 1000;
 
 function hojeISODate() {
   return new Date().toISOString().slice(0, 10);
@@ -178,71 +175,14 @@ function avaliarCondicao(config: Record<string, unknown>, oportunidade: Oportuni
 
 // ---------- Execução das ações ----------
 
-async function acharOuCriarConversaServidor(admin: AdminClient, empresaId: string | null, telefone: string) {
-  const telefoneE164 = normalizarTelefoneE164(telefone);
-  if (!telefoneE164) return { erro: "Telefone inválido" };
-
-  const { data: existente } = await admin.from("whatsapp_conversas").select("*").eq("telefone", telefoneE164).maybeSingle();
-  if (existente) return { conversa: existente };
-
-  const { data: nova, error } = await admin
-    .from("whatsapp_conversas")
-    .insert({ telefone: telefoneE164, empresa_id: empresaId })
-    .select("*")
-    .single();
-  if (error || !nova) return { erro: error?.message ?? "Erro ao criar conversa" };
-  return { conversa: nova };
-}
-
-async function executarAcaoWhatsapp(admin: AdminClient, config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
-  if (!alvo.telefone) return { ok: false, erro: "Empresa sem telefone cadastrado" };
-
-  const resultadoConversa = await acharOuCriarConversaServidor(admin, alvo.empresaId, alvo.telefone);
-  if ("erro" in resultadoConversa) return { ok: false, erro: resultadoConversa.erro };
-  const conversa = resultadoConversa.conversa;
-
-  const { data: numeroAtivo } = await admin.from("whatsapp_numeros").select("phone_number_id").eq("ativo", true).maybeSingle();
-  const phoneNumberIdOverride = numeroAtivo?.phone_number_id;
-
-  const { data: ultimaRecebida } = await admin
-    .from("whatsapp_mensagens")
-    .select("criado_em")
-    .eq("conversa_id", conversa.id)
-    .eq("direcao", "recebida")
-    .order("criado_em", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const dentroDaJanela = ultimaRecebida ? Date.now() - new Date(ultimaRecebida.criado_em).getTime() < JANELA_24H_MS : false;
-
-  const modo = config.modo === "template" ? "template" : "texto";
-  if (modo === "texto" && !dentroDaJanela) {
-    return { ok: false, erro: "Fora da janela de 24h — configure essa ação pra usar template aprovado." };
-  }
-
-  const resultado =
-    modo === "template"
-      ? await enviarTemplate(
-          conversa.telefone,
-          String(config.templateNome ?? ""),
-          String(config.templateIdioma ?? "pt_BR"),
-          [],
-          phoneNumberIdOverride
-        )
-      : await enviarTexto(conversa.telefone, String(config.texto ?? ""), phoneNumberIdOverride);
-
-  if (!resultado.ok) return { ok: false, erro: resultado.error };
-
-  await admin.from("whatsapp_mensagens").insert({
-    conversa_id: conversa.id,
-    direcao: "enviada",
-    conteudo: modo === "template" ? `[template] ${config.templateNome}` : String(config.texto ?? ""),
-    tipo: modo,
-    whatsapp_message_id: resultado.messageId,
-    status_entrega: "enviado",
+async function executarAcaoWhatsapp(config: Record<string, unknown>, alvo: Alvo): Promise<{ ok: boolean; erro?: string }> {
+  const resultado = await enviarWhatsappGenerico(alvo.telefone, alvo.empresaId, {
+    modo: config.modo === "template" ? "template" : "texto",
+    texto: typeof config.texto === "string" ? config.texto : undefined,
+    templateNome: typeof config.templateNome === "string" ? config.templateNome : undefined,
+    templateIdioma: typeof config.templateIdioma === "string" ? config.templateIdioma : undefined,
   });
-  await admin.from("whatsapp_conversas").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", conversa.id);
-
-  return { ok: true };
+  return resultado.ok ? { ok: true } : { ok: false, erro: resultado.erro };
 }
 
 function proximoHorarioComercial(horarioPadrao: string, diasUteis: boolean, duracaoMinutos: number) {
@@ -394,7 +334,7 @@ async function processarNo(
   if (!executado) {
     let resultado: { ok: boolean; erro?: string };
     try {
-      if (no.tipo === "acao_whatsapp") resultado = await executarAcaoWhatsapp(admin, no.config, alvo);
+      if (no.tipo === "acao_whatsapp") resultado = await executarAcaoWhatsapp(no.config, alvo);
       else if (no.tipo === "acao_agendar_reuniao") resultado = await executarAcaoAgendarReuniao(no.config, alvo);
       else if (no.tipo === "acao_criar_atividade") resultado = await executarAcaoCriarAtividade(admin, no.config, alvo);
       else if (no.tipo === "acao_notificar_interno") resultado = await executarAcaoNotificarInterno(admin, no.config, alvo);

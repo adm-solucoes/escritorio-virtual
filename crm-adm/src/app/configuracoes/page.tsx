@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CalendarCheck, ExternalLink, MessageCircle, Save, UserPlus, X } from "lucide-react";
+import { CalendarCheck, ExternalLink, MessageCircle, Save, Trash2, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   META_EQUIPE_ID,
+  type AcaoRapidaContato,
   type ConfiguracaoRelatorio,
   type EtapaFunilConfig,
   type Gc,
@@ -94,6 +95,53 @@ function ConfiguracoesConteudo() {
   const [codigoVerificacao, setCodigoVerificacao] = useState("");
   const [enviandoNumero, setEnviandoNumero] = useState(false);
   const [erroNumero, setErroNumero] = useState<string | null>(null);
+
+  const [contatosAcaoRapida, setContatosAcaoRapida] = useState<AcaoRapidaContato[]>([]);
+  const [loadingContatos, setLoadingContatos] = useState(true);
+  const [refreshContatosKey, setRefreshContatosKey] = useState(0);
+  const [editandoContatoId, setEditandoContatoId] = useState<string | null>(null);
+  const [edicaoContato, setEdicaoContato] = useState<{ nome: string; email: string; telefone: string }>({
+    nome: "",
+    email: "",
+    telefone: "",
+  });
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase
+      .from("acao_rapida_contatos")
+      .select("*")
+      .order("quantidade_usos", { ascending: false })
+      .then(({ data }) => {
+        if (cancelado) return;
+        setContatosAcaoRapida((data as AcaoRapidaContato[]) ?? []);
+        setLoadingContatos(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [refreshContatosKey]);
+
+  function iniciarEdicaoContato(contato: AcaoRapidaContato) {
+    setEditandoContatoId(contato.id);
+    setEdicaoContato({ nome: contato.nome, email: contato.email, telefone: contato.telefone ?? "" });
+  }
+
+  async function salvarEdicaoContato() {
+    if (!editandoContatoId) return;
+    await supabase
+      .from("acao_rapida_contatos")
+      .update({ nome: edicaoContato.nome, email: edicaoContato.email, telefone: edicaoContato.telefone || null })
+      .eq("id", editandoContatoId);
+    setEditandoContatoId(null);
+    setRefreshContatosKey((k) => k + 1);
+  }
+
+  async function excluirContato(contato: AcaoRapidaContato) {
+    if (!confirm(`Remover "${contato.nome}" da memória da Ação Rápida?`)) return;
+    await supabase.from("acao_rapida_contatos").delete().eq("id", contato.id);
+    setRefreshContatosKey((k) => k + 1);
+  }
 
   useEffect(() => {
     let cancelado = false;
@@ -661,6 +709,97 @@ function ConfiguracoesConteudo() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-extrabold text-navy">Contatos da Ação Rápida</h2>
+          <p className="text-sm text-navy/60">
+            Memória de contatos usados no comando de reunião (Ctrl+K). Corrija um e-mail errado ou remova
+            duplicatas.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+          {loadingContatos ? (
+            <p className="p-6 text-sm text-navy/50">Carregando...</p>
+          ) : contatosAcaoRapida.length === 0 ? (
+            <p className="p-6 text-sm text-navy/50">Nenhum contato salvo ainda — use o Ctrl+K pra marcar uma reunião.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                  <th className="px-4 py-3 font-semibold">Nome</th>
+                  <th className="px-4 py-3 font-semibold">E-mail</th>
+                  <th className="px-4 py-3 font-semibold">Telefone</th>
+                  <th className="px-4 py-3 font-semibold">Usos</th>
+                  <th className="px-4 py-3 font-semibold"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {contatosAcaoRapida.map((contato) =>
+                  editandoContatoId === contato.id ? (
+                    <tr key={contato.id} className="border-b border-navy/5 last:border-0">
+                      <td className="px-4 py-2">
+                        <input
+                          className="input"
+                          value={edicaoContato.nome}
+                          onChange={(e) => setEdicaoContato({ ...edicaoContato, nome: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          className="input"
+                          value={edicaoContato.email}
+                          onChange={(e) => setEdicaoContato({ ...edicaoContato, email: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          className="input"
+                          value={edicaoContato.telefone}
+                          onChange={(e) => setEdicaoContato({ ...edicaoContato, telefone: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-navy/60">{contato.quantidade_usos}</td>
+                      <td className="px-4 py-2">
+                        <button onClick={salvarEdicaoContato} className="text-xs font-semibold text-blue hover:underline mr-2">
+                          Salvar
+                        </button>
+                        <button
+                          onClick={() => setEditandoContatoId(null)}
+                          className="text-xs font-semibold text-navy/50 hover:underline"
+                        >
+                          Cancelar
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={contato.id} className="border-b border-navy/5 last:border-0 hover:bg-navy/[0.02]">
+                      <td className="px-4 py-3 font-semibold text-navy">{contato.nome}</td>
+                      <td className="px-4 py-3 text-navy/70">{contato.email}</td>
+                      <td className="px-4 py-3 text-navy/70">{contato.telefone ?? "—"}</td>
+                      <td className="px-4 py-3 text-navy/60">{contato.quantidade_usos}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          <button
+                            onClick={() => iniciarEdicaoContato(contato)}
+                            className="text-xs font-semibold text-blue hover:underline"
+                          >
+                            Editar
+                          </button>
+                          <button onClick={() => excluirContato(contato)} className="p-1.5 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">
