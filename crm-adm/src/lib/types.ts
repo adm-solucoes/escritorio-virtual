@@ -90,6 +90,15 @@ export interface EtapaFunilConfig {
 
 export type TipoPipeline = "comercial" | "cs";
 
+export interface ChecklistEtapaItem {
+  id: string;
+  etapa: EtapaFunil;
+  nome_item: string;
+  prazo_dias: number;
+  ordem: number;
+  criado_em: string;
+}
+
 export interface Oportunidade {
   id: string;
   codigo: string | null;

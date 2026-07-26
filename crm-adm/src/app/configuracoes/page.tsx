@@ -6,9 +6,12 @@ import { useSearchParams } from "next/navigation";
 import { CalendarCheck, ExternalLink, MessageCircle, Plus, Save, Trash2, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
+  ETAPAS_FUNIL,
   META_EQUIPE_ID,
   type AcaoRapidaContato,
+  type ChecklistEtapaItem,
   type ConfiguracaoRelatorio,
+  type EtapaFunil,
   type EtapaFunilConfig,
   type FormularioCaptura,
   type Gc,
@@ -216,6 +219,48 @@ function ConfiguracoesConteudo() {
     if (!confirm(`Remover o motivo "${motivo.motivo}"?`)) return;
     await supabase.from("motivos_perda_config").delete().eq("id", motivo.id);
     setRefreshMotivosPerdaKey((k) => k + 1);
+  }
+
+  const [checklistItens, setChecklistItens] = useState<ChecklistEtapaItem[]>([]);
+  const [loadingChecklist, setLoadingChecklist] = useState(true);
+  const [refreshChecklistKey, setRefreshChecklistKey] = useState(0);
+  const [etapaChecklist, setEtapaChecklist] = useState<EtapaFunil>("Onboarding");
+  const [novoItemNome, setNovoItemNome] = useState("");
+  const [novoItemPrazo, setNovoItemPrazo] = useState("3");
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase
+      .from("checklist_etapa_config")
+      .select("*")
+      .order("etapa")
+      .order("ordem")
+      .then(({ data }) => {
+        if (cancelado) return;
+        setChecklistItens((data as ChecklistEtapaItem[]) ?? []);
+        setLoadingChecklist(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [refreshChecklistKey]);
+
+  async function adicionarItemChecklist(e: React.FormEvent) {
+    e.preventDefault();
+    if (!novoItemNome.trim()) return;
+    const ordem = checklistItens.filter((i) => i.etapa === etapaChecklist).length + 1;
+    await supabase
+      .from("checklist_etapa_config")
+      .insert({ etapa: etapaChecklist, nome_item: novoItemNome.trim(), prazo_dias: Number(novoItemPrazo) || 1, ordem });
+    setNovoItemNome("");
+    setNovoItemPrazo("3");
+    setRefreshChecklistKey((k) => k + 1);
+  }
+
+  async function excluirItemChecklist(item: ChecklistEtapaItem) {
+    if (!confirm(`Remover "${item.nome_item}" do checklist de ${item.etapa}?`)) return;
+    await supabase.from("checklist_etapa_config").delete().eq("id", item.id);
+    setRefreshChecklistKey((k) => k + 1);
   }
 
   const [formularios, setFormularios] = useState<FormularioCaptura[]>([]);
@@ -1211,6 +1256,71 @@ function ConfiguracoesConteudo() {
           Ao salvar, todas as oportunidades que já estão nessa etapa são atualizadas com a nova porcentagem
           imediatamente (a receita ponderada é recalculada sozinha).
         </p>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-extrabold text-navy">Checklist da etapa</h2>
+          <p className="text-sm text-navy/60">
+            Cadastre vários itens de checklist por etapa (ex.: Onboarding, Renovação) — ao entrar na etapa, uma
+            atividade é criada automaticamente pra cada item, com o prazo relativo configurado. Etapas sem
+            checklist continuam usando a tarefa automática única de cima.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+          {loadingChecklist ? (
+            <p className="p-6 text-sm text-navy/50">Carregando...</p>
+          ) : (
+            <div className="divide-y divide-navy/5">
+              {ETAPAS_FUNIL.filter((etapa) => checklistItens.some((i) => i.etapa === etapa)).map((etapa) => (
+                <div key={etapa} className="p-3">
+                  <p className="text-xs font-bold text-navy/50 uppercase mb-1.5">{etapa}</p>
+                  <div className="flex flex-col gap-1">
+                    {checklistItens
+                      .filter((i) => i.etapa === etapa)
+                      .map((item) => (
+                        <div key={item.id} className="flex items-center justify-between gap-2 text-sm px-2 py-1 rounded hover:bg-navy/[0.02]">
+                          <span className="text-navy">{item.nome_item}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-navy/50">+{item.prazo_dias}d</span>
+                            <button onClick={() => excluirItemChecklist(item)} className="p-1 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
+              {checklistItens.length === 0 && <p className="p-6 text-sm text-navy/50">Nenhum checklist configurado ainda.</p>}
+            </div>
+          )}
+
+          <form onSubmit={adicionarItemChecklist} className="p-4 border-t border-navy/10 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-navy/60 font-medium">Etapa</span>
+              <select className="input" value={etapaChecklist} onChange={(e) => setEtapaChecklist(e.target.value as EtapaFunil)}>
+                {ETAPAS_FUNIL.map((etapa) => (
+                  <option key={etapa} value={etapa}>
+                    {etapa}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm flex-1">
+              <span className="text-navy/60 font-medium">Item do checklist</span>
+              <input className="input" value={novoItemNome} onChange={(e) => setNovoItemNome(e.target.value)} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-navy/60 font-medium">Prazo (dias)</span>
+              <input className="input w-20" type="number" min={0} value={novoItemPrazo} onChange={(e) => setNovoItemPrazo(e.target.value)} />
+            </label>
+            <button type="submit" className="btn-primary whitespace-nowrap">
+              <Plus size={15} /> Adicionar
+            </button>
+          </form>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">
