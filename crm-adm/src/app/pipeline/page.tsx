@@ -4,15 +4,26 @@ import { useEffect, useMemo, useState } from "react";
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { supabase } from "@/lib/supabase";
 import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
-import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type EtapaFunilConfig, type Gc, type Oportunidade } from "@/lib/types";
+import { useGcAtual } from "@/lib/useGcAtual";
+import {
+  type Empresa,
+  type EtapaFunil,
+  type EtapaFunilConfig,
+  type Gc,
+  type Oportunidade,
+  type OportunidadeHistoricoEtapa,
+  type TipoPipeline,
+} from "@/lib/types";
 import KanbanColumn from "@/components/KanbanColumn";
 import OportunidadeModal from "@/components/OportunidadeModal";
 
 export default function PipelinePage() {
+  const { gc: gcAtual, carregando: carregandoGc } = useGcAtual();
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
   const [etapas, setEtapas] = useState<EtapaFunilConfig[]>([]);
+  const [historico, setHistorico] = useState<OportunidadeHistoricoEtapa[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState<Oportunidade | null>(null);
@@ -22,6 +33,7 @@ export default function PipelinePage() {
   const [gcFiltro, setGcFiltro] = useState("");
   const [valorMin, setValorMin] = useState("");
   const [valorMax, setValorMax] = useState("");
+  const [tipoPipeline, setTipoPipeline] = useState<TipoPipeline>("comercial");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -36,12 +48,14 @@ export default function PipelinePage() {
       supabase.from("empresas").select("*").order("nome_empresa"),
       supabase.from("etapas_funil").select("*").order("ordem"),
       supabase.from("gcs").select("*").order("nome"),
-    ]).then(([{ data: opsData }, { data: empData }, { data: etapasData }, { data: gcsData }]) => {
+      supabase.from("oportunidade_historico_etapa").select("*").order("data_mudanca", { ascending: false }),
+    ]).then(([{ data: opsData }, { data: empData }, { data: etapasData }, { data: gcsData }, { data: histData }]) => {
       if (cancelado) return;
       setOportunidades(opsData ?? []);
       setEmpresas(empData ?? []);
       setEtapas((etapasData as EtapaFunilConfig[]) ?? []);
       setGcs(gcsData ?? []);
+      setHistorico((histData as OportunidadeHistoricoEtapa[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -50,7 +64,19 @@ export default function PipelinePage() {
   }, [refreshKey]);
 
   const empresasPorId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
+  const etapasDoTipo = useMemo(() => etapas.filter((e) => e.tipo_pipeline === tipoPipeline).map((e) => e.nome), [etapas, tipoPipeline]);
   const probabilidadePorEtapa = useMemo(() => new Map(etapas.map((e) => [e.nome, e.probabilidade])), [etapas]);
+
+  // data da mudança de etapa mais recente por oportunidade, pra calcular dias reais na etapa atual
+  const ultimaMudancaPorOportunidade = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const h of historico) {
+      if (!map.has(h.oportunidade_id)) map.set(h.oportunidade_id, h.data_mudanca);
+    }
+    return map;
+  }, [historico]);
+
+  const souComercial = gcAtual?.role === "comercial";
 
   const oportunidadesFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -58,6 +84,9 @@ export default function PipelinePage() {
     const max = valorMax ? Number(valorMax) : null;
 
     return oportunidades.filter((o) => {
+      if (o.tipo_pipeline !== tipoPipeline) return false;
+      // GC comercial só vê a própria carteira; gestor vê tudo
+      if (souComercial && gcAtual && o.gc_responsavel_id !== gcAtual.id) return false;
       if (termo) {
         const nomeEmpresa = empresasPorId.get(o.empresa_id)?.nome_empresa?.toLowerCase() ?? "";
         if (!nomeEmpresa.includes(termo) && !(o.projeto ?? "").toLowerCase().includes(termo)) return false;
@@ -67,16 +96,16 @@ export default function PipelinePage() {
       if (max !== null && (o.valor_estimado ?? 0) > max) return false;
       return true;
     });
-  }, [oportunidades, busca, gcFiltro, valorMin, valorMax, empresasPorId]);
+  }, [oportunidades, busca, gcFiltro, valorMin, valorMax, empresasPorId, tipoPipeline, souComercial, gcAtual]);
 
   const porEtapa = useMemo(() => {
     const map = new Map<EtapaFunil, Oportunidade[]>();
-    for (const etapa of ETAPAS_FUNIL) map.set(etapa, []);
+    for (const etapa of etapasDoTipo) map.set(etapa, []);
     for (const o of oportunidadesFiltradas) {
       map.get(o.etapa_atual)?.push(o);
     }
     return map;
-  }, [oportunidadesFiltradas]);
+  }, [oportunidadesFiltradas, etapasDoTipo]);
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -129,6 +158,17 @@ export default function PipelinePage() {
     setModalAberto(true);
   }
 
+  if (!carregandoGc && gcAtual?.role === "sem_acesso") {
+    return (
+      <div className="max-w-2xl mx-auto w-full px-6 py-16 text-center">
+        <h1 className="text-lg font-bold text-navy">Acesso restrito</h1>
+        <p className="text-sm text-navy/60 mt-2">
+          Essa área é exclusiva do time comercial. Fale com seu gestor se acha que isso é um engano.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 w-full">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -139,20 +179,36 @@ export default function PipelinePage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="flex rounded-md border border-navy/15 overflow-hidden">
+            <button
+              onClick={() => setTipoPipeline("comercial")}
+              className={`px-3 py-1.5 text-sm font-semibold ${tipoPipeline === "comercial" ? "bg-navy text-white" : "text-navy/60 hover:bg-navy/5"}`}
+            >
+              Comercial
+            </button>
+            <button
+              onClick={() => setTipoPipeline("cs")}
+              className={`px-3 py-1.5 text-sm font-semibold ${tipoPipeline === "cs" ? "bg-navy text-white" : "text-navy/60 hover:bg-navy/5"}`}
+            >
+              Customer Success
+            </button>
+          </div>
           <input
             className="input w-full sm:w-56"
             placeholder="Buscar por empresa ou projeto..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
-          <select className="input" value={gcFiltro} onChange={(e) => setGcFiltro(e.target.value)}>
-            <option value="">Todos os GCs</option>
-            {gcs.map((gc) => (
-              <option key={gc.id} value={gc.id}>
-                {gc.nome}
-              </option>
-            ))}
-          </select>
+          {!souComercial && (
+            <select className="input" value={gcFiltro} onChange={(e) => setGcFiltro(e.target.value)}>
+              <option value="">Todos os GCs</option>
+              {gcs.map((gc) => (
+                <option key={gc.id} value={gc.id}>
+                  {gc.nome}
+                </option>
+              ))}
+            </select>
+          )}
           <input
             className="input w-24"
             type="number"
@@ -175,13 +231,14 @@ export default function PipelinePage() {
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-6 flex-1">
-            {ETAPAS_FUNIL.map((etapa) => (
+            {etapasDoTipo.map((etapa) => (
               <KanbanColumn
                 key={etapa}
                 etapa={etapa}
                 probabilidade={probabilidadePorEtapa.get(etapa) ?? null}
                 oportunidades={porEtapa.get(etapa) ?? []}
                 empresasPorId={empresasPorId}
+                ultimaMudancaPorOportunidade={ultimaMudancaPorOportunidade}
                 onCardClick={abrirEdicao}
                 onAddClick={() => abrirNova(etapa)}
               />

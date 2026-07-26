@@ -11,6 +11,7 @@ export default function KanbanColumn({
   probabilidade,
   oportunidades,
   empresasPorId,
+  ultimaMudancaPorOportunidade,
   onCardClick,
   onAddClick,
 }: {
@@ -18,6 +19,7 @@ export default function KanbanColumn({
   probabilidade: number | null;
   oportunidades: Oportunidade[];
   empresasPorId: Map<string, Empresa>;
+  ultimaMudancaPorOportunidade?: Map<string, string>;
   onCardClick: (o: Oportunidade) => void;
   onAddClick: () => void;
 }) {
@@ -102,6 +104,7 @@ export default function KanbanColumn({
               key={o.id}
               oportunidade={o}
               empresa={empresasPorId.get(o.empresa_id)}
+              dataMudancaEtapa={ultimaMudancaPorOportunidade?.get(o.id)}
               onClick={() => onCardClick(o)}
             />
           ))}

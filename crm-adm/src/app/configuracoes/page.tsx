@@ -13,6 +13,7 @@ import {
   type Gc,
   type Meta,
   type MotivoPerdaConfig,
+  type RoleGc,
   type ScoreRule,
   type WhatsappNumero,
 } from "@/lib/types";
@@ -390,6 +391,17 @@ function ConfiguracoesConteudo() {
     setRefreshGcsKey((k) => k + 1);
   }
 
+  const souGestor = gcAtual?.role === "gestor";
+
+  async function atualizarPapel(gc: Gc, novoRole: RoleGc) {
+    const { error } = await supabase.from("gcs").update({ role: novoRole }).eq("id", gc.id);
+    if (error) {
+      alert("Erro ao atualizar papel: " + error.message);
+      return;
+    }
+    setRefreshGcsKey((k) => k + 1);
+  }
+
   useEffect(() => {
     let cancelado = false;
     supabase
@@ -589,68 +601,83 @@ function ConfiguracoesConteudo() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-extrabold text-navy">Membros</h2>
-          <p className="text-sm text-navy/60">
-            Convide novos gerentes de conta (GCs) — eles recebem um e-mail para criar a própria senha e passam a
-            aparecer como opção de responsável em toda a plataforma.
-          </p>
-        </div>
+      {souGestor && (
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-lg font-extrabold text-navy">Membros</h2>
+            <p className="text-sm text-navy/60">
+              Convide novos gerentes de conta (GCs) e defina o papel de cada um — eles recebem um e-mail para criar
+              a própria senha e passam a aparecer como opção de responsável em toda a plataforma. Só gestores veem
+              esta seção.
+            </p>
+          </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
-                <th className="px-4 py-3 font-semibold">Nome</th>
-                <th className="px-4 py-3 font-semibold">E-mail</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {gcs.map((gc) => (
-                <tr key={gc.id} className="border-b border-navy/5 last:border-0">
-                  <td className="px-4 py-3 font-semibold text-navy">{gc.nome}</td>
-                  <td className="px-4 py-3 text-navy/70">{gc.email}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        gc.status === "Ativo" ? "bg-green-100 text-green-700" : "bg-navy/5 text-navy/50"
-                      }`}
-                    >
-                      {gc.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => alternarStatus(gc)}
-                      className="text-xs font-semibold text-blue hover:underline"
-                    >
-                      {gc.status === "Ativo" ? "Desativar" : "Ativar"}
-                    </button>
-                  </td>
+          <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                  <th className="px-4 py-3 font-semibold">Nome</th>
+                  <th className="px-4 py-3 font-semibold">E-mail</th>
+                  <th className="px-4 py-3 font-semibold">Papel</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {gcs.map((gc) => (
+                  <tr key={gc.id} className="border-b border-navy/5 last:border-0">
+                    <td className="px-4 py-3 font-semibold text-navy">{gc.nome}</td>
+                    <td className="px-4 py-3 text-navy/70">{gc.email}</td>
+                    <td className="px-4 py-3">
+                      <select
+                        className="input py-1"
+                        value={gc.role}
+                        onChange={(e) => atualizarPapel(gc, e.target.value as RoleGc)}
+                      >
+                        <option value="gestor">Gestor</option>
+                        <option value="comercial">Comercial</option>
+                        <option value="sem_acesso">Sem acesso (Pipeline/WhatsApp)</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          gc.status === "Ativo" ? "bg-green-100 text-green-700" : "bg-navy/5 text-navy/50"
+                        }`}
+                      >
+                        {gc.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => alternarStatus(gc)}
+                        className="text-xs font-semibold text-blue hover:underline"
+                      >
+                        {gc.status === "Ativo" ? "Desativar" : "Ativar"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          <form onSubmit={convidarMembro} className="p-4 border-t border-navy/10 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-navy/60 font-medium">Nome</span>
-              <input className="input w-48" value={nomeConvite} onChange={(e) => setNomeConvite(e.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-navy/60 font-medium">E-mail</span>
-              <input className="input w-56" type="email" value={emailConvite} onChange={(e) => setEmailConvite(e.target.value)} />
-            </label>
-            <button type="submit" disabled={convidando} className="btn-primary">
-              <UserPlus size={15} /> {convidando ? "Convidando..." : "Convidar membro"}
-            </button>
-            {mensagemConvite && <span className="text-xs text-navy/60 sm:ml-2">{mensagemConvite}</span>}
-          </form>
+            <form onSubmit={convidarMembro} className="p-4 border-t border-navy/10 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-navy/60 font-medium">Nome</span>
+                <input className="input w-48" value={nomeConvite} onChange={(e) => setNomeConvite(e.target.value)} />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-navy/60 font-medium">E-mail</span>
+                <input className="input w-56" type="email" value={emailConvite} onChange={(e) => setEmailConvite(e.target.value)} />
+              </label>
+              <button type="submit" disabled={convidando} className="btn-primary">
+                <UserPlus size={15} /> {convidando ? "Convidando..." : "Convidar membro"}
+              </button>
+              {mensagemConvite && <span className="text-xs text-navy/60 sm:ml-2">{mensagemConvite}</span>}
+            </form>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">

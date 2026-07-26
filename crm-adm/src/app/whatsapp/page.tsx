@@ -418,6 +418,17 @@ function WhatsappPageConteudo() {
     }
   }
 
+  if (gcAtual?.role === "sem_acesso") {
+    return (
+      <div className="max-w-2xl mx-auto w-full px-6 py-16 text-center">
+        <h1 className="text-lg font-bold text-navy">Acesso restrito</h1>
+        <p className="text-sm text-navy/60 mt-2">
+          Essa área é exclusiva do time comercial. Fale com seu gestor se acha que isso é um engano.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
     <div className="flex-1 flex min-h-0">

@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { Empresa, Gc, Oportunidade } from "@/lib/types";
+import type { Empresa, Gc, Oportunidade, OportunidadeHistoricoEtapa, PipelineSnapshot } from "@/lib/types";
 import {
   evolucaoPipeline,
+  evolucaoValorPipeline,
   relatorioMensal,
   relatorioPerdas,
   relatorioPorOrigem,
   relatorioPorResponsavel,
+  tempoMedioPorEtapa,
 } from "@/lib/relatorios";
 
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -18,6 +20,8 @@ export default function RelatoriosPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
+  const [historico, setHistorico] = useState<OportunidadeHistoricoEtapa[]>([]);
+  const [snapshots, setSnapshots] = useState<PipelineSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState<string | null>(null);
@@ -28,11 +32,15 @@ export default function RelatoriosPage() {
       supabase.from("empresas").select("*"),
       supabase.from("oportunidades").select("*"),
       supabase.from("gcs").select("*"),
-    ]).then(([{ data: empData }, { data: opsData }, { data: gcsData }]) => {
+      supabase.from("oportunidade_historico_etapa").select("*"),
+      supabase.from("pipeline_snapshot").select("*").order("data"),
+    ]).then(([{ data: empData }, { data: opsData }, { data: gcsData }, { data: histData }, { data: snapData }]) => {
       if (cancelado) return;
       setEmpresas(empData ?? []);
       setOportunidades(opsData ?? []);
       setGcs(gcsData ?? []);
+      setHistorico((histData as OportunidadeHistoricoEtapa[]) ?? []);
+      setSnapshots((snapData as PipelineSnapshot[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -45,6 +53,8 @@ export default function RelatoriosPage() {
   const origem = useMemo(() => relatorioPorOrigem(empresas, oportunidades), [empresas, oportunidades]);
   const responsavel = useMemo(() => relatorioPorResponsavel(oportunidades, gcs), [oportunidades, gcs]);
   const evolucao = useMemo(() => evolucaoPipeline(empresas, oportunidades), [empresas, oportunidades]);
+  const tempoPorEtapa = useMemo(() => tempoMedioPorEtapa(historico), [historico]);
+  const evolucaoValor = useMemo(() => evolucaoValorPipeline(snapshots, "comercial"), [snapshots]);
 
   async function enviarPorEmail() {
     setEnviando(true);
@@ -126,11 +136,27 @@ export default function RelatoriosPage() {
           linhas={evolucao.map((e) => [e.label, e.novasEmpresas.toString(), e.novasOportunidades.toString()])}
           vazio="Sem dados suficientes."
         />
-        <p className="text-xs text-navy/40 px-4 pb-4">
-          Mostra o ritmo de entrada de leads e oportunidades. Para acompanhar a evolução do valor do pipeline ao
-          longo do tempo (não só de quem entrou), o sistema precisaria guardar uma &ldquo;foto&rdquo; do pipeline a cada mês —
-          posso adicionar isso depois se for útil.
-        </p>
+      </Secao>
+
+      <Secao titulo="Tempo médio por etapa (ciclo de vendas)">
+        <Tabela
+          colunas={["Etapa", "Dias médios", "Amostras"]}
+          linhas={tempoPorEtapa.map((t) => [t.etapa, t.diasMedios.toString(), t.amostras.toString()])}
+          vazio="Ainda sem histórico suficiente — vai se acumulando conforme oportunidades mudam de etapa."
+        />
+      </Secao>
+
+      <Secao titulo="Evolução do valor do pipeline comercial (foto diária)">
+        <Tabela
+          colunas={["Data", "Valor em pipeline", "Valor ponderado", "Qtd. oportunidades"]}
+          linhas={evolucaoValor.map((e) => [
+            new Date(e.data).toLocaleDateString("pt-BR"),
+            moeda(e.valorTotal),
+            moeda(e.valorPonderado),
+            e.qtd.toString(),
+          ])}
+          vazio="Ainda sem fotos do pipeline — a primeira roda no próximo dia útil (cron diário)."
+        />
       </Secao>
     </div>
   );

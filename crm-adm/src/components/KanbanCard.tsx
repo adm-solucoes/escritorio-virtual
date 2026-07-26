@@ -15,10 +15,12 @@ const TEMP_COLOR: Record<string, string> = {
 export default function KanbanCard({
   oportunidade,
   empresa,
+  dataMudancaEtapa,
   onClick,
 }: {
   oportunidade: Oportunidade;
   empresa: Empresa | undefined;
+  dataMudancaEtapa?: string;
   onClick: () => void;
 }) {
   const router = useRouter();
@@ -35,10 +37,9 @@ export default function KanbanCard({
     ? Math.floor((agora - new Date(oportunidade.ultima_interacao).getTime()) / 86400000)
     : null;
 
-  // TODO(Fase 2 RevOps): trocar esse proxy pelo histórico real de mudança de etapa
-  // (tabela oportunidade_historico_etapa) assim que ela existir — hoje usamos
-  // atualizado_em, que também muda por qualquer outra edição, não só troca de etapa.
-  const diasNaEtapaAtual = Math.floor((agora - new Date(oportunidade.atualizado_em).getTime()) / 86400000);
+  const diasNaEtapaAtual = Math.floor(
+    (agora - new Date(dataMudancaEtapa ?? oportunidade.atualizado_em).getTime()) / 86400000
+  );
 
   async function abrirConversa(e: React.MouseEvent) {
     e.stopPropagation();
@@ -105,10 +106,7 @@ export default function KanbanCard({
       )}
 
       <div className="flex flex-wrap gap-1 mt-1.5">
-        <div
-          className="text-[11px] font-medium text-navy/50 bg-navy/5 rounded px-1.5 py-0.5 inline-block"
-          title="Proxy por atualizado_em — ainda não é o histórico real de etapa"
-        >
+        <div className="text-[11px] font-medium text-navy/50 bg-navy/5 rounded px-1.5 py-0.5 inline-block">
           {diasNaEtapaAtual}d nesta etapa
         </div>
         {diasSemInteracao !== null && diasSemInteracao >= 5 && (

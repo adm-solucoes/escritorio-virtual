@@ -1,4 +1,4 @@
-import type { Empresa, Gc, Oportunidade } from "./types";
+import type { Empresa, Gc, Oportunidade, OportunidadeHistoricoEtapa, PipelineSnapshot } from "./types";
 
 const MESES = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez",
@@ -154,4 +154,68 @@ export function evolucaoPipeline(empresas: Empresa[], oportunidades: Oportunidad
     map.set(chave, atual);
   }
   return [...map.values()].sort((a, b) => a.chave.localeCompare(b.chave));
+}
+
+export interface TempoMedioEtapa {
+  etapa: string;
+  diasMedios: number;
+  amostras: number;
+}
+
+// Tempo médio (em dias) que as oportunidades passaram em cada etapa, calculado a partir
+// do histórico real de mudança de etapa (oportunidade_historico_etapa) — substitui o
+// proxy da Fase 1 baseado em atualizado_em.
+export function tempoMedioPorEtapa(historico: OportunidadeHistoricoEtapa[]): TempoMedioEtapa[] {
+  const porOportunidade = new Map<string, OportunidadeHistoricoEtapa[]>();
+  for (const h of historico) {
+    const arr = porOportunidade.get(h.oportunidade_id) ?? [];
+    arr.push(h);
+    porOportunidade.set(h.oportunidade_id, arr);
+  }
+
+  const somaDias = new Map<string, number>();
+  const contagem = new Map<string, number>();
+
+  for (const eventos of porOportunidade.values()) {
+    const ordenados = [...eventos].sort((a, b) => new Date(a.data_mudanca).getTime() - new Date(b.data_mudanca).getTime());
+    for (let i = 0; i < ordenados.length; i++) {
+      const inicio = new Date(ordenados[i].data_mudanca).getTime();
+      const fim = i + 1 < ordenados.length ? new Date(ordenados[i + 1].data_mudanca).getTime() : Date.now();
+      const dias = (fim - inicio) / 86400000;
+      const etapa = ordenados[i].etapa_nova;
+      somaDias.set(etapa, (somaDias.get(etapa) ?? 0) + dias);
+      contagem.set(etapa, (contagem.get(etapa) ?? 0) + 1);
+    }
+  }
+
+  return [...somaDias.keys()]
+    .map((etapa) => ({
+      etapa,
+      diasMedios: Math.round((somaDias.get(etapa) ?? 0) / (contagem.get(etapa) ?? 1)),
+      amostras: contagem.get(etapa) ?? 0,
+    }))
+    .sort((a, b) => b.diasMedios - a.diasMedios);
+}
+
+export interface EvolucaoValorPipeline {
+  data: string;
+  valorTotal: number;
+  valorPonderado: number;
+  qtd: number;
+}
+
+// Evolução do valor do pipeline ao longo do tempo, a partir das fotos diárias
+// (pipeline_snapshot) — ao contrário de evolucaoPipeline(), mostra o valor em aberto
+// em cada dia, não só a contagem de leads/oportunidades novas.
+export function evolucaoValorPipeline(snapshots: PipelineSnapshot[], tipoPipeline: "comercial" | "cs"): EvolucaoValorPipeline[] {
+  const map = new Map<string, EvolucaoValorPipeline>();
+  for (const s of snapshots) {
+    if (s.tipo_pipeline !== tipoPipeline || s.etapa === "Perdido") continue;
+    const atual = map.get(s.data) ?? { data: s.data, valorTotal: 0, valorPonderado: 0, qtd: 0 };
+    atual.valorTotal += s.valor_total;
+    atual.valorPonderado += s.valor_ponderado;
+    atual.qtd += s.qtd;
+    map.set(s.data, atual);
+  }
+  return [...map.values()].sort((a, b) => a.data.localeCompare(b.data));
 }

@@ -212,7 +212,7 @@ export default function CommandBar() {
     setEnviando(false);
   }
 
-  if (esconderNaPagina) return null;
+  if (esconderNaPagina || gcAtual?.role === "sem_acesso") return null;
 
   return (
     <>

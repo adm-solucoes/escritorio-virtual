@@ -5,14 +5,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Settings, LogOut, Menu, X, User, Workflow, CalendarDays, BarChart3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useGcAtual } from "@/lib/useGcAtual";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/empresas", label: "Empresas", icon: Building2 },
-  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
+  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare, restrito: true },
   { href: "/atividades", label: "Atividades", icon: ListChecks },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
-  { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle, restrito: true },
   { href: "/automacoes", label: "Automações", icon: Workflow },
   { href: "/calendario", label: "Agenda da equipe", icon: CalendarDays },
 ];
@@ -25,6 +26,9 @@ export default function Sidebar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [usuario, setUsuario] = useState<{ nome: string; email: string } | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const { gc } = useGcAtual();
+  const semAcesso = gc?.role === "sem_acesso";
+  const linksVisiveis = links.filter((l) => !l.restrito || !semAcesso);
 
   const paginasSemMenu = ["/login", "/redefinir-senha", "/auth"];
   const esconderMenu = paginasSemMenu.some((p) => pathname?.startsWith(p));
@@ -119,7 +123,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 flex flex-col gap-1 px-2.5 py-2 overflow-x-hidden overflow-y-auto">
-          {links.map((link) => {
+          {linksVisiveis.map((link) => {
             const active = pathname?.startsWith(link.href);
             const Icon = link.icon;
             return (

@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { ClipboardList, Plus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
-import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type Gc, type MotivoPerdaConfig, type Oportunidade, type Solicitacao } from "@/lib/types";
+import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type Gc, type MotivoPerdaConfig, type Oportunidade, type Solicitacao, type TipoPipeline } from "@/lib/types";
+
+const ETAPAS_CS: EtapaFunil[] = ["Onboarding", "Adoção", "Expansão", "Indicação", "Renovação"];
 import SolicitacaoModal from "./SolicitacaoModal";
 
 const OUTRO_MOTIVO = "Outro";
@@ -47,6 +49,7 @@ export default function OportunidadeModal({
   const [proximaAcao, setProximaAcao] = useState(oportunidade?.proxima_acao ?? "");
   const [dataProximaAcao, setDataProximaAcao] = useState(oportunidade?.data_proxima_acao ?? "");
   const [observacoes, setObservacoes] = useState(oportunidade?.observacoes ?? "");
+  const [healthScore, setHealthScore] = useState(oportunidade?.health_score?.toString() ?? "");
   const [motivoSelecionado, setMotivoSelecionado] = useState(() => {
     const atual = oportunidade?.motivo_perda ?? "";
     if (atual.startsWith(`${OUTRO_MOTIVO}: `)) return OUTRO_MOTIVO;
@@ -125,6 +128,8 @@ export default function OportunidadeModal({
       data_proxima_acao: dataProximaAcao || null,
       observacoes: observacoes || null,
       motivo_perda: etapa === "Perdido" ? motivoPerdaFinal : null,
+      health_score: ["Onboarding", "Adoção", "Renovação"].includes(etapa) && healthScore ? Number(healthScore) : null,
+      ...(oportunidade ? {} : { tipo_pipeline: (ETAPAS_CS.includes(etapa) ? "cs" : "comercial") as TipoPipeline }),
     };
 
     const etapaAnterior = oportunidade?.etapa_atual;
@@ -222,6 +227,20 @@ export default function OportunidadeModal({
             <span className="text-navy/60 font-medium">Observações</span>
             <textarea className="input" rows={3} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
           </label>
+
+          {["Onboarding", "Adoção", "Renovação"].includes(etapa) && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-navy/60 font-medium">Health Score (0-100)</span>
+              <input
+                className="input"
+                type="number"
+                min={0}
+                max={100}
+                value={healthScore}
+                onChange={(e) => setHealthScore(e.target.value)}
+              />
+            </label>
+          )}
 
           {etapa === "Perdido" && (
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">

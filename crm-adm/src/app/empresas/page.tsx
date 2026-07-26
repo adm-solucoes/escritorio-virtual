@@ -7,10 +7,12 @@ import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, Oportunidade, ScoreRule } from "@/lib/types";
 import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
+import { useGcAtual } from "@/lib/useGcAtual";
 import EmpresaModal from "@/components/EmpresaModal";
 
 export default function EmpresasPage() {
   const router = useRouter();
+  const { gc: gcAtual } = useGcAtual();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
@@ -68,7 +70,9 @@ export default function EmpresasPage() {
 
   const filtradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    let lista = empresas;
+    // GC comercial só vê a própria carteira; gestor vê todas as empresas
+    let lista =
+      gcAtual?.role === "comercial" ? empresas.filter((e) => e.gc_responsavel_id === gcAtual.id) : empresas;
     if (termo) {
       lista = lista.filter((e) =>
         [e.nome_empresa, e.nome_contato, e.cidade, e.segmento]
@@ -80,7 +84,7 @@ export default function EmpresasPage() {
       lista = [...lista].sort((a, b) => (scorePorEmpresa.get(b.id) ?? 0) - (scorePorEmpresa.get(a.id) ?? 0));
     }
     return lista;
-  }, [empresas, busca, ordenarPorScore, scorePorEmpresa]);
+  }, [empresas, busca, ordenarPorScore, scorePorEmpresa, gcAtual]);
 
   function abrirNovo() {
     setEmpresaEditando(null);
@@ -167,7 +171,12 @@ export default function EmpresasPage() {
                 return (
                   <tr key={empresa.id} className="border-b border-navy/5 last:border-0 hover:bg-navy/[0.02]">
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-navy">{empresa.nome_empresa}</div>
+                      <button
+                        onClick={() => router.push(`/empresas/${empresa.id}`)}
+                        className="font-semibold text-navy hover:text-blue hover:underline text-left"
+                      >
+                        {empresa.nome_empresa}
+                      </button>
                       <div className="text-navy/50 text-xs">{empresa.segmento}</div>
                     </td>
                     <td className="px-4 py-3">

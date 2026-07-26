@@ -1,12 +1,15 @@
 export type Icp = "A" | "B" | "C";
 export type Temperatura = "Frio" | "Morno" | "Quente";
 
+export type RoleGc = "gestor" | "comercial" | "sem_acesso";
+
 export interface Gc {
   id: string;
   nome: string;
   email: string;
   status: "Ativo" | "Inativo";
   ordem_round_robin: number;
+  role: RoleGc;
 }
 
 export interface Empresa {
@@ -82,7 +85,10 @@ export interface EtapaFunilConfig {
   probabilidade: number;
   dias_alerta_followup: number;
   tarefa_padrao: string | null;
+  tipo_pipeline: TipoPipeline;
 }
+
+export type TipoPipeline = "comercial" | "cs";
 
 export interface Oportunidade {
   id: string;
@@ -99,9 +105,40 @@ export interface Oportunidade {
   gc_responsavel_id: string | null;
   observacoes: string | null;
   motivo_perda: string | null;
+  tipo_pipeline: TipoPipeline;
+  health_score: number | null;
   criado_em: string;
   atualizado_em: string;
   empresas?: Empresa;
+}
+
+export interface OportunidadeHistoricoEtapa {
+  id: string;
+  oportunidade_id: string;
+  etapa_anterior: EtapaFunil | null;
+  etapa_nova: EtapaFunil;
+  data_mudanca: string;
+  usuario: string | null;
+}
+
+export interface PipelineSnapshot {
+  id: string;
+  data: string;
+  etapa: EtapaFunil;
+  tipo_pipeline: TipoPipeline;
+  valor_total: number;
+  valor_ponderado: number;
+  qtd: number;
+  criado_em: string;
+}
+
+export interface NpsResposta {
+  id: string;
+  empresa_id: string;
+  nota: number;
+  comentario: string | null;
+  data: string;
+  criado_em: string;
 }
 
 export type StatusAtividade = "Pendente" | "Em andamento" | "Concluído" | "Atrasado";
