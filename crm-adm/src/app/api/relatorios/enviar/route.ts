@@ -1,7 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import type { ConfiguracaoRelatorio, Empresa, Gc, Oportunidade } from "@/lib/types";
-import { montarRelatorioHtml } from "@/lib/relatorio-email";
+import { calcularResumoRelatorio, montarRelatorioHtml } from "@/lib/relatorio-email";
+
+const moedaCompacta = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
 
 export const dynamic = "force-dynamic";
 
@@ -58,11 +60,13 @@ async function gerarEEnviar({ respeitarEnvioAutomatico }: { respeitarEnvioAutoma
       : undefined
   );
 
+  const { valorPipeline } = calcularResumoRelatorio((oportunidades as Oportunidade[]) ?? []);
+
   const resend = new Resend(resendApiKey);
   const { error } = await resend.emails.send({
     from: "ADM Soluções <onboarding@resend.dev>",
     to: destinatario.split(",").map((e) => e.trim()),
-    subject: `Relatório comercial · ${new Date().toLocaleDateString("pt-BR")}`,
+    subject: `Relatório comercial · ${new Date().toLocaleDateString("pt-BR")} · Pipeline ${moedaCompacta(valorPipeline)}`,
     html,
   });
 
