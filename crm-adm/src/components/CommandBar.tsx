@@ -35,6 +35,9 @@ export default function CommandBar() {
   const [texto, setTexto] = useState("");
   const [sugestoes, setSugestoes] = useState<AcaoRapidaContato[]>([]);
   const [contatoSelecionadoId, setContatoSelecionadoId] = useState<string | null>(null);
+  const [comandoIA, setComandoIA] = useState<ComandoParseado | null>(null);
+  const [interpretandoIA, setInterpretandoIA] = useState(false);
+  const [erroIA, setErroIA] = useState<string | null>(null);
 
   const [motivo, setMotivo] = useState("");
   const [motivosRecentes, setMotivosRecentes] = useState<string[]>([]);
@@ -87,6 +90,8 @@ export default function CommandBar() {
     setTexto("");
     setSugestoes([]);
     setContatoSelecionadoId(null);
+    setComandoIA(null);
+    setErroIA(null);
     setMotivo("");
     setEmpresaJaExiste(false);
     setCriarNovaEmpresa(true);
@@ -94,12 +99,35 @@ export default function CommandBar() {
   }
 
   const resultadoParse = useMemo(() => (texto.trim() ? parseComando(texto) : null), [texto]);
-  const comando: ComandoParseado | null = resultadoParse?.ok ? resultadoParse.comando : null;
-  const erroParse = resultadoParse && !resultadoParse.ok ? resultadoParse.erro : null;
+  const comando: ComandoParseado | null = comandoIA ?? (resultadoParse?.ok ? resultadoParse.comando : null);
+  const erroParse = comandoIA ? null : resultadoParse && !resultadoParse.ok ? resultadoParse.erro : null;
 
   function aoDigitar(novoTexto: string) {
     setTexto(novoTexto);
     setContatoSelecionadoId(null);
+    setComandoIA(null);
+    setErroIA(null);
+  }
+
+  async function tentarComIA() {
+    setInterpretandoIA(true);
+    setErroIA(null);
+    try {
+      const res = await fetch("/api/acao-rapida/parse-ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texto }),
+      });
+      const dados = await res.json();
+      if (dados.comando) {
+        setComandoIA(dados.comando);
+      } else {
+        setErroIA(dados.error ?? "Não consegui entender esse comando.");
+      }
+    } catch {
+      setErroIA("Erro de rede ao tentar interpretar com IA.");
+    }
+    setInterpretandoIA(false);
   }
 
   useEffect(() => {
@@ -257,13 +285,29 @@ export default function CommandBar() {
                 </p>
 
                 {erroParse && (
-                  <p className="text-xs text-red flex items-center gap-1.5">
-                    <AlertTriangle size={13} /> {erroParse}
-                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-xs text-red flex items-center gap-1.5">
+                      <AlertTriangle size={13} /> {erroParse}
+                    </p>
+                    <button
+                      onClick={tentarComIA}
+                      disabled={interpretandoIA}
+                      className="self-start flex items-center gap-1.5 text-xs font-semibold text-blue hover:underline disabled:opacity-50"
+                    >
+                      {interpretandoIA && <Loader2 size={12} className="animate-spin" />}
+                      {interpretandoIA ? "Interpretando com IA..." : "Não escrevi no formato — tentar com IA"}
+                    </button>
+                    {erroIA && (
+                      <p className="text-xs text-red flex items-center gap-1.5">
+                        <AlertTriangle size={13} /> {erroIA}
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {comando && !erroParse && (
                   <div className="bg-navy/[0.03] rounded-md p-2.5 text-xs text-navy/70 flex flex-col gap-0.5">
+                    {comandoIA && <span className="text-blue font-semibold">Interpretado com IA — confira antes de avançar:</span>}
                     <span>
                       <strong>{new Date(`${comando.dataISO}T00:00:00`).toLocaleDateString("pt-BR")}</strong> às{" "}
                       <strong>{comando.hora}</strong>
