@@ -197,6 +197,85 @@ export function tempoMedioPorEtapa(historico: OportunidadeHistoricoEtapa[]): Tem
     .sort((a, b) => b.diasMedios - a.diasMedios);
 }
 
+const ORDEM_FUNIL_COMERCIAL = ["Prospect", "Briefing", "Planejamento", "Validação", "Proposta", "Negociação", "Contrato Fechado"] as const;
+
+export interface EtapaFunilConversao {
+  etapa: string;
+  qtd: number;
+  percentualDoTopo: number;
+  percentualEtapaAnterior: number | null;
+}
+
+// Funil de conversão do pipeline Comercial: pra cada oportunidade, olha a etapa mais
+// avançada que ela já alcançou (via histórico + etapa atual) e conta quantas chegaram em
+// cada etapa — "Perdido" e etapas do pipeline de CS não entram na ordem, só descartam
+// a oportunidade das etapas seguintes que ela não alcançou.
+export function funilConversao(oportunidades: Oportunidade[], historico: OportunidadeHistoricoEtapa[]): EtapaFunilConversao[] {
+  const indicePorEtapa = new Map(ORDEM_FUNIL_COMERCIAL.map((e, i) => [e as string, i]));
+  const maxIndicePorOportunidade = new Map<string, number>();
+
+  function considerar(oportunidadeId: string, etapa: string) {
+    const idx = indicePorEtapa.get(etapa);
+    if (idx === undefined) return;
+    const atual = maxIndicePorOportunidade.get(oportunidadeId) ?? -1;
+    if (idx > atual) maxIndicePorOportunidade.set(oportunidadeId, idx);
+  }
+
+  const comerciais = oportunidades.filter((o) => o.tipo_pipeline === "comercial");
+  const idsComerciais = new Set(comerciais.map((o) => o.id));
+  for (const o of comerciais) considerar(o.id, o.etapa_atual);
+  for (const h of historico) {
+    if (!idsComerciais.has(h.oportunidade_id)) continue;
+    considerar(h.oportunidade_id, h.etapa_nova);
+  }
+
+  const qtdPorEtapa = ORDEM_FUNIL_COMERCIAL.map((etapa, i) => {
+    let qtd = 0;
+    for (const maxIdx of maxIndicePorOportunidade.values()) if (maxIdx >= i) qtd += 1;
+    return { etapa, qtd };
+  });
+
+  const topo = qtdPorEtapa[0]?.qtd ?? 0;
+  return qtdPorEtapa.map((atual, i) => ({
+    etapa: atual.etapa,
+    qtd: atual.qtd,
+    percentualDoTopo: topo ? Math.round((atual.qtd / topo) * 100) : 0,
+    percentualEtapaAnterior:
+      i === 0 ? null : qtdPorEtapa[i - 1].qtd ? Math.round((atual.qtd / qtdPorEtapa[i - 1].qtd) * 100) : 0,
+  }));
+}
+
+export interface CicloVendas {
+  diasMedios: number;
+  amostras: number;
+}
+
+// Ciclo total de vendas do pipeline Comercial (Prospect -> Contrato Fechado), medido
+// pela diferença entre a criação da oportunidade e o evento de histórico em que ela
+// entrou em "Contrato Fechado". Só entram oportunidades que realmente fecharam.
+export function cicloVendasComercial(historico: OportunidadeHistoricoEtapa[]): CicloVendas {
+  const porOportunidade = new Map<string, OportunidadeHistoricoEtapa[]>();
+  for (const h of historico) {
+    const arr = porOportunidade.get(h.oportunidade_id) ?? [];
+    arr.push(h);
+    porOportunidade.set(h.oportunidade_id, arr);
+  }
+
+  let somaDias = 0;
+  let amostras = 0;
+  for (const eventos of porOportunidade.values()) {
+    const ordenados = [...eventos].sort((a, b) => new Date(a.data_mudanca).getTime() - new Date(b.data_mudanca).getTime());
+    const criacao = ordenados.find((h) => h.etapa_anterior === null) ?? ordenados[0];
+    const fechamento = ordenados.find((h) => h.etapa_nova === "Contrato Fechado");
+    if (!criacao || !fechamento) continue;
+    const dias = (new Date(fechamento.data_mudanca).getTime() - new Date(criacao.data_mudanca).getTime()) / 86400000;
+    if (dias < 0) continue;
+    somaDias += dias;
+    amostras += 1;
+  }
+  return { diasMedios: amostras ? Math.round(somaDias / amostras) : 0, amostras };
+}
+
 export interface EvolucaoValorPipeline {
   data: string;
   valorTotal: number;

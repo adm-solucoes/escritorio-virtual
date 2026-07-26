@@ -2,9 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ETAPAS_FUNIL, META_EQUIPE_ID, type Empresa, type EtapaFunilConfig, type Gc, type Meta, type Oportunidade, type ScoreRule } from "@/lib/types";
+import {
+  ETAPAS_FUNIL,
+  META_EQUIPE_ID,
+  type Empresa,
+  type EtapaFunilConfig,
+  type Gc,
+  type Meta,
+  type Oportunidade,
+  type OportunidadeHistoricoEtapa,
+  type ScoreRule,
+} from "@/lib/types";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
 import { realizadoNoMes } from "@/lib/metas";
+import { cicloVendasComercial, funilConversao, tempoMedioPorEtapa } from "@/lib/relatorios";
 
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -15,6 +26,7 @@ export default function DashboardPage() {
   const [gcs, setGcs] = useState<Gc[]>([]);
   const [metas, setMetas] = useState<Meta[]>([]);
   const [regrasScore, setRegrasScore] = useState<ScoreRule[]>([]);
+  const [historico, setHistorico] = useState<OportunidadeHistoricoEtapa[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,7 +39,8 @@ export default function DashboardPage() {
       supabase.from("gcs").select("*").order("nome"),
       supabase.from("metas").select("*").eq("mes", agora.getMonth() + 1).eq("ano", agora.getFullYear()),
       supabase.from("score_rules").select("*"),
-    ]).then(([{ data: empData }, { data: opsData }, { data: etapasData }, { data: gcsData }, { data: metasData }, { data: regrasData }]) => {
+      supabase.from("oportunidade_historico_etapa").select("*"),
+    ]).then(([{ data: empData }, { data: opsData }, { data: etapasData }, { data: gcsData }, { data: metasData }, { data: regrasData }, { data: histData }]) => {
       if (cancelado) return;
       setEmpresas(empData ?? []);
       setOportunidades(opsData ?? []);
@@ -35,6 +48,7 @@ export default function DashboardPage() {
       setGcs(gcsData ?? []);
       setMetas((metasData as Meta[]) ?? []);
       setRegrasScore((regrasData as ScoreRule[]) ?? []);
+      setHistorico((histData as OportunidadeHistoricoEtapa[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -105,6 +119,10 @@ export default function DashboardPage() {
     }
     return map;
   }, [oportunidades]);
+
+  const funil = useMemo(() => funilConversao(oportunidades, historico), [oportunidades, historico]);
+  const cicloVendas = useMemo(() => cicloVendasComercial(historico), [historico]);
+  const tempoPorEtapa = useMemo(() => tempoMedioPorEtapa(historico), [historico]);
 
   if (loading) {
     return <p className="p-6 text-sm text-navy/50">Carregando...</p>;
@@ -224,6 +242,56 @@ export default function DashboardPage() {
           </tbody>
         </table>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-navy mb-3">Funil de conversão (Comercial)</h2>
+          {funil[0]?.qtd === 0 ? (
+            <p className="text-xs text-navy/40">Sem oportunidades comerciais suficientes ainda.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {funil.map((f) => (
+                <BarraFunil key={f.etapa} {...f} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Card
+              label="Ciclo médio de vendas"
+              value={cicloVendas.amostras ? `${cicloVendas.diasMedios} dias` : "—"}
+              sub={cicloVendas.amostras ? `${cicloVendas.amostras} oportunidade${cicloVendas.amostras > 1 ? "s" : ""} fechada${cicloVendas.amostras > 1 ? "s" : ""} · Prospect → Contrato Fechado` : "Ainda sem oportunidades fechadas"}
+            />
+          </div>
+          <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm flex-1">
+            <h2 className="text-sm font-bold text-navy px-4 pt-4 pb-1">Tempo médio por etapa</h2>
+            {tempoPorEtapa.length === 0 ? (
+              <p className="px-4 pb-4 text-xs text-navy/40">Ainda sem histórico suficiente.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                    <th className="px-4 py-2 font-semibold">Etapa</th>
+                    <th className="px-4 py-2 font-semibold">Dias médios</th>
+                    <th className="px-4 py-2 font-semibold">Amostras</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tempoPorEtapa.map((t) => (
+                    <tr key={t.etapa} className="border-b border-navy/5 last:border-0">
+                      <td className="px-4 py-2 font-medium text-navy">{t.etapa}</td>
+                      <td className="px-4 py-2 text-navy/60">{t.diasMedios}</td>
+                      <td className="px-4 py-2 text-navy/60">{t.amostras}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -261,6 +329,32 @@ function BarraMeta({
       </div>
       <div className="h-2.5 rounded-full bg-navy/5 overflow-hidden">
         <div className={`h-full rounded-full ${bateu ? "bg-green-500" : "bg-red"}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function BarraFunil({
+  etapa,
+  qtd,
+  percentualDoTopo,
+  percentualEtapaAnterior,
+}: {
+  etapa: string;
+  qtd: number;
+  percentualDoTopo: number;
+  percentualEtapaAnterior: number | null;
+}) {
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1">
+        <span className="font-semibold text-navy/70">{etapa}</span>
+        <span className="text-navy/60">
+          {qtd} · {percentualDoTopo}%{percentualEtapaAnterior !== null ? ` (${percentualEtapaAnterior}% da etapa anterior)` : ""}
+        </span>
+      </div>
+      <div className="h-2.5 rounded-full bg-navy/5 overflow-hidden">
+        <div className="h-full rounded-full bg-blue" style={{ width: `${percentualDoTopo}%` }} />
       </div>
     </div>
   );
