@@ -1,34 +1,63 @@
-import type { Empresa, Oportunidade } from "./types";
-
-const PONTOS_ICP: Record<string, number> = { A: 40, B: 25, C: 10 };
-const PONTOS_TEMPERATURA: Record<string, number> = { Quente: 30, Morno: 15, Frio: 5 };
+import type { Empresa, Oportunidade, ScoreRule } from "./types";
 
 export interface ScoreLead {
   pontos: number;
   motivos: string[];
 }
 
-export function calcularScoreLead(empresa: Empresa, oportunidadesDaEmpresa: Oportunidade[]): ScoreLead {
+// Pesos padrão — usados só como fallback caso a tabela `score_rules` ainda não tenha
+// sido carregada (ex: antes da migração rodar, ou enquanto a página ainda busca os dados).
+const PESOS_PADRAO: Record<string, number> = {
+  icp_a: 40,
+  icp_b: 25,
+  icp_c: 10,
+  temperatura_quente: 30,
+  temperatura_morno: 15,
+  temperatura_frio: 5,
+  oportunidade_com_valor: 20,
+  oportunidade_sem_valor: 10,
+  interacao_recente: 10,
+};
+
+function pesoPara(chave: string, mapaPesos: Map<string, ScoreRule> | null): number {
+  const regra = mapaPesos?.get(chave);
+  if (regra) return regra.ativo ? regra.peso : 0;
+  return PESOS_PADRAO[chave] ?? 0;
+}
+
+export function calcularScoreLead(
+  empresa: Empresa,
+  oportunidadesDaEmpresa: Oportunidade[],
+  regras?: ScoreRule[]
+): ScoreLead {
+  const mapaPesos = regras ? new Map(regras.map((r) => [r.chave, r])) : null;
   let pontos = 0;
   const motivos: string[] = [];
 
-  if (empresa.icp && PONTOS_ICP[empresa.icp]) {
-    pontos += PONTOS_ICP[empresa.icp];
-    motivos.push(`ICP ${empresa.icp}`);
+  if (empresa.icp) {
+    const peso = pesoPara(`icp_${empresa.icp.toLowerCase()}`, mapaPesos);
+    if (peso > 0) {
+      pontos += peso;
+      motivos.push(`ICP ${empresa.icp}`);
+    }
   }
 
-  if (empresa.temperatura && PONTOS_TEMPERATURA[empresa.temperatura]) {
-    pontos += PONTOS_TEMPERATURA[empresa.temperatura];
-    motivos.push(empresa.temperatura);
+  if (empresa.temperatura) {
+    const chave = `temperatura_${empresa.temperatura === "Quente" ? "quente" : empresa.temperatura === "Morno" ? "morno" : "frio"}`;
+    const peso = pesoPara(chave, mapaPesos);
+    if (peso > 0) {
+      pontos += peso;
+      motivos.push(empresa.temperatura);
+    }
   }
 
   const abertas = oportunidadesDaEmpresa.filter((o) => o.etapa_atual !== "Perdido" && (o.probabilidade ?? 0) < 1);
   const valorAberto = abertas.reduce((acc, o) => acc + (o.valor_estimado ?? 0), 0);
   if (valorAberto > 0) {
-    pontos += 20;
+    pontos += pesoPara("oportunidade_com_valor", mapaPesos);
     motivos.push("Oportunidade em aberto com valor");
   } else if (abertas.length > 0) {
-    pontos += 10;
+    pontos += pesoPara("oportunidade_sem_valor", mapaPesos);
     motivos.push("Oportunidade em aberto");
   }
 
@@ -40,7 +69,7 @@ export function calcularScoreLead(empresa: Empresa, oportunidadesDaEmpresa: Opor
   if (maisRecente) {
     const dias = Math.floor((Date.now() - new Date(maisRecente).getTime()) / 86400000);
     if (dias <= 7) {
-      pontos += 10;
+      pontos += pesoPara("interacao_recente", mapaPesos);
       motivos.push("Interação recente");
     }
   }

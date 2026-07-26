@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpDown, MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { Empresa, Gc, Oportunidade } from "@/lib/types";
+import type { Empresa, Gc, Oportunidade, ScoreRule } from "@/lib/types";
 import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
 import EmpresaModal from "@/components/EmpresaModal";
@@ -14,6 +14,7 @@ export default function EmpresasPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
+  const [regrasScore, setRegrasScore] = useState<ScoreRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [ordenarPorScore, setOrdenarPorScore] = useState(false);
@@ -31,11 +32,13 @@ export default function EmpresasPage() {
       supabase.from("empresas").select("*").order("nome_empresa"),
       supabase.from("oportunidades").select("*"),
       supabase.from("gcs").select("*").order("nome"),
-    ]).then(([{ data: empresasData }, { data: opsData }, { data: gcsData }]) => {
+      supabase.from("score_rules").select("*"),
+    ]).then(([{ data: empresasData }, { data: opsData }, { data: gcsData }, { data: regrasData }]) => {
       if (cancelado) return;
       setEmpresas(empresasData ?? []);
       setOportunidades(opsData ?? []);
       setGcs(gcsData ?? []);
+      setRegrasScore((regrasData as ScoreRule[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -58,10 +61,10 @@ export default function EmpresasPage() {
   const scorePorEmpresa = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of empresas) {
-      map.set(e.id, calcularScoreLead(e, oportunidadesPorEmpresa.get(e.id) ?? []).pontos);
+      map.set(e.id, calcularScoreLead(e, oportunidadesPorEmpresa.get(e.id) ?? [], regrasScore).pontos);
     }
     return map;
-  }, [empresas, oportunidadesPorEmpresa]);
+  }, [empresas, oportunidadesPorEmpresa, regrasScore]);
 
   const filtradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();

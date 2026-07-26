@@ -18,6 +18,10 @@ export default function PipelinePage() {
   const [editando, setEditando] = useState<Oportunidade | null>(null);
   const [etapaNova, setEtapaNova] = useState<EtapaFunil>("Prospect");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [busca, setBusca] = useState("");
+  const [gcFiltro, setGcFiltro] = useState("");
+  const [valorMin, setValorMin] = useState("");
+  const [valorMax, setValorMax] = useState("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -48,14 +52,31 @@ export default function PipelinePage() {
   const empresasPorId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const probabilidadePorEtapa = useMemo(() => new Map(etapas.map((e) => [e.nome, e.probabilidade])), [etapas]);
 
+  const oportunidadesFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const min = valorMin ? Number(valorMin) : null;
+    const max = valorMax ? Number(valorMax) : null;
+
+    return oportunidades.filter((o) => {
+      if (termo) {
+        const nomeEmpresa = empresasPorId.get(o.empresa_id)?.nome_empresa?.toLowerCase() ?? "";
+        if (!nomeEmpresa.includes(termo) && !(o.projeto ?? "").toLowerCase().includes(termo)) return false;
+      }
+      if (gcFiltro && o.gc_responsavel_id !== gcFiltro) return false;
+      if (min !== null && (o.valor_estimado ?? 0) < min) return false;
+      if (max !== null && (o.valor_estimado ?? 0) > max) return false;
+      return true;
+    });
+  }, [oportunidades, busca, gcFiltro, valorMin, valorMax, empresasPorId]);
+
   const porEtapa = useMemo(() => {
     const map = new Map<EtapaFunil, Oportunidade[]>();
     for (const etapa of ETAPAS_FUNIL) map.set(etapa, []);
-    for (const o of oportunidades) {
+    for (const o of oportunidadesFiltradas) {
       map.get(o.etapa_atual)?.push(o);
     }
     return map;
-  }, [oportunidades]);
+  }, [oportunidadesFiltradas]);
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -63,6 +84,14 @@ export default function PipelinePage() {
     const novaEtapa = over.id as EtapaFunil;
     const oportunidade = oportunidades.find((o) => o.id === active.id);
     if (!oportunidade || oportunidade.etapa_atual === novaEtapa) return;
+
+    // Perdido exige motivo (obrigatório no modal) — não grava a troca de etapa direto
+    // no drag, só abre o modal já com "Perdido" selecionado. Se o usuário cancelar,
+    // a oportunidade continua exatamente onde estava.
+    if (novaEtapa === "Perdido") {
+      abrirEdicao({ ...oportunidade, etapa_atual: novaEtapa });
+      return;
+    }
 
     const novaProbabilidade = probabilidadePorEtapa.get(novaEtapa) ?? oportunidade.probabilidade;
     const novaReceitaPonderada = (oportunidade.valor_estimado ?? 0) * (novaProbabilidade ?? 0);
@@ -86,11 +115,6 @@ export default function PipelinePage() {
       return;
     }
 
-    if (novaEtapa === "Perdido") {
-      abrirEdicao({ ...oportunidade, etapa_atual: novaEtapa });
-      return;
-    }
-
     await criarTarefaAutomaticaSeConfigurada(oportunidade, novaEtapa);
   }
 
@@ -107,10 +131,42 @@ export default function PipelinePage() {
 
   return (
     <div className="flex flex-col flex-1 w-full">
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-navy">Pipeline</h1>
-          <p className="text-sm text-navy/60">{oportunidades.length} oportunidades no funil</p>
+          <p className="text-sm text-navy/60">
+            {oportunidadesFiltradas.length} de {oportunidades.length} oportunidades no funil
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <input
+            className="input w-full sm:w-56"
+            placeholder="Buscar por empresa ou projeto..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          <select className="input" value={gcFiltro} onChange={(e) => setGcFiltro(e.target.value)}>
+            <option value="">Todos os GCs</option>
+            {gcs.map((gc) => (
+              <option key={gc.id} value={gc.id}>
+                {gc.nome}
+              </option>
+            ))}
+          </select>
+          <input
+            className="input w-24"
+            type="number"
+            placeholder="Valor min"
+            value={valorMin}
+            onChange={(e) => setValorMin(e.target.value)}
+          />
+          <input
+            className="input w-24"
+            type="number"
+            placeholder="Valor máx"
+            value={valorMax}
+            onChange={(e) => setValorMax(e.target.value)}
+          />
         </div>
       </div>
 

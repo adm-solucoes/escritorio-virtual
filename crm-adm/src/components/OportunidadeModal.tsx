@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { ClipboardList, Plus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
-import { ETAPAS_FUNIL, MOTIVOS_PERDA, type Empresa, type EtapaFunil, type Gc, type Oportunidade, type Solicitacao } from "@/lib/types";
+import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type Gc, type MotivoPerdaConfig, type Oportunidade, type Solicitacao } from "@/lib/types";
 import SolicitacaoModal from "./SolicitacaoModal";
+
+const OUTRO_MOTIVO = "Outro";
 
 interface Props {
   oportunidade: Oportunidade | null;
@@ -45,12 +47,36 @@ export default function OportunidadeModal({
   const [proximaAcao, setProximaAcao] = useState(oportunidade?.proxima_acao ?? "");
   const [dataProximaAcao, setDataProximaAcao] = useState(oportunidade?.data_proxima_acao ?? "");
   const [observacoes, setObservacoes] = useState(oportunidade?.observacoes ?? "");
-  const [motivoPerda, setMotivoPerda] = useState(oportunidade?.motivo_perda ?? "");
+  const [motivoSelecionado, setMotivoSelecionado] = useState(() => {
+    const atual = oportunidade?.motivo_perda ?? "";
+    if (atual.startsWith(`${OUTRO_MOTIVO}: `)) return OUTRO_MOTIVO;
+    return atual;
+  });
+  const [motivoOutroTexto, setMotivoOutroTexto] = useState(() => {
+    const atual = oportunidade?.motivo_perda ?? "";
+    return atual.startsWith(`${OUTRO_MOTIVO}: `) ? atual.slice(OUTRO_MOTIVO.length + 2) : "";
+  });
+  const [motivosConfig, setMotivosConfig] = useState<MotivoPerdaConfig[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [modalSolicitacaoAberto, setModalSolicitacaoAberto] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase
+      .from("motivos_perda_config")
+      .select("*")
+      .eq("ativo", true)
+      .order("ordem")
+      .then(({ data }) => {
+        if (!cancelado) setMotivosConfig((data as MotivoPerdaConfig[]) ?? []);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!oportunidade) return;
@@ -75,12 +101,19 @@ export default function OportunidadeModal({
       setError("Selecione a empresa.");
       return;
     }
-    if (etapa === "Perdido" && !motivoPerda) {
+    if (etapa === "Perdido" && !motivoSelecionado) {
       setError("Selecione o motivo da perda.");
+      return;
+    }
+    if (etapa === "Perdido" && motivoSelecionado === OUTRO_MOTIVO && !motivoOutroTexto.trim()) {
+      setError("Descreva o motivo da perda.");
       return;
     }
     setSaving(true);
     setError(null);
+
+    const motivoPerdaFinal =
+      motivoSelecionado === OUTRO_MOTIVO ? `${OUTRO_MOTIVO}: ${motivoOutroTexto.trim()}` : motivoSelecionado;
 
     const payload = {
       empresa_id: empresaId,
@@ -91,7 +124,7 @@ export default function OportunidadeModal({
       proxima_acao: proximaAcao || null,
       data_proxima_acao: dataProximaAcao || null,
       observacoes: observacoes || null,
-      motivo_perda: etapa === "Perdido" ? motivoPerda : null,
+      motivo_perda: etapa === "Perdido" ? motivoPerdaFinal : null,
     };
 
     const etapaAnterior = oportunidade?.etapa_atual;
@@ -193,14 +226,28 @@ export default function OportunidadeModal({
           {etapa === "Perdido" && (
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="text-red font-medium">Motivo da perda *</span>
-              <select className="input" value={motivoPerda} onChange={(e) => setMotivoPerda(e.target.value)} required>
+              <select
+                className="input"
+                value={motivoSelecionado}
+                onChange={(e) => setMotivoSelecionado(e.target.value)}
+                required
+              >
                 <option value="">Selecione...</option>
-                {MOTIVOS_PERDA.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
+                {motivosConfig.map((m) => (
+                  <option key={m.id} value={m.motivo}>
+                    {m.motivo}
                   </option>
                 ))}
+                <option value={OUTRO_MOTIVO}>{OUTRO_MOTIVO}</option>
               </select>
+              {motivoSelecionado === OUTRO_MOTIVO && (
+                <input
+                  className="input mt-1"
+                  placeholder="Descreva o motivo..."
+                  value={motivoOutroTexto}
+                  onChange={(e) => setMotivoOutroTexto(e.target.value)}
+                />
+              )}
             </label>
           )}
 

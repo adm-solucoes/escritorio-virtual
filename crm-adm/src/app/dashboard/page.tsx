@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ETAPAS_FUNIL, META_EQUIPE_ID, type Empresa, type EtapaFunilConfig, type Gc, type Meta, type Oportunidade } from "@/lib/types";
+import { ETAPAS_FUNIL, META_EQUIPE_ID, type Empresa, type EtapaFunilConfig, type Gc, type Meta, type Oportunidade, type ScoreRule } from "@/lib/types";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
 import { realizadoNoMes } from "@/lib/metas";
 
@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [etapas, setEtapas] = useState<EtapaFunilConfig[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
   const [metas, setMetas] = useState<Meta[]>([]);
+  const [regrasScore, setRegrasScore] = useState<ScoreRule[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,13 +26,15 @@ export default function DashboardPage() {
       supabase.from("etapas_funil").select("*").order("ordem"),
       supabase.from("gcs").select("*").order("nome"),
       supabase.from("metas").select("*").eq("mes", agora.getMonth() + 1).eq("ano", agora.getFullYear()),
-    ]).then(([{ data: empData }, { data: opsData }, { data: etapasData }, { data: gcsData }, { data: metasData }]) => {
+      supabase.from("score_rules").select("*"),
+    ]).then(([{ data: empData }, { data: opsData }, { data: etapasData }, { data: gcsData }, { data: metasData }, { data: regrasData }]) => {
       if (cancelado) return;
       setEmpresas(empData ?? []);
       setOportunidades(opsData ?? []);
       setEtapas((etapasData as EtapaFunilConfig[]) ?? []);
       setGcs(gcsData ?? []);
       setMetas((metasData as Meta[]) ?? []);
+      setRegrasScore((regrasData as ScoreRule[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -86,10 +89,10 @@ export default function DashboardPage() {
       oportunidadesPorEmpresa.set(o.empresa_id, arr);
     }
     return [...empresas]
-      .map((e) => ({ empresa: e, score: calcularScoreLead(e, oportunidadesPorEmpresa.get(e.id) ?? []).pontos }))
+      .map((e) => ({ empresa: e, score: calcularScoreLead(e, oportunidadesPorEmpresa.get(e.id) ?? [], regrasScore).pontos }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-  }, [empresas, oportunidades]);
+  }, [empresas, oportunidades, regrasScore]);
 
   const porEtapa = useMemo(() => {
     const map = new Map<string, { count: number; valor: number }>();

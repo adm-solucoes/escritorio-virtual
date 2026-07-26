@@ -104,16 +104,6 @@ export interface Oportunidade {
   empresas?: Empresa;
 }
 
-export const MOTIVOS_PERDA = [
-  "Preço",
-  "Concorrência",
-  "Sem orçamento",
-  "Não é decisor",
-  "Timing / não é o momento",
-  "Perdeu contato",
-  "Outro",
-] as const;
-
 export type StatusAtividade = "Pendente" | "Em andamento" | "Concluído" | "Atrasado";
 
 export interface Atividade {
@@ -151,6 +141,20 @@ export interface Solicitacao {
   status: StatusSolicitacao;
   data_solicitacao: string;
   data_resposta: string | null;
+}
+
+export interface ScoreRule {
+  chave: string;
+  label: string;
+  peso: number;
+  ativo: boolean;
+}
+
+export interface MotivoPerdaConfig {
+  id: string;
+  motivo: string;
+  ativo: boolean;
+  ordem: number;
 }
 
 export const META_EQUIPE_ID = "00000000-0000-0000-0000-000000000000";

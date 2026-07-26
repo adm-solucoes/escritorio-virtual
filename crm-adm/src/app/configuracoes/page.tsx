@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CalendarCheck, ExternalLink, MessageCircle, Save, Trash2, UserPlus, X } from "lucide-react";
+import { CalendarCheck, ExternalLink, MessageCircle, Plus, Save, Trash2, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   META_EQUIPE_ID,
@@ -12,6 +12,8 @@ import {
   type EtapaFunilConfig,
   type Gc,
   type Meta,
+  type MotivoPerdaConfig,
+  type ScoreRule,
   type WhatsappNumero,
 } from "@/lib/types";
 import TrocarSenha from "@/components/TrocarSenha";
@@ -141,6 +143,77 @@ function ConfiguracoesConteudo() {
     if (!confirm(`Remover "${contato.nome}" da memória da Ação Rápida?`)) return;
     await supabase.from("acao_rapida_contatos").delete().eq("id", contato.id);
     setRefreshContatosKey((k) => k + 1);
+  }
+
+  const [regrasScore, setRegrasScore] = useState<ScoreRule[]>([]);
+  const [loadingRegrasScore, setLoadingRegrasScore] = useState(true);
+  const [salvandoRegraChave, setSalvandoRegraChave] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase
+      .from("score_rules")
+      .select("*")
+      .then(({ data }) => {
+        if (cancelado) return;
+        setRegrasScore((data as ScoreRule[]) ?? []);
+        setLoadingRegrasScore(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  function atualizarRegraLocal(chave: string, campo: "peso" | "ativo", valor: number | boolean) {
+    setRegrasScore((prev) => prev.map((r) => (r.chave === chave ? { ...r, [campo]: valor } : r)));
+  }
+
+  async function salvarRegraScore(regra: ScoreRule) {
+    setSalvandoRegraChave(regra.chave);
+    await supabase.from("score_rules").update({ peso: regra.peso, ativo: regra.ativo }).eq("chave", regra.chave);
+    setSalvandoRegraChave(null);
+  }
+
+  const [motivosPerda, setMotivosPerda] = useState<MotivoPerdaConfig[]>([]);
+  const [loadingMotivosPerda, setLoadingMotivosPerda] = useState(true);
+  const [novoMotivo, setNovoMotivo] = useState("");
+  const [refreshMotivosPerdaKey, setRefreshMotivosPerdaKey] = useState(0);
+
+  useEffect(() => {
+    let cancelado = false;
+    supabase
+      .from("motivos_perda_config")
+      .select("*")
+      .order("ordem")
+      .then(({ data }) => {
+        if (cancelado) return;
+        setMotivosPerda((data as MotivoPerdaConfig[]) ?? []);
+        setLoadingMotivosPerda(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [refreshMotivosPerdaKey]);
+
+  async function alternarMotivoPerdaAtivo(motivo: MotivoPerdaConfig) {
+    await supabase.from("motivos_perda_config").update({ ativo: !motivo.ativo }).eq("id", motivo.id);
+    setRefreshMotivosPerdaKey((k) => k + 1);
+  }
+
+  async function adicionarMotivoPerda(e: React.FormEvent) {
+    e.preventDefault();
+    if (!novoMotivo.trim()) return;
+    await supabase
+      .from("motivos_perda_config")
+      .insert({ motivo: novoMotivo.trim(), ordem: motivosPerda.length + 1 });
+    setNovoMotivo("");
+    setRefreshMotivosPerdaKey((k) => k + 1);
+  }
+
+  async function excluirMotivoPerda(motivo: MotivoPerdaConfig) {
+    if (!confirm(`Remover o motivo "${motivo.motivo}"?`)) return;
+    await supabase.from("motivos_perda_config").delete().eq("id", motivo.id);
+    setRefreshMotivosPerdaKey((k) => k + 1);
   }
 
   useEffect(() => {
@@ -799,6 +872,117 @@ function ConfiguracoesConteudo() {
               </tbody>
             </table>
           )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-extrabold text-navy">Critérios do Score de lead</h2>
+          <p className="text-sm text-navy/60">
+            Pesos usados no cálculo do score de cada empresa (tela Empresas e Dashboard). Desative um critério pra
+            ele não contar mais.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+          {loadingRegrasScore ? (
+            <p className="p-6 text-sm text-navy/50">Carregando...</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                  <th className="px-4 py-3 font-semibold">Critério</th>
+                  <th className="px-4 py-3 font-semibold">Peso</th>
+                  <th className="px-4 py-3 font-semibold">Ativo</th>
+                  <th className="px-4 py-3 font-semibold"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {regrasScore.map((regra) => (
+                  <tr key={regra.chave} className="border-b border-navy/5 last:border-0">
+                    <td className="px-4 py-3 font-semibold text-navy">{regra.label}</td>
+                    <td className="px-4 py-3">
+                      <input
+                        className="input w-20"
+                        type="number"
+                        min={0}
+                        value={regra.peso}
+                        onChange={(e) => atualizarRegraLocal(regra.chave, "peso", Number(e.target.value))}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={regra.ativo}
+                        onChange={(e) => atualizarRegraLocal(regra.chave, "ativo", e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => salvarRegraScore(regra)}
+                        disabled={salvandoRegraChave === regra.chave}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-blue border border-blue/30 hover:bg-blue/5 disabled:opacity-50"
+                      >
+                        <Save size={13} />
+                        {salvandoRegraChave === regra.chave ? "Salvando..." : "Salvar"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-extrabold text-navy">Motivos de perda</h2>
+          <p className="text-sm text-navy/60">
+            Lista usada quando uma oportunidade é movida pra &quot;Perdido&quot;. Desative um motivo em vez de
+            excluir se ele já foi usado em oportunidades antigas.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-navy/10 shadow-sm">
+          {loadingMotivosPerda ? (
+            <p className="p-6 text-sm text-navy/50">Carregando...</p>
+          ) : (
+            <div className="divide-y divide-navy/5">
+              {motivosPerda.map((motivo) => (
+                <div key={motivo.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <span className={`text-sm ${motivo.ativo ? "text-navy" : "text-navy/40 line-through"}`}>{motivo.motivo}</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => alternarMotivoPerdaAtivo(motivo)}
+                      className="text-xs font-semibold text-blue hover:underline"
+                    >
+                      {motivo.ativo ? "Desativar" : "Ativar"}
+                    </button>
+                    <button onClick={() => excluirMotivoPerda(motivo)} className="p-1 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <form onSubmit={adicionarMotivoPerda} className="p-4 border-t border-navy/10 flex gap-2">
+            <input
+              className="input flex-1"
+              placeholder="Novo motivo..."
+              value={novoMotivo}
+              onChange={(e) => setNovoMotivo(e.target.value)}
+            />
+            <button type="submit" className="btn-primary whitespace-nowrap">
+              <Plus size={15} /> Adicionar
+            </button>
+          </form>
+          <p className="px-4 pb-4 text-xs text-navy/40">
+            &quot;Outro&quot; sempre aparece como opção fixa no modal, com campo de texto livre — não precisa
+            cadastrar aqui.
+          </p>
         </div>
       </div>
 
