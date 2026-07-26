@@ -24,6 +24,7 @@ export interface Empresa {
   cargo: string | null;
   telefone: string | null;
   email: string | null;
+  instagram_usuario: string | null;
   origem_lead: string | null;
   icp: Icp | null;
   temperatura: Temperatura | null;
@@ -402,6 +403,40 @@ export interface WhatsappMensagem {
   enviado_por_gc_id: string | null;
   whatsapp_message_id: string | null;
   status_entrega: StatusEntregaWhatsapp;
+  criado_em: string;
+  gcs?: { nome: string };
+}
+
+export type StatusConversaInstagram = "Aberta" | "Arquivada";
+
+export interface InstagramConversa {
+  id: string;
+  empresa_id: string | null;
+  instagram_scoped_id: string;
+  username: string | null;
+  nome_perfil: string | null;
+  ultima_mensagem_em: string | null;
+  status: StatusConversaInstagram;
+  nao_lidas: number;
+  criado_em: string;
+  empresas?: Empresa;
+}
+
+export type TipoMensagemInstagram = "texto" | "imagem" | "video" | "audio" | "midia" | "nota";
+export type StatusEntregaInstagram = "enviando" | "enviado" | "lido" | "falhou" | null;
+
+export interface InstagramMensagem {
+  id: string;
+  conversa_id: string;
+  direcao: DirecaoMensagemWhatsapp;
+  conteudo: string;
+  tipo: TipoMensagemInstagram;
+  interna: boolean;
+  midia_url: string | null;
+  midia_nome: string | null;
+  enviado_por_gc_id: string | null;
+  instagram_message_id: string | null;
+  status_entrega: StatusEntregaInstagram;
   criado_em: string;
   gcs?: { nome: string };
 }

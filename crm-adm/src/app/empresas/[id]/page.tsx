@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, History, Mail, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Camera, Download, History, Mail, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useGcAtual } from "@/lib/useGcAtual";
 import type {
@@ -11,6 +11,8 @@ import type {
   Atividade,
   Empresa,
   Gc,
+  InstagramConversa,
+  InstagramMensagem,
   LogAlteracao,
   NpsResposta,
   Oportunidade,
@@ -52,6 +54,8 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [conversa, setConversa] = useState<WhatsappConversa | null>(null);
   const [mensagens, setMensagens] = useState<WhatsappMensagem[]>([]);
+  const [conversaInstagram, setConversaInstagram] = useState<InstagramConversa | null>(null);
+  const [mensagensInstagram, setMensagensInstagram] = useState<InstagramMensagem[]>([]);
   const [nps, setNps] = useState<NpsResposta[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
@@ -84,14 +88,16 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
       supabase.from("oportunidades").select("*").eq("empresa_id", id).order("criado_em", { ascending: false }),
       supabase.from("atividades").select("*").eq("empresa_id", id).order("prazo", { ascending: true, nullsFirst: false }),
       supabase.from("whatsapp_conversas").select("*").eq("empresa_id", id).maybeSingle(),
+      supabase.from("instagram_conversas").select("*").eq("empresa_id", id).maybeSingle(),
       supabase.from("nps_respostas").select("*").eq("empresa_id", id).order("data", { ascending: false }),
       supabase.from("gcs").select("*").order("nome"),
-    ]).then(([empresaRes, opsRes, atividadesRes, conversaRes, npsRes, gcsRes]) => {
+    ]).then(([empresaRes, opsRes, atividadesRes, conversaRes, conversaInstagramRes, npsRes, gcsRes]) => {
       if (cancelado) return;
       setEmpresa((empresaRes.data as Empresa) ?? null);
       setOportunidades((opsRes.data as Oportunidade[]) ?? []);
       setAtividades((atividadesRes.data as Atividade[]) ?? []);
       setConversa((conversaRes.data as WhatsappConversa) ?? null);
+      setConversaInstagram((conversaInstagramRes.data as InstagramConversa) ?? null);
       setNps((npsRes.data as NpsResposta[]) ?? []);
       setGcs((gcsRes.data as Gc[]) ?? []);
       setLoading(false);
@@ -118,6 +124,24 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
       cancelado = true;
     };
   }, [conversa]);
+
+  useEffect(() => {
+    let cancelado = false;
+    const consulta = conversaInstagram
+      ? supabase
+          .from("instagram_mensagens")
+          .select("*")
+          .eq("conversa_id", conversaInstagram.id)
+          .order("criado_em", { ascending: false })
+          .limit(5)
+      : Promise.resolve({ data: [] as InstagramMensagem[] });
+    consulta.then(({ data }) => {
+      if (!cancelado) setMensagensInstagram(((data as InstagramMensagem[]) ?? []).reverse());
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [conversaInstagram]);
 
   useEffect(() => {
     let cancelado = false;
@@ -328,6 +352,14 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
               <MessagesSquare size={15} /> WhatsApp
             </button>
           )}
+          {conversaInstagram && (
+            <button
+              onClick={() => router.push(`/instagram?conversa=${conversaInstagram.id}`)}
+              className="btn-primary whitespace-nowrap bg-fuchsia-600 hover:bg-fuchsia-700"
+            >
+              <Camera size={15} /> Instagram
+            </button>
+          )}
           <button onClick={() => setModalEmpresaAberto(true)} className="px-3 py-2 rounded-md text-sm font-semibold text-blue hover:bg-blue/10 flex items-center gap-1.5">
             <Pencil size={15} /> Editar
           </button>
@@ -535,6 +567,24 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
             <h2 className="text-sm font-bold text-navy">Últimas mensagens no WhatsApp</h2>
             <ul className="flex flex-col gap-1.5">
               {mensagens.map((m) => (
+                <li
+                  key={m.id}
+                  className={`text-xs rounded px-2.5 py-1.5 max-w-lg ${
+                    m.direcao === "enviada" ? "bg-blue/10 text-navy self-end ml-auto" : "bg-navy/[0.05] text-navy"
+                  }`}
+                >
+                  {m.conteudo}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {conversaInstagram && (
+          <div className="flex flex-col gap-3 lg:col-span-2">
+            <h2 className="text-sm font-bold text-navy">Últimas mensagens no Instagram</h2>
+            <ul className="flex flex-col gap-1.5">
+              {mensagensInstagram.map((m) => (
                 <li
                   key={m.id}
                   className={`text-xs rounded px-2.5 py-1.5 max-w-lg ${

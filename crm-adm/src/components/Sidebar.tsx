@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Settings, LogOut, Menu, X, User, Workflow, CalendarDays, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Camera, Settings, LogOut, Menu, X, User, Workflow, CalendarDays, BarChart3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useGcAtual } from "@/lib/useGcAtual";
 
@@ -14,6 +14,7 @@ const links = [
   { href: "/atividades", label: "Atividades", icon: ListChecks },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle, restrito: true },
+  { href: "/instagram", label: "Instagram", icon: Camera, restrito: true },
   { href: "/automacoes", label: "Automações", icon: Workflow },
   { href: "/calendario", label: "Agenda da equipe", icon: CalendarDays },
 ];

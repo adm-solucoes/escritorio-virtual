@@ -23,6 +23,7 @@ const empty = {
   cargo: "",
   telefone: "",
   email: "",
+  instagram_usuario: "",
   origem_lead: "",
   icp: "" as Icp | "",
   temperatura: "" as Temperatura | "",
@@ -41,6 +42,7 @@ function formFromEmpresa(empresa: Empresa | null): typeof empty {
     cargo: empresa.cargo ?? "",
     telefone: empresa.telefone ?? "",
     email: empresa.email ?? "",
+    instagram_usuario: empresa.instagram_usuario ?? "",
     origem_lead: empresa.origem_lead ?? "",
     icp: (empresa.icp as Icp) ?? "",
     temperatura: (empresa.temperatura as Temperatura) ?? "",
@@ -78,6 +80,7 @@ export default function EmpresaModal({ empresa, gcs, onClose, onSaved }: Props) 
       cargo: form.cargo || null,
       telefone: form.telefone || null,
       email: form.email || null,
+      instagram_usuario: form.instagram_usuario.trim().replace(/^@/, "") || null,
       origem_lead: form.origem_lead || null,
       icp: form.icp || null,
       temperatura: form.temperatura || null,
@@ -97,9 +100,29 @@ export default function EmpresaModal({ empresa, gcs, onClose, onSaved }: Props) 
 
     if (salva?.id) {
       await vincularConversaWhatsapp(salva.id, payload.telefone);
+      await vincularConversaInstagram(salva.id, payload.instagram_usuario);
     }
 
     onSaved();
+  }
+
+  // Ao contrário do WhatsApp, não dá pra criar a conversa do Instagram do zero
+  // aqui (só nasce quando o contato manda mensagem). Isso só vincula a empresa
+  // a uma conversa que já exista com esse @usuário — melhor esforço.
+  async function vincularConversaInstagram(empresaId: string, usuario: string | null) {
+    if (!usuario) return;
+    try {
+      const { data: existente } = await supabase
+        .from("instagram_conversas")
+        .select("id, empresa_id")
+        .ilike("username", usuario)
+        .maybeSingle();
+      if (existente && existente.empresa_id !== empresaId) {
+        await supabase.from("instagram_conversas").update({ empresa_id: empresaId }).eq("id", existente.id);
+      }
+    } catch {
+      // best-effort — não trava o cadastro da empresa se isso falhar
+    }
   }
 
   // Assim que uma empresa é cadastrada (ou tem o telefone editado), já deixa a conversa de
@@ -178,6 +201,9 @@ export default function EmpresaModal({ empresa, gcs, onClose, onSaved }: Props) 
           </Field>
           <Field label="E-mail">
             <input className="input" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+          </Field>
+          <Field label="Instagram (@usuário)">
+            <input className="input" placeholder="@empresa" value={form.instagram_usuario} onChange={(e) => set("instagram_usuario", e.target.value)} />
           </Field>
 
           <Field label="Origem do lead" className="sm:col-span-2">
