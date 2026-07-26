@@ -53,7 +53,7 @@ export async function chamarClaude(opcoes: ChamarClaudeOpcoes): Promise<Resultad
         messages: [{ role: "user", content: opcoes.mensagem }],
         ...(Object.keys(outputConfig).length ? { output_config: outputConfig } : {}),
         ...(opcoes.permitirBuscaWeb
-          ? { tools: [{ type: "web_search_20260209" as const, name: "web_search" as const, max_uses: 3 }] }
+          ? { tools: [{ type: "web_search_20260209" as const, name: "web_search" as const, max_uses: 2 }] }
           : {}),
       },
       { timeout: opcoes.timeoutMs ?? TIMEOUT_PADRAO_MS }

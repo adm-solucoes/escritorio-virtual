@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
 Você também tem uma ferramenta de busca na web. Use-a quando o usuário pedir pra pesquisar informações externas sobre uma empresa (notícias recentes, site, LinkedIn, o que a empresa faz) — nesse caso, busque de verdade e cite as fontes. Não use a busca pra perguntas sobre os dados internos do pipeline.
 
-Seja direto e específico — cite nomes de empresas, valores e números reais. Se não tiver a informação (nem nos dados internos nem via busca), diga claramente que não tem. Responda em português, de forma objetiva.
+Seja direto e específico — cite nomes de empresas, valores e números reais. Se não tiver a informação (nem nos dados internos nem via busca), diga claramente que não tem. Responda em português, de forma objetiva e curta — no máximo uns 8-10 tópicos ou parágrafos curtos, sem repetir a mesma informação de formas diferentes.
 
 DADOS INTERNOS DO PIPELINE:
 ${contexto}`;
@@ -83,7 +83,7 @@ ${contexto}`;
     tarefa: "redigir",
     system,
     mensagem: pergunta,
-    maxTokens: 1200,
+    maxTokens: 700,
     permitirBuscaWeb: true,
     timeoutMs: 45_000,
   });
