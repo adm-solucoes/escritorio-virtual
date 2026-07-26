@@ -109,14 +109,14 @@ export default function CommandBar() {
     setErroIA(null);
   }
 
-  async function tentarComIA() {
+  async function tentarComIA(textoParaInterpretar: string) {
     setInterpretandoIA(true);
     setErroIA(null);
     try {
       const res = await fetch("/api/acao-rapida/parse-ia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto }),
+        body: JSON.stringify({ texto: textoParaInterpretar }),
       });
       const dados = await res.json();
       if (dados.comando) {
@@ -129,6 +129,18 @@ export default function CommandBar() {
     }
     setInterpretandoIA(false);
   }
+
+  // TESTE: por enquanto a IA entra automaticamente (com debounce) assim que o
+  // formato fixo não bate, sem precisar clicar no botão "tentar com IA".
+  useEffect(() => {
+    if (!erroParse || comandoIA || interpretandoIA) return;
+    if (texto.trim().length < 8) return;
+    const timer = setTimeout(() => {
+      tentarComIA(texto);
+    }, 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [texto, erroParse]);
 
   useEffect(() => {
     const nome = comando?.nome ?? "";
@@ -289,14 +301,16 @@ export default function CommandBar() {
                     <p className="text-xs text-red flex items-center gap-1.5">
                       <AlertTriangle size={13} /> {erroParse}
                     </p>
-                    <button
-                      onClick={tentarComIA}
-                      disabled={interpretandoIA}
-                      className="self-start flex items-center gap-1.5 text-xs font-semibold text-blue hover:underline disabled:opacity-50"
-                    >
-                      {interpretandoIA && <Loader2 size={12} className="animate-spin" />}
-                      {interpretandoIA ? "Interpretando com IA..." : "Não escrevi no formato — tentar com IA"}
-                    </button>
+                    {(interpretandoIA || erroIA) && (
+                      <button
+                        onClick={() => tentarComIA(texto)}
+                        disabled={interpretandoIA}
+                        className="self-start flex items-center gap-1.5 text-xs font-semibold text-blue hover:underline disabled:opacity-50"
+                      >
+                        {interpretandoIA && <Loader2 size={12} className="animate-spin" />}
+                        {interpretandoIA ? "Interpretando com IA..." : "Tentar de novo com IA"}
+                      </button>
+                    )}
                     {erroIA && (
                       <p className="text-xs text-red flex items-center gap-1.5">
                         <AlertTriangle size={13} /> {erroIA}
