@@ -1,7 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import type { ConfiguracaoRelatorio, Empresa, Gc, Oportunidade } from "@/lib/types";
-import { calcularResumoRelatorio, montarRelatorioHtml } from "@/lib/relatorio-email";
+import type { Atividade, ConfiguracaoRelatorio, Empresa, Gc, Oportunidade, PipelineSnapshot } from "@/lib/types";
+import { calcularAlertasRelatorio, calcularResumoRelatorio, montarRelatorioHtml } from "@/lib/relatorio-email";
+import { gerarResumoRelatorioIA } from "@/lib/relatorio-ia";
+import { isGanha, isPerdida } from "@/lib/relatorios";
 
 const moedaCompacta = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
 
@@ -17,21 +19,26 @@ async function gerarEEnviar({ respeitarEnvioAutomatico }: { respeitarEnvioAutoma
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const hojeISO = new Date().toISOString().slice(0, 10);
 
   const [
     { data: empresas, error: e1 },
     { data: oportunidades, error: e2 },
     { data: gcs, error: e3 },
     { data: config, error: e4 },
+    { data: atividadesAtrasadas, error: e5 },
+    { data: snapshots, error: e6 },
   ] = await Promise.all([
     supabase.from("empresas").select("*"),
     supabase.from("oportunidades").select("*"),
     supabase.from("gcs").select("*"),
     supabase.from("configuracoes_relatorio").select("*").eq("id", 1).maybeSingle(),
+    supabase.from("atividades").select("*, empresas(nome_empresa)").neq("status", "Concluído").lt("prazo", hojeISO),
+    supabase.from("pipeline_snapshot").select("*").order("data"),
   ]);
 
-  if (e1 || e2 || e3 || e4) {
-    throw new Error(e1?.message || e2?.message || e3?.message || e4?.message || "Erro ao buscar dados");
+  if (e1 || e2 || e3 || e4 || e5 || e6) {
+    throw new Error(e1?.message || e2?.message || e3?.message || e4?.message || e5?.message || e6?.message || "Erro ao buscar dados");
   }
 
   const configRelatorio = config as ConfiguracaoRelatorio | null;
@@ -45,11 +52,30 @@ async function gerarEEnviar({ respeitarEnvioAutomatico }: { respeitarEnvioAutoma
     return { enviado: false, motivo: "Envio automático desativado nas configurações." };
   }
 
-  const html = montarRelatorioHtml(
-    (empresas as Empresa[]) ?? [],
-    (oportunidades as Oportunidade[]) ?? [],
-    (gcs as Gc[]) ?? [],
-    configRelatorio
+  const empresasArr = (empresas as Empresa[]) ?? [];
+  const oportunidadesArr = (oportunidades as Oportunidade[]) ?? [];
+  const atividadesArr = (atividadesAtrasadas as Atividade[]) ?? [];
+
+  // Resumo por IA é melhor-esforço: se a chave não estiver configurada ou a
+  // chamada falhar, o e-mail sai normal, só sem esse bloco.
+  const { dadosParaIA } = calcularAlertasRelatorio(empresasArr, oportunidadesArr, atividadesArr);
+  const { valorPipeline, receitaFechada } = calcularResumoRelatorio(oportunidadesArr);
+  const ganhasCount = oportunidadesArr.filter(isGanha).length;
+  const totalDecididas = ganhasCount + oportunidadesArr.filter(isPerdida).length;
+  const taxaConversao = totalDecididas ? (ganhasCount / totalDecididas) * 100 : 0;
+
+  const resumoIA = await gerarResumoRelatorioIA({
+    valorPipeline,
+    receitaFechada,
+    taxaConversao,
+    ...dadosParaIA,
+  }).catch(() => null);
+
+  const html = montarRelatorioHtml({
+    empresas: empresasArr,
+    oportunidades: oportunidadesArr,
+    gcs: (gcs as Gc[]) ?? [],
+    secoes: configRelatorio
       ? {
           incluir_vendas: configRelatorio.incluir_vendas,
           incluir_perdas: configRelatorio.incluir_perdas,
@@ -57,10 +83,12 @@ async function gerarEEnviar({ respeitarEnvioAutomatico }: { respeitarEnvioAutoma
           incluir_responsavel: configRelatorio.incluir_responsavel,
           incluir_evolucao: configRelatorio.incluir_evolucao,
         }
-      : undefined
-  );
-
-  const { valorPipeline } = calcularResumoRelatorio((oportunidades as Oportunidade[]) ?? []);
+      : undefined,
+    snapshots: (snapshots as PipelineSnapshot[]) ?? [],
+    atividadesAtrasadas: atividadesArr,
+    resumoIA,
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "",
+  });
 
   const resend = new Resend(resendApiKey);
   const { error } = await resend.emails.send({
@@ -95,6 +123,7 @@ export async function GET(request: Request) {
     const resultado = await gerarEEnviar({ respeitarEnvioAutomatico: true });
     return Response.json({ ok: true, ...resultado });
   } catch (e) {
+    console.error("Erro ao enviar relatório:", e);
     return Response.json({ error: e instanceof Error ? e.message : "Erro desconhecido" }, { status: 500 });
   }
 }

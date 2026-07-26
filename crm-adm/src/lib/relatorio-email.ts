@@ -1,4 +1,4 @@
-import type { ConfiguracaoRelatorio, Empresa, Gc, Oportunidade } from "./types";
+import type { Atividade, ConfiguracaoRelatorio, Empresa, Gc, Oportunidade, PipelineSnapshot } from "./types";
 import {
   evolucaoPipeline,
   isGanha,
@@ -26,6 +26,8 @@ const TODAS_SECOES: SecoesRelatorio = {
 // início do CRM) continua disponível na tela de Relatórios; no e-mail só o
 // período recente importa, senão a tabela só cresce e vira ruído.
 const MESES_RECENTES = 6;
+const DIAS_ALERTA_RENOVACAO = 30;
+const DIAS_ALERTA_SEM_CONTATO = 15;
 
 const CORES = {
   navy: "#150638",
@@ -71,6 +73,15 @@ function tabela(colunas: string[], linhas: (string | number)[][], vazio = "Sem d
   return `<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 24px;border:1px solid ${CORES.borda};border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+function listaAlerta(itens: string[], vazio: string) {
+  if (itens.length === 0) {
+    return `<p style="color:${CORES.bom};font-size:13px;margin:0 0 14px;font-weight:600">✓ ${vazio}</p>`;
+  }
+  return `<ul style="margin:0 0 14px;padding-left:18px">${itens
+    .map((i) => `<li style="font-size:13px;color:${CORES.navySuave};margin-bottom:4px;line-height:1.4">${i}</li>`)
+    .join("")}</ul>`;
+}
+
 function secao(icone: string, titulo: string, conteudoHtml: string) {
   return `
     <tr><td style="padding:0">
@@ -81,17 +92,36 @@ function secao(icone: string, titulo: string, conteudoHtml: string) {
     </td></tr>`;
 }
 
+// Setinha + % de variação ao lado do valor do cartão — bom/ruim decide a cor
+// (nem sempre "subiu" é bom: usado só nos cartões onde subir é positivo).
+function badgeDelta(deltaValor: number | null, unidade: "%" | "p.p." = "%"): string {
+  if (deltaValor === null || !Number.isFinite(deltaValor) || Math.abs(deltaValor) < 0.5) return "";
+  const bom = deltaValor >= 0;
+  const cor = bom ? CORES.bom : CORES.ruim;
+  const seta = deltaValor > 0 ? "▲" : "▼";
+  return `<span style="color:${cor};font-size:11px;font-weight:700;margin-left:6px;white-space:nowrap">${seta} ${Math.abs(deltaValor).toFixed(0)}${unidade}</span>`;
+}
+
 // Cartão de destaque (bulletproof pra e-mail: uma célula de tabela com fundo
 // sólido, sem depender de border-radius/flex — degrada bem no Outlook desktop).
-function cartaoDestaque(label: string, valor: string, destaque = false) {
+function cartaoDestaque(label: string, valor: string, deltaHtml = "", destaque = false) {
   const bg = destaque ? CORES.navy : "#ffffff";
   const corLabel = destaque ? "rgba(251,243,231,0.65)" : CORES.navyMuted;
   const corValor = destaque ? CORES.cream : CORES.navy;
   return `
     <td style="padding:14px 16px;background:${bg};border:1px solid ${CORES.borda};border-radius:10px" width="25%">
       <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em;color:${corLabel}">${label}</p>
-      <p style="margin:4px 0 0;font-size:18px;font-weight:800;color:${corValor}">${valor}</p>
+      <p style="margin:4px 0 0;font-size:18px;font-weight:800;color:${corValor}">${valor}${deltaHtml}</p>
     </td>`;
+}
+
+function deltaPct(atual: number, anterior: number | null): number | null {
+  if (anterior === null || anterior === 0) return null;
+  return ((atual - anterior) / anterior) * 100;
+}
+
+function diasEntre(a: Date, b: Date) {
+  return Math.round((a.getTime() - b.getTime()) / 86400000);
 }
 
 /** Resumo curto reaproveitado no assunto do e-mail — mesma conta usada no topo do relatório. */
@@ -103,16 +133,93 @@ export function calcularResumoRelatorio(oportunidades: Oportunidade[]) {
   return { valorPipeline, receitaFechada };
 }
 
-export function montarRelatorioHtml(
-  empresas: Empresa[],
-  oportunidades: Oportunidade[],
-  gcs: Gc[],
-  secoes: SecoesRelatorio = TODAS_SECOES
-) {
+// Soma o valor/qtd em aberto (todas as etapas exceto Perdido, comercial + CS)
+// por dia, a partir dos snapshots diários — usado só pra comparar "hoje" com
+// "~30 dias atrás" nos cartões do topo.
+function serieDiariaPipelineAberto(snapshots: PipelineSnapshot[]) {
+  const porDia = new Map<string, { valor: number; qtd: number }>();
+  for (const s of snapshots) {
+    if (s.etapa === "Perdido") continue;
+    const atual = porDia.get(s.data) ?? { valor: 0, qtd: 0 };
+    atual.valor += s.valor_total;
+    atual.qtd += s.qtd;
+    porDia.set(s.data, atual);
+  }
+  return [...porDia.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
+export interface DadosParaResumoIA {
+  atividadesAtrasadas: number;
+  renovacoesProximas: number;
+  oportunidadesParadas: number;
+  maiorOportunidadeAberta: { nome: string; valor: number } | null;
+}
+
+/** Calcula os alertas (usado tanto na seção "Pontos de atenção" quanto pra alimentar o resumo por IA). */
+export function calcularAlertasRelatorio(empresas: Empresa[], oportunidades: Oportunidade[], atividadesAtrasadas: Atividade[]) {
+  const nomePorEmpresa = new Map(empresas.map((e) => [e.id, e.nome_empresa]));
+  const hoje = new Date();
+
+  const renovacoes = oportunidades
+    .filter((o) => o.data_renovacao)
+    .map((o) => ({ o, dias: diasEntre(new Date(o.data_renovacao!), hoje) }))
+    .filter(({ dias }) => dias >= 0 && dias <= DIAS_ALERTA_RENOVACAO)
+    .sort((a, b) => a.dias - b.dias);
+
+  const paradas = oportunidades
+    .filter((o) => !isGanha(o) && !isPerdida(o) && o.ultima_interacao)
+    .map((o) => ({ o, dias: diasEntre(hoje, new Date(o.ultima_interacao!)) }))
+    .filter(({ dias }) => dias >= DIAS_ALERTA_SEM_CONTATO)
+    .sort((a, b) => b.dias - a.dias);
+
+  const maiorAberta = oportunidades
+    .filter((o) => !isGanha(o) && !isPerdida(o) && o.valor_estimado)
+    .sort((a, b) => (b.valor_estimado ?? 0) - (a.valor_estimado ?? 0))[0];
+
+  return {
+    atividadesAtrasadasItens: atividadesAtrasadas.map((a) => {
+      const dias = a.prazo ? diasEntre(hoje, new Date(a.prazo)) : 0;
+      const nome = a.empresas?.nome_empresa ?? (a.empresa_id ? nomePorEmpresa.get(a.empresa_id) : null) ?? "Empresa";
+      return `<strong>${nome}</strong> — ${a.tipo_atividade} (${dias}d atrasada)`;
+    }),
+    renovacoesItens: renovacoes.slice(0, 5).map(({ o, dias }) => `<strong>${nomePorEmpresa.get(o.empresa_id) ?? "Empresa"}</strong> — ${o.projeto ?? "renovação"} (em ${dias}d)`),
+    paradasItens: paradas.slice(0, 5).map(({ o, dias }) => `<strong>${nomePorEmpresa.get(o.empresa_id) ?? "Empresa"}</strong> — ${o.projeto ?? "sem projeto"} (${dias}d sem contato)`),
+    dadosParaIA: {
+      atividadesAtrasadas: atividadesAtrasadas.length,
+      renovacoesProximas: renovacoes.length,
+      oportunidadesParadas: paradas.length,
+      maiorOportunidadeAberta: maiorAberta ? { nome: nomePorEmpresa.get(maiorAberta.empresa_id) ?? "Empresa", valor: maiorAberta.valor_estimado ?? 0 } : null,
+    } satisfies DadosParaResumoIA,
+  };
+}
+
+export interface OpcoesRelatorioHtml {
+  empresas: Empresa[];
+  oportunidades: Oportunidade[];
+  gcs: Gc[];
+  secoes?: SecoesRelatorio;
+  snapshots?: PipelineSnapshot[];
+  atividadesAtrasadas?: Atividade[];
+  resumoIA?: string | null;
+  siteUrl?: string;
+}
+
+export function montarRelatorioHtml(opcoes: OpcoesRelatorioHtml) {
+  const {
+    empresas,
+    oportunidades,
+    gcs,
+    secoes = TODAS_SECOES,
+    snapshots = [],
+    atividadesAtrasadas = [],
+    resumoIA = null,
+    siteUrl = "",
+  } = opcoes;
+
   const hoje = new Date();
   const dataFormatada = hoje.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
-  // ---------- Resumo do topo ----------
+  // ---------- Resumo do topo (com comparativo vs ~30 dias atrás) ----------
   const abertas = oportunidades.filter((o) => !isGanha(o) && !isPerdida(o));
   const ganhas = oportunidades.filter(isGanha);
   const perdidasArr = oportunidades.filter(isPerdida);
@@ -120,18 +227,59 @@ export function montarRelatorioHtml(
   const totalDecididas = ganhas.length + perdidasArr.length;
   const taxaConversao = totalDecididas ? (ganhas.length / totalDecididas) * 100 : 0;
 
+  const serieAberto = serieDiariaPipelineAberto(snapshots);
+  let deltaPipeline: number | null = null;
+  let deltaQtdAtivas: number | null = null;
+  if (serieAberto.length >= 2) {
+    const [, ultimoValor] = serieAberto[serieAberto.length - 1];
+    const alvo = new Date(hoje);
+    alvo.setDate(alvo.getDate() - 30);
+    const alvoISO = alvo.toISOString().slice(0, 10);
+    const referencia = [...serieAberto].reverse().find(([data]) => data <= alvoISO) ?? serieAberto[0];
+    deltaPipeline = deltaPct(ultimoValor.valor, referencia[1].valor);
+    deltaQtdAtivas = deltaPct(ultimoValor.qtd, referencia[1].qtd);
+  }
+
+  const mensalParaComparativo = relatorioMensal(oportunidades);
+  let deltaReceita: number | null = null;
+  let deltaTaxaConversao: number | null = null;
+  if (mensalParaComparativo.length >= 2) {
+    const atual = mensalParaComparativo[mensalParaComparativo.length - 1];
+    const anterior = mensalParaComparativo[mensalParaComparativo.length - 2];
+    deltaReceita = deltaPct(atual.valorGanho, anterior.valorGanho || null);
+    const taxaAtual = atual.qtdGanhas + atual.qtdPerdidas ? (atual.qtdGanhas / (atual.qtdGanhas + atual.qtdPerdidas)) * 100 : null;
+    const taxaAnterior = anterior.qtdGanhas + anterior.qtdPerdidas ? (anterior.qtdGanhas / (anterior.qtdGanhas + anterior.qtdPerdidas)) * 100 : null;
+    deltaTaxaConversao = taxaAtual !== null && taxaAnterior !== null ? taxaAtual - taxaAnterior : null;
+  }
+
   const resumo = `
     <table role="presentation" style="width:100%;border-collapse:separate;border-spacing:8px 0;margin:16px 0 8px">
       <tr>
-        ${cartaoDestaque("Pipeline aberto", moedaCompacta(valorPipeline))}
-        ${cartaoDestaque("Receita fechada", moedaCompacta(receitaFechada), true)}
-        ${cartaoDestaque("Taxa de conversão", `${taxaConversao.toFixed(0)}%`)}
-        ${cartaoDestaque("Oportunidades ativas", String(abertas.length))}
+        ${cartaoDestaque("Pipeline aberto", moedaCompacta(valorPipeline), badgeDelta(deltaPipeline))}
+        ${cartaoDestaque("Receita fechada", moedaCompacta(receitaFechada), badgeDelta(deltaReceita), true)}
+        ${cartaoDestaque("Taxa de conversão", `${taxaConversao.toFixed(0)}%`, badgeDelta(deltaTaxaConversao, "p.p."))}
+        ${cartaoDestaque("Oportunidades ativas", String(abertas.length), badgeDelta(deltaQtdAtivas))}
       </tr>
-    </table>`;
+    </table>
+    <p style="font-size:10px;color:${CORES.navyMuted};margin:0 0 8px">Comparado a ~30 dias atrás</p>`;
 
-  // ---------- Seções ----------
-  const blocos: string[] = [];
+  // ---------- Pontos de atenção ----------
+  const alertas = calcularAlertasRelatorio(empresas, oportunidades, atividadesAtrasadas);
+  const blocoAlertas = secao(
+    "⚠️",
+    "Pontos de atenção",
+    `
+      <p style="font-size:12px;font-weight:700;color:${CORES.navy};margin:0 0 4px">Atividades atrasadas</p>
+      ${listaAlerta(alertas.atividadesAtrasadasItens, "Nenhuma atividade atrasada.")}
+      <p style="font-size:12px;font-weight:700;color:${CORES.navy};margin:0 0 4px">Renovações se aproximando (${DIAS_ALERTA_RENOVACAO} dias)</p>
+      ${listaAlerta(alertas.renovacoesItens, "Nenhuma renovação próxima.")}
+      <p style="font-size:12px;font-weight:700;color:${CORES.navy};margin:0 0 4px">Sem contato há mais de ${DIAS_ALERTA_SEM_CONTATO} dias</p>
+      ${listaAlerta(alertas.paradasItens, "Todo mundo com contato em dia.")}
+    `
+  );
+
+  // ---------- Seções de dados ----------
+  const blocos: string[] = [blocoAlertas];
 
   if (secoes.incluir_vendas) {
     const mensal = relatorioMensal(oportunidades).slice(-MESES_RECENTES);
@@ -212,7 +360,11 @@ export function montarRelatorioHtml(
     );
   }
 
-  const semSecoes = blocos.length === 0;
+  const botaoCrm = siteUrl
+    ? `<table role="presentation" style="margin:24px 0 0"><tr><td style="background:${CORES.navy};border-radius:8px">
+        <a href="${siteUrl}/dashboard" style="display:inline-block;padding:11px 20px;color:${CORES.cream};font-size:13px;font-weight:700;text-decoration:none">Ver dashboard completo no CRM →</a>
+      </td></tr></table>`
+    : "";
 
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:0 auto;padding:20px;background:#f4f1ea">
@@ -230,13 +382,19 @@ export function montarRelatorioHtml(
       </td></tr>
 
       <tr><td style="background:#ffffff;padding:20px 24px 28px;border:1px solid ${CORES.borda};border-top:0;border-radius:0 0 12px 12px">
+        ${
+          resumoIA
+            ? `<div style="background:${CORES.fundoZebra};border-left:3px solid ${CORES.navy};border-radius:6px;padding:12px 16px;margin:0 0 18px">
+                <p style="margin:0;font-size:13px;line-height:1.5;color:${CORES.navy}">${resumoIA}</p>
+              </div>`
+            : ""
+        }
+
         ${resumo}
 
-        ${
-          semSecoes
-            ? `<p style="color:${CORES.navyMuted};font-size:13px;margin-top:24px">Nenhuma seção selecionada nas configurações — ajuste em Configurações → Relatórios por e-mail.</p>`
-            : `<table role="presentation" style="width:100%;border-collapse:collapse">${blocos.join("\n")}</table>`
-        }
+        <table role="presentation" style="width:100%;border-collapse:collapse">${blocos.join("\n")}</table>
+
+        ${botaoCrm}
 
         <p style="font-size:11px;color:${CORES.navyMuted};margin:28px 0 0;padding-top:14px;border-top:1px solid ${CORES.borda}">
           Relatório automático do CRM ADM Soluções · gerado em ${dataFormatada}
