@@ -10,6 +10,7 @@ export interface Gc {
   status: "Ativo" | "Inativo";
   ordem_round_robin: number;
   role: RoleGc;
+  foto_url: string | null;
 }
 
 export interface Empresa {
@@ -424,7 +425,7 @@ export interface WhatsappMensagem {
   whatsapp_message_id: string | null;
   status_entrega: StatusEntregaWhatsapp;
   criado_em: string;
-  gcs?: { nome: string };
+  gcs?: { nome: string; foto_url: string | null };
 }
 
 export type StatusConversaInstagram = "Aberta" | "Arquivada";
@@ -458,7 +459,7 @@ export interface InstagramMensagem {
   instagram_message_id: string | null;
   status_entrega: StatusEntregaInstagram;
   criado_em: string;
-  gcs?: { nome: string };
+  gcs?: { nome: string; foto_url: string | null };
 }
 
 // ==========================================================

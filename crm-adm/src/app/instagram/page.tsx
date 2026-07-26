@@ -20,6 +20,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, InstagramConversa, InstagramMensagem } from "@/lib/types";
 import { linkInstagram, vincularEmpresaConversaInstagram } from "@/lib/instagram";
+import Avatar from "@/components/Avatar";
 
 export default function InstagramPage() {
   return (
@@ -109,7 +110,7 @@ function InstagramPageConteudo() {
     if (!conversaId) return;
     const { data } = await supabase
       .from("instagram_mensagens")
-      .select("*, gcs(nome)")
+      .select("*, gcs(nome, foto_url)")
       .eq("conversa_id", conversaId)
       .order("criado_em", { ascending: true });
     const lista = (data as unknown as InstagramMensagem[]) ?? [];
@@ -127,7 +128,7 @@ function InstagramPageConteudo() {
 
     supabase
       .from("instagram_mensagens")
-      .select("*, gcs(nome)")
+      .select("*, gcs(nome, foto_url)")
       .eq("conversa_id", conversaId)
       .order("criado_em", { ascending: true })
       .then(({ data }) => {
@@ -288,32 +289,36 @@ function InstagramPageConteudo() {
                 Nenhuma conversa ainda. As conversas aparecem aqui assim que um contato manda uma mensagem no Direct.
               </p>
             ) : (
-              conversas.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setConversaId(c.id)}
-                  className={`w-full text-left px-4 py-3 border-b border-navy/5 hover:bg-navy/[0.03] transition-colors ${
-                    conversaId === c.id ? "bg-blue/10" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-sm text-navy truncate">
-                      {c.empresas?.nome_empresa ?? c.nome_perfil ?? c.username ?? "—"}
-                    </span>
-                    {c.nao_lidas > 0 && (
-                      <span className="shrink-0 bg-red text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                        {c.nao_lidas}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-navy/50 truncate">{c.username ? `@${c.username}` : "sem @usuário"}</div>
-                  {c.ultima_mensagem_em && (
-                    <div className="text-[11px] text-navy/40 mt-0.5">
-                      {new Date(c.ultima_mensagem_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              conversas.map((c) => {
+                const nomeContato = c.empresas?.nome_empresa ?? c.nome_perfil ?? c.username ?? "—";
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setConversaId(c.id)}
+                    className={`w-full text-left px-4 py-3 border-b border-navy/5 hover:bg-navy/[0.03] transition-colors flex items-center gap-3 ${
+                      conversaId === c.id ? "bg-blue/10" : ""
+                    }`}
+                  >
+                    <Avatar nome={nomeContato} tamanho="md" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-sm text-navy truncate">{nomeContato}</span>
+                        {c.nao_lidas > 0 && (
+                          <span className="shrink-0 bg-red text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                            {c.nao_lidas}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-navy/50 truncate">{c.username ? `@${c.username}` : "sem @usuário"}</div>
+                      {c.ultima_mensagem_em && (
+                        <div className="text-[11px] text-navy/40 mt-0.5">
+                          {new Date(c.ultima_mensagem_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -324,18 +329,21 @@ function InstagramPageConteudo() {
           ) : (
             <>
               <div className="px-5 py-3 border-b border-navy/10 bg-white flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-semibold text-navy truncate">
-                    {conversaSelecionada.empresas?.nome_empresa ?? conversaSelecionada.nome_perfil ?? "—"}
-                  </div>
-                  <div className="text-xs text-navy/50 truncate">
-                    {conversaSelecionada.username ? (
-                      <a href={linkInstagram(conversaSelecionada.username) ?? "#"} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                        @{conversaSelecionada.username}
-                      </a>
-                    ) : (
-                      "sem @usuário"
-                    )}
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar nome={conversaSelecionada.empresas?.nome_empresa ?? conversaSelecionada.nome_perfil ?? conversaSelecionada.username ?? "?"} tamanho="md" />
+                  <div className="min-w-0">
+                    <div className="font-semibold text-navy truncate">
+                      {conversaSelecionada.empresas?.nome_empresa ?? conversaSelecionada.nome_perfil ?? "—"}
+                    </div>
+                    <div className="text-xs text-navy/50 truncate">
+                      {conversaSelecionada.username ? (
+                        <a href={linkInstagram(conversaSelecionada.username) ?? "#"} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                          @{conversaSelecionada.username}
+                        </a>
+                      ) : (
+                        "sem @usuário"
+                      )}
+                    </div>
                   </div>
                 </div>
                 {conversaSelecionada.empresa_id ? (
@@ -364,7 +372,13 @@ function InstagramPageConteudo() {
                       </div>
                     </div>
                   ) : (
-                    <div key={m.id} className={`flex ${m.direcao === "enviada" ? "justify-end" : "justify-start"}`}>
+                    <div key={m.id} className={`flex items-end gap-2 ${m.direcao === "enviada" ? "justify-end" : "justify-start"}`}>
+                      {m.direcao === "recebida" && (
+                        <Avatar
+                          nome={conversaSelecionada.empresas?.nome_empresa ?? conversaSelecionada.nome_perfil ?? conversaSelecionada.username ?? "?"}
+                          tamanho="sm"
+                        />
+                      )}
                       <div
                         className={`max-w-[70%] rounded-xl px-3 py-2 text-sm ${
                           m.direcao === "enviada" ? "bg-blue text-white rounded-br-sm" : "bg-white text-navy border border-navy/10 rounded-bl-sm"

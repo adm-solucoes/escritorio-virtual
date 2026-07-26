@@ -22,6 +22,7 @@ import {
   type WhatsappNumero,
 } from "@/lib/types";
 import TrocarSenha from "@/components/TrocarSenha";
+import EditarFoto from "@/components/EditarFoto";
 
 const MESES_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -615,8 +616,11 @@ function ConfiguracoesConteudo() {
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-xl font-extrabold text-navy">Minha conta</h1>
-          <p className="text-sm text-navy/60">Troque sua senha de acesso ao sistema.</p>
+          <p className="text-sm text-navy/60">Sua foto de perfil e senha de acesso ao sistema.</p>
         </div>
+        {gcAtual && (
+          <EditarFoto gc={gcAtual} onAtualizado={(fotoUrl) => setGcAtual((atual) => (atual ? { ...atual, foto_url: fotoUrl } : atual))} />
+        )}
         <TrocarSenha />
       </div>
 

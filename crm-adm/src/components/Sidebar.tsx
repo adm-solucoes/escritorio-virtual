@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Camera, Settings, LogOut, Menu, X, User, Workflow, CalendarDays, BarChart3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useGcAtual } from "@/lib/useGcAtual";
+import Avatar from "./Avatar";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -68,15 +69,6 @@ export default function Sidebar() {
     router.push("/login");
     router.refresh();
   }
-
-  const iniciais = usuario?.nome
-    ? usuario.nome
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((p) => p[0]?.toUpperCase())
-        .join("")
-    : "?";
 
   return (
     <>
@@ -187,9 +179,7 @@ export default function Sidebar() {
             title={mostrarTexto ? undefined : "Perfil"}
             className="w-full flex items-center gap-2.5 px-1.5 py-1.5 rounded-md hover:bg-white/10 transition-colors whitespace-nowrap"
           >
-            <span className="w-8 h-8 rounded-full bg-red text-white flex items-center justify-center text-xs font-bold shrink-0">
-              {iniciais}
-            </span>
+            <Avatar nome={usuario?.nome ?? "?"} fotoUrl={gc?.foto_url} tamanho="sm" />
             <span
               className="text-sm text-cream/80 font-medium truncate text-left overflow-hidden transition-opacity duration-150"
               style={{ opacity: mostrarTexto ? 1 : 0 }}
