@@ -3,9 +3,11 @@
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MessagesSquare, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, Download, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useGcAtual } from "@/lib/useGcAtual";
 import type {
+  Anexo,
   Atividade,
   Empresa,
   Gc,
@@ -20,9 +22,28 @@ import { calcularScoreLead, classificarScore } from "@/lib/score";
 import EmpresaModal from "@/components/EmpresaModal";
 import OportunidadeModal from "@/components/OportunidadeModal";
 
+const TIPOS_ACEITOS = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/msword",
+  "application/vnd.ms-excel",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+const TAMANHO_MAXIMO_BYTES = 10 * 1024 * 1024;
+
+function formatarTamanho(bytes: number | null) {
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { gc: gcAtual } = useGcAtual();
 
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
@@ -32,6 +53,9 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
   const [mensagens, setMensagens] = useState<WhatsappMensagem[]>([]);
   const [nps, setNps] = useState<NpsResposta[]>([]);
   const [gcs, setGcs] = useState<Gc[]>([]);
+  const [anexos, setAnexos] = useState<Anexo[]>([]);
+  const [vinculoAnexo, setVinculoAnexo] = useState("empresa");
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -105,6 +129,72 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
       cancelado = true;
     };
   }, [oportunidades]);
+
+  useEffect(() => {
+    let cancelado = false;
+    const idsOportunidades = oportunidades.map((o) => o.id);
+    const consulta =
+      idsOportunidades.length === 0
+        ? supabase.from("anexos").select("*").eq("registro_tipo", "empresa").eq("registro_id", id)
+        : supabase
+            .from("anexos")
+            .select("*")
+            .or(
+              `and(registro_tipo.eq.empresa,registro_id.eq.${id}),and(registro_tipo.eq.oportunidade,registro_id.in.(${idsOportunidades.join(",")}))`
+            );
+    consulta.order("criado_em", { ascending: false }).then(({ data }) => {
+      if (!cancelado) setAnexos((data as Anexo[]) ?? []);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [id, oportunidades, refreshKey]);
+
+  async function enviarAnexo(file: File) {
+    if (!file) return;
+    if (file.size > TAMANHO_MAXIMO_BYTES) {
+      alert("Arquivo maior que 10MB. Escolha um arquivo menor.");
+      return;
+    }
+    if (!TIPOS_ACEITOS.includes(file.type)) {
+      alert("Tipo de arquivo não permitido. Use PDF, DOCX, XLSX ou imagem (JPG/PNG/WEBP).");
+      return;
+    }
+    setEnviandoAnexo(true);
+    const registroTipo = vinculoAnexo === "empresa" ? "empresa" : "oportunidade";
+    const registroId = vinculoAnexo === "empresa" ? id : vinculoAnexo;
+    const caminho = `${registroTipo}/${registroId}/${Date.now()}-${file.name}`;
+
+    const { error: erroUpload } = await supabase.storage.from("anexos").upload(caminho, file);
+    if (erroUpload) {
+      alert("Erro ao enviar arquivo: " + erroUpload.message);
+      setEnviandoAnexo(false);
+      return;
+    }
+
+    const { error: erroInsert } = await supabase.from("anexos").insert({
+      registro_tipo: registroTipo,
+      registro_id: registroId,
+      nome_arquivo: file.name,
+      caminho_storage: caminho,
+      tamanho_bytes: file.size,
+      tipo_mime: file.type,
+      enviado_por_gc_id: gcAtual?.id ?? null,
+    });
+    setEnviandoAnexo(false);
+    if (erroInsert) {
+      alert("Erro ao registrar anexo: " + erroInsert.message);
+      return;
+    }
+    carregar();
+  }
+
+  async function excluirAnexo(anexo: Anexo) {
+    if (!confirm(`Excluir o arquivo "${anexo.nome_arquivo}"?`)) return;
+    await supabase.storage.from("anexos").remove([anexo.caminho_storage]);
+    await supabase.from("anexos").delete().eq("id", anexo.id);
+    carregar();
+  }
 
   const gcPorId = useMemo(() => new Map(gcs.map((g) => [g.id, g.nome])), [gcs]);
   const oportunidadesPorId = useMemo(() => new Map(oportunidades.map((o) => [o.id, o])), [oportunidades]);
@@ -295,6 +385,67 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-bold text-navy flex items-center gap-1.5">
+            <Paperclip size={14} /> Anexos ({anexos.length})
+          </h2>
+          {anexos.length === 0 ? (
+            <p className="text-xs text-navy/40">Nenhum arquivo anexado ainda.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {anexos.map((a) => {
+                const { data: pub } = supabase.storage.from("anexos").getPublicUrl(a.caminho_storage);
+                return (
+                  <li key={a.id} className="bg-white rounded-lg border border-navy/10 p-3 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm text-navy truncate">{a.nome_arquivo}</p>
+                      <p className="text-[11px] text-navy/40">
+                        {new Date(a.criado_em).toLocaleDateString("pt-BR")}
+                        {a.enviado_por_gc_id ? ` · ${gcPorId.get(a.enviado_por_gc_id) ?? "?"}` : ""}
+                        {a.tamanho_bytes ? ` · ${formatarTamanho(a.tamanho_bytes)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <a href={pub.publicUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md hover:bg-blue/10 text-blue" title="Baixar">
+                        <Download size={15} />
+                      </a>
+                      <button onClick={() => excluirAnexo(a)} className="p-1.5 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+            <select className="input" value={vinculoAnexo} onChange={(e) => setVinculoAnexo(e.target.value)}>
+              <option value="empresa">Empresa (geral)</option>
+              {oportunidades.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.projeto || o.etapa_atual}
+                </option>
+              ))}
+            </select>
+            <label className="btn-primary whitespace-nowrap cursor-pointer">
+              <Upload size={15} /> {enviandoAnexo ? "Enviando..." : "Enviar arquivo"}
+              <input
+                type="file"
+                className="hidden"
+                disabled={enviandoAnexo}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) enviarAnexo(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+          <p className="text-[11px] text-navy/40">PDF, Word, Excel ou imagem — até 10MB por arquivo.</p>
         </div>
 
         {conversa && (

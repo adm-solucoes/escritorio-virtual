@@ -92,6 +92,20 @@ export type TipoPipeline = "comercial" | "cs";
 
 export type TipoLinkNotificacao = "empresa" | "oportunidade" | "atividade";
 
+export type TipoRegistroAnexo = "empresa" | "oportunidade";
+
+export interface Anexo {
+  id: string;
+  registro_tipo: TipoRegistroAnexo;
+  registro_id: string;
+  nome_arquivo: string;
+  caminho_storage: string;
+  tamanho_bytes: number | null;
+  tipo_mime: string | null;
+  enviado_por_gc_id: string | null;
+  criado_em: string;
+}
+
 export interface Notificacao {
   id: string;
   gc_id: string | null;
