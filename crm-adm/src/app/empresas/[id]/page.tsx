@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, History, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Download, History, Mail, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useGcAtual } from "@/lib/useGcAtual";
 import type {
@@ -67,6 +67,11 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
   const [modalNpsAberto, setModalNpsAberto] = useState(false);
   const [notaNps, setNotaNps] = useState("8");
   const [comentarioNps, setComentarioNps] = useState("");
+  const [modalEmailAberto, setModalEmailAberto] = useState(false);
+  const [vinculoEmail, setVinculoEmail] = useState("empresa");
+  const [assuntoEmail, setAssuntoEmail] = useState("");
+  const [resumoEmail, setResumoEmail] = useState("");
+  const [salvandoEmail, setSalvandoEmail] = useState(false);
 
   function carregar() {
     setRefreshKey((k) => k + 1);
@@ -251,6 +256,31 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
     carregar();
   }
 
+  async function registrarEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!empresa || !assuntoEmail.trim()) return;
+    setSalvandoEmail(true);
+    const tipoAtividade = `E-mail: ${assuntoEmail.trim()}${resumoEmail.trim() ? ` — ${resumoEmail.trim()}` : ""}`;
+    const { error } = await supabase.from("atividades").insert({
+      empresa_id: empresa.id,
+      oportunidade_id: vinculoEmail === "empresa" ? null : vinculoEmail,
+      tipo_atividade: tipoAtividade,
+      responsavel_id: gcAtual?.id ?? null,
+      status: "Concluído",
+      prazo: new Date().toISOString().slice(0, 10),
+    });
+    setSalvandoEmail(false);
+    if (error) {
+      alert("Erro ao registrar e-mail: " + error.message);
+      return;
+    }
+    setModalEmailAberto(false);
+    setAssuntoEmail("");
+    setResumoEmail("");
+    setVinculoEmail("empresa");
+    carregar();
+  }
+
   if (loading) {
     return <p className="p-6 text-sm text-navy/50">Carregando...</p>;
   }
@@ -370,14 +400,22 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-bold text-navy">Atividades ({atividades.length})</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-navy">Atividades ({atividades.length})</h2>
+            <button onClick={() => setModalEmailAberto(true)} className="flex items-center gap-1 text-xs font-semibold text-blue hover:underline">
+              <Mail size={13} /> Registrar e-mail
+            </button>
+          </div>
           {atividades.length === 0 ? (
             <p className="text-xs text-navy/40">Nenhuma atividade vinculada.</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {atividades.map((a) => (
                 <li key={a.id} className="bg-white rounded-lg border border-navy/10 p-3 flex items-center justify-between gap-2">
-                  <span className="text-sm text-navy truncate">{a.tipo_atividade}</span>
+                  <span className="text-sm text-navy truncate flex items-center gap-1.5">
+                    {a.tipo_atividade.startsWith("E-mail:") && <Mail size={13} className="text-navy/40 shrink-0" />}
+                    {a.tipo_atividade}
+                  </span>
                   <span className="text-xs text-navy/50 shrink-0">{a.status}</span>
                 </li>
               ))}
@@ -563,6 +601,56 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
               </button>
               <button type="submit" className="btn-primary">
                 Salvar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {modalEmailAberto && (
+        <div className="fixed inset-0 z-30 bg-navy/50 flex items-center justify-center p-4" onClick={() => setModalEmailAberto(false)}>
+          <form
+            onSubmit={registrarEmail}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 flex flex-col gap-3"
+          >
+            <h2 className="font-bold text-navy">Registrar e-mail enviado</h2>
+            <p className="text-xs text-navy/50 -mt-2">
+              Envio manual — registra que um e-mail foi trocado com o contato, fora do CRM.
+            </p>
+            {oportunidades.length > 0 && (
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-navy/60 font-medium">Vínculo</span>
+                <select className="input" value={vinculoEmail} onChange={(e) => setVinculoEmail(e.target.value)}>
+                  <option value="empresa">Empresa (geral)</option>
+                  {oportunidades.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.projeto || o.etapa_atual}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-navy/60 font-medium">Assunto *</span>
+              <input
+                className="input"
+                placeholder="Ex: Proposta comercial enviada"
+                value={assuntoEmail}
+                onChange={(e) => setAssuntoEmail(e.target.value)}
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-navy/60 font-medium">Resumo (opcional)</span>
+              <textarea className="input" rows={3} value={resumoEmail} onChange={(e) => setResumoEmail(e.target.value)} />
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setModalEmailAberto(false)} className="px-4 py-2 rounded-md text-sm font-semibold text-navy/70 hover:bg-navy/5">
+                Cancelar
+              </button>
+              <button type="submit" disabled={salvandoEmail} className="btn-primary">
+                {salvandoEmail ? "Salvando..." : "Salvar"}
               </button>
             </div>
           </form>
