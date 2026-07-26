@@ -276,6 +276,16 @@ export function cicloVendasComercial(historico: OportunidadeHistoricoEtapa[]): C
   return { diasMedios: amostras ? Math.round(somaDias / amostras) : 0, amostras };
 }
 
+// Ajusta a probabilidade fixa da etapa pra baixo quando a oportunidade está parada
+// muito além da média histórica daquela etapa — só pra exibição (não altera o valor
+// gravado em oportunidades.probabilidade nem a receita_ponderada persistida). Nunca
+// reduz abaixo de 30% da probabilidade base, pra não zerar oportunidades antigas.
+export function probabilidadeAjustada(probabilidadeBase: number, diasNaEtapa: number, mediaDiasEtapa: number): number {
+  if (mediaDiasEtapa <= 0 || diasNaEtapa <= mediaDiasEtapa) return probabilidadeBase;
+  const fator = Math.max(0.3, mediaDiasEtapa / diasNaEtapa);
+  return probabilidadeBase * fator;
+}
+
 export interface EvolucaoValorPipeline {
   data: string;
   valorTotal: number;

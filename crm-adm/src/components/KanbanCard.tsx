@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import type { Empresa, Oportunidade } from "@/lib/types";
 import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
+import { probabilidadeAjustada } from "@/lib/relatorios";
 
 const TEMP_COLOR: Record<string, string> = {
   Frio: "border-l-blue",
@@ -16,11 +17,13 @@ export default function KanbanCard({
   oportunidade,
   empresa,
   dataMudancaEtapa,
+  mediaDiasEtapa,
   onClick,
 }: {
   oportunidade: Oportunidade;
   empresa: Empresa | undefined;
   dataMudancaEtapa?: string;
+  mediaDiasEtapa?: number | null;
   onClick: () => void;
 }) {
   const router = useRouter();
@@ -40,6 +43,14 @@ export default function KanbanCard({
   const diasNaEtapaAtual = Math.floor(
     (agora - new Date(dataMudancaEtapa ?? oportunidade.atualizado_em).getTime()) / 86400000
   );
+
+  // Probabilidade só pra exibição — reduz visualmente quando a oportunidade está
+  // parada bem além da média histórica da etapa. Não altera o valor gravado no banco.
+  const probAjustada =
+    oportunidade.probabilidade !== null && mediaDiasEtapa
+      ? probabilidadeAjustada(oportunidade.probabilidade, diasNaEtapaAtual, mediaDiasEtapa)
+      : null;
+  const probAjustadaDiferente = probAjustada !== null && Math.round(probAjustada * 100) < Math.round((oportunidade.probabilidade ?? 0) * 100);
 
   async function abrirConversa(e: React.MouseEvent) {
     e.stopPropagation();
@@ -80,6 +91,14 @@ export default function KanbanCard({
           {oportunidade.probabilidade !== null && (
             <span className="ml-1.5 text-[10px] font-bold text-blue bg-blue/10 rounded-full px-1.5 py-0.5">
               {Math.round(oportunidade.probabilidade * 100)}%
+            </span>
+          )}
+          {probAjustadaDiferente && (
+            <span
+              className="ml-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-1.5 py-0.5"
+              title="Probabilidade ajustada pra baixo: essa oportunidade está parada nesta etapa bem além da média histórica. Só um indicador visual, não muda o valor gravado."
+            >
+              ~{Math.round((probAjustada ?? 0) * 100)}%
             </span>
           )}
         </div>

@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
 import { useGcAtual } from "@/lib/useGcAtual";
 import { exportarCSV } from "@/lib/csv";
+import { tempoMedioPorEtapa } from "@/lib/relatorios";
 import {
   type Empresa,
   type EtapaFunil,
@@ -68,6 +69,11 @@ export default function PipelinePage() {
   const empresasPorId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const etapasDoTipo = useMemo(() => etapas.filter((e) => e.tipo_pipeline === tipoPipeline).map((e) => e.nome), [etapas, tipoPipeline]);
   const probabilidadePorEtapa = useMemo(() => new Map(etapas.map((e) => [e.nome, e.probabilidade])), [etapas]);
+  const mediaDiasPorEtapa = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of tempoMedioPorEtapa(historico)) map.set(t.etapa, t.diasMedios);
+    return map;
+  }, [historico]);
 
   // data da mudança de etapa mais recente por oportunidade, pra calcular dias reais na etapa atual
   const ultimaMudancaPorOportunidade = useMemo(() => {
@@ -263,6 +269,7 @@ export default function PipelinePage() {
                 oportunidades={porEtapa.get(etapa) ?? []}
                 empresasPorId={empresasPorId}
                 ultimaMudancaPorOportunidade={ultimaMudancaPorOportunidade}
+                mediaDiasEtapa={mediaDiasPorEtapa.get(etapa) ?? null}
                 onCardClick={abrirEdicao}
                 onAddClick={() => abrirNova(etapa)}
               />
