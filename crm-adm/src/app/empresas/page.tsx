@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpDown, MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowUpDown, Download, MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, Oportunidade, ScoreRule } from "@/lib/types";
 import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 import { calcularScoreLead, classificarScore } from "@/lib/score";
 import { useGcAtual } from "@/lib/useGcAtual";
+import { exportarCSV } from "@/lib/csv";
 import EmpresaModal from "@/components/EmpresaModal";
 
 export default function EmpresasPage() {
@@ -117,6 +118,24 @@ export default function EmpresasPage() {
     carregar();
   }
 
+  function exportarCsvEmpresas() {
+    const colunas = ["Empresa", "Contato", "Cargo", "Cidade", "Estado", "ICP", "Temperatura", "Score", "GC responsável", "Telefone", "E-mail"];
+    const linhas = filtradas.map((e) => [
+      e.nome_empresa,
+      e.nome_contato ?? "",
+      e.cargo ?? "",
+      e.cidade ?? "",
+      e.estado ?? "",
+      e.icp ?? "",
+      e.temperatura ?? "",
+      String(scorePorEmpresa.get(e.id) ?? 0),
+      e.gc_responsavel_id ? gcPorId.get(e.gc_responsavel_id) ?? "" : "",
+      e.telefone ?? "",
+      e.email ?? "",
+    ]);
+    exportarCSV(`empresas-${new Date().toISOString().slice(0, 10)}`, colunas, linhas);
+  }
+
   return (
     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -131,6 +150,9 @@ export default function EmpresasPage() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
+          <button onClick={exportarCsvEmpresas} className="px-3 py-2 rounded-md text-sm font-semibold text-navy/70 border border-navy/15 hover:bg-navy/5 whitespace-nowrap flex items-center gap-1.5">
+            <Download size={15} /> Exportar CSV
+          </button>
           <button onClick={abrirNovo} className="btn-primary whitespace-nowrap">
             <Plus size={16} /> Nova empresa
           </button>

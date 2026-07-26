@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { Download } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { criarTarefaAutomaticaSeConfigurada } from "@/lib/automacoes";
 import { useGcAtual } from "@/lib/useGcAtual";
+import { exportarCSV } from "@/lib/csv";
 import {
   type Empresa,
   type EtapaFunil,
@@ -147,6 +149,22 @@ export default function PipelinePage() {
     await criarTarefaAutomaticaSeConfigurada(oportunidade, novaEtapa);
   }
 
+  function exportarCsvPipeline() {
+    const gcPorId = new Map(gcs.map((g) => [g.id, g.nome]));
+    const colunas = ["Empresa", "Projeto", "Pipeline", "Etapa", "Valor estimado", "Valor ponderado", "GC responsável", "Motivo de perda"];
+    const linhas = oportunidadesFiltradas.map((o) => [
+      empresasPorId.get(o.empresa_id)?.nome_empresa ?? "",
+      o.projeto ?? "",
+      o.tipo_pipeline === "cs" ? "Customer Success" : "Comercial",
+      o.etapa_atual,
+      String(o.valor_estimado ?? 0),
+      String(o.receita_ponderada ?? 0),
+      o.gc_responsavel_id ? gcPorId.get(o.gc_responsavel_id) ?? "" : "",
+      o.motivo_perda ?? "",
+    ]);
+    exportarCSV(`pipeline-${new Date().toISOString().slice(0, 10)}`, colunas, linhas);
+  }
+
   function abrirNova(etapa: EtapaFunil) {
     setEditando(null);
     setEtapaNova(etapa);
@@ -223,6 +241,12 @@ export default function PipelinePage() {
             value={valorMax}
             onChange={(e) => setValorMax(e.target.value)}
           />
+          <button
+            onClick={exportarCsvPipeline}
+            className="px-3 py-2 rounded-md text-sm font-semibold text-navy/70 border border-navy/15 hover:bg-navy/5 whitespace-nowrap flex items-center gap-1.5"
+          >
+            <Download size={15} /> Exportar CSV
+          </button>
         </div>
       </div>
 

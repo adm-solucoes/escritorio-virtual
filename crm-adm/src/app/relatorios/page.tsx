@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Mail } from "lucide-react";
+import { Download, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { exportarCSV } from "@/lib/csv";
 import type { Empresa, Gc, Oportunidade, OportunidadeHistoricoEtapa, PipelineSnapshot } from "@/lib/types";
 import {
   evolucaoPipeline,
@@ -90,7 +91,12 @@ export default function RelatoriosPage() {
         </div>
       </div>
 
-      <Secao titulo="Relatório mensal de vendas">
+      <Secao
+        titulo="Relatório mensal de vendas"
+        arquivo="relatorio-mensal-vendas"
+        colunas={["Mês", "Ganhas", "Valor ganho", "Perdidas", "Valor perdido"]}
+        linhas={mensal.map((m) => [m.label, m.qtdGanhas.toString(), moeda(m.valorGanho), m.qtdPerdidas.toString(), moeda(m.valorPerdido)])}
+      >
         <Tabela
           colunas={["Mês", "Ganhas", "Valor ganho", "Perdidas", "Valor perdido"]}
           linhas={mensal.map((m) => [m.label, m.qtdGanhas.toString(), moeda(m.valorGanho), m.qtdPerdidas.toString(), moeda(m.valorPerdido)])}
@@ -98,7 +104,12 @@ export default function RelatoriosPage() {
         />
       </Secao>
 
-      <Secao titulo="Relatório de perdas por motivo">
+      <Secao
+        titulo="Relatório de perdas por motivo"
+        arquivo="relatorio-perdas"
+        colunas={["Motivo", "Qtd", "Valor"]}
+        linhas={perdas.map((p) => [p.motivo, p.qtd.toString(), moeda(p.valor)])}
+      >
         <Tabela
           colunas={["Motivo", "Qtd", "Valor"]}
           linhas={perdas.map((p) => [p.motivo, p.qtd.toString(), moeda(p.valor)])}
@@ -106,7 +117,12 @@ export default function RelatoriosPage() {
         />
       </Secao>
 
-      <Secao titulo="Relatório por origem de lead">
+      <Secao
+        titulo="Relatório por origem de lead"
+        arquivo="relatorio-origem"
+        colunas={["Origem", "Leads", "Oportunidades", "Valor ganho"]}
+        linhas={origem.map((o) => [o.origem, o.leads.toString(), o.oportunidades.toString(), moeda(o.valorGanho)])}
+      >
         <Tabela
           colunas={["Origem", "Leads", "Oportunidades", "Valor ganho"]}
           linhas={origem.map((o) => [o.origem, o.leads.toString(), o.oportunidades.toString(), moeda(o.valorGanho)])}
@@ -114,7 +130,20 @@ export default function RelatoriosPage() {
         />
       </Secao>
 
-      <Secao titulo="Relatório por responsável">
+      <Secao
+        titulo="Relatório por responsável"
+        arquivo="relatorio-responsavel"
+        colunas={["GC", "Em aberto", "Ganhas", "Perdidas", "Pipeline aberto", "Valor ganho", "Conversão"]}
+        linhas={responsavel.map((r) => [
+          r.nome,
+          r.abertas.toString(),
+          r.ganhas.toString(),
+          r.perdidas.toString(),
+          moeda(r.valorPipeline),
+          moeda(r.valorGanho),
+          `${r.taxaConversao.toFixed(0)}%`,
+        ])}
+      >
         <Tabela
           colunas={["GC", "Em aberto", "Ganhas", "Perdidas", "Pipeline aberto", "Valor ganho", "Conversão"]}
           linhas={responsavel.map((r) => [
@@ -130,7 +159,12 @@ export default function RelatoriosPage() {
         />
       </Secao>
 
-      <Secao titulo="Evolução do pipeline (novos leads e oportunidades por mês)">
+      <Secao
+        titulo="Evolução do pipeline (novos leads e oportunidades por mês)"
+        arquivo="evolucao-pipeline"
+        colunas={["Mês", "Novas empresas", "Novas oportunidades"]}
+        linhas={evolucao.map((e) => [e.label, e.novasEmpresas.toString(), e.novasOportunidades.toString()])}
+      >
         <Tabela
           colunas={["Mês", "Novas empresas", "Novas oportunidades"]}
           linhas={evolucao.map((e) => [e.label, e.novasEmpresas.toString(), e.novasOportunidades.toString()])}
@@ -138,7 +172,12 @@ export default function RelatoriosPage() {
         />
       </Secao>
 
-      <Secao titulo="Tempo médio por etapa (ciclo de vendas)">
+      <Secao
+        titulo="Tempo médio por etapa (ciclo de vendas)"
+        arquivo="tempo-medio-por-etapa"
+        colunas={["Etapa", "Dias médios", "Amostras"]}
+        linhas={tempoPorEtapa.map((t) => [t.etapa, t.diasMedios.toString(), t.amostras.toString()])}
+      >
         <Tabela
           colunas={["Etapa", "Dias médios", "Amostras"]}
           linhas={tempoPorEtapa.map((t) => [t.etapa, t.diasMedios.toString(), t.amostras.toString()])}
@@ -146,7 +185,17 @@ export default function RelatoriosPage() {
         />
       </Secao>
 
-      <Secao titulo="Evolução do valor do pipeline comercial (foto diária)">
+      <Secao
+        titulo="Evolução do valor do pipeline comercial (foto diária)"
+        arquivo="evolucao-valor-pipeline"
+        colunas={["Data", "Valor em pipeline", "Valor ponderado", "Qtd. oportunidades"]}
+        linhas={evolucaoValor.map((e) => [
+          new Date(e.data).toLocaleDateString("pt-BR"),
+          moeda(e.valorTotal),
+          moeda(e.valorPonderado),
+          e.qtd.toString(),
+        ])}
+      >
         <Tabela
           colunas={["Data", "Valor em pipeline", "Valor ponderado", "Qtd. oportunidades"]}
           linhas={evolucaoValor.map((e) => [
@@ -162,10 +211,32 @@ export default function RelatoriosPage() {
   );
 }
 
-function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Secao({
+  titulo,
+  arquivo,
+  colunas,
+  linhas,
+  children,
+}: {
+  titulo: string;
+  arquivo: string;
+  colunas: string[];
+  linhas: string[][];
+  children: React.ReactNode;
+}) {
   return (
     <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
-      <h2 className="text-sm font-bold text-navy px-4 pt-4 pb-2">{titulo}</h2>
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <h2 className="text-sm font-bold text-navy">{titulo}</h2>
+        {linhas.length > 0 && (
+          <button
+            onClick={() => exportarCSV(arquivo, colunas, linhas)}
+            className="flex items-center gap-1 text-xs font-semibold text-blue hover:underline shrink-0"
+          >
+            <Download size={13} /> Exportar CSV
+          </button>
+        )}
+      </div>
       {children}
     </div>
   );
