@@ -69,16 +69,21 @@ export async function POST(request: Request) {
 
   const contexto = montarContexto(empresas, oportunidades, gcs);
 
-  const system = `Você é um assistente comercial interno da ADM Soluções, uma empresa júnior de consultoria. Responda a pergunta do usuário usando SOMENTE os dados de empresas e oportunidades fornecidos abaixo. Seja direto e específico — cite nomes de empresas, valores e números reais dos dados. Se a pergunta não puder ser respondida com esses dados, diga claramente que não tem essa informação. Nunca invente dados que não estão na lista. Responda em português, em no máximo 4-5 frases ou uma lista curta.
+  const system = `Você é um assistente comercial interno da ADM Soluções, uma empresa júnior de consultoria. Para perguntas sobre o pipeline, empresas e oportunidades, responda usando SOMENTE os dados fornecidos abaixo — nunca invente números, valores ou etapas que não estão na lista.
 
-DADOS:
+Você também tem uma ferramenta de busca na web. Use-a quando o usuário pedir pra pesquisar informações externas sobre uma empresa (notícias recentes, site, LinkedIn, o que a empresa faz) — nesse caso, busque de verdade e cite as fontes. Não use a busca pra perguntas sobre os dados internos do pipeline.
+
+Seja direto e específico — cite nomes de empresas, valores e números reais. Se não tiver a informação (nem nos dados internos nem via busca), diga claramente que não tem. Responda em português, de forma objetiva.
+
+DADOS INTERNOS DO PIPELINE:
 ${contexto}`;
 
   const resultado = await chamarClaude({
     tarefa: "redigir",
     system,
     mensagem: pergunta,
-    maxTokens: 600,
+    maxTokens: 1200,
+    permitirBuscaWeb: true,
   });
 
   if (!resultado.ok) {

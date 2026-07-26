@@ -25,6 +25,8 @@ interface ChamarClaudeOpcoes {
   /** JSON Schema opcional — quando informado, a resposta vem estruturada (output_config.format). */
   outputSchema?: Record<string, unknown>;
   timeoutMs?: number;
+  /** Liga a ferramenta de busca na web (server-side, sem beta header). O modelo decide sozinho quando usar. */
+  permitirBuscaWeb?: boolean;
 }
 
 export type ResultadoIA = { ok: true; texto: string } | { ok: false; erro: string };
@@ -44,15 +46,24 @@ export async function chamarClaude(opcoes: ChamarClaudeOpcoes): Promise<Resultad
         ...(opcoes.outputSchema
           ? { output_config: { format: { type: "json_schema" as const, schema: opcoes.outputSchema } } }
           : {}),
+        ...(opcoes.permitirBuscaWeb
+          ? { tools: [{ type: "web_search_20260209" as const, name: "web_search" as const, max_uses: 3 }] }
+          : {}),
       },
       { timeout: opcoes.timeoutMs ?? TIMEOUT_PADRAO_MS }
     );
 
-    const bloco = response.content.find((b) => b.type === "text");
-    if (!bloco || bloco.type !== "text" || !bloco.text.trim()) {
+    // Com busca na web, a resposta pode ter vários blocos de texto intercalados com
+    // chamadas de busca — concatena todos em vez de pegar só o primeiro.
+    const texto = response.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("\n\n")
+      .trim();
+    if (!texto) {
       return { ok: false, erro: "A IA não retornou texto." };
     }
-    return { ok: true, texto: bloco.text };
+    return { ok: true, texto };
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) {
       return { ok: false, erro: "IA sobrecarregada no momento — tente de novo em alguns segundos." };
