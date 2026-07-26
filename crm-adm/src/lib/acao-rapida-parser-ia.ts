@@ -27,10 +27,21 @@ export async function interpretarComandoIA(texto: string): Promise<ComandoParsea
 
   const hoje = new Date().toISOString().slice(0, 10);
 
+  const system = `Você extrai dados de um comando de agendamento de reunião em português, escrito de forma informal e com possíveis erros de digitação. Hoje é ${hoje} (formato YYYY-MM-DD).
+
+Marque "entendido": true sempre que o texto tiver um horário (mesmo que só a hora, tipo "as 14" = 14:00) E um jeito de identificar a pessoa (nome, ou e-mail, ou telefone). Não exija que as duas coisas apareçam com palavras-chave explícitas — infira pelo contexto. Só marque "entendido": false se realmente não der pra saber o horário OU não der pra identificar ninguém.
+
+"hora" deve ser HH:mm (24h) — "as 14" vira "14:00", "14h30" vira "14:30".
+"dataISO" deve ser YYYY-MM-DD, resolvendo "hoje"/"amanhã"/dias da semana relativos a hoje; se não houver data, use hoje.
+"nome" é o nome da pessoa com quem é a reunião.
+Extraia e-mail e telefone só se estiverem literalmente no texto (não invente); ignore erros de digitação em palavras como "emial"/"email".
+
+Exemplo: "reunião com o caio as 14 no email caio@x.com" -> entendido true, hora 14:00, nome Caio, email caio@x.com, telefone null, dataISO hoje.`;
+
   const response = await client.messages.create({
     model: "claude-haiku-4-5",
     max_tokens: 300,
-    system: `Você extrai dados de um comando de agendamento de reunião em português. Hoje é ${hoje} (formato YYYY-MM-DD). Se o texto não descrever claramente uma reunião com horário e nome de contato, responda "entendido": false. "hora" deve ser HH:mm (24h). "dataISO" deve ser YYYY-MM-DD, resolvendo "hoje"/"amanhã"/dias da semana relativos a hoje. Não invente e-mail ou telefone se não estiverem no texto — deixe null.`,
+    system,
     messages: [{ role: "user", content: texto }],
     output_config: { format: { type: "json_schema", schema: SCHEMA } },
   });
