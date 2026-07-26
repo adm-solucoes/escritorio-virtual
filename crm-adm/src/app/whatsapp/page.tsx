@@ -24,12 +24,6 @@ import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, WhatsappConversa, WhatsappMensagem } from "@/lib/types";
 import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 
-interface Template {
-  name: string;
-  language: string;
-  status: string;
-}
-
 export default function WhatsappPage() {
   return (
     <Suspense fallback={<p className="p-6 text-sm text-navy/50">Carregando...</p>}>
@@ -47,9 +41,6 @@ function WhatsappPageConteudo() {
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
-  const [dentroDaJanela, setDentroDaJanela] = useState(true);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [templateEscolhido, setTemplateEscolhido] = useState("");
   const [loading, setLoading] = useState(true);
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [notaAberta, setNotaAberta] = useState(false);
@@ -137,11 +128,6 @@ function WhatsappPageConteudo() {
       .order("criado_em", { ascending: true });
     const lista = (data as unknown as WhatsappMensagem[]) ?? [];
     setMensagens(lista);
-
-    const ultimaRecebida = [...lista].reverse().find((m) => m.direcao === "recebida");
-    setDentroDaJanela(
-      ultimaRecebida ? Date.now() - new Date(ultimaRecebida.criado_em).getTime() < 24 * 60 * 60 * 1000 : false
-    );
   }
 
   useEffect(() => {
@@ -157,10 +143,6 @@ function WhatsappPageConteudo() {
         if (cancelado) return;
         const lista = (data as unknown as WhatsappMensagem[]) ?? [];
         setMensagens(lista);
-        const ultimaRecebida = [...lista].reverse().find((m) => m.direcao === "recebida");
-        setDentroDaJanela(
-          ultimaRecebida ? Date.now() - new Date(ultimaRecebida.criado_em).getTime() < 24 * 60 * 60 * 1000 : false
-        );
       });
     supabase.from("whatsapp_conversas").update({ nao_lidas: 0 }).eq("id", conversaId).then(() => carregarConversas());
 
@@ -175,13 +157,6 @@ function WhatsappPageConteudo() {
   useEffect(() => {
     fimDasMensagensRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensagens]);
-
-  useEffect(() => {
-    fetch("/api/whatsapp/templates")
-      .then((r) => r.json())
-      .then((d) => setTemplates(d.templates ?? []))
-      .catch(() => setTemplates([]));
-  }, []);
 
   const conversaSelecionada = useMemo(() => conversas.find((c) => c.id === conversaId), [conversas, conversaId]);
 
@@ -217,24 +192,15 @@ function WhatsappPageConteudo() {
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
-    if (!conversaId) return;
-    if (!dentroDaJanela && !templateEscolhido) {
-      setErroEnvio("Selecione um template — a janela de 24h dessa conversa está fechada.");
-      return;
-    }
-    if (dentroDaJanela && !texto.trim()) return;
+    if (!conversaId || !texto.trim()) return;
 
     setEnviando(true);
     setErroEnvio(null);
 
-    const payload = dentroDaJanela && !templateEscolhido
-      ? { conversaId, texto: texto.trim(), gcId: gcAtual?.id }
-      : { conversaId, template: { nome: templateEscolhido, idioma: "pt_BR" }, gcId: gcAtual?.id };
-
     const res = await fetch("/api/whatsapp/enviar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ conversaId, texto: texto.trim(), gcId: gcAtual?.id }),
     });
     const data = await res.json();
     setEnviando(false);
@@ -245,7 +211,6 @@ function WhatsappPageConteudo() {
     }
 
     setTexto("");
-    setTemplateEscolhido("");
     await carregarMensagens();
     carregarConversas();
   }
@@ -542,24 +507,6 @@ function WhatsappPageConteudo() {
             </div>
 
             <form onSubmit={enviar} className="border-t border-navy/10 bg-white p-3 flex flex-col gap-2">
-              {!dentroDaJanela && (
-                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-md px-2.5 py-1.5">
-                  <AlertTriangle size={13} />
-                  Fora da janela de 24h — escolha um template pra iniciar a conversa de novo.
-                </div>
-              )}
-
-              {!dentroDaJanela ? (
-                <select className="input" value={templateEscolhido} onChange={(e) => setTemplateEscolhido(e.target.value)}>
-                  <option value="">Selecione um template...</option>
-                  {templates.map((t) => (
-                    <option key={t.name} value={t.name}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-
               <div className="flex gap-2 items-center relative">
                 <div ref={menuAnexoRef} className="relative">
                   <button
@@ -650,10 +597,9 @@ function WhatsappPageConteudo() {
                 ) : (
                   <input
                     className="input flex-1"
-                    placeholder={dentroDaJanela ? "Digite uma mensagem..." : "Envie um template pra reabrir a conversa"}
+                    placeholder="Digite uma mensagem..."
                     value={texto}
                     onChange={(e) => setTexto(e.target.value)}
-                    disabled={!dentroDaJanela}
                   />
                 )}
 
@@ -671,7 +617,7 @@ function WhatsappPageConteudo() {
                       <Send size={15} /> Enviar áudio
                     </button>
                   </>
-                ) : dentroDaJanela && !texto.trim() ? (
+                ) : !texto.trim() ? (
                   <button
                     type="button"
                     onClick={iniciarGravacao}

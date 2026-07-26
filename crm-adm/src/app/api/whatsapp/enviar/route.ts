@@ -3,8 +3,6 @@ import { enviarMidia, enviarTemplate, enviarTexto } from "@/lib/whatsapp-api";
 
 export const dynamic = "force-dynamic";
 
-const JANELA_24H_MS = 24 * 60 * 60 * 1000;
-
 const TIPO_MIDIA_PARA_GRAPH: Record<string, "image" | "document" | "audio"> = {
   imagem: "image",
   documento: "document",
@@ -49,28 +47,10 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
 
-    // Janela de 24h da Meta: só dá pra mandar texto/mídia livre se o cliente
-    // mandou mensagem nas últimas 24h. Fora disso, só template aprovado.
-    const { data: ultimaRecebida } = await admin
-      .from("whatsapp_mensagens")
-      .select("criado_em")
-      .eq("conversa_id", conversaId)
-      .eq("direcao", "recebida")
-      .order("criado_em", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const dentroDaJanela = ultimaRecebida
-      ? Date.now() - new Date(ultimaRecebida.criado_em).getTime() < JANELA_24H_MS
-      : false;
-
-    if (!template && !dentroDaJanela) {
-      return Response.json(
-        { error: "Fora da janela de 24h — use um template aprovado pra iniciar a conversa de novo." },
-        { status: 400 }
-      );
-    }
-
+    // Não bloqueamos mais aqui pela janela de 24h — a Meta segue aplicando a
+    // regra dela do lado de lá independente disso: fora da janela, o envio de
+    // texto/mídia livre volta com erro da própria Graph API (ex: "Re-engagement
+    // message"), e esse erro é repassado pro chamador normalmente lá embaixo.
     const primeiroNome = gc?.nome ? gc.nome.trim().split(/\s+/)[0] : null;
     const assinatura = primeiroNome ? `*${primeiroNome}:*` : null;
 
