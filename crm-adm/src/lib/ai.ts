@@ -27,6 +27,8 @@ interface ChamarClaudeOpcoes {
   timeoutMs?: number;
   /** Liga a ferramenta de busca na web (server-side, sem beta header). O modelo decide sozinho quando usar. */
   permitirBuscaWeb?: boolean;
+  /** low | medium | high | xhigh | max — padrão "medium" pra equilibrar custo/latência com qualidade. */
+  effort?: "low" | "medium" | "high" | "xhigh" | "max";
 }
 
 export type ResultadoIA = { ok: true; texto: string } | { ok: false; erro: string };
@@ -36,6 +38,12 @@ export async function chamarClaude(opcoes: ChamarClaudeOpcoes): Promise<Resultad
     return { ok: false, erro: "IA não configurada (ANTHROPIC_API_KEY ausente)." };
   }
 
+  // Haiku 4.5 não aceita output_config.effort (erro 400) — o parâmetro só existe
+  // pra modelos mais novos como o Sonnet 5, então só entra na tarefa "redigir".
+  const outputConfig: Record<string, unknown> = {};
+  if (opcoes.tarefa === "redigir") outputConfig.effort = opcoes.effort ?? "medium";
+  if (opcoes.outputSchema) outputConfig.format = { type: "json_schema" as const, schema: opcoes.outputSchema };
+
   try {
     const response = await client.messages.create(
       {
@@ -43,9 +51,7 @@ export async function chamarClaude(opcoes: ChamarClaudeOpcoes): Promise<Resultad
         max_tokens: opcoes.maxTokens ?? 1000,
         system: opcoes.system,
         messages: [{ role: "user", content: opcoes.mensagem }],
-        ...(opcoes.outputSchema
-          ? { output_config: { format: { type: "json_schema" as const, schema: opcoes.outputSchema } } }
-          : {}),
+        ...(Object.keys(outputConfig).length ? { output_config: outputConfig } : {}),
         ...(opcoes.permitirBuscaWeb
           ? { tools: [{ type: "web_search_20260209" as const, name: "web_search" as const, max_uses: 3 }] }
           : {}),

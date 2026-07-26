@@ -3,6 +3,7 @@ import { chamarClaude } from "@/lib/ai";
 import type { Empresa, Gc, Oportunidade } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function montarContexto(empresas: Empresa[], oportunidades: (Oportunidade & { empresas?: Empresa })[], gcs: Gc[]) {
   const nomeGc = new Map(gcs.map((g) => [g.id, g.nome]));
@@ -84,6 +85,7 @@ ${contexto}`;
     mensagem: pergunta,
     maxTokens: 1200,
     permitirBuscaWeb: true,
+    timeoutMs: 45_000,
   });
 
   if (!resultado.ok) {
