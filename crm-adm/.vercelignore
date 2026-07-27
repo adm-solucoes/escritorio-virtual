@@ -1,0 +1,7 @@
+# A Vercel CLI envia o diretório local, então o .gitignore NÃO basta pra
+# impedir que um arquivo seja publicado. Isto aqui é o que vale no deploy.
+
+# Ferramenta local de inspeção visual do mascote 3D (cópia do three.js +
+# página de debug). Serve só pra desenvolvimento na máquina; publicar isso
+# exporia ~700 KB de biblioteca e uma página que não é do produto.
+public/_dbg
