@@ -1,0 +1,699 @@
+/* ---------------------------------------------------------------------------
+ * Mascote da tela de login — Rhodesian Ridgeback animado em SVG + CSS.
+ *
+ * Regras do arquivo:
+ *  - só animamos `transform` e `opacity` (composição na GPU, sem layout/paint);
+ *  - a posição horizontal do cachorro e do formulário vem da mesma variável
+ *    `--x`, então os dois se movem em sincronia durante a intro (o cachorro
+ *    "carrega" o formulário na boca);
+ *  - `prefers-reduced-motion` zera todas as animações e transições do palco.
+ * ------------------------------------------------------------------------ */
+
+/* ----------------------------- Palco / âncoras --------------------------- */
+
+.dog-stage {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* No mobile o mascote fica ACIMA do cartão, então o palco reserva espaço
+     no topo e cresce o suficiente pra os dois nunca se sobreporem. */
+  min-height: 44rem;
+  padding: 15rem 1rem 3rem;
+
+  /* Âncoras horizontais (deslocamento a partir do centro do palco). */
+  --x-off-left: -78vw;
+  --x-off-right: 78vw;
+  --x-form: 0rem;
+  --x-bowl: 8.5rem;
+  --x-eat: 5.6rem;
+  --x-center: 0rem;
+
+  /* Posição vertical do cachorro e da cumbuca. */
+  --y-dog: -13rem;
+  --y-bowl: -10rem;
+
+  --dog-scale: 0.58;
+  --bowl-scale: 0.72;
+
+  /* Offset da "boca" do cachorro durante a intro (o form fica pendurado ali). */
+  --carry-dx: -3rem;
+  --carry-dy: -11.6rem;
+
+  --move-ms: 0ms;
+}
+
+@media (min-width: 768px) {
+  .dog-stage {
+    padding: 2rem 1rem;
+    min-height: 38rem;
+    --x-form: -20rem;
+    --x-bowl: 18rem;
+    --x-eat: 14.8rem;
+    --y-dog: 2.5rem;
+    --y-bowl: 7.6rem;
+    --dog-scale: 1;
+    --bowl-scale: 1;
+    --carry-dx: -5.4rem;
+    --carry-dy: 3.4rem;
+  }
+}
+
+/* Shake horizontal quando a senha está errada. */
+.dog-stage--shake {
+  animation: dog-shake 480ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes dog-shake {
+  10%,
+  90% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(7px, 0, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-9px, 0, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(9px, 0, 0);
+  }
+}
+
+/* ------------------------- Invólucro do formulário ----------------------- */
+
+.dog-form-slot {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 24rem;
+  transition: transform var(--move-ms) cubic-bezier(0.33, 0, 0.2, 1),
+    opacity 220ms ease;
+  will-change: transform, opacity;
+}
+
+/* Escondido enquanto o cachorro ainda não foi buscar o formulário. */
+.dog-form-slot--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Preso na boca do cachorro. */
+.dog-form-slot--carried {
+  opacity: 1;
+  pointer-events: none;
+  transform: translate3d(calc(var(--x) + var(--carry-dx)), var(--carry-dy), 0)
+    scale(0.26) rotate(-7deg);
+}
+
+/* Posição final. */
+.dog-form-slot--settled {
+  opacity: 1;
+  transform: none;
+}
+
+/* Depois do login concluído o formulário some de vez. */
+.dog-form-slot--gone {
+  opacity: 0;
+  transform: scale(0.9);
+  pointer-events: none;
+  transition: transform 420ms ease, opacity 420ms ease;
+}
+
+.dog-skip-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  z-index: 5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgb(21 6 56 / 0.45);
+  animation: dog-hint-pulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dog-hint-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------- Cachorro -------------------------------- */
+
+.dog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  width: 15rem;
+  margin-left: -7.5rem;
+  margin-top: -6.25rem;
+  transform: translate3d(var(--x), var(--y-dog), 0) scale(var(--dog-scale));
+  transition: transform var(--move-ms) cubic-bezier(0.33, 0, 0.2, 1);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.dog-flip {
+  transform: scaleX(var(--facing, 1));
+  transition: transform 180ms ease;
+}
+
+.dog-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* Pivôs de rotação — `fill-box` deixa a origem relativa ao bbox da forma. */
+.dog-tail,
+.dog-leg,
+.dog-ear,
+.dog-head,
+.dog-body {
+  transform-box: fill-box;
+}
+
+.dog-tail {
+  transform-origin: 100% 100%;
+  animation: dog-tail-slow 1.9s ease-in-out infinite;
+}
+
+.dog-leg {
+  transform-origin: 50% 6%;
+}
+
+.dog-ear {
+  transform-origin: 50% 6%;
+}
+
+.dog-head {
+  transform-origin: 50% 100%;
+  transition: transform 320ms cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.dog-body {
+  transform-origin: 50% 100%;
+  animation: dog-breathe 3.4s ease-in-out infinite;
+}
+
+.dog-pupil {
+  transform: translate3d(var(--eye-x, 0px), var(--eye-y, 0px), 0);
+  transition: transform 160ms ease-out;
+}
+
+.dog-eyelid {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: dog-blink 5.4s ease-in-out infinite;
+}
+
+.dog-brow {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transition: transform 220ms ease;
+}
+
+.dog-eyes-happy,
+.dog-mouth-open,
+.dog-cover-paws,
+.dog-sweat {
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.dog-cover-paws {
+  transform: translate3d(0, 74px, 0);
+  transition: transform 300ms cubic-bezier(0.34, 1.4, 0.64, 1), opacity 180ms ease;
+}
+
+/* ------------------------------ Keyframes -------------------------------- */
+
+@keyframes dog-breathe {
+  0%,
+  100% {
+    transform: scaleY(1) scaleX(1);
+  }
+  50% {
+    transform: scaleY(1.03) scaleX(0.995);
+  }
+}
+
+@keyframes dog-tail-slow {
+  0%,
+  100% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(11deg);
+  }
+}
+
+@keyframes dog-tail-fast {
+  0%,
+  100% {
+    transform: rotate(-26deg);
+  }
+  50% {
+    transform: rotate(28deg);
+  }
+}
+
+@keyframes dog-leg-run {
+  0%,
+  100% {
+    transform: rotate(34deg);
+  }
+  50% {
+    transform: rotate(-34deg);
+  }
+}
+
+@keyframes dog-leg-trot {
+  0%,
+  100% {
+    transform: rotate(9deg);
+  }
+  50% {
+    transform: rotate(-9deg);
+  }
+}
+
+@keyframes dog-run-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(1deg);
+  }
+}
+
+@keyframes dog-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-30px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  70% {
+    transform: translateY(-14px);
+  }
+  85% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes dog-bark {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    transform: translate(7px, -7px) rotate(-7deg);
+  }
+  32% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  55% {
+    transform: translate(7px, -7px) rotate(-7deg);
+  }
+  72% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes dog-chew {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(5px) rotate(2.5deg);
+  }
+}
+
+@keyframes dog-blink {
+  0%,
+  90%,
+  100% {
+    transform: scaleY(0);
+  }
+  93%,
+  96% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes dog-ear-flap {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+}
+
+/* -------------------------- Estados do mascote --------------------------- */
+
+/* idle: nada além do respirar/rabo lento já declarados. */
+
+/* watching: cabeça inclinada, orelha levantada, rabo um pouco mais animado. */
+.dog--watching .dog-head {
+  transform: rotate(-8deg) translateY(-2px);
+}
+.dog--watching .dog-tail {
+  animation-duration: 1.1s;
+}
+
+/* coveringEyes: patas sobem e cobrem os olhos. */
+.dog--coveringEyes .dog-cover-paws {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+.dog--coveringEyes .dog-head {
+  transform: translateY(3px) rotate(2deg);
+}
+.dog--coveringEyes .dog-tail {
+  animation-duration: 2.8s;
+}
+
+/* barking: cabeça avança em latidos, boca aberta, orelhas caídas. */
+.dog--barking .dog-head-inner {
+  animation: dog-bark 620ms ease-in-out 2;
+}
+.dog--barking .dog-mouth-open,
+.dog--barking .dog-sweat {
+  opacity: 1;
+}
+.dog--barking .dog-mouth-closed {
+  opacity: 0;
+}
+.dog--barking .dog-brow--l {
+  transform: translate(4px, 6px) rotate(20deg);
+}
+.dog--barking .dog-brow--r {
+  transform: translate(-4px, 6px) rotate(-20deg);
+}
+.dog--barking .dog-ear {
+  transform: rotate(0deg) translateY(6px) scaleY(1.08);
+}
+.dog--barking .dog-tail {
+  animation-duration: 3.2s;
+}
+
+/* happy: pulo, rabo elétrico, olhos fechados de alegria, língua de fora. */
+.dog--happy .dog-root {
+  animation: dog-hop 900ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
+}
+.dog--happy .dog-tail {
+  animation: dog-tail-fast 180ms ease-in-out infinite;
+}
+.dog--happy .dog-eyes-happy,
+.dog--happy .dog-mouth-open {
+  opacity: 1;
+}
+.dog--happy .dog-eyes-open,
+.dog--happy .dog-mouth-closed {
+  opacity: 0;
+}
+.dog--happy .dog-ear {
+  animation: dog-ear-flap 450ms ease-in-out infinite;
+}
+.dog--happy .dog-head {
+  transform: rotate(-4deg);
+}
+
+/* eating: cabeça abaixada na cumbuca, mastigando. */
+.dog--eating .dog-head {
+  transform: translate(6px, 30px) rotate(16deg);
+}
+.dog--eating .dog-head-inner {
+  animation: dog-chew 420ms ease-in-out infinite;
+}
+.dog--eating .dog-mouth-open {
+  opacity: 1;
+}
+.dog--eating .dog-mouth-closed {
+  opacity: 0;
+}
+.dog--eating .dog-tail {
+  animation-duration: 0.7s;
+}
+
+/* running: pernas a mil, corpo balançando, orelhas voando. */
+.dog--running .dog-root {
+  animation: dog-run-bob 260ms ease-in-out infinite;
+}
+.dog--running .dog-leg {
+  animation: dog-leg-run 260ms ease-in-out infinite;
+}
+.dog--running .dog-leg--b,
+.dog--running .dog-leg--d {
+  animation-delay: -130ms;
+}
+.dog--running .dog-ear {
+  animation: dog-ear-flap 260ms ease-in-out infinite;
+}
+.dog--running .dog-tail {
+  animation-duration: 0.5s;
+}
+.dog--running .dog-head {
+  transform: rotate(-5deg) translateY(-3px);
+}
+
+/* Trote leve enquanto está parado, só pra não parecer estátua. */
+.dog--idle .dog-leg,
+.dog--watching .dog-leg {
+  animation: dog-leg-trot 2.6s ease-in-out infinite;
+}
+.dog--idle .dog-leg--b,
+.dog--idle .dog-leg--d,
+.dog--watching .dog-leg--b,
+.dog--watching .dog-leg--d {
+  animation-delay: -1.3s;
+}
+
+/* ------------------------------ Balão "AU!" ------------------------------ */
+
+.dog-bubble {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  transform: translate3d(
+      calc(var(--x) + var(--bubble-dx, 4rem)),
+      calc(var(--y-dog) - 6rem),
+      0
+    )
+    scale(var(--dog-scale));
+  background: var(--adm-navy);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.875rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: dog-bubble-pop 260ms cubic-bezier(0.34, 1.6, 0.64, 1) both;
+}
+
+.dog-bubble::after {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  bottom: -0.4rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 0.15rem;
+}
+
+@keyframes dog-bubble-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(
+        calc(var(--x) + var(--bubble-dx, 4rem)),
+        calc(var(--y-dog) - 5rem),
+        0
+      )
+      scale(calc(var(--dog-scale) * 0.6));
+  }
+}
+
+/* ------------------------------- Cumbuca --------------------------------- */
+
+.dog-bowl {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  width: 7.5rem;
+  margin-left: -3.75rem;
+  margin-top: -2.5rem;
+  transform: translate3d(var(--x-bowl), var(--y-bowl), 0) scale(var(--bowl-scale));
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 200ms ease;
+  border-radius: 1rem;
+}
+
+.dog-bowl:hover:not(:disabled) {
+  transform: translate3d(var(--x-bowl), var(--y-bowl), 0)
+    scale(calc(var(--bowl-scale) * 1.07));
+}
+
+.dog-bowl:focus-visible {
+  outline: 3px solid var(--adm-blue);
+  outline-offset: 4px;
+}
+
+.dog-bowl:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.dog-bowl-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* O rótulo só aparece no desktop: no mobile o espaço vertical é disputado com
+   o cartão, e o botão já tem `aria-label` descritivo. */
+.dog-bowl-label {
+  display: none;
+  margin-top: 0.15rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: rgb(21 6 56 / 0.5);
+}
+
+@media (min-width: 768px) {
+  .dog-bowl-label {
+    display: block;
+  }
+}
+
+.kibble-drop {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: kibble-fall 620ms cubic-bezier(0.5, 0, 0.9, 0.6) both;
+}
+
+.kibble-drop--2 {
+  animation-delay: 90ms;
+}
+.kibble-drop--3 {
+  animation-delay: 180ms;
+}
+
+@keyframes kibble-fall {
+  from {
+    transform: translateY(-72px) rotate(0deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(0) rotate(220deg);
+    opacity: 0;
+  }
+}
+
+/* ---------------------------- Tela de loading ---------------------------- */
+
+.dog-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 0.92);
+  animation: dog-fade-in 160ms ease both;
+}
+
+@keyframes dog-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.dog-paw-track {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dog-paw {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: var(--adm-red);
+  opacity: 0.2;
+  animation: dog-paw-step 1.05s ease-in-out infinite;
+}
+
+.dog-paw--2 {
+  animation-delay: 0.15s;
+}
+.dog-paw--3 {
+  animation-delay: 0.3s;
+}
+.dog-paw--4 {
+  animation-delay: 0.45s;
+}
+
+@keyframes dog-paw-step {
+  0%,
+  70%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* --------------------------- Movimento reduzido -------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .dog-stage,
+  .dog-stage *,
+  .dog-stage *::before,
+  .dog-stage *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

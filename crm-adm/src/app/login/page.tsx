@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import PasswordInput from "@/components/PasswordInput";
+import LoginDogMascot, { type DogMascotHandle } from "@/components/login/LoginDogMascot";
+import LoginForm from "@/components/login/LoginForm";
+import RecuperarSenhaForm from "@/components/login/RecuperarSenhaForm";
+import usePrefersReducedMotion from "@/components/login/usePrefersReducedMotion";
 
 const UM_DIA = 60 * 60 * 24;
+
+/** Tempo de comemoração do mascote antes de navegar pro dashboard. */
+const COMEMORACAO_MS = 1500;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,11 +20,23 @@ export default function LoginPage() {
   const [manterConectado, setManterConectado] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState(false);
 
   const [modoRecuperar, setModoRecuperar] = useState(false);
   const [emailRecuperar, setEmailRecuperar] = useState("");
   const [enviandoRecuperacao, setEnviandoRecuperacao] = useState(false);
   const [mensagemRecuperacao, setMensagemRecuperacao] = useState<string | null>(null);
+
+  const mascoteRef = useRef<DogMascotHandle>(null);
+  const timerNavegacao = useRef<number | null>(null);
+  const movimentoReduzido = usePrefersReducedMotion();
+
+  // Nunca deixa o timer de navegação vazando se a página desmontar antes.
+  useEffect(() => {
+    return () => {
+      if (timerNavegacao.current !== null) window.clearTimeout(timerNavegacao.current);
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,11 +57,18 @@ export default function LoginPage() {
     setSaving(false);
     if (error) {
       setError(error.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : error.message);
+      mascoteRef.current?.react("barking");
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    // Sucesso: o mascote comemora e o formulário sai de cena antes de navegar.
+    setSucesso(true);
+    const espera = movimentoReduzido ? 0 : COMEMORACAO_MS;
+    timerNavegacao.current = window.setTimeout(() => {
+      timerNavegacao.current = null;
+      router.push("/dashboard");
+      router.refresh();
+    }, espera);
   }
 
   async function handleRecuperar(e: React.FormEvent) {
@@ -62,108 +87,38 @@ export default function LoginPage() {
     }
   }
 
-  if (modoRecuperar) {
-    return (
-      <div className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-white rounded-xl shadow-sm border border-navy/10 p-6">
-          <h1 className="text-lg font-extrabold text-navy mb-1">Esqueci minha senha</h1>
-          <p className="text-sm text-navy/60 mb-6">Digite seu e-mail e mandamos um link para redefinir a senha.</p>
-
-          <form onSubmit={handleRecuperar} className="flex flex-col gap-4">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-navy/60 font-medium">E-mail</span>
-              <input
-                className="input"
-                type="email"
-                value={emailRecuperar}
-                onChange={(e) => setEmailRecuperar(e.target.value)}
-                required
-                autoFocus
-              />
-            </label>
-
-            {mensagemRecuperacao && <p className="text-sm text-navy/70">{mensagemRecuperacao}</p>}
-
-            <button type="submit" disabled={enviandoRecuperacao} className="btn-primary justify-center">
-              {enviandoRecuperacao ? "Enviando..." : "Enviar link"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setModoRecuperar(false);
-                setMensagemRecuperacao(null);
-              }}
-              className="text-sm font-semibold text-navy/60 hover:underline"
-            >
-              Voltar para o login
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex-1 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-sm border border-navy/10 p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <span className="relative inline-flex w-4 h-4">
-            <span className="absolute top-0 right-0 w-3 h-3 rounded-[3px] bg-red" />
-            <span className="absolute bottom-0 left-0 w-2 h-2 rounded-[2px] bg-red/70" />
-          </span>
-          <span className="font-bold text-navy" style={{ fontFamily: "var(--font-serif-accent)" }}>
-            ADM Soluções
-          </span>
-        </div>
-
-        <h1 className="text-lg font-extrabold text-navy mb-1">Entrar</h1>
-        <p className="text-sm text-navy/60 mb-6">Acesse o CRM com seu e-mail e senha.</p>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-navy/60 font-medium">E-mail</span>
-            <input
-              className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoFocus
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-navy/60 font-medium">Senha</span>
-            <PasswordInput value={senha} onChange={setSenha} required autoComplete="current-password" />
-          </label>
-
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={manterConectado}
-                onChange={(e) => setManterConectado(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-navy/70">Manter conectado</span>
-            </label>
-            <button
-              type="button"
-              onClick={() => setModoRecuperar(true)}
-              className="text-sm font-semibold text-blue hover:underline"
-            >
-              Esqueci minha senha
-            </button>
-          </div>
-
-          {error && <p className="text-sm text-red">{error}</p>}
-
-          <button type="submit" disabled={saving} className="btn-primary justify-center">
-            {saving ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
-      </div>
-    </div>
+    <LoginDogMascot ref={mascoteRef} success={sucesso}>
+      {modoRecuperar ? (
+        <RecuperarSenhaForm
+          email={emailRecuperar}
+          enviando={enviandoRecuperacao}
+          mensagem={mensagemRecuperacao}
+          onEmailChange={setEmailRecuperar}
+          onSubmit={handleRecuperar}
+          onVoltar={() => {
+            setModoRecuperar(false);
+            setMensagemRecuperacao(null);
+          }}
+        />
+      ) : (
+        <LoginForm
+          email={email}
+          senha={senha}
+          manterConectado={manterConectado}
+          saving={saving}
+          error={error}
+          onEmailChange={setEmail}
+          onSenhaChange={setSenha}
+          onManterConectadoChange={setManterConectado}
+          onSubmit={handleSubmit}
+          onEsqueciSenha={() => {
+            setModoRecuperar(true);
+            mascoteRef.current?.setFocusField(null);
+          }}
+          onFieldFocus={(campo) => mascoteRef.current?.setFocusField(campo)}
+        />
+      )}
+    </LoginDogMascot>
   );
 }
