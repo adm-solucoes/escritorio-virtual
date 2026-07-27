@@ -226,8 +226,8 @@
 
 /* Rastreio sutil do cursor: inclina a foto inteira em vez de mover pupilas
    (não dá pra animar o olho bordado da pelúcia). */
-.dog--idle .dog-photo-wrap,
-.dog--watching .dog-photo-wrap {
+.dog-photo-wrap--idle,
+.dog-photo-wrap--watching {
   transform: rotate(calc(var(--gaze-x, 0) * 2.2deg)) translateY(calc(var(--gaze-y, 0) * -3px));
 }
 
@@ -248,6 +248,14 @@
 }
 .dog-paw-cover--r {
   left: 55%;
+}
+/* Modificador aplicado diretamente pelo componente (não via seletor
+   ancestral `.dog--coveringEyes .dog-paw-cover`) — mais previsível sob
+   HMR/hot-reload, que às vezes deixa cascatas por classe ancestral com
+   comportamento inconsistente em dev. */
+.dog-paw-cover--active {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 /* ------------------------------ Keyframes -------------------------------- */
@@ -321,34 +329,34 @@
 }
 
 /* -------------------------- Estados do mascote --------------------------- */
+/* Cada estado é uma classe modificadora aplicada DIRETO no elemento pelo
+   componente (`dog-photo-wrap--<estado>`, `dog-shadow--<estado>`), em vez de
+   um seletor ancestral `.dog--X .dog-photo-wrap`. */
 
 /* idle: só a respiração + inclinação sutil já declaradas acima. */
 
-/* watching: leve inclinação de cabeça (a mesma classe de idle já cobre o
-   rastreio do cursor; aqui só acentua um pouco). */
-.dog--watching .dog-photo-wrap {
+/* watching: leve inclinação de cabeça (a classe idle já cobre o rastreio do
+   cursor; aqui só acentua um pouco). */
+.dog-photo-wrap--watching {
   transform: rotate(calc(-4deg + var(--gaze-x, 0) * 2.2deg));
 }
 
-/* coveringEyes: as duas patas descem e cobrem os olhos. */
-.dog--coveringEyes .dog-paw-cover {
-  opacity: 1;
-  transform: translate3d(0, 0, 0) scale(1);
-}
-.dog--coveringEyes .dog-photo-wrap {
+/* coveringEyes: as duas patas descem e cobrem os olhos (dog-paw-cover--active
+   já cuida disso) — aqui só a leve inclinação de cabeça. */
+.dog-photo-wrap--coveringEyes {
   transform: rotate(2deg) translateY(2px);
 }
 
 /* barking: sacudida rápida + sombra treme junto. */
-.dog--barking .dog-photo-wrap {
+.dog-photo-wrap--barking {
   animation: dog-bark 560ms ease-in-out 2;
 }
 
 /* happy: pulo animado, sombra "respira" junto pra dar noção de profundidade. */
-.dog--happy .dog-photo-wrap {
+.dog-photo-wrap--happy {
   animation: dog-hop 850ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
 }
-.dog--happy .dog-shadow {
+.dog-shadow--happy {
   animation: dog-shadow-pulse 850ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
 }
 
@@ -369,13 +377,13 @@
 }
 
 /* eating: cabeça baixa na cumbuca, mastigando. */
-.dog--eating .dog-photo-wrap {
+.dog-photo-wrap--eating {
   animation: dog-chew 420ms ease-in-out infinite;
   transform: rotate(6deg);
 }
 
 /* running: corpo balançando rápido. */
-.dog--running .dog-photo-wrap {
+.dog-photo-wrap--running {
   animation: dog-run-bob 240ms ease-in-out infinite;
 }
 

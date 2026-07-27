@@ -34,8 +34,8 @@ export default function DogMascot({ state, x, facing, moveMs, containerRef }: Pr
   return (
     <div ref={containerRef} className={`dog dog--${state}`} style={style} aria-hidden="true">
       <div className="dog-flip">
-        <div className="dog-shadow" />
-        <div className="dog-photo-wrap">
+        <div className={`dog-shadow dog-shadow--${state}`} />
+        <div className={`dog-photo-wrap dog-photo-wrap--${state}`}>
           <Image
             src={cachorroFoto}
             alt=""
@@ -43,8 +43,8 @@ export default function DogMascot({ state, x, facing, moveMs, containerRef }: Pr
             priority
             sizes="200px"
           />
-          <div className="dog-paw-cover dog-paw-cover--l" />
-          <div className="dog-paw-cover dog-paw-cover--r" />
+          <div className={`dog-paw-cover dog-paw-cover--l${state === "coveringEyes" ? " dog-paw-cover--active" : ""}`} />
+          <div className={`dog-paw-cover dog-paw-cover--r${state === "coveringEyes" ? " dog-paw-cover--active" : ""}`} />
         </div>
       </div>
     </div>
