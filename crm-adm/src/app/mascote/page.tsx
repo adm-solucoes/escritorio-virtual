@@ -21,7 +21,9 @@ export default function MascotePreviewPage() {
       <div className="px-4 sm:px-6 py-4 border-b border-navy/10">
         <h1 className="text-xl font-extrabold text-navy">Mascote 3D — prévia</h1>
         <p className="text-sm text-navy/60">
-          Etapa 1: só o cachorro. Arraste pra girar e use o scroll pra aproximar.
+          Etapa 2: a cabeça segue o cursor do mouse. Mexa o mouse sobre o cachorro — se parar
+          de mexer por ~4s, ele volta a olhar ao redor sozinho. Arraste pra girar a câmera e
+          use o scroll pra aproximar.
         </p>
       </div>
 

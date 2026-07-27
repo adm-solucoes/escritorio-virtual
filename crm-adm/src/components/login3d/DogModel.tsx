@@ -8,6 +8,7 @@ import {
   CLIPES,
   CORES_POR_MATERIAL,
   COR_PISCADA,
+  LIMITE_OLHAR,
   MATERIAIS_OLHO,
   MODELO_URL,
   OSSOS,
@@ -15,7 +16,7 @@ import {
 } from "./constants";
 
 /**
- * Mascote 3D — Etapa 1: só o cachorro, "vivo" parado.
+ * Mascote 3D — Etapa 1 (vivo parado) + Etapa 2 (rastreamento de cursor).
  *
  * ┌─ POR QUE ROTAÇÃO ABSOLUTA E NÃO `+=` ────────────────────────────────────┐
  * │ A primeira versão somava offsets (`osso.rotation.z += ...`) supondo que  │
@@ -155,10 +156,13 @@ export default function DogModel() {
     proximaTroca: 1.5,
   });
   const piscada = useRef({ proxima: 2.5, terminaEm: 0, fechado: false });
+  /* Cursor: guarda a última posição vista e quando ela mudou, pra saber se o
+   * usuário está mexendo o mouse agora ou se já parou (aí volta pro olhar
+   * ocioso aleatório da Etapa 1). */
+  const cursor = useRef({ x: 0, y: 0, ultimoMovimento: -Infinity });
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
-    const suave = Math.min(delta * 3, 1);
     const partes = ossos.current;
 
     /* Orelhas caídas: o husky vem com orelha em pé, o spec pede caída. A dobra
@@ -183,21 +187,46 @@ export default function DogModel() {
       pose(osso, Math.sin(t * 0.9) * 0.012 * (i === 1 ? 1.6 : 1), 0, 0);
     });
 
-    /* Olhar ocioso: de tempos em tempos escolhe um ponto novo e vai até ele
-       devagar. Na Etapa 2 isso passa a seguir o cursor. */
+    /* Olhar: Etapa 2 — a cabeça segue o cursor (não existe osso de olho no
+     * rig, então é a cabeça inteira que faz esse papel, dentro dos limites
+     * de LIMITE_OLHAR). Quando o mouse fica parado por um tempo, volta pro
+     * olhar ocioso aleatório da Etapa 1.
+     *
+     * `state.pointer` é a coordenada normalizada (-1..1) que o R3F já
+     * calcula sozinho a partir do mouse sobre o Canvas — não precisa de
+     * listener manual. x: -1 esquerda … 1 direita. y: -1 embaixo … 1 em cima.
+     *
+     * ⚠️ Sinal ainda não confirmado visualmente (não dá pra renderizar 3D
+     * neste ambiente): o mapeamento abaixo assume que rotation.z positivo
+     * gira a cabeça pra a direita da tela e rotation.x positivo inclina pra
+     * cima. Se ao testar em /mascote o cachorro olhar pro lado/sentido
+     * errado, é só inverter o sinal de `pointer.x` e/ou `pointer.y` aqui. */
     const o = olhar.current;
-    if (t > o.proximaTroca) {
-      o.alvoGiro = (Math.random() - 0.5) * 0.7;
-      o.alvoInclinacao = (Math.random() - 0.5) * 0.3;
+    const c = cursor.current;
+    if (Math.abs(state.pointer.x - c.x) > 0.0008 || Math.abs(state.pointer.y - c.y) > 0.0008) {
+      c.x = state.pointer.x;
+      c.y = state.pointer.y;
+      c.ultimoMovimento = t;
+    }
+    const seguindoCursor = t - c.ultimoMovimento < 4;
+
+    if (seguindoCursor) {
+      o.alvoGiro = c.x * LIMITE_OLHAR.cabecaY;
+      o.alvoInclinacao = c.y * LIMITE_OLHAR.cabecaX;
+    } else if (t > o.proximaTroca) {
+      o.alvoGiro = (Math.random() - 0.5) * LIMITE_OLHAR.cabecaY;
+      o.alvoInclinacao = (Math.random() - 0.5) * LIMITE_OLHAR.cabecaX * 0.6;
       o.proximaTroca = t + 2.5 + Math.random() * 3.5;
     }
-    o.inclinacao += (o.alvoInclinacao - o.inclinacao) * suave * 0.6;
-    o.giro += (o.alvoGiro - o.giro) * suave * 0.6;
+    // Segue o cursor mais rápido que o olhar ocioso — fica mais "alerta".
+    const velocidadeOlhar = seguindoCursor ? 5 : 3;
+    o.inclinacao += (o.alvoInclinacao - o.inclinacao) * Math.min(delta * velocidadeOlhar, 1);
+    o.giro += (o.alvoGiro - o.giro) * Math.min(delta * velocidadeOlhar, 1);
 
-    if (partes.cabeca) pose(partes.cabeca, o.inclinacao * 0.6, 0, o.giro * 0.6);
+    if (partes.cabeca) pose(partes.cabeca, o.inclinacao, 0, o.giro);
     // O pescoço acompanha só uma fração, senão o giro fica de robô.
     partes.pescoco.forEach((osso) => {
-      pose(osso, o.inclinacao * 0.15, 0, o.giro * 0.15);
+      pose(osso, o.inclinacao * LIMITE_OLHAR.pescocoFator, 0, o.giro * LIMITE_OLHAR.pescocoFator);
     });
 
     /* Piscada: o rig não tem osso de olho nem morph target, então "fechar o

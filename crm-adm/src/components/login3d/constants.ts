@@ -87,7 +87,7 @@ export const EIXO = { lateral: "z", inclinar: "x" } as const;
  */
 export const QUEDA_ORELHA = [0.9, 0.75, 0.53, 0.3];
 
-/** Limites do olhar (Etapa 2 usa; aqui só o idle aleatório respeita). */
+/** Limites do olhar — rastreamento de cursor e olhar ocioso aleatório (Etapa 2). */
 export const LIMITE_OLHAR = {
   cabecaX: 0.35, // ~20° cima/baixo
   cabecaY: 0.44, // ~25° esquerda/direita
