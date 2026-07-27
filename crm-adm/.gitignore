@@ -42,3 +42,7 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Ferramenta local de inspeção visual do mascote 3D (three.js puro + captura).
+# Fica só na máquina: nunca vai pro git nem pro deploy.
+/public/_dbg/
