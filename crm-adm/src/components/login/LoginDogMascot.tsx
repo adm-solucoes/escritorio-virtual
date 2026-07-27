@@ -16,7 +16,6 @@ import IntroStage from "./IntroStage";
 import usePrefersReducedMotion from "./usePrefersReducedMotion";
 import {
   DUR,
-  INTRO_MS,
   anchorToCss,
   dogReducer,
   initialState,
@@ -76,13 +75,6 @@ export default function LoginDogMascot({ children, success, ref }: Props) {
     if (!movimentoReduzido) dispatch({ type: "playIntro" });
   }, [movimentoReduzido]);
 
-  /* --- Avanço automático das fases da intro ------------------------------ */
-  useEffect(() => {
-    if (m.intro === "done") return;
-    const id = window.setTimeout(() => dispatch({ type: "introAdvance" }), INTRO_MS[m.intro]);
-    return () => window.clearTimeout(id);
-  }, [m.intro]);
-
   /* --- Chegada ao fim de uma corrida ------------------------------------- */
   useEffect(() => {
     if (m.dog !== "running" || m.intro !== "done") return;
@@ -125,7 +117,11 @@ export default function LoginDogMascot({ children, success, ref }: Props) {
     if (success) dispatch({ type: "finish" });
   }, [success]);
 
-  /* --- Olhos seguindo o cursor ------------------------------------------- */
+  /* --- "Olhar" seguindo o cursor ------------------------------------------
+   * Como o mascote agora é uma foto (não um desenho com pupilas soltas), o
+   * rastreio vira uma inclinação sutil da foto inteira em direção ao cursor:
+   * --gaze-x/--gaze-y são números sem unidade entre -1 e 1, consumidos em
+   * mascot.css como `rotate(calc(var(--gaze-x) * Xdeg))`. */
   useEffect(() => {
     if (movimentoReduzido !== false) return;
 
@@ -138,15 +134,15 @@ export default function LoginDogMascot({ children, success, ref }: Props) {
       if (!el || !ponteiro) return;
       const r = el.getBoundingClientRect();
       if (!r.width) return;
-      // Centro aproximado da cabeça dentro do viewBox 240x200.
-      const cx = r.left + r.width * (170 / 240);
-      const cy = r.top + r.height * (64 / 200);
+      // Centro aproximado da cabeça: perto do topo da foto (recorte vertical).
+      const cx = r.left + r.width * 0.5;
+      const cy = r.top + r.height * 0.22;
       const dx = ponteiro.x - cx;
       const dy = ponteiro.y - cy;
       const dist = Math.hypot(dx, dy) || 1;
-      const intensidade = Math.min(1, dist / 240) * 3.4;
-      el.style.setProperty("--eye-x", `${((dx / dist) * intensidade).toFixed(2)}px`);
-      el.style.setProperty("--eye-y", `${((dy / dist) * intensidade).toFixed(2)}px`);
+      const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+      el.style.setProperty("--gaze-x", clamp(dx / Math.max(dist, 260)).toFixed(3));
+      el.style.setProperty("--gaze-y", clamp(dy / Math.max(dist, 260)).toFixed(3));
     };
 
     const onMove = (e: PointerEvent) => {
@@ -177,13 +173,15 @@ export default function LoginDogMascot({ children, success, ref }: Props) {
         {children}
       </IntroStage>
 
-      <DogMascot
-        state={estadoVisual}
-        x={x}
-        facing={m.facing}
-        moveMs={m.moveMs}
-        containerRef={dogRef}
-      />
+      {m.dog !== "intro" && (
+        <DogMascot
+          state={estadoVisual}
+          x={x}
+          facing={m.facing}
+          moveMs={m.moveMs}
+          containerRef={dogRef}
+        />
+      )}
 
       {m.dog === "barking" && (
         <div className="dog-bubble" style={{ "--x": x } as CSSProperties} aria-hidden="true">
@@ -191,7 +189,7 @@ export default function LoginDogMascot({ children, success, ref }: Props) {
         </div>
       )}
 
-      {!m.finished && (
+      {!m.finished && m.dog !== "intro" && (
         <FoodBowl
           kibble={m.kibble}
           filling={m.filling}

@@ -19,14 +19,7 @@ export type DogState =
 
 /** Passos da animação de introdução (rodam uma única vez). */
 export type IntroPhase =
-  | "start" // fora da tela, à esquerda
-  | "enter" // entra correndo
-  | "sniff" // para e farega procurando algo
-  | "leave" // sai correndo pela direita
-  | "gap" // palco vazio
-  | "carry" // volta trazendo o formulário na boca
-  | "drop" // empurra o formulário para o lugar
-  | "celebrate" // comemora
+  | "video" // vídeo de referência tocando (entra, fareja, busca e traz o formulário)
   | "done"; // intro encerrada, interações liberadas
 
 /** Posições horizontais possíveis (viram variáveis CSS no palco). */
@@ -61,7 +54,6 @@ export interface MachineState {
 
 export type Action =
   | { type: "playIntro" }
-  | { type: "introAdvance" }
   | { type: "skipIntro" }
   | { type: "focus"; field: FocusField }
   | { type: "fillBowl" }
@@ -75,14 +67,6 @@ export type Action =
 
 /** Durações (ms) usadas tanto pelos timers quanto pelas transições CSS. */
 export const DUR = {
-  introStart: 80,
-  introEnter: 1000,
-  introSniff: 620,
-  introLeave: 780,
-  introGap: 460,
-  introCarry: 1250,
-  introDrop: 700,
-  introCelebrate: 1000,
   run: 850,
   center: 620,
   bark: 1450,
@@ -91,18 +75,6 @@ export const DUR = {
   fill: 700,
   shake: 480,
 } as const;
-
-/** Quanto tempo cada fase da intro fica no ar antes de avançar sozinha. */
-export const INTRO_MS: Record<Exclude<IntroPhase, "done">, number> = {
-  start: DUR.introStart,
-  enter: DUR.introEnter,
-  sniff: DUR.introSniff,
-  leave: DUR.introLeave,
-  gap: DUR.introGap,
-  carry: DUR.introCarry,
-  drop: DUR.introDrop,
-  celebrate: DUR.introCelebrate,
-};
 
 /** Quantidade de ração servida por clique na cumbuca. */
 export const KIBBLE_PER_SERVING = 6;
@@ -138,63 +110,17 @@ export function dogReducer(s: MachineState, a: Action): MachineState {
   switch (a.type) {
     case "playIntro": {
       if (s.intro !== "done" || s.finished) return s;
+      // O cachorro fica oculto (o vídeo de referência assume a cena) até o
+      // vídeo terminar ou o usuário pular.
       return {
         ...s,
         dog: "intro",
-        intro: "start",
-        anchor: "offLeft",
+        intro: "video",
+        anchor: "form",
         facing: 1,
         moveMs: 0,
         moveToken: s.moveToken + 1,
       };
-    }
-
-    case "introAdvance": {
-      switch (s.intro) {
-        case "start":
-          return {
-            ...s,
-            intro: "enter",
-            dog: "running",
-            anchor: "form",
-            facing: 1,
-            moveMs: DUR.introEnter,
-            moveToken: s.moveToken + 1,
-          };
-        case "enter":
-          return { ...s, intro: "sniff", dog: "watching" };
-        case "sniff":
-          return {
-            ...s,
-            intro: "leave",
-            dog: "running",
-            anchor: "offRight",
-            facing: 1,
-            moveMs: DUR.introLeave,
-            moveToken: s.moveToken + 1,
-          };
-        case "leave":
-          return { ...s, intro: "gap", dog: "intro" };
-        case "carry":
-          // Chegou com o formulário: vira de frente e empurra pro lugar.
-          return { ...s, intro: "drop", dog: "idle", facing: 1 };
-        case "gap":
-          return {
-            ...s,
-            intro: "carry",
-            dog: "running",
-            anchor: "form",
-            facing: -1,
-            moveMs: DUR.introCarry,
-            moveToken: s.moveToken + 1,
-          };
-        case "drop":
-          return { ...s, intro: "celebrate", dog: "happy" };
-        case "celebrate":
-          return { ...s, intro: "done", dog: restingState(s.focus), next: null };
-        default:
-          return s;
-      }
     }
 
     case "skipIntro": {
