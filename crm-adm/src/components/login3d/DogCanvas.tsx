@@ -4,6 +4,8 @@ import { Component, Suspense, type ReactNode } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import DogModel from "./DogModel";
+import IntroStage from "./IntroStage";
+import type { Cena } from "./introTimeline";
 
 /**
  * Palco 3D do mascote.
@@ -62,6 +64,14 @@ interface Props {
   /** O que aparece se o 3D não puder rodar. */
   fallback?: ReactNode;
   className?: string;
+  /** "idle": só o cachorro parado/seguindo o cursor (Etapas 1-2, comportamento
+   * default). "intro": roda a sequência cinematográfica da Etapa 3. */
+  modo?: "idle" | "intro";
+  /** Trava a intro numa cena específica (não avança sozinha) — usado pelo
+   * seletor de cena da prévia, pra inspecionar uma cena isolada. */
+  cenaForcada?: Cena;
+  onCenaChange?: (cena: Cena) => void;
+  onFinishIntro?: () => void;
 }
 
 export default function DogCanvas({
@@ -69,6 +79,10 @@ export default function DogCanvas({
   capturavel = false,
   fallback = null,
   className,
+  modo = "idle",
+  cenaForcada,
+  onCenaChange,
+  onFinishIntro,
 }: Props) {
   if (!temWebGL()) return <>{fallback}</>;
 
@@ -102,7 +116,11 @@ export default function DogCanvas({
 
         <Suspense fallback={null}>
           <group position={[0, 0, 0]}>
-            <DogModel />
+            {modo === "intro" ? (
+              <IntroStage cenaForcada={cenaForcada} onCenaChange={onCenaChange} onFinish={onFinishIntro} />
+            ) : (
+              <DogModel />
+            )}
           </group>
           <ContactShadows
             position={[0, 0.01, 0]}
