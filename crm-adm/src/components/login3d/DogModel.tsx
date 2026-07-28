@@ -89,10 +89,12 @@ export default function DogModel({ suspenderComportamentoOcioso = false }: Props
         clone.bumpMap = texturaPelagemCache;
         clone.bumpScale = 0.012;
       } else if (material.name === "Branco") {
-        // Olhos: roughness bem baixo pra pegar um brilho/reflexo da luz
-        // direcional — é isso que dá o "olho vivo" da referência. Sem essa
-        // superfície mais lisa/molhada, fica fosco e sem graça.
-        clone.roughness = 0.12;
+        // Olhos: roughness 0.12 tava baixo demais — em material físico
+        // (PBR), quanto mais liso, MENOS luz difusa reflete (a energia vai
+        // quase toda pro brilho especular concentrado), então o olho ficava
+        // escuro/preto no resto da superfície, só um pontinho de brilho.
+        // 0.4 mantém algum reflexo sem perder a cor marrom no resto do olho.
+        clone.roughness = 0.4;
       } else {
         clone.roughness = 0.5; // focinho/coleira: lisos, quase plástico
       }

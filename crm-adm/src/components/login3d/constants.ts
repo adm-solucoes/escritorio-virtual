@@ -32,7 +32,7 @@ export const MODELO_URL = "/models/adm-dog.glb";
 export const CORES_POR_MATERIAL: Record<string, string> = {
   Corpo: "#c1863f", // dourado/caramelo quente, tipo golden retriever
   Preto: "#171310", // focinho + coleira
-  Branco: "#3b2415", // olhos — marrom escuro, não branco
+  Branco: "#6b4423", // olhos — marrom, visível mesmo sem luz direta no ângulo
 };
 
 /** Nome do material que representa o corpo/pelagem — só ele recebe a
