@@ -5,37 +5,27 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type { Group } from "three";
 import DogModel from "./DogModel";
-import { CLIPES } from "./constants";
+import { ESCALA_MODELO } from "./constants";
 import { CENAS, DURACAO_CENA, easeInOutCubic, indiceDaCena, type Cena } from "./introTimeline";
 
 /**
- * Orquestra a intro cinematográfica (Etapa 3): posição do cachorro, clipe de
- * animação por cena, e o "painel" (placeholder nesta etapa — vira o
- * formulário de verdade na Etapa 4) sendo carregado e posicionado.
+ * Orquestra a intro cinematográfica (Etapa 3): posição do cachorro e o
+ * "painel" (placeholder — vira o formulário de verdade na Etapa 4) sendo
+ * carregado e posicionado.
+ *
+ * ⚠️ O modelo ADMSOLUÇÕES.glb não tem NENHUM clipe de animação — então, por
+ * enquanto, as cenas de corrida/andar só deslocam a posição do grupo; o
+ * cachorro "desliza" na pose de repouso, sem ciclo de pernas. Escrever esse
+ * ciclo de marcha em código é o próximo passo, ainda não feito — é trabalho
+ * arriscado de acertar sem conseguir renderizar, então fica separado desta
+ * mudança (troca de modelo) em vez de ser tentado no mesmo passo.
  *
  * ⚠️ Todas as posições/durações abaixo são um primeiro palpite, não uma
  * medição — este ambiente não renderiza 3D, então os números certos só saem
  * testando em `/mascote` e ajustando. É por isso que a prévia tem um seletor
  * de cena: dá pra pular direto pra qualquer uma em vez de assistir a
  * sequência toda pra achar o que ajustar.
- *
- * O `indice`/`tempoNaCena` (refs) são a fonte da verdade pra posição por
- * frame — 60x/s, não pode passar por React state. Já qual CLIPE está tocando
- * só muda em momentos discretos (na troca de cena), e isso PRECISA ser React
- * state (`cenaAuto`) pra virar prop nova em `DogModel` e disparar a troca de
- * animação — uma ref lida durante o render fica presa no valor do primeiro
- * render, porque mudar uma ref não re-renderiza nada.
  */
-
-const CLIPE_POR_CENA: Partial<Record<Cena, string>> = {
-  correndoEntrada: CLIPES.correr,
-  farejando: CLIPES.cabecaBaixa,
-  correndoSaida: CLIPES.correr,
-  retornandoComPainel: CLIPES.correr,
-  posicionando: CLIPES.andar,
-  empurrando: CLIPES.andar,
-  comemorando: CLIPES.pular,
-};
 
 /** Posição X do cachorro no início/fim de cada cena (fora da tela = ±9). A
  * posição final da intro (cena "idle") é -1.3 pra sobrar espaço à direita
@@ -146,13 +136,14 @@ export default function IntroStage({ cenaForcada, onCenaChange, onFinish }: Prop
   });
 
   const mostrarPainel = indiceDaCena(cena) >= indiceDaCena("retornandoComPainel");
-  const clipeAtual = CLIPE_POR_CENA[cena];
   const suspenderOcioso = cena !== "idle" && cena !== "vazio";
 
   return (
     <>
       <group ref={grupo}>
-        <DogModel clipeAtivo={clipeAtual} suspenderComportamentoOcioso={suspenderOcioso} />
+        <group scale={ESCALA_MODELO}>
+          <DogModel suspenderComportamentoOcioso={suspenderOcioso} />
+        </group>
       </group>
       {mostrarPainel && (
         <group ref={painelRef} position={POS_PAINEL_FINAL}>

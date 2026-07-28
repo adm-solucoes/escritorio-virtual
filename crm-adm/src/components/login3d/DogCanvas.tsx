@@ -5,14 +5,18 @@ import { Canvas } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import DogModel from "./DogModel";
 import IntroStage from "./IntroStage";
+import { ESCALA_MODELO } from "./constants";
 import type { Cena } from "./introTimeline";
 
 /**
  * Palco 3D do mascote.
  *
- * Medidas vindas da inspeção do .glb: o modelo tem os pés em Y=0, mede ~3,9
- * unidades de comprimento por ~3,2 de altura, e o focinho aponta pro +Z — ou
- * seja, ele já nasce de frente pra câmera padrão.
+ * A câmera/luzes abaixo foram calibradas pro modelo Husky (Etapas 1-3,
+ * descontinuado). O modelo atual (ADMSOLUÇÕES.glb) tem proporções bem
+ * diferentes — bind pose ~1×2×2 unidades, e não confirmamos visualmente se o
+ * focinho aponta pra câmera do mesmo jeito. `ESCALA_MODELO` (constants.ts)
+ * compensa o tamanho, mas o enquadramento/altura da câmera ainda não foi
+ * recalibrado de verdade — primeira coisa a olhar em /mascote.
  *
  * Regra que vale pro projeto todo: **o 3D nunca pode impedir alguém de usar a
  * tela**. Se o WebGL não existir ou o Canvas explodir, cai no `fallback` e a
@@ -119,7 +123,9 @@ export default function DogCanvas({
             {modo === "intro" ? (
               <IntroStage cenaForcada={cenaForcada} onCenaChange={onCenaChange} onFinish={onFinishIntro} />
             ) : (
-              <DogModel />
+              <group scale={ESCALA_MODELO}>
+                <DogModel />
+              </group>
             )}
           </group>
           <ContactShadows
