@@ -1,29 +1,22 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import { Euler, type Object3D, type Group, type Mesh, type MeshStandardMaterial } from "three";
-import { CORES_POR_MATERIAL, LIMITE_OLHAR, MATERIAL_PELAGEM, MODELO_URL, OSSOS } from "./constants";
-import { gerarTexturaPelagem } from "./pelagem";
-
-// Gerada uma vez (client-only, dentro do useLayoutEffect) e reaproveitada —
-// não precisa de uma textura nova por remontagem do componente.
-let texturaPelagemCache: ReturnType<typeof gerarTexturaPelagem> | null = null;
+import { Box3, Euler, Vector3, type Object3D, type Group, type Mesh } from "three";
+import { ALTURA_ALVO, LIMITE_OLHAR, MODELO_URL, OSSOS } from "./constants";
 
 /**
- * Mascote 3D — modelo ADMSOLUÇÕES.glb. Diferente do Husky usado nas Etapas
- * 1-3, este modelo não tem NENHUM clipe de animação — não existe um "Idle"
- * pra tocar em loop cobrindo o que a gente não controla na mão. Isso muda a
- * arquitetura: aqui, TODO o comportamento (inclusive parado) é pose absoluta
- * escrita por código, sempre. Não tem clipe pra crossfade nem pra "herdar"
- * movimento de pernas.
+ * Mascote 3D — modelo Labrador.glb. Diferente do ADMSOLUÇÕES.glb usado antes,
+ * este tem textura PBR real (não precisa recolorir material nem gerar
+ * pelagem por bump map) e um clipe de animação embutido — mas o clipe NÃO é
+ * tocado aqui: a arquitetura continua 100% pose absoluta por código, mesma
+ * técnica idempotente já usada nos modelos anteriores, pra manter controle
+ * fino do olhar/estados da intro sem um clipe rodando por baixo brigando com
+ * essas poses.
  *
  * Pose de repouso = a pose em que o artista modelou o rig (bind pose), lida
  * uma vez de cada osso controlado. A cada frame: rotação = repouso + offset.
- * Mesma técnica idempotente já usada no Husky (ver commit "corrige
- * retorcimento progressivo"), só que aqui é a ÚNICA fonte de movimento —
- * não tem clipe por baixo pra brigar com ela.
  */
 
 const REPOUSO = new WeakMap<Object3D, Euler>();
@@ -54,52 +47,25 @@ export default function DogModel({ suspenderComportamentoOcioso = false }: Props
   const grupo = useRef<Group>(null);
   const { scene } = useGLTF(MODELO_URL);
 
-  /* --- Recoloração por material + pelagem de pelúcia ----------------------
-   * "Corpo" já vem com a cor certa no arquivo; "Preto"/"Branco" vêm cinza
-   * (0.8,0.8,0.8) — provavelmente pensados pra receber textura/paint que não
-   * veio no export, então força a cor pelo nome. Clona o material antes de
-   * mexer pra não sujar o cache global do useGLTF.
-   *
-   * O material do corpo (MATERIAL_PELAGEM) ganha, além da cor, um bump map
-   * gerado por código (pelagem.ts) simulando pelo curto — o arquivo não tem
-   * textura de pelagem nenhuma, então isso é a única forma de não ficar
-   * completamente liso/plástico. Focinho/coleira/plaquinha ficam lisos de
-   * propósito, pro contraste. */
-  useLayoutEffect(() => {
-    if (!texturaPelagemCache) texturaPelagemCache = gerarTexturaPelagem();
+  /* --- Sombra + auto-escala -------------------------------------------
+   * Este modelo vem de um asset de terceiro com unidades desconhecidas de
+   * antemão — em vez de chutar um fator de escala fixo (erro cometido com os
+   * modelos anteriores, corrigido só depois de ver renderizado), mede a
+   * caixa delimitadora real da bind pose e calcula o fator que faz a altura
+   * bater com ALTURA_ALVO, plantando os pés em y=0. */
+  const ajuste = useMemo(() => {
+    const caixa = new Box3().setFromObject(scene);
+    const tamanho = caixa.getSize(new Vector3());
+    const escala = ALTURA_ALVO / (tamanho.y || 1);
+    return { escala, offsetY: -caixa.min.y * escala };
+  }, [scene]);
 
+  useLayoutEffect(() => {
     scene.traverse((obj) => {
       const malha = obj as Mesh;
       if (!malha.isMesh) return;
       malha.castShadow = true;
       malha.receiveShadow = true;
-
-      const material = malha.material as MeshStandardMaterial;
-      if (!material || Array.isArray(material)) return;
-
-      const nova = CORES_POR_MATERIAL[material.name];
-      if (!nova) return;
-
-      const clone = material.clone();
-      clone.color.set(nova);
-      clone.metalness = 0;
-
-      if (material.name === MATERIAL_PELAGEM) {
-        clone.roughness = 0.9; // fosco, mas não 100% morto
-        clone.bumpMap = texturaPelagemCache;
-        clone.bumpScale = 0.012;
-      } else if (material.name === "Branco") {
-        // Olhos: roughness 0.12 tava baixo demais — em material físico
-        // (PBR), quanto mais liso, MENOS luz difusa reflete (a energia vai
-        // quase toda pro brilho especular concentrado), então o olho ficava
-        // escuro/preto no resto da superfície, só um pontinho de brilho.
-        // 0.4 mantém algum reflexo sem perder a cor marrom no resto do olho.
-        clone.roughness = 0.4;
-      } else {
-        clone.roughness = 0.5; // focinho/coleira: lisos, quase plástico
-      }
-
-      malha.material = clone;
     });
   }, [scene]);
 
@@ -107,14 +73,12 @@ export default function DogModel({ suspenderComportamentoOcioso = false }: Props
    * Em ref (não useMemo): o useFrame escreve neles todo frame. */
   const ossos = useRef<{
     cabeca?: Object3D;
-    mandibula?: Object3D;
-    pingente?: Object3D;
     orelhaE?: Object3D;
     orelhaD?: Object3D;
-    pescoco?: Object3D;
+    pescoco: Object3D[];
     torso: Object3D[];
     cauda: Object3D[];
-  }>({ torso: [], cauda: [] });
+  }>({ pescoco: [], torso: [], cauda: [] });
 
   useLayoutEffect(() => {
     const buscar = (nome: string) => scene.getObjectByName(nome) ?? undefined;
@@ -123,17 +87,15 @@ export default function DogModel({ suspenderComportamentoOcioso = false }: Props
 
     const partes = {
       cabeca: buscar(OSSOS.cabeca),
-      mandibula: buscar(OSSOS.mandibula),
-      pingente: buscar(OSSOS.pingente),
       orelhaE: buscar(OSSOS.orelhaE),
       orelhaD: buscar(OSSOS.orelhaD),
-      pescoco: buscar(OSSOS.pescoco),
+      pescoco: lista(OSSOS.pescoco),
       torso: lista(OSSOS.torso),
       cauda: lista(OSSOS.cauda),
     };
 
     // Fixa a pose de repouso ANTES de qualquer offset ser aplicado.
-    for (const osso of [partes.cabeca, partes.mandibula, partes.pingente, partes.orelhaE, partes.orelhaD, partes.pescoco, ...partes.torso, ...partes.cauda]) {
+    for (const osso of [partes.cabeca, partes.orelhaE, partes.orelhaD, ...partes.pescoco, ...partes.torso, ...partes.cauda]) {
       if (osso) repousoDe(osso);
     }
 
@@ -149,28 +111,25 @@ export default function DogModel({ suspenderComportamentoOcioso = false }: Props
     const partes = ossos.current;
 
     if (!suspenderComportamentoOcioso) {
-      /* Orelhas: um leve tremor/balanço, sem "queda" forçada — diferente do
-       * Husky (que precisava dobrar a orelha em pé pra ficar caída), esse
-       * modelo já deve vir modelado com a orelha na posição certa. */
+      /* Orelhas: leve tremor/balanço — o resto da corrente (Ear2-4) segue por
+       * herança de transform (FK), então só o osso raiz precisa de pose. */
       pose(partes.orelhaE, 0, 0, Math.sin(t * 1.6) * 0.05);
       pose(partes.orelhaD, 0, 0, Math.sin(t * 1.6 + 0.4) * 0.05 * -1);
 
-      /* Rabo: abanar lateral, onda entre os 2 segmentos. */
+      /* Rabo: abanar lateral, onda correndo pelos 6 segmentos. */
       partes.cauda.forEach((osso, i) => {
         pose(osso, 0, 0, Math.sin(t * 2.6 - i * 0.6) * 0.18);
       });
 
-      /* Respiração: sobe/desce sutil na coluna (Chest é o mais visível). */
+      /* Respiração: sobe/desce sutil na coluna (Torso é o mais visível). */
       partes.torso.forEach((osso, i) => {
         pose(osso, Math.sin(t * 0.9) * 0.01 * (i === 0 ? 1.6 : 1), 0, 0);
       });
 
-      /* Pingente: balanço passivo simples (pêndulo), mais lento que o rabo. */
-      pose(partes.pingente, Math.sin(t * 1.1) * 0.06, 0, Math.cos(t * 0.9) * 0.04);
-
-      /* Olhar: cabeça segue o cursor (mesma lógica/limites do Husky — ver
-       * aviso de sinal não confirmado no componente anterior; vale o mesmo
-       * aqui, ainda mais porque é um rig diferente). */
+      /* Olhar: cabeça + corrente de pescoço seguem o cursor. O fator é
+       * dividido pelo número de ossos da corrente pra o efeito acumulado
+       * (cada rotação soma na cadeia FK) bater com o mesmo ângulo total
+       * usado nos modelos anteriores (pescoço de 1 osso só). */
       const o = olhar.current;
       const c = cursor.current;
       if (Math.abs(state.pointer.x - c.x) > 0.0008 || Math.abs(state.pointer.y - c.y) > 0.0008) {
@@ -193,12 +152,15 @@ export default function DogModel({ suspenderComportamentoOcioso = false }: Props
       o.giro += (o.alvoGiro - o.giro) * Math.min(delta * velocidadeOlhar, 1);
 
       pose(partes.cabeca, o.inclinacao, 0, o.giro);
-      pose(partes.pescoco, o.inclinacao * LIMITE_OLHAR.pescocoFator, 0, o.giro * LIMITE_OLHAR.pescocoFator);
+      const fatorPorOsso = LIMITE_OLHAR.pescocoFator / (partes.pescoco.length || 1);
+      partes.pescoco.forEach((osso) => {
+        pose(osso, o.inclinacao * fatorPorOsso, 0, o.giro * fatorPorOsso);
+      });
     }
   });
 
   return (
-    <group ref={grupo} dispose={null}>
+    <group ref={grupo} dispose={null} position={[0, ajuste.offsetY, 0]} scale={ajuste.escala}>
       <primitive object={scene} />
     </group>
   );

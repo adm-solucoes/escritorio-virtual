@@ -115,6 +115,7 @@ export default function DogCanvas({
           shadow-camera-right={6}
           shadow-camera-top={6}
           shadow-camera-bottom={-6}
+          shadow-normalBias={0.02}
         />
         <directionalLight position={[-5, 3, -4]} intensity={0.5} color="#ffd9a8" />
 
