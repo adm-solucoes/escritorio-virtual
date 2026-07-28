@@ -3,53 +3,48 @@ import { CanvasTexture, RepeatWrapping } from "three";
 /**
  * Gera uma textura de relevo (bump map) por código pra simular pelagem curta
  * de pelúcia — sem precisar de um asset de textura pintado, que o modelo não
- * tem. Ruído em 2 camadas (grossa + fina) em vez de ruído puro por pixel,
- * que ficaria com cara de "estática de TV" em vez de pelo agrupado.
+ * tem.
  *
- * ⚠️ Efeito visual (o quanto "peludo" fica) não foi conferido renderizado —
- * `bumpScale` em DogModel.tsx é o parâmetro pra ajustar depois de ver.
+ * Primeira versão usava ruído por pixel (2 camadas, grossa+fina): ficou com
+ * cara de "estática de TV"/listra regular, não de pelo. Fio de pelo real tem
+ * DIREÇÃO — então aqui desenha milhares de traços curtos quase-verticais
+ * (technique clássica de "fake fur" em canvas 2D), não ruído isotrópico.
+ * Cada traço = um fio. Ângulo/comprimento/tom variam por traço, dando o
+ * aspecto "penteado" da referência em vez de grão uniforme.
  */
-export function gerarTexturaPelagem(tamanho = 256): CanvasTexture {
+export function gerarTexturaPelagem(tamanho = 512): CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = tamanho;
   const ctx = canvas.getContext("2d")!;
 
-  // Camada grossa: grade de baixa resolução, upscaled (dá o "agrupamento" do
-  // pelo, em vez de ruído uniforme).
-  const grade = 24;
-  const valoresGrade: number[][] = Array.from({ length: grade }, () =>
-    Array.from({ length: grade }, () => Math.random())
-  );
-  const amostrarGrade = (u: number, v: number) => {
-    const gx = u * (grade - 1);
-    const gy = v * (grade - 1);
-    const x0 = Math.floor(gx), y0 = Math.floor(gy);
-    const x1 = Math.min(x0 + 1, grade - 1), y1 = Math.min(y0 + 1, grade - 1);
-    const fx = gx - x0, fy = gy - y0;
-    const a = valoresGrade[y0][x0], b = valoresGrade[y0][x1];
-    const c = valoresGrade[y1][x0], d = valoresGrade[y1][x1];
-    return a * (1 - fx) * (1 - fy) + b * fx * (1 - fy) + c * (1 - fx) * fy + d * fx * fy;
-  };
+  // Base neutra (nem alto nem baixo — bump map em 128/255 = "sem relevo").
+  ctx.fillStyle = "rgb(150,150,150)";
+  ctx.fillRect(0, 0, tamanho, tamanho);
 
-  const imageData = ctx.createImageData(tamanho, tamanho);
-  for (let y = 0; y < tamanho; y++) {
-    for (let x = 0; x < tamanho; x++) {
-      const grossa = amostrarGrade(x / tamanho, y / tamanho);
-      const fina = Math.random();
-      // 70% grossa (agrupamento) + 30% fina (textura do fio), centrado em ~190/255
-      const v = Math.round(140 + (grossa * 0.7 + fina * 0.3) * 100);
-      const i = (y * tamanho + x) * 4;
-      imageData.data[i] = v;
-      imageData.data[i + 1] = v;
-      imageData.data[i + 2] = v;
-      imageData.data[i + 3] = 255;
-    }
+  const NUM_FIOS = 9000;
+  for (let i = 0; i < NUM_FIOS; i++) {
+    const x = Math.random() * tamanho;
+    const y = Math.random() * tamanho;
+    const comprimento = 4 + Math.random() * 7;
+    // Quase vertical, com um leve desvio aleatório — "penteado", não reto.
+    const angulo = (Math.random() - 0.5) * 0.9 + Math.PI / 2;
+    const dx = Math.cos(angulo) * comprimento;
+    const dy = Math.sin(angulo) * comprimento;
+
+    const tom = 120 + Math.floor(Math.random() * 110); // 120–230: alguns fios claros, outros escuros
+    ctx.strokeStyle = `rgb(${tom},${tom},${tom})`;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.55 + Math.random() * 0.25;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + dx, y + dy);
+    ctx.stroke();
   }
-  ctx.putImageData(imageData, 0, 0);
+  ctx.globalAlpha = 1;
 
   const textura = new CanvasTexture(canvas);
   textura.wrapS = textura.wrapT = RepeatWrapping;
-  textura.repeat.set(16, 16); // repete bastante — pelo curto, não manchas grandes
+  textura.repeat.set(10, 10);
   textura.needsUpdate = true;
   return textura;
 }

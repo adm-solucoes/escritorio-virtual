@@ -19,15 +19,20 @@
 
 export const MODELO_URL = "/models/adm-dog.glb";
 
-/** Cor base de cada material — recalibrada pra bater com a referência de
- * pelúcia (dourado/caramelo, coleira preta, plaquinha clara) que o usuário
- * mandou. "Preto"/"Branco" no arquivo original vêm cinza (0.8,0.8,0.8), sem
- * cor própria; "Corpo" já vinha com um marrom escuro, trocado aqui por um
- * dourado mais quente. Ajustar depois de ver renderizado. */
+/** Cor base de cada material — recalibrada depois de ver renderizado (não é
+ * mais chute). Confirmado visualmente em /mascote:
+ * - "Corpo": corpo inteiro (pelagem).
+ * - "Preto": focinho + coleira — já renderiza certo.
+ * - "Branco": os DOIS OLHOS (267 vértices, região alta/frontal da cabeça) —
+ *   não "plaquinha" como eu supunha antes. O arquivo não tem pupila pintada
+ *   (cor de vértice uniforme nessa região), então um olho branco sólido
+ *   ficava com cara de assombrado. Trocado pra um marrom escuro — sem
+ *   distinção esclera/pupila, mas muito mais parecido com "olhão de
+ *   pelúcia" da referência do que branco vazio. */
 export const CORES_POR_MATERIAL: Record<string, string> = {
   Corpo: "#c1863f", // dourado/caramelo quente, tipo golden retriever
-  Preto: "#171310", // coleira + focinho + pupila
-  Branco: "#f6ecdb", // plaquinha/detalhe claro
+  Preto: "#171310", // focinho + coleira
+  Branco: "#3b2415", // olhos — marrom escuro, não branco
 };
 
 /** Nome do material que representa o corpo/pelagem — só ele recebe a

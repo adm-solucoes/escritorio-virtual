@@ -85,11 +85,16 @@ export default function DogModel({ suspenderComportamentoOcioso = false }: Props
       clone.metalness = 0;
 
       if (material.name === MATERIAL_PELAGEM) {
-        clone.roughness = 0.95; // fosco, sem brilho — mais feltro/pelúcia
+        clone.roughness = 0.9; // fosco, mas não 100% morto
         clone.bumpMap = texturaPelagemCache;
-        clone.bumpScale = 0.025;
+        clone.bumpScale = 0.012;
+      } else if (material.name === "Branco") {
+        // Olhos: roughness bem baixo pra pegar um brilho/reflexo da luz
+        // direcional — é isso que dá o "olho vivo" da referência. Sem essa
+        // superfície mais lisa/molhada, fica fosco e sem graça.
+        clone.roughness = 0.12;
       } else {
-        clone.roughness = 0.5; // focinho/coleira/plaquinha: lisos, quase plástico
+        clone.roughness = 0.5; // focinho/coleira: lisos, quase plástico
       }
 
       malha.material = clone;
