@@ -134,6 +134,9 @@ export interface EventoAgenda {
   fim: string;
   linkChamada: string | null;
   linkEvento: string | null;
+  /** Nomes/e-mails dos convidados — usado pra achar qual reunião cancelar
+   * quando o usuário menciona uma pessoa em vez do horário exato. */
+  convidados: string[];
 }
 
 /** Lista os eventos entre `inicioISO` e `fimISO` na agenda do GC (usado na agenda compartilhada). */
@@ -166,6 +169,7 @@ export async function listarEventosPeriodo(
         fim: e.end?.dateTime ?? e.start!.dateTime!,
         linkChamada: e.hangoutLink ?? e.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video")?.uri ?? null,
         linkEvento: e.htmlLink ?? null,
+        convidados: (e.attendees ?? []).map((a) => a.displayName ?? a.email ?? "").filter(Boolean),
       }));
 
     return { ok: true, eventos };

@@ -73,3 +73,54 @@ ${listaEquipe || "(nenhuma pessoa cadastrada)"}`;
 
   return parseJsonIA<DeteccaoAgendamento>(resultado);
 }
+
+const SCHEMA_CANCELAMENTO = {
+  type: "object" as const,
+  properties: {
+    cancelamento: { type: "boolean" as const },
+    participanteNome: { type: ["string", "null"] as const },
+    dataISO: { type: ["string", "null"] as const },
+    hora: { type: ["string", "null"] as const },
+    pista: { type: ["string", "null"] as const },
+  },
+  required: ["cancelamento", "participanteNome", "dataISO", "hora", "pista"],
+  additionalProperties: false,
+};
+
+export interface DeteccaoCancelamento {
+  cancelamento: boolean;
+  participanteNome: string | null;
+  dataISO: string | null;
+  hora: string | null;
+  /** Qualquer outra pista pra achar a reunião certa — palavra do título, assunto etc. */
+  pista: string | null;
+}
+
+/** Mesmo padrão do agendamento: detecta pedido de CANCELAR/DESMARCAR — a
+ * rota depois busca as reuniões reais que batem com a pista e propõe pro
+ * usuário confirmar qual cancelar (nunca cancela sozinho). */
+export async function detectarPedidoDeCancelamento(mensagem: string): Promise<DeteccaoCancelamento | null> {
+  const hoje = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+
+  const system = `Você identifica se uma mensagem de chat é um pedido pra CANCELAR ou DESMARCAR uma reunião/compromisso já existente na agenda. Hoje é ${hoje} (formato YYYY-MM-DD), fuso de Brasília.
+
+Marque "cancelamento": true só quando a pessoa claramente quer cancelar/desmarcar/tirar algo da agenda (ex: "cancela a reunião com o cliente amanhã", "desmarca a call das 14h", "tira a reunião de sexta"). NÃO marque true pra pedidos de marcar/criar reunião nova — isso é outro fluxo.
+
+Extraia o que estiver disponível no texto pra ajudar a encontrar a reunião certa (não invente o que não está lá):
+- "participanteNome": nome de quem é a reunião, se mencionado.
+- "dataISO": resolvendo "hoje"/"amanhã"/dias da semana relativos a hoje, formato YYYY-MM-DD. Se não conseguir inferir, null.
+- "hora": formato HH:mm (24h), se mencionado. Senão null.
+- "pista": qualquer outra palavra que ajude a achar (ex: "financeiro", "onboarding", "cliente X"). Senão null.
+
+Se "cancelamento" for false, os outros campos ficam null.`;
+
+  const resultado = await chamarClaude({
+    tarefa: "extrair",
+    system,
+    mensagem,
+    maxTokens: 200,
+    outputSchema: SCHEMA_CANCELAMENTO,
+  });
+
+  return parseJsonIA<DeteccaoCancelamento>(resultado);
+}

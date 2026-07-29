@@ -1,7 +1,49 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { chamarClaude } from "@/lib/ai";
-import { detectarPedidoDeAgendamento } from "@/lib/assistente-agendamento";
+import { detectarPedidoDeAgendamento, detectarPedidoDeCancelamento, type DeteccaoCancelamento } from "@/lib/assistente-agendamento";
+import { listarEventosPeriodo, type EventoAgenda } from "@/lib/google-calendar";
 import type { Empresa, Gc, Oportunidade } from "@/lib/types";
+
+function normalizar(s: string) {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
+/** Acha, entre os eventos do próprio usuário, quais batem com o pedido de
+ * cancelamento — sem data/hora/nome suficientes pra saber qual é "a"
+ * reunião, mostra os próximos compromissos pra pessoa escolher em vez de
+ * adivinhar e cancelar a errada. */
+function candidatosParaCancelar(eventos: EventoAgenda[], deteccao: DeteccaoCancelamento): EventoAgenda[] {
+  let restantes = eventos;
+
+  if (deteccao.dataISO) {
+    restantes = restantes.filter(
+      (e) => new Date(e.inicio).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" }) === deteccao.dataISO
+    );
+  }
+
+  const pontuados = restantes.map((evento) => {
+    let pontos = 0;
+    if (deteccao.hora) {
+      const horaLocal = new Date(evento.inicio).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "America/Sao_Paulo",
+      });
+      if (horaLocal === deteccao.hora) pontos += 3;
+    }
+    const textoAlvo = normalizar(`${evento.titulo} ${evento.convidados.join(" ")}`);
+    if (deteccao.participanteNome && textoAlvo.includes(normalizar(deteccao.participanteNome))) pontos += 2;
+    if (deteccao.pista && textoAlvo.includes(normalizar(deteccao.pista))) pontos += 2;
+    return { evento, pontos };
+  });
+
+  pontuados.sort((a, b) => b.pontos - a.pontos || new Date(a.evento.inicio).getTime() - new Date(b.evento.inicio).getTime());
+  return pontuados.slice(0, 5).map((p) => p.evento);
+}
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -97,6 +139,30 @@ export async function POST(request: Request) {
     });
   }
 
+  // Mesma lógica pra CANCELAR: detecta a intenção, busca candidatos reais
+  // na agenda do usuário e devolve pra escolher — nunca cancela sozinho.
+  const deteccaoCancelamento = await detectarPedidoDeCancelamento(pergunta).catch(() => null);
+  if (deteccaoCancelamento?.cancelamento) {
+    const agora = new Date();
+    const daqui30dias = new Date(agora.getTime() + 30 * 86_400_000);
+    const resultadoEventos = await listarEventosPeriodo(gcId, agora.toISOString(), daqui30dias.toISOString());
+
+    if (!resultadoEventos.ok) {
+      return Response.json({
+        resposta: `Encontrei seu pedido de cancelamento, mas não consegui acessar sua agenda: ${resultadoEventos.error}`,
+      });
+    }
+
+    const candidatos = candidatosParaCancelar(resultadoEventos.eventos ?? [], deteccaoCancelamento);
+    if (candidatos.length === 0) {
+      return Response.json({
+        resposta: "Não achei nenhuma reunião nos próximos 30 dias que bata com isso. Pode me dar mais detalhes (data, horário ou com quem é)?",
+      });
+    }
+
+    return Response.json({ propostaCancelamento: { eventos: candidatos } });
+  }
+
   const [{ data: empresasData }, { data: oportunidadesData }, { data: gcsData }] = await Promise.all([
     admin.from("empresas").select("*"),
     admin.from("oportunidades").select("*"),
@@ -117,7 +183,7 @@ export async function POST(request: Request) {
 
 Você também tem uma ferramenta de busca na web. Use-a quando o usuário pedir pra pesquisar informações externas sobre uma empresa (notícias recentes, site, LinkedIn, o que a empresa faz) — nesse caso, busque de verdade e cite as fontes. Não use a busca pra perguntas sobre os dados internos do pipeline.
 
-Você TEM acesso à agenda (Google Calendar) do usuário — não diga que não tem essa ferramenta. O agendamento em si é tratado por um passo separado antes de chegar até você; se você está respondendo esta pergunta, é porque ou não era um pedido de agendamento, ou faltou informação nele. Se parecer um pedido de reunião incompleto, pergunte objetivamente o que falta (com quem, que dia, que horário) — quando a pessoa responder com isso, o agendamento é detectado automaticamente e vira uma proposta pra confirmar, com link do Google Meet.
+Você TEM acesso à agenda (Google Calendar) do usuário, tanto pra marcar quanto pra cancelar reunião — não diga que não tem essa ferramenta. Os dois fluxos são tratados por um passo separado antes de chegar até você; se você está respondendo esta pergunta, é porque não era um pedido de agendar/cancelar, ou faltou informação nele. Se parecer um pedido de reunião incompleto (marcar ou cancelar), pergunte objetivamente o que falta (com quem, que dia, que horário) — quando a pessoa responder com isso, o pedido é detectado automaticamente e vira uma proposta pra confirmar.
 
 Seja direto e específico — cite nomes de empresas, valores e números reais. Se não tiver a informação (nem nos dados internos nem via busca), diga claramente que não tem. Responda em português, de forma objetiva e curta — no máximo uns 8-10 tópicos ou parágrafos curtos, sem repetir a mesma informação de formas diferentes.
 
