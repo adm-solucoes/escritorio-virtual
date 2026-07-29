@@ -57,6 +57,7 @@ export async function POST(request: Request) {
   const horarioGcId = texto(body.horario_confirmado_gc_id);
   const horarioInicio = texto(body.horario_confirmado_inicio);
   const horarioFim = texto(body.horario_confirmado_fim);
+  const emailLeadDaLigacao = texto(body.email_lead);
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
   const sufixo = digitosChamada.slice(-8);
   const { data: empresas } = await supabase
     .from("empresas")
-    .select("id, nome_empresa, gc_responsavel_id, telefone");
+    .select("id, nome_empresa, gc_responsavel_id, telefone, email");
   const empresa = (empresas ?? []).find((e) => sufixo && apenasDigitos(e.telefone).includes(sufixo));
 
   const tipoAtividade = `Ligação (agente de voz) ${marcaIdempotencia}: ${resumo}`;
@@ -154,10 +155,16 @@ export async function POST(request: Request) {
   // Google Calendar do consultor — em vez de só anotar texto livre.
   let linkEvento: string | null = null;
   if (horarioGcId && horarioInicio && horarioFim) {
+    // E-mail de quem participa do briefing: prioriza o que o agente de voz
+    // capturou na própria ligação (se pedir e a pessoa passar); cai pro
+    // e-mail já cadastrado da empresa se não tiver. Sem nenhum dos dois, cria
+    // o evento sem convidado externo (só na agenda do consultor mesmo).
+    const participanteEmail = emailLeadDaLigacao ?? empresa?.email ?? null;
     const resultadoEvento = await criarEventoReuniao({
       gcId: horarioGcId,
       titulo: `Briefing — ${empresa?.nome_empresa ?? telefone}`,
       descricao: `Agendado automaticamente pelo agente de voz outbound.\n\nResumo da ligação: ${resumo}`,
+      participanteEmail,
       inicioISO: horarioInicio,
       fimISO: horarioFim,
     });
