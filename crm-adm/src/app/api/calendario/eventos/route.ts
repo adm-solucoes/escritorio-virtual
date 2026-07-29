@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-admin";
+import { exigirSessao } from "@/lib/auth-api";
 import { criarEventoReuniao, listarEventosPeriodo } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,9 @@ async function participantesCompartilhando(admin: ReturnType<typeof createAdminC
 }
 
 export async function GET(request: Request) {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   try {
     const { searchParams } = new URL(request.url);
     const inicioParam = searchParams.get("inicio");
@@ -67,8 +71,13 @@ function texto(v: unknown): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
-/** Cria um evento novo direto da grade (clique num horário vazio). */
+/** Cria um evento novo direto da grade (clique num horário vazio). Pode
+ * criar na agenda de qualquer pessoa da equipe (não só a própria) — é o
+ * propósito da agenda compartilhada; só exige estar autenticado. */
 export async function POST(request: Request) {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   try {
     const body = await request.json();
     const gcId = texto(body.gcId);
