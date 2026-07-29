@@ -3,6 +3,7 @@
 // Nunca usar o SDK da Anthropic direto em outro arquivo; sempre por chamarClaude().
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createAdminClient } from "./supabase-admin";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -13,6 +14,14 @@ export type TarefaIA = "extrair" | "redigir";
 const MODELOS: Record<TarefaIA, string> = {
   extrair: "claude-haiku-4-5",
   redigir: "claude-sonnet-5",
+};
+
+// USD por milhão de tokens. Sonnet 5 está em preço promocional (vale até
+// 2026-08-31, segundo a Anthropic) — depois disso sobe pra $3/$15. Atualizar
+// aqui quando isso mudar; é só pra estimativa de custo interna, não cobrança.
+const PRECO_POR_MILHAO: Record<string, { entrada: number; saida: number }> = {
+  "claude-haiku-4-5": { entrada: 1.0, saida: 5.0 },
+  "claude-sonnet-5": { entrada: 2.0, saida: 10.0 },
 };
 
 const TIMEOUT_PADRAO_MS = 15_000;
@@ -29,6 +38,39 @@ interface ChamarClaudeOpcoes {
   permitirBuscaWeb?: boolean;
   /** low | medium | high | xhigh | max — padrão "medium" pra equilibrar custo/latência com qualidade. */
   effort?: "low" | "medium" | "high" | "xhigh" | "max";
+  /** Rótulo livre de quem chamou (ex: "assistente-chat", "relatorio") — só pra aparecer
+   * separado no painel de uso de IA. Opcional, não afeta o comportamento da chamada. */
+  origem?: string;
+}
+
+/** Grava o custo estimado da chamada pra aparecer no painel de uso de IA
+ * (visível só pro gestor). Nunca deixa um erro de log derrubar a chamada de
+ * IA em si — é só telemetria. */
+async function registrarUsoIA(opcoes: {
+  tarefa: TarefaIA;
+  origem?: string;
+  modelo: string;
+  tokensEntrada: number;
+  tokensSaida: number;
+}) {
+  try {
+    const preco = PRECO_POR_MILHAO[opcoes.modelo];
+    const custoUsd = preco
+      ? (opcoes.tokensEntrada / 1_000_000) * preco.entrada + (opcoes.tokensSaida / 1_000_000) * preco.saida
+      : 0;
+
+    const admin = createAdminClient();
+    await admin.from("ia_uso").insert({
+      tarefa: opcoes.tarefa,
+      origem: opcoes.origem ?? null,
+      modelo: opcoes.modelo,
+      tokens_entrada: opcoes.tokensEntrada,
+      tokens_saida: opcoes.tokensSaida,
+      custo_usd: custoUsd,
+    });
+  } catch (e) {
+    console.error("[ai] falha ao registrar uso de IA (não afeta a resposta):", e);
+  }
 }
 
 export type ResultadoIA = { ok: true; texto: string } | { ok: false; erro: string };
@@ -66,6 +108,16 @@ export async function chamarClaude(opcoes: ChamarClaudeOpcoes): Promise<Resultad
       .map((b) => b.text)
       .join("\n\n")
       .trim();
+
+    // Fire-and-forget: não espera o insert pra devolver a resposta da IA.
+    void registrarUsoIA({
+      tarefa: opcoes.tarefa,
+      origem: opcoes.origem,
+      modelo: MODELOS[opcoes.tarefa],
+      tokensEntrada: response.usage.input_tokens,
+      tokensSaida: response.usage.output_tokens,
+    });
+
     if (!texto) {
       return { ok: false, erro: "A IA não retornou texto." };
     }

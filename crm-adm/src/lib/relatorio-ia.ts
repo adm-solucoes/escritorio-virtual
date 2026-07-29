@@ -31,6 +31,7 @@ ${dados.maiorOportunidadeAberta ? `Maior oportunidade em aberto: ${dados.maiorOp
 
   const resultado = await chamarClaude({
     tarefa: "extrair",
+    origem: "relatorio",
     system: SYSTEM,
     mensagem,
     maxTokens: 250,

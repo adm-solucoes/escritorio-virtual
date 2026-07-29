@@ -65,6 +65,7 @@ ${listaEquipe || "(nenhuma pessoa cadastrada)"}`;
 
   const resultado = await chamarClaude({
     tarefa: "extrair",
+    origem: "assistente-chat",
     system,
     mensagem,
     maxTokens: 300,
@@ -116,6 +117,7 @@ Se "cancelamento" for false, os outros campos ficam null.`;
 
   const resultado = await chamarClaude({
     tarefa: "extrair",
+    origem: "assistente-chat",
     system,
     mensagem,
     maxTokens: 200,

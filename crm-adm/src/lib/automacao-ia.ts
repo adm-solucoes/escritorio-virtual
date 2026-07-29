@@ -94,6 +94,7 @@ export async function gerarMensagemWhatsappIA(
   const contexto = await montarContexto(admin, alvo);
   const resultado = await chamarClaude({
     tarefa: "redigir",
+    origem: "automacao",
     system: SYSTEM_WHATSAPP,
     mensagem: `Instrução: ${instrucao}\n\nContexto:\n${contexto}`,
     maxTokens: 400,
@@ -126,6 +127,7 @@ export async function gerarEmailIA(
   const contexto = await montarContexto(admin, alvo);
   const resultado = await chamarClaude({
     tarefa: "redigir",
+    origem: "automacao",
     system: SYSTEM_EMAIL,
     mensagem: `Instrução: ${instrucao}\n\nContexto:\n${contexto}`,
     maxTokens: 600,
@@ -159,6 +161,7 @@ export async function avaliarCondicaoIA(admin: AdminClient, pergunta: string, al
   const contexto = await montarContexto(admin, alvo);
   const resultado = await chamarClaude({
     tarefa: "extrair",
+    origem: "automacao",
     system: SYSTEM_CONDICAO,
     mensagem: `Pergunta: ${pergunta}\n\nContexto:\n${contexto}`,
     maxTokens: 300,
@@ -194,6 +197,7 @@ export async function gerarResumoIA(
   const contexto = await montarContexto(admin, alvo);
   const resultado = await chamarClaude({
     tarefa: "redigir",
+    origem: "automacao",
     system: SYSTEM_RESUMO,
     mensagem: `Contexto:\n${contexto}`,
     maxTokens: 400,

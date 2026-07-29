@@ -207,6 +207,7 @@ ${contexto}`;
 
   const resultado = await chamarClaude({
     tarefa: "redigir",
+    origem: "assistente-chat",
     system,
     mensagem: pergunta,
     maxTokens: 700,

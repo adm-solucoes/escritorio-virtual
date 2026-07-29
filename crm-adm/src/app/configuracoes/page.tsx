@@ -482,6 +482,23 @@ function ConfiguracoesConteudo() {
 
   const souGestor = gcAtual?.role === "gestor";
 
+  interface UsoIA {
+    custoHojeUsd: number;
+    custoMesUsd: number;
+    chamadasMes: number;
+    porOrigem: { origem: string; chamadas: number; custoUsd: number }[];
+  }
+  const [usoIA, setUsoIA] = useState<UsoIA | null>(null);
+
+  useEffect(() => {
+    if (!souGestor) return;
+    fetch("/api/ia/uso")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.error) setUsoIA(d);
+      });
+  }, [souGestor]);
+
   async function atualizarPapel(gc: Gc, novoRole: RoleGc) {
     const { error } = await supabase.from("gcs").update({ role: novoRole }).eq("id", gc.id);
     if (error) {
@@ -1505,6 +1522,59 @@ function ConfiguracoesConteudo() {
           )}
         </div>
       </div>
+
+      {souGestor && (
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-lg font-extrabold text-navy">Uso de IA</h2>
+            <p className="text-sm text-navy/60">
+              Custo estimado de todas as chamadas de IA do CRM (assistente, relatórios, automações). Só gestores veem
+              esta seção.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4">
+            {!usoIA ? (
+              <p className="text-sm text-navy/50">Carregando...</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-6">
+                  <div>
+                    <p className="text-xs text-navy/50 uppercase tracking-wide font-semibold">Hoje</p>
+                    <p className="text-xl font-extrabold text-navy">${usoIA.custoHojeUsd.toFixed(3)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-navy/50 uppercase tracking-wide font-semibold">Este mês</p>
+                    <p className="text-xl font-extrabold text-navy">${usoIA.custoMesUsd.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-navy/50 uppercase tracking-wide font-semibold">Chamadas no mês</p>
+                    <p className="text-xl font-extrabold text-navy">{usoIA.chamadasMes}</p>
+                  </div>
+                </div>
+
+                {usoIA.porOrigem.length > 0 && (
+                  <div className="border-t border-navy/10 pt-3">
+                    <p className="text-xs text-navy/50 uppercase tracking-wide font-semibold mb-2">Por origem (este mês)</p>
+                    <div className="flex flex-col gap-1.5">
+                      {usoIA.porOrigem
+                        .sort((a, b) => b.custoUsd - a.custoUsd)
+                        .map((o) => (
+                          <div key={o.origem} className="flex items-center justify-between text-sm">
+                            <span className="text-navy/70">
+                              {o.origem} <span className="text-navy/40">({o.chamadas} chamadas)</span>
+                            </span>
+                            <span className="font-semibold text-navy">${o.custoUsd.toFixed(3)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -45,6 +45,7 @@ Exemplo: "reunião com o caio as 14 no email caio@x.com" -> entendido true, hora
 
   const resultado = await chamarClaude({
     tarefa: "extrair",
+    origem: "acao-rapida",
     system,
     mensagem: texto,
     maxTokens: 300,
