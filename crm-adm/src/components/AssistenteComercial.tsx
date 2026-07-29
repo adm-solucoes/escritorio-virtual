@@ -8,7 +8,7 @@ import type { Gc } from "@/lib/types";
 
 interface PropostaReuniao {
   participanteNome: string | null;
-  participanteEmail: string | null;
+  participantesEmails: string[];
   assunto: string;
   dataISO: string;
   hora: string;
@@ -92,7 +92,11 @@ export default function AssistenteComercial() {
     setEnviando(false);
   }
 
-  async function confirmarReuniao(indice: number) {
+  // `participantesEmailsAtuais` vem direto do card (não do estado
+  // `mensagens`) porque setMensagens é assíncrono — se o usuário editar o
+  // campo e clicar "Confirmar" na sequência, ler de `mensagens` pegaria o
+  // valor de ANTES da edição (batch do React ainda não aplicado).
+  async function confirmarReuniao(indice: number, participantesEmailsAtuais: string[]) {
     const alvo = mensagens[indice];
     if (!alvo.proposta || !gcAtual) return;
 
@@ -102,7 +106,7 @@ export default function AssistenteComercial() {
       const res = await fetch("/api/assistente/confirmar-reuniao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gcId: gcAtual.id, ...alvo.proposta }),
+        body: JSON.stringify({ gcId: gcAtual.id, ...alvo.proposta, participantesEmails: participantesEmailsAtuais }),
       });
       const dados = await res.json();
       setMensagens((prev) =>
@@ -127,6 +131,12 @@ export default function AssistenteComercial() {
 
   function cancelarProposta(indice: number) {
     setMensagens((prev) => prev.map((m, i) => (i === indice ? { ...m, statusProposta: "cancelada" } : m)));
+  }
+
+  function editarEmailsProposta(indice: number, emails: string[]) {
+    setMensagens((prev) =>
+      prev.map((m, i) => (i === indice && m.proposta ? { ...m, proposta: { ...m.proposta, participantesEmails: emails } } : m))
+    );
   }
 
   if (esconderNaPagina || gcAtual?.role === "sem_acesso") return null;
@@ -171,8 +181,9 @@ export default function AssistenteComercial() {
                     proposta={m.proposta}
                     status={m.statusProposta ?? "pendente"}
                     detalhe={m.detalheProposta}
-                    onConfirmar={() => confirmarReuniao(i)}
+                    onConfirmar={(emails) => confirmarReuniao(i, emails)}
                     onCancelar={() => cancelarProposta(i)}
+                    onEditarEmails={(emails) => editarEmailsProposta(i, emails)}
                   />
                 ) : (
                   <div
@@ -226,18 +237,29 @@ function PropostaReuniaoCard({
   detalhe,
   onConfirmar,
   onCancelar,
+  onEditarEmails,
 }: {
   proposta: PropostaReuniao;
   status: StatusProposta;
   detalhe?: string;
-  onConfirmar: () => void;
+  onConfirmar: (emails: string[]) => void;
   onCancelar: () => void;
+  onEditarEmails: (emails: string[]) => void;
 }) {
+  const [textoEmails, setTextoEmails] = useState(proposta.participantesEmails.join(", "));
+
   const dataFormatada = new Date(`${proposta.dataISO}T${proposta.hora}:00-03:00`).toLocaleDateString("pt-BR", {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
   });
+
+  function emailsAtuais(): string[] {
+    return textoEmails
+      .split(/[,;\s]+/)
+      .map((e) => e.trim())
+      .filter(Boolean);
+  }
 
   return (
     <div className="self-start max-w-[90%] rounded-lg border border-blue/20 bg-blue/5 px-3 py-2.5 text-sm text-navy">
@@ -251,11 +273,26 @@ function PropostaReuniaoCard({
       </p>
 
       {status === "pendente" && (
+        <div className="mt-2">
+          <label className="text-[11px] font-semibold text-navy/50 uppercase tracking-wide">
+            E-mail(s) do(s) convidado(s) — opcional
+          </label>
+          <input
+            className="input text-xs mt-1 w-full"
+            placeholder="fulano@empresa.com, ciclano@empresa.com"
+            value={textoEmails}
+            onChange={(e) => setTextoEmails(e.target.value)}
+            onBlur={() => onEditarEmails(emailsAtuais())}
+          />
+        </div>
+      )}
+
+      {status === "pendente" && (
         <div className="flex gap-2 mt-2.5">
           <button onClick={onCancelar} className="px-2.5 py-1 rounded-md text-xs font-semibold text-navy/60 hover:bg-navy/5">
             Cancelar
           </button>
-          <button onClick={onConfirmar} className="btn-primary text-xs px-2.5 py-1">
+          <button onClick={() => onConfirmar(emailsAtuais())} className="btn-primary text-xs px-2.5 py-1">
             <Check size={13} /> Confirmar
           </button>
         </div>

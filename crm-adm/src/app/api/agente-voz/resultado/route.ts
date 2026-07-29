@@ -164,7 +164,7 @@ export async function POST(request: Request) {
       gcId: horarioGcId,
       titulo: `Briefing — ${empresa?.nome_empresa ?? telefone}`,
       descricao: `Agendado automaticamente pelo agente de voz outbound.\n\nResumo da ligação: ${resumo}`,
-      participanteEmail,
+      participantesEmails: participanteEmail ? [participanteEmail] : undefined,
       inicioISO: horarioInicio,
       fimISO: horarioFim,
     });

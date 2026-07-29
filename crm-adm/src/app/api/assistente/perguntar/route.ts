@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     return Response.json({
       propostaReuniao: {
         participanteNome: deteccao.participanteNome,
-        participanteEmail: deteccao.participanteEmail,
+        participantesEmails: deteccao.participantesEmails ?? [],
         assunto: deteccao.assunto ?? "Reunião",
         dataISO: deteccao.dataISO,
         hora: deteccao.hora,

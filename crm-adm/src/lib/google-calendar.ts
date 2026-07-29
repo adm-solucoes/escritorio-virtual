@@ -76,7 +76,8 @@ interface CriarEventoOpcoes {
   gcId: string;
   titulo: string;
   descricao?: string;
-  participanteEmail?: string | null;
+  /** Convidados externos — aceita quantos precisar (antes só tinha 1). */
+  participantesEmails?: string[];
   inicioISO: string;
   fimISO: string;
 }
@@ -91,7 +92,7 @@ interface ResultadoEvento {
 
 /** Cria um evento no Google Calendar do GC responsável, com Google Meet automático. */
 export async function criarEventoReuniao(opcoes: CriarEventoOpcoes): Promise<ResultadoEvento> {
-  const { gcId, titulo, descricao, participanteEmail, inicioISO, fimISO } = opcoes;
+  const { gcId, titulo, descricao, participantesEmails, inicioISO, fimISO } = opcoes;
   const autenticado = await clientAutenticadoParaGc(gcId);
   if ("erro" in autenticado) return { ok: false, error: autenticado.erro };
 
@@ -108,7 +109,7 @@ export async function criarEventoReuniao(opcoes: CriarEventoOpcoes): Promise<Res
         description: descricao,
         start: { dateTime: inicioISO },
         end: { dateTime: fimISO },
-        attendees: participanteEmail ? [{ email: participanteEmail }] : undefined,
+        attendees: participantesEmails?.length ? participantesEmails.map((email) => ({ email })) : undefined,
         conferenceData: {
           createRequest: { requestId, conferenceSolutionKey: { type: "hangoutsMeet" } },
         },

@@ -334,7 +334,7 @@ async function executarAcaoAgendarReuniao(config: Record<string, unknown>, alvo:
     gcId: alvo.gcResponsavelId,
     titulo,
     descricao: typeof config.descricaoTemplate === "string" ? config.descricaoTemplate : undefined,
-    participanteEmail: alvo.emailContato,
+    participantesEmails: alvo.emailContato ? [alvo.emailContato] : undefined,
     inicioISO: inicio.toISOString(),
     fimISO: fim.toISOString(),
   });

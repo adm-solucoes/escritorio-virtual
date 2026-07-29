@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       gcId,
       titulo: tituloEvento,
       descricao: motivo,
-      participanteEmail: email,
+      participantesEmails: email ? [email] : undefined,
       inicioISO: inicio.toISOString(),
       fimISO: fim.toISOString(),
     });

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 interface CorpoConfirmacao {
   gcId: string;
   participanteNome: string | null;
-  participanteEmail: string | null;
+  participantesEmails: string[];
   assunto: string;
   dataISO: string;
   hora: string;
@@ -15,7 +15,7 @@ interface CorpoConfirmacao {
 export async function POST(request: Request) {
   try {
     const corpo = (await request.json()) as CorpoConfirmacao;
-    const { gcId, participanteNome, participanteEmail, assunto, dataISO, hora, duracaoMinutos } = corpo;
+    const { gcId, participanteNome, participantesEmails, assunto, dataISO, hora, duracaoMinutos } = corpo;
 
     if (!gcId || !dataISO || !hora) {
       return Response.json({ error: "Faltam campos obrigatórios." }, { status: 400 });
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const resultado = await criarEventoReuniao({
       gcId,
       titulo,
-      participanteEmail: participanteEmail || null,
+      participantesEmails: (participantesEmails ?? []).filter(Boolean),
       inicioISO: inicio.toISOString(),
       fimISO: fim.toISOString(),
     });
