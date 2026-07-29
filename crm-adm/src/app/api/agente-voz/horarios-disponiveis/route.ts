@@ -81,9 +81,12 @@ export async function GET() {
       .eq("compartilhar_agenda", true)
       .eq("gcs.role", "comercial");
 
+    const agora = new Date();
+    const fimPeriodo = new Date(agora.getTime() + (DIAS_UTEIS_A_OFERECER + 4) * 86_400_000);
+
     const eventosPorGc = new Map<string, EventoOcupado[]>();
     for (const integracao of (integracoes as { gc_id: string }[]) ?? []) {
-      const resultado = await listarEventosPeriodo(integracao.gc_id, DIAS_UTEIS_A_OFERECER + 4);
+      const resultado = await listarEventosPeriodo(integracao.gc_id, agora.toISOString(), fimPeriodo.toISOString());
       eventosPorGc.set(
         integracao.gc_id,
         resultado.ok ? (resultado.eventos ?? []).map((e) => ({ inicio: e.inicio, fim: e.fim })) : []

@@ -135,23 +135,25 @@ export interface EventoAgenda {
   linkEvento: string | null;
 }
 
-/** Lista os eventos dos próximos `dias` dias na agenda do GC (usado na agenda compartilhada). */
-export async function listarEventosPeriodo(gcId: string, dias = 7): Promise<{ ok: boolean; eventos?: EventoAgenda[]; error?: string }> {
+/** Lista os eventos entre `inicioISO` e `fimISO` na agenda do GC (usado na agenda compartilhada). */
+export async function listarEventosPeriodo(
+  gcId: string,
+  inicioISO: string,
+  fimISO: string
+): Promise<{ ok: boolean; eventos?: EventoAgenda[]; error?: string }> {
   const autenticado = await clientAutenticadoParaGc(gcId);
   if ("erro" in autenticado) return { ok: false, error: autenticado.erro };
 
   try {
     const calendar = google.calendar({ auth: autenticado.client, version: "v3" });
-    const agora = new Date();
-    const fimPeriodo = new Date(agora.getTime() + dias * 86_400_000);
 
     const { data } = await calendar.events.list({
       calendarId: "primary",
-      timeMin: agora.toISOString(),
-      timeMax: fimPeriodo.toISOString(),
+      timeMin: inicioISO,
+      timeMax: fimISO,
       singleEvents: true,
       orderBy: "startTime",
-      maxResults: 50,
+      maxResults: 100,
     });
 
     const eventos: EventoAgenda[] = (data.items ?? [])
@@ -168,5 +170,58 @@ export async function listarEventosPeriodo(gcId: string, dias = 7): Promise<{ ok
     return { ok: true, eventos };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro ao listar eventos do Google Calendar" };
+  }
+}
+
+interface AtualizarEventoOpcoes {
+  gcId: string;
+  eventoId: string;
+  titulo?: string;
+  inicioISO?: string;
+  fimISO?: string;
+}
+
+/** Atualiza horário e/ou título de um evento existente — usado pelo editar e pelo
+ * arrastar-pra-remarcar da grade semanal. */
+export async function atualizarEvento(opcoes: AtualizarEventoOpcoes): Promise<ResultadoEvento> {
+  const { gcId, eventoId, titulo, inicioISO, fimISO } = opcoes;
+  const autenticado = await clientAutenticadoParaGc(gcId);
+  if ("erro" in autenticado) return { ok: false, error: autenticado.erro };
+
+  try {
+    const calendar = google.calendar({ auth: autenticado.client, version: "v3" });
+    const { data: evento } = await calendar.events.patch({
+      calendarId: "primary",
+      eventId: eventoId,
+      sendUpdates: "all",
+      requestBody: {
+        ...(titulo ? { summary: titulo } : {}),
+        ...(inicioISO ? { start: { dateTime: inicioISO } } : {}),
+        ...(fimISO ? { end: { dateTime: fimISO } } : {}),
+      },
+    });
+
+    return {
+      ok: true,
+      eventoId: evento.id ?? undefined,
+      linkEvento: evento.htmlLink ?? undefined,
+      linkChamada: evento.hangoutLink ?? evento.conferenceData?.entryPoints?.[0]?.uri ?? null,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro ao atualizar evento no Google Calendar" };
+  }
+}
+
+/** Exclui um evento — usado pelo botão de excluir no modal de detalhe. */
+export async function excluirEvento(gcId: string, eventoId: string): Promise<{ ok: boolean; error?: string }> {
+  const autenticado = await clientAutenticadoParaGc(gcId);
+  if ("erro" in autenticado) return { ok: false, error: autenticado.erro };
+
+  try {
+    const calendar = google.calendar({ auth: autenticado.client, version: "v3" });
+    await calendar.events.delete({ calendarId: "primary", eventId: eventoId, sendUpdates: "all" });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro ao excluir evento no Google Calendar" };
   }
 }
