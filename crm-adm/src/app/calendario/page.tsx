@@ -202,13 +202,19 @@ export default function CalendarioPage() {
     setModal({ tipo: "detalhe", evento });
   }
 
+  // Arrastar pra remarcar só faz sentido com mouse — em touch, "touch-action:
+  // none" (necessário pra não brigar com o scroll da página durante o
+  // arrasto) desligava a rolagem inteira sempre que o dedo encostava num
+  // compromisso pra rolar a tela. Em toque, o toque só abre o detalhe.
   function iniciarArrasto(e: React.PointerEvent<HTMLDivElement>, eventoId: string) {
     e.stopPropagation();
+    if (e.pointerType !== "mouse") return;
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     arrastoRef.current = { eventoId, startY: e.clientY, moveu: false };
   }
 
   function moverArrasto(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "mouse") return;
     const a = arrastoRef.current;
     if (!a) return;
     const deltaY = e.clientY - a.startY;
@@ -217,6 +223,11 @@ export default function CalendarioPage() {
   }
 
   async function soltarArrasto(e: React.PointerEvent<HTMLDivElement>, evento: EventoAgendaEquipe) {
+    if (e.pointerType !== "mouse") {
+      abrirDetalhe(evento);
+      return;
+    }
+
     const a = arrastoRef.current;
     arrastoRef.current = null;
     setArrastoDeltaY(null);
@@ -519,7 +530,7 @@ export default function CalendarioPage() {
                             onPointerDown={(e) => iniciarArrasto(e, evento.id)}
                             onPointerMove={moverArrasto}
                             onPointerUp={(e) => soltarArrasto(e, evento)}
-                            className="absolute z-10 px-1 touch-none"
+                            className="absolute z-10 px-1"
                             style={{
                               top: topPx,
                               height: alturaPx,
