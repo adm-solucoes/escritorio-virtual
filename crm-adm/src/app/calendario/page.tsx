@@ -107,6 +107,9 @@ export default function CalendarioPage() {
   const [modal, setModal] = useState<ModalState>(null);
   const [salvando, setSalvando] = useState(false);
   const [erroModal, setErroModal] = useState<string | null>(null);
+  // Filtro por pessoa: gcIds ESCONDIDOS. Vazio = sem filtro, mostra todo
+  // mundo (padrão) — clicar num chip da legenda esconde/mostra só aquela pessoa.
+  const [pessoasOcultas, setPessoasOcultas] = useState<Set<string>>(new Set());
 
   const dias = useMemo(() => {
     const hoje = inicioDoDia(new Date());
@@ -147,37 +150,46 @@ export default function CalendarioPage() {
     return () => clearInterval(id);
   }, []);
 
+  const eventosFiltrados = useMemo(
+    () => (pessoasOcultas.size === 0 ? eventos : eventos.filter((e) => !pessoasOcultas.has(e.gcId))),
+    [eventos, pessoasOcultas]
+  );
+
   const eventosPorDia = useMemo(() => {
     const mapa = new Map<number, EventoAgendaEquipe[]>();
     for (const dia of dias) mapa.set(dia.getTime(), []);
-    for (const evento of eventos) {
+    for (const evento of eventosFiltrados) {
       const chave = inicioDoDia(new Date(evento.inicio)).getTime();
       const lista = mapa.get(chave);
       if (lista) lista.push(evento);
     }
     return mapa;
-  }, [eventos, dias]);
+  }, [eventosFiltrados, dias]);
 
   const { horaInicio, horaFim } = useMemo(() => {
-    if (eventos.length === 0) return { horaInicio: HORA_MIN_PADRAO, horaFim: HORA_MAX_PADRAO };
+    if (eventosFiltrados.length === 0) return { horaInicio: HORA_MIN_PADRAO, horaFim: HORA_MAX_PADRAO };
     let min = HORA_MIN_PADRAO;
     let max = HORA_MAX_PADRAO;
-    for (const evento of eventos) {
+    for (const evento of eventosFiltrados) {
       min = Math.min(min, Math.floor(horaFracionaria(new Date(evento.inicio))));
       max = Math.max(max, Math.ceil(horaFracionaria(new Date(evento.fim))));
     }
     return { horaInicio: Math.max(0, min), horaFim: Math.min(24, max) };
-  }, [eventos]);
+  }, [eventosFiltrados]);
 
   const horas = useMemo(
     () => Array.from({ length: horaFim - horaInicio }, (_, i) => horaInicio + i),
     [horaInicio, horaFim]
   );
 
-  const pessoasComEvento = useMemo(() => {
-    const nomes = Array.from(new Set(eventos.map((e) => e.gcNome))).sort();
-    return nomes.map((nome) => ({ nome, cor: corPorNome(nome) }));
-  }, [eventos]);
+  function alternarFiltroPessoa(gcId: string) {
+    setPessoasOcultas((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(gcId)) novo.delete(gcId);
+      else novo.add(gcId);
+      return novo;
+    });
+  }
 
   const alturaGrade = (horaFim - horaInicio) * ALTURA_HORA;
 
@@ -336,14 +348,30 @@ export default function CalendarioPage() {
           </p>
         </div>
 
-        {pessoasComEvento.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3">
-            {pessoasComEvento.map((p) => (
-              <div key={p.nome} className="flex items-center gap-1.5 text-xs font-medium text-navy/70">
-                <span className={`w-2.5 h-2.5 rounded-full ${p.cor.dot}`} />
-                {p.nome}
-              </div>
-            ))}
+        {participantes.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {participantes.map((p) => {
+              const cor = corPorNome(p.nome);
+              const oculta = pessoasOcultas.has(p.gcId);
+              return (
+                <button
+                  key={p.gcId}
+                  onClick={() => alternarFiltroPessoa(p.gcId)}
+                  className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border transition ${
+                    oculta ? "border-navy/10 text-navy/30" : "border-navy/10 text-navy/70 bg-navy/[0.02]"
+                  }`}
+                  title={oculta ? "Clique pra mostrar de novo" : "Clique pra esconder"}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full ${cor.dot} ${oculta ? "opacity-30" : ""}`} />
+                  {p.nome}
+                </button>
+              );
+            })}
+            {pessoasOcultas.size > 0 && (
+              <button onClick={() => setPessoasOcultas(new Set())} className="text-xs text-navy/40 underline hover:text-navy/60">
+                mostrar todos
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -406,8 +434,10 @@ export default function CalendarioPage() {
         ) : (
           <div className="overflow-x-auto">
             <div className="min-w-[820px]">
-              {eventos.length === 0 && (
-                <p className="px-4 pt-3 text-xs text-navy/40">Nenhum compromisso nesta semana.</p>
+              {eventosFiltrados.length === 0 && (
+                <p className="px-4 pt-3 text-xs text-navy/40">
+                  {pessoasOcultas.size > 0 ? "Nenhum compromisso visível com o filtro atual." : "Nenhum compromisso nesta semana."}
+                </p>
               )}
               {/* Cabeçalho: dias da semana, dia atual destacado igual ao Google Calendar */}
               <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-navy/10">
