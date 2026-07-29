@@ -258,7 +258,7 @@ export default function CommandBar() {
     <>
       <button
         onClick={abrir}
-        className="fixed bottom-5 right-5 z-40 w-12 h-12 rounded-full bg-red text-white shadow-lg flex items-center justify-center hover:bg-red/90 transition-colors"
+        className="fixed bottom-5 right-5 z-40 w-12 h-12 rounded-full bg-navy text-white shadow-lg flex items-center justify-center hover:bg-blue transition-colors"
         title="Ação rápida (Ctrl+K)"
       >
         <Zap size={20} />

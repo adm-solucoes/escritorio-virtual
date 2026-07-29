@@ -191,7 +191,7 @@ export default function EmpresasPage() {
                 const score = scorePorEmpresa.get(empresa.id) ?? 0;
                 const classificacao = classificarScore(score);
                 return (
-                  <tr key={empresa.id} className="border-b border-navy/5 last:border-0 hover:bg-navy/[0.02]">
+                  <tr key={empresa.id} className="group border-b border-navy/5 last:border-0 hover:bg-navy/[0.02]">
                     <td className="px-4 py-3">
                       <button
                         onClick={() => router.push(`/empresas/${empresa.id}`)}
@@ -228,7 +228,7 @@ export default function EmpresasPage() {
                       {empresa.gc_responsavel_id ? gcPorId.get(empresa.gc_responsavel_id) : "—"}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 justify-end">
+                      <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                         <button
                           onClick={() => abrirConversaWhatsapp(empresa)}
                           className="p-1.5 rounded-md hover:bg-green-50 text-green-600"

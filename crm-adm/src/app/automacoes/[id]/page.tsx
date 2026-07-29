@@ -48,10 +48,11 @@ export default function AutomacaoCanvasPage({ params }: { params: Promise<{ id: 
   useEffect(() => {
     let cancelado = false;
     async function carregar() {
-      const [{ data: automacao }, { data: nos }, { data: conexoes }] = await Promise.all([
+      const [{ data: automacao }, { data: nos }, { data: conexoes }, { data: execucoes }] = await Promise.all([
         supabase.from("automacoes").select("*").eq("id", id).maybeSingle(),
         supabase.from("automacao_nos").select("*").eq("automacao_id", id),
         supabase.from("automacao_conexoes").select("*").eq("automacao_id", id),
+        supabase.from("automacao_execucoes").select("no_id, resultado").eq("automacao_id", id),
       ]);
       if (cancelado) return;
 
@@ -60,12 +61,28 @@ export default function AutomacaoCanvasPage({ params }: { params: Promise<{ id: 
         setStatus(automacao.status);
       }
 
+      // Contador de execução real por nó (sucesso/erro) — mostrado direto no
+      // card do canvas, pra saber de cara se aquele passo específico já
+      // rodou de verdade e se está funcionando, sem abrir relatório separado.
+      const contadoresPorNo: Record<string, { sucessos: number; erros: number }> = {};
+      for (const execucao of (execucoes ?? []) as { no_id: string; resultado: string }[]) {
+        const atual = contadoresPorNo[execucao.no_id] ?? { sucessos: 0, erros: 0 };
+        if (execucao.resultado === "sucesso") atual.sucessos += 1;
+        else if (execucao.resultado === "erro") atual.erros += 1;
+        contadoresPorNo[execucao.no_id] = atual;
+      }
+
       setNodes(
         (nos ?? []).map((n) => ({
           id: n.id,
           type: "noAutomacao",
           position: { x: n.posicao_x, y: n.posicao_y },
-          data: { tipo: n.tipo as TipoNoAutomacao, config: n.config as Record<string, unknown>, resumo: resumoConfig(n.tipo, n.config) },
+          data: {
+            tipo: n.tipo as TipoNoAutomacao,
+            config: n.config as Record<string, unknown>,
+            resumo: resumoConfig(n.tipo, n.config),
+            contador: contadoresPorNo[n.id],
+          },
         }))
       );
 

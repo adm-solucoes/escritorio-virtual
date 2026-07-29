@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Camera, Settings, LogOut, Menu, X, User, Workflow, CalendarDays, BarChart3, Phone } from "lucide-react";
+import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Camera, Settings, LogOut, Menu, X, User, Workflow, CalendarDays, BarChart3, Phone, Bot } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useGcAtual } from "@/lib/useGcAtual";
 import Avatar from "./Avatar";
@@ -18,6 +18,7 @@ const links = [
   { href: "/agente-voz", label: "Agente de Voz", icon: Phone },
   { href: "/instagram", label: "Instagram", icon: Camera, restrito: true },
   { href: "/automacoes", label: "Automações", icon: Workflow },
+  { href: "/agentes-ia", label: "Agentes de IA", icon: Bot },
   { href: "/calendario", label: "Agenda da equipe", icon: CalendarDays },
 ];
 

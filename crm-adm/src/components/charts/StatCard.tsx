@@ -24,10 +24,12 @@ export function StatCard({
   const bom = temDelta && (deltaGoodDirection === "up" ? delta! >= 0 : delta! <= 0);
 
   return (
-    <div className={`rounded-xl border p-4 shadow-sm ${destaque ? "bg-navy border-navy" : "bg-white border-navy/10"}`}>
-      <p className={`text-xs font-semibold ${destaque ? "text-cream/60" : "text-navy/50"}`}>{label}</p>
+    <div
+      className={`rounded-xl border bg-white p-4 shadow-sm ${destaque ? "border-navy/10 border-l-4 border-l-navy" : "border-navy/10"}`}
+    >
+      <p className="text-xs font-semibold text-navy/50">{label}</p>
       <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-        <p className={`text-lg font-extrabold ${destaque ? "text-cream" : "text-navy"}`}>{value}</p>
+        <p className="text-lg font-extrabold text-navy">{value}</p>
         {temDelta && (
           <span
             className="text-xs font-bold flex items-center gap-0.5"
@@ -38,7 +40,7 @@ export function StatCard({
           </span>
         )}
       </div>
-      {sub && <p className={`text-[11px] mt-0.5 ${destaque ? "text-cream/50" : "text-navy/40"}`}>{sub}</p>}
+      {sub && <p className="text-[11px] mt-0.5 text-navy/40">{sub}</p>}
     </div>
   );
 }

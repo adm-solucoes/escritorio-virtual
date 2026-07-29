@@ -14,6 +14,8 @@ import {
   Mail,
   RefreshCw,
   Sparkles,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import type { TipoNoAutomacao } from "@/lib/types";
 import { COR_CATEGORIA, definicaoDoTipo } from "@/lib/automacoes-nos";
@@ -39,6 +41,7 @@ export interface DadosNoAutomacao {
   tipo: TipoNoAutomacao;
   config: Record<string, unknown>;
   resumo: string;
+  contador?: { sucessos: number; erros: number };
 }
 
 export default function NoAutomacao({ data, selected }: NodeProps<DadosNoAutomacao>) {
@@ -61,6 +64,19 @@ export default function NoAutomacao({ data, selected }: NodeProps<DadosNoAutomac
         {definicao.label}
       </div>
       {data.resumo && <div className="text-[11px] text-navy/60 mt-0.5 break-words">{data.resumo}</div>}
+
+      {data.contador && (data.contador.sucessos > 0 || data.contador.erros > 0) && (
+        <div className="flex items-center gap-2.5 mt-1.5 pt-1.5 border-t border-navy/10 text-[10px] font-semibold">
+          <span className="flex items-center gap-0.5 text-green-700">
+            <CheckCircle2 size={11} /> {data.contador.sucessos}
+          </span>
+          {data.contador.erros > 0 && (
+            <span className="flex items-center gap-0.5 text-red">
+              <XCircle size={11} /> {data.contador.erros}
+            </span>
+          )}
+        </div>
+      )}
 
       {ehCondicao ? (
         <div className="flex justify-between text-[10px] font-semibold text-navy/50 mt-2">

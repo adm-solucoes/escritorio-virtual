@@ -351,7 +351,7 @@ export default function AgenteVozPage() {
             <button
               onClick={exportarCsv}
               disabled={selecionados.size === 0}
-              className="flex items-center gap-1.5 text-sm font-semibold bg-red text-white px-3 py-1.5 rounded-md disabled:opacity-40 disabled:cursor-not-allowed sm:ml-auto"
+              className="flex items-center gap-1.5 text-sm font-semibold bg-navy text-white px-3 py-1.5 rounded-md disabled:opacity-40 disabled:cursor-not-allowed sm:ml-auto"
             >
               <Download size={14} /> Exportar CSV ({selecionados.size})
             </button>

@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Sparkles, Trash2, Workflow } from "lucide-react";
+import { CheckCircle2, Plus, Sparkles, Trash2, Workflow, XCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Automacao } from "@/lib/types";
+
+type ContadorExecucao = { sucessos: number; erros: number };
 
 const EXEMPLO_FOLLOWUP_PADRAO = {
   nome: "Follow-up padrão",
@@ -14,6 +16,7 @@ const EXEMPLO_FOLLOWUP_PADRAO = {
 export default function AutomacoesPage() {
   const router = useRouter();
   const [automacoes, setAutomacoes] = useState<Automacao[]>([]);
+  const [contadores, setContadores] = useState<Record<string, ContadorExecucao>>({});
   const [sugestoesPendentes, setSugestoesPendentes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
@@ -29,6 +32,22 @@ export default function AutomacoesPage() {
         if (cancelado) return;
         setAutomacoes((data as Automacao[]) ?? []);
         setLoading(false);
+      });
+    // Contadores reais de execução (sucesso/erro) — dá confiança de que a
+    // automação está rodando de verdade, não só existindo no papel.
+    supabase
+      .from("automacao_execucoes")
+      .select("automacao_id, resultado")
+      .then(({ data }) => {
+        if (cancelado || !data) return;
+        const mapa: Record<string, ContadorExecucao> = {};
+        for (const linha of data as { automacao_id: string; resultado: string }[]) {
+          const atual = mapa[linha.automacao_id] ?? { sucessos: 0, erros: 0 };
+          if (linha.resultado === "sucesso") atual.sucessos += 1;
+          else if (linha.resultado === "erro") atual.erros += 1;
+          mapa[linha.automacao_id] = atual;
+        }
+        setContadores(mapa);
       });
     supabase
       .from("automacao_sugestoes_ia")
@@ -163,6 +182,7 @@ export default function AutomacoesPage() {
               <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
                 <th className="px-4 py-3 font-semibold">Nome</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Execuções</th>
                 <th className="px-4 py-3 font-semibold">Atualizado em</th>
                 <th className="px-4 py-3 font-semibold"></th>
               </tr>
@@ -188,6 +208,26 @@ export default function AutomacoesPage() {
                     >
                       {automacao.status === "ativa" ? "Ativa" : "Rascunho"}
                     </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const c = contadores[automacao.id];
+                      if (!c || (c.sucessos === 0 && c.erros === 0)) {
+                        return <span className="text-xs text-navy/40">Nunca executou</span>;
+                      }
+                      return (
+                        <div className="flex items-center gap-3 text-xs font-semibold">
+                          <span className="flex items-center gap-1 text-green-700">
+                            <CheckCircle2 size={13} /> {c.sucessos}
+                          </span>
+                          {c.erros > 0 && (
+                            <span className="flex items-center gap-1 text-red">
+                              <XCircle size={13} /> {c.erros}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-navy/60">
                     {new Date(automacao.atualizado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
