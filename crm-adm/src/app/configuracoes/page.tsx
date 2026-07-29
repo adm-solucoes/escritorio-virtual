@@ -1525,12 +1525,23 @@ function ConfiguracoesConteudo() {
 
       {souGestor && (
         <div className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-extrabold text-navy">Uso de IA</h2>
-            <p className="text-sm text-navy/60">
-              Custo estimado de todas as chamadas de IA do CRM (assistente, relatórios, automações). Só gestores veem
-              esta seção.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-extrabold text-navy">Uso de IA</h2>
+              <p className="text-sm text-navy/60">
+                Custo estimado de todas as chamadas de IA do CRM (assistente, relatórios, automações). Só gestores
+                veem esta seção. O gasto aqui é uma estimativa nossa, não o saldo real.
+              </p>
+            </div>
+            <a
+              href="https://platform.claude.com/settings/billing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-blue border border-blue/30 hover:bg-blue/5 shrink-0"
+            >
+              <ExternalLink size={14} />
+              Ver saldo/recarregar (Console Anthropic)
+            </a>
           </div>
 
           <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4">
