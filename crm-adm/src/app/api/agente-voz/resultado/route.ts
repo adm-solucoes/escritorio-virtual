@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { criarNotificacaoSeNaoExiste } from "@/lib/notificacoes";
+import { criarEventoReuniao } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -52,16 +53,20 @@ export async function POST(request: Request) {
   const resumo = texto(body.resumo) ?? "(sem resumo)";
   const dispararWhatsapp = body.trigger_whatsapp_followup === true;
   const templateWhatsapp = texto(body.whatsapp_template);
+  const transcricaoCompleta = texto(body.transcricao_completa) ?? texto(body.transcricaoTexto);
+  const horarioGcId = texto(body.horario_confirmado_gc_id);
+  const horarioInicio = texto(body.horario_confirmado_inicio);
+  const horarioFim = texto(body.horario_confirmado_fim);
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
-  // Idempotência: o call_id vai embutido no texto da atividade (sem migração
-  // nova só pra isto). Se já existe, essa chamada é um reenvio — não duplica.
+  // Idempotência: call_id é unique em ligacoes_agente_voz. Se já existe, essa
+  // chamada é um reenvio (retry do agente de voz) — não duplica nada.
   const marcaIdempotencia = `[agente-voz:${callId}]`;
   const { data: jaProcessado } = await supabase
-    .from("atividades")
+    .from("ligacoes_agente_voz")
     .select("id")
-    .ilike("tipo_atividade", `%${marcaIdempotencia}%`)
+    .eq("call_id", callId)
     .maybeSingle();
   if (jaProcessado) {
     return Response.json({ ok: true, duplicado: true });
@@ -143,10 +148,48 @@ export async function POST(request: Request) {
     }
   }
 
+  // Se o lead confirmou um dos horários que o agente ofereceu na ligação
+  // (veio com gc_id + início/fim reais, calculados por
+  // /api/agente-voz/horarios-disponiveis), cria o evento de verdade no
+  // Google Calendar do consultor — em vez de só anotar texto livre.
+  let linkEvento: string | null = null;
+  if (horarioGcId && horarioInicio && horarioFim) {
+    const resultadoEvento = await criarEventoReuniao({
+      gcId: horarioGcId,
+      titulo: `Briefing — ${empresa?.nome_empresa ?? telefone}`,
+      descricao: `Agendado automaticamente pelo agente de voz outbound.\n\nResumo da ligação: ${resumo}`,
+      inicioISO: horarioInicio,
+      fimISO: horarioFim,
+    });
+    if (resultadoEvento.ok) {
+      linkEvento = resultadoEvento.linkEvento ?? null;
+    } else {
+      console.error("[agente-voz/resultado] falha ao criar evento no Google Calendar:", resultadoEvento.error);
+    }
+  }
+
+  const { error: erroLigacao } = await supabase.from("ligacoes_agente_voz").insert({
+    call_id: callId,
+    telefone,
+    empresa_id: empresa?.id ?? null,
+    interessado,
+    motivo_recusa: motivoRecusa,
+    melhor_horario_retorno: melhorHorario,
+    resumo,
+    transcricao_completa: transcricaoCompleta,
+    trigger_whatsapp_followup: dispararWhatsapp,
+    sugestao_whatsapp_id: sugestaoId,
+    evento_calendario_link: linkEvento,
+  });
+  if (erroLigacao) {
+    console.error("[agente-voz/resultado] falha ao gravar em ligacoes_agente_voz:", erroLigacao.message);
+  }
+
   return Response.json({
     ok: true,
     empresaEncontrada: Boolean(empresa),
     empresaId: empresa?.id ?? null,
     sugestaoWhatsappId: sugestaoId,
+    eventoLink: linkEvento,
   });
 }
