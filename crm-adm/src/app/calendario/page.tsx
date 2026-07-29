@@ -189,13 +189,20 @@ export default function CalendarioPage() {
           <p className="p-6 text-sm text-navy/50">Carregando...</p>
         ) : erro ? (
           <p className="p-6 text-sm text-red">{erro}</p>
-        ) : eventos.length === 0 ? (
+        ) : totalCompartilhando === 0 ? (
           <p className="p-6 text-sm text-navy/50">
-            Nenhum compromisso nos próximos 7 dias — ou ninguém ativou o compartilhamento da agenda ainda.
+            Ninguém ativou o compartilhamento da agenda ainda — ative em{" "}
+            <Link href="/configuracoes" className="underline">
+              Configurações
+            </Link>
+            .
           </p>
         ) : (
           <div className="overflow-x-auto">
             <div className="min-w-[820px]">
+              {eventos.length === 0 && (
+                <p className="px-4 pt-3 text-xs text-navy/40">Nenhum compromisso nos próximos 7 dias.</p>
+              )}
               {/* Cabeçalho: dias da semana, dia atual destacado igual ao Google Calendar */}
               <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-navy/10">
                 <div />
