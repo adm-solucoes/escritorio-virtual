@@ -13,7 +13,7 @@ export async function enviarEmail({ para, assunto, html }: EnviarEmailOpcoes): P
 
   const resend = new Resend(resendApiKey);
   const { error } = await resend.emails.send({
-    from: "ADM Soluções <onboarding@resend.dev>",
+    from: "ADM Soluções <crm@admsolucoes.com.br>",
     to: para,
     subject: assunto,
     html,

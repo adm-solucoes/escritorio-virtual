@@ -79,7 +79,7 @@ async function gerarEEnviar({ respeitarConfig }: { respeitarConfig: boolean }) {
 
   const resend = new Resend(resendApiKey);
   const { error } = await resend.emails.send({
-    from: "ADM Soluções <onboarding@resend.dev>",
+    from: "ADM Soluções <crm@admsolucoes.com.br>",
     to: destinatario.split(",").map((e) => e.trim()),
     subject: `${atividadesAtrasadas.length} atividade(s) atrasada(s) · ${new Date().toLocaleDateString("pt-BR")}`,
     html: montarHtml(atividadesAtrasadas),

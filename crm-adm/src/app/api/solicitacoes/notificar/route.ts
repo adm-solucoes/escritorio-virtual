@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
     const resend = new Resend(resendApiKey);
     const { error } = await resend.emails.send({
-      from: "ADM Soluções <onboarding@resend.dev>",
+      from: "ADM Soluções <crm@admsolucoes.com.br>",
       to: [sol.email_responsavel_atendimento],
       subject: `Nova solicitação: ${sol.nome_evento_projeto}`,
       html: montarHtml(""),
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
           sem domínio verificado) só entrega para o e-mail da conta. Encaminhe manualmente se precisar.
         </p>`;
         const { error: erroFallback } = await resend.emails.send({
-          from: "ADM Soluções <onboarding@resend.dev>",
+          from: "ADM Soluções <crm@admsolucoes.com.br>",
           to: [fallback],
           subject: `[Repasse] Nova solicitação: ${sol.nome_evento_projeto}`,
           html: montarHtml(aviso),

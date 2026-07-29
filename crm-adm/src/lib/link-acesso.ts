@@ -53,7 +53,7 @@ export async function enviarLinkDeAcesso({ email, nome, assunto, titulo, mensage
   if (resendApiKey) {
     const resend = new Resend(resendApiKey);
     await resend.emails.send({
-      from: "ADM Soluções <onboarding@resend.dev>",
+      from: "ADM Soluções <crm@admsolucoes.com.br>",
       to: [email],
       subject: assunto,
       html: `
