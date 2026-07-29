@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bot, Phone, MessageSquareText, Workflow, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Bot, Phone, MessageSquareText, Workflow, ExternalLink, CheckCircle2, Settings } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type UsoIA = { custoHojeUsd: number; custoMesUsd: number };
@@ -73,9 +73,14 @@ export default function AgentesIaPage() {
             Liga pra prospects, qualifica o interesse com SPIN Selling leve e agenda um briefing direto na agenda real
             do time comercial — tudo por telefone, sem intervenção humana na ligação em si.
           </p>
-          <Link href="/agente-voz" className="text-xs font-semibold text-blue hover:underline mt-auto">
-            Ver ligações e prospects →
-          </Link>
+          <div className="flex items-center justify-between mt-auto">
+            <Link href="/agente-voz" className="text-xs font-semibold text-blue hover:underline">
+              Ver ligações e prospects →
+            </Link>
+            <Link href="/agentes-ia/agente-voz" className="flex items-center gap-1 text-xs font-semibold text-navy/50 hover:text-navy">
+              <Settings size={12} /> Editar
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-5 flex flex-col gap-3">
@@ -97,7 +102,12 @@ export default function AgentesIaPage() {
             Botão flutuante disponível em todas as telas (menos login) — responde perguntas sobre a carteira, marca e
             cancela reunião na agenda de cada GC, sempre pela sessão real de quem está logado.
           </p>
-          <span className="text-xs text-navy/40 mt-auto">Disponível no canto inferior direito de qualquer página</span>
+          <div className="flex items-center justify-between mt-auto">
+            <span className="text-xs text-navy/40">Disponível no canto inferior direito de qualquer página</span>
+            <Link href="/agentes-ia/assistente-chat" className="flex items-center gap-1 text-xs font-semibold text-navy/50 hover:text-navy shrink-0">
+              <Settings size={12} /> Editar
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-5 flex flex-col gap-3 md:col-span-2">

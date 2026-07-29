@@ -191,6 +191,15 @@ export async function POST(request: Request) {
   const contexto = montarContexto(empresas, oportunidades, gcs);
   const equipeTexto = membrosEquipe.map((m) => `${m.nome} <${m.email}>`).join("\n");
 
+  // Configuração editável em /agentes-ia — nome/instrução extra/uso de emoji
+  // do assistente. Se a linha não existir ainda (migration não rodada), usa
+  // o comportamento padrão sem quebrar nada.
+  const { data: configAgente } = await admin
+    .from("agentes_ia")
+    .select("instrucoes_extra, usar_emojis")
+    .eq("chave", "assistente-chat")
+    .maybeSingle();
+
   const system = `Você é um assistente comercial interno da ADM Soluções, uma empresa júnior de consultoria. Para perguntas sobre o pipeline, empresas, oportunidades e a equipe, responda usando SOMENTE os dados fornecidos abaixo — nunca invente números, valores, etapas ou e-mails que não estão na lista.
 
 Você também tem uma ferramenta de busca na web. Use-a quando o usuário pedir pra pesquisar informações externas sobre uma empresa (notícias recentes, site, LinkedIn, o que a empresa faz) — nesse caso, busque de verdade e cite as fontes. Não use a busca pra perguntas sobre os dados internos do pipeline.
@@ -198,6 +207,9 @@ Você também tem uma ferramenta de busca na web. Use-a quando o usuário pedir 
 Você TEM acesso à agenda (Google Calendar) do usuário, tanto pra marcar quanto pra cancelar reunião — não diga que não tem essa ferramenta. Os dois fluxos são tratados por um passo separado antes de chegar até você; se você está respondendo esta pergunta, é porque não era um pedido de agendar/cancelar, ou faltou informação nele. Se parecer um pedido de reunião incompleto (marcar ou cancelar), pergunte objetivamente o que falta (com quem, que dia, que horário) — quando a pessoa responder com isso, o pedido é detectado automaticamente e vira uma proposta pra confirmar.
 
 Seja direto e específico — cite nomes de empresas, valores e números reais. Se não tiver a informação (nem nos dados internos nem via busca), diga claramente que não tem. Responda em português, de forma objetiva e curta — no máximo uns 8-10 tópicos ou parágrafos curtos, sem repetir a mesma informação de formas diferentes.
+
+${configAgente?.usar_emojis ? "Pode usar emoji com moderação quando fizer sentido." : "Não use emoji nas respostas."}
+${configAgente?.instrucoes_extra ? `\nINSTRUÇÃO ADICIONAL (definida pelo gestor):\n${configAgente.instrucoes_extra}\n` : ""}
 
 EQUIPE (nome <e-mail>):
 ${equipeTexto}
