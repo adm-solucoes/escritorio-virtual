@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-admin";
+import { createClient as createServerClient } from "@/lib/supabase-server";
 import { chamarClaude } from "@/lib/ai";
 import { detectarPedidoDeAgendamento, detectarPedidoDeCancelamento, type DeteccaoCancelamento } from "@/lib/assistente-agendamento";
 import { listarEventosPeriodo, type EventoAgenda } from "@/lib/google-calendar";
@@ -84,19 +85,30 @@ function montarContexto(empresas: Empresa[], oportunidades: (Oportunidade & { em
 }
 
 export async function POST(request: Request) {
-  const { gcId, pergunta } = await request.json();
+  const { pergunta } = await request.json();
   if (typeof pergunta !== "string" || !pergunta.trim()) {
     return Response.json({ error: "Pergunta vazia" }, { status: 400 });
   }
-  if (typeof gcId !== "string") {
-    return Response.json({ error: "Usuário não identificado" }, { status: 400 });
+
+  // gcId NUNCA vem do corpo da requisição — só do cookie de sessão de
+  // verdade. Antes o cliente mandava o gcId direto e o servidor confiava
+  // cegamente, o que deixaria qualquer pessoa agir na agenda de outra só
+  // trocando o valor enviado. Cada usuário só consegue agir na própria
+  // agenda agora, sempre.
+  const supabaseSessao = await createServerClient();
+  const {
+    data: { user },
+  } = await supabaseSessao.auth.getUser();
+  if (!user?.email) {
+    return Response.json({ error: "Não autenticado." }, { status: 401 });
   }
 
   const admin = createAdminClient();
-  const { data: gcAtual } = await admin.from("gcs").select("*").eq("id", gcId).maybeSingle();
+  const { data: gcAtual } = await admin.from("gcs").select("*").eq("email", user.email).maybeSingle();
   if (!gcAtual || gcAtual.role === "sem_acesso") {
     return Response.json({ error: "Sem acesso a dados comerciais." }, { status: 403 });
   }
+  const gcId = gcAtual.id;
 
   // Time interno pra reconhecer nome → e-mail automaticamente ao marcar
   // reunião (ex: "marca com a Isabelle" já resolve o e-mail sozinho, sem

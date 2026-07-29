@@ -89,7 +89,7 @@ export default function AssistenteComercial() {
       const res = await fetch("/api/assistente/perguntar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gcId: gcAtual.id, pergunta: texto }),
+        body: JSON.stringify({ pergunta: texto }),
       });
       const dados = await res.json();
       if (dados.propostaReuniao) {
@@ -128,7 +128,7 @@ export default function AssistenteComercial() {
       const res = await fetch("/api/assistente/confirmar-reuniao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gcId: gcAtual.id, ...alvo.proposta, participantesEmails: participantesEmailsAtuais }),
+        body: JSON.stringify({ ...alvo.proposta, participantesEmails: participantesEmailsAtuais }),
       });
       const dados = await res.json();
       setMensagens((prev) =>
@@ -182,7 +182,7 @@ export default function AssistenteComercial() {
       const res = await fetch("/api/assistente/cancelar-reuniao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gcId: gcAtual.id, eventoId }),
+        body: JSON.stringify({ eventoId }),
       });
       const dados = await res.json();
       atualizarItemCancelamento(indiceMsg, eventoId, {

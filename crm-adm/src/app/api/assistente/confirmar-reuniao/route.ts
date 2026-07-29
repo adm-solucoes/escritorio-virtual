@@ -1,9 +1,10 @@
+import { createAdminClient } from "@/lib/supabase-admin";
+import { createClient as createServerClient } from "@/lib/supabase-server";
 import { criarEventoReuniao } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
 
 interface CorpoConfirmacao {
-  gcId: string;
   participanteNome: string | null;
   participantesEmails: string[];
   assunto: string;
@@ -15,11 +16,28 @@ interface CorpoConfirmacao {
 export async function POST(request: Request) {
   try {
     const corpo = (await request.json()) as CorpoConfirmacao;
-    const { gcId, participanteNome, participantesEmails, assunto, dataISO, hora, duracaoMinutos } = corpo;
+    const { participanteNome, participantesEmails, assunto, dataISO, hora, duracaoMinutos } = corpo;
 
-    if (!gcId || !dataISO || !hora) {
+    if (!dataISO || !hora) {
       return Response.json({ error: "Faltam campos obrigatórios." }, { status: 400 });
     }
+
+    // gcId sempre da sessão real, nunca do corpo — ver mesmo comentário em
+    // /api/assistente/perguntar. Sem isso, dava pra marcar reunião na
+    // agenda de qualquer pessoa só trocando o gcId enviado.
+    const supabaseSessao = await createServerClient();
+    const {
+      data: { user },
+    } = await supabaseSessao.auth.getUser();
+    if (!user?.email) {
+      return Response.json({ error: "Não autenticado." }, { status: 401 });
+    }
+    const admin = createAdminClient();
+    const { data: gcAtual } = await admin.from("gcs").select("id, role").eq("email", user.email).maybeSingle();
+    if (!gcAtual || gcAtual.role === "sem_acesso") {
+      return Response.json({ error: "Sem acesso a dados comerciais." }, { status: 403 });
+    }
+    const gcId = gcAtual.id;
 
     // Fuso de Brasília fixo (sem horário de verão desde 2019) — sem isso, o
     // servidor (Vercel roda em UTC) interpretaria "14:00" como 14h UTC, e o
