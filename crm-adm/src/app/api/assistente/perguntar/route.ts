@@ -56,11 +56,27 @@ export async function POST(request: Request) {
     return Response.json({ error: "Sem acesso a dados comerciais." }, { status: 403 });
   }
 
+  // Time interno pra reconhecer nome → e-mail automaticamente ao marcar
+  // reunião (ex: "marca com a Isabelle" já resolve o e-mail sozinho, sem
+  // precisar digitar). Usa o e-mail REAL conectado no Google Calendar
+  // (integracoes_google.email_google) quando existir — é o que faz a
+  // reunião aparecer na agenda da pessoa de verdade; pode ser diferente do
+  // e-mail cadastrado no CRM (ex: alguém conectou uma conta compartilhada).
+  const [{ data: todosGcs }, { data: integracoesGoogle }] = await Promise.all([
+    admin.from("gcs").select("id, nome, email"),
+    admin.from("integracoes_google").select("gc_id, email_google"),
+  ]);
+  const emailGooglePorGc = new Map((integracoesGoogle ?? []).map((i) => [i.gc_id, i.email_google as string]));
+  const membrosEquipe = (todosGcs ?? []).map((g) => ({
+    nome: g.nome as string,
+    email: emailGooglePorGc.get(g.id) ?? (g.email as string),
+  }));
+
   // Passo separado (antes da resposta normal): detecta se é um pedido de
   // agendamento. Só propõe (nunca cria sozinho) quando já tem data+hora — se
   // faltar informação, cai pro fluxo de chat normal abaixo, que pede o que
   // falta em linguagem natural.
-  const deteccao = await detectarPedidoDeAgendamento(pergunta).catch(() => null);
+  const deteccao = await detectarPedidoDeAgendamento(pergunta, membrosEquipe).catch(() => null);
   if (deteccao?.agendamento && deteccao.dataISO && deteccao.hora) {
     const { data: integracao } = await admin.from("integracoes_google").select("id").eq("gc_id", gcId).maybeSingle();
     if (!integracao) {
@@ -95,14 +111,18 @@ export async function POST(request: Request) {
   const gcs = (gcsData as Gc[]) ?? [];
 
   const contexto = montarContexto(empresas, oportunidades, gcs);
+  const equipeTexto = membrosEquipe.map((m) => `${m.nome} <${m.email}>`).join("\n");
 
-  const system = `Você é um assistente comercial interno da ADM Soluções, uma empresa júnior de consultoria. Para perguntas sobre o pipeline, empresas e oportunidades, responda usando SOMENTE os dados fornecidos abaixo — nunca invente números, valores ou etapas que não estão na lista.
+  const system = `Você é um assistente comercial interno da ADM Soluções, uma empresa júnior de consultoria. Para perguntas sobre o pipeline, empresas, oportunidades e a equipe, responda usando SOMENTE os dados fornecidos abaixo — nunca invente números, valores, etapas ou e-mails que não estão na lista.
 
 Você também tem uma ferramenta de busca na web. Use-a quando o usuário pedir pra pesquisar informações externas sobre uma empresa (notícias recentes, site, LinkedIn, o que a empresa faz) — nesse caso, busque de verdade e cite as fontes. Não use a busca pra perguntas sobre os dados internos do pipeline.
 
 Você TEM acesso à agenda (Google Calendar) do usuário — não diga que não tem essa ferramenta. O agendamento em si é tratado por um passo separado antes de chegar até você; se você está respondendo esta pergunta, é porque ou não era um pedido de agendamento, ou faltou informação nele. Se parecer um pedido de reunião incompleto, pergunte objetivamente o que falta (com quem, que dia, que horário) — quando a pessoa responder com isso, o agendamento é detectado automaticamente e vira uma proposta pra confirmar, com link do Google Meet.
 
 Seja direto e específico — cite nomes de empresas, valores e números reais. Se não tiver a informação (nem nos dados internos nem via busca), diga claramente que não tem. Responda em português, de forma objetiva e curta — no máximo uns 8-10 tópicos ou parágrafos curtos, sem repetir a mesma informação de formas diferentes.
+
+EQUIPE (nome <e-mail>):
+${equipeTexto}
 
 DADOS INTERNOS DO PIPELINE:
 ${contexto}`;
