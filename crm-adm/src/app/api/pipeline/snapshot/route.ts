@@ -1,11 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase-admin";
 import type { EtapaFunilConfig, Oportunidade } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 async function gerarSnapshot() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  const supabase = createAdminClient();
 
   const [{ data: oportunidades }, { data: etapas }] = await Promise.all([
     supabase.from("oportunidades").select("*"),

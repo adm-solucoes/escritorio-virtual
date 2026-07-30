@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { Resend } from "resend";
 import type { Empresa, Gc, Oportunidade, Solicitacao } from "@/lib/types";
 import { exigirSessao } from "@/lib/auth-api";
@@ -23,14 +23,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "solicitacaoId é obrigatório" }, { status: 400 });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
       throw new Error("RESEND_API_KEY não configurada");
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createAdminClient();
 
     const { data: solicitacao, error: e1 } = await supabase
       .from("solicitacoes")

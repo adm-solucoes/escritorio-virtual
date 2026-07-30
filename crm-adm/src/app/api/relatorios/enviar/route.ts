@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { Resend } from "resend";
 import type { Atividade, ConfiguracaoRelatorio, Empresa, Gc, Oportunidade, PipelineSnapshot } from "@/lib/types";
 import { calcularAlertasRelatorio, calcularResumoRelatorio, montarRelatorioHtml } from "@/lib/relatorio-email";
@@ -11,15 +11,13 @@ const moedaCompacta = (v: number) => v.toLocaleString("pt-BR", { style: "currenc
 export const dynamic = "force-dynamic";
 
 async function gerarEEnviar({ respeitarEnvioAutomatico }: { respeitarEnvioAutomatico: boolean }) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const resendApiKey = process.env.RESEND_API_KEY;
 
   if (!resendApiKey) {
     throw new Error("RESEND_API_KEY não configurada");
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const supabase = createAdminClient();
   const hojeISO = new Date().toISOString().slice(0, 10);
 
   const [

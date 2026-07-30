@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { criarNotificacaoSeNaoExiste } from "@/lib/notificacoes";
 import { criarEventoReuniao } from "@/lib/google-calendar";
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   const horarioFim = texto(body.horario_confirmado_fim);
   const emailLeadDaLigacao = texto(body.email_lead);
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  const supabase = createAdminClient();
 
   // Idempotência: call_id é unique em ligacoes_agente_voz. Se já existe, essa
   // chamada é um reenvio (retry do agente de voz) — não duplica nada.

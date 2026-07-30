@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { gerarNotificacoesAtividadesAtrasadas, gerarNotificacoesFollowupEtapa } from "@/lib/notificacoes";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  const supabase = createAdminClient();
 
   try {
     await Promise.all([gerarNotificacoesAtividadesAtrasadas(supabase), gerarNotificacoesFollowupEtapa(supabase)]);

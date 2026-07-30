@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,9 @@ export async function POST(request: Request) {
     return Response.json({ error: "Chave de API ausente (header x-api-key)" }, { status: 401 });
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  // Chave de serviço: a rota já se autentica sozinha pela chave_api do
+  // formulário logo abaixo, e o banco não aceita mais acesso anônimo.
+  const supabase = createAdminClient();
 
   const { data: formulario } = await supabase
     .from("formularios_captura")
