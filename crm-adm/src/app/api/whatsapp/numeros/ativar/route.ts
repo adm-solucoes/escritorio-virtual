@@ -1,8 +1,15 @@
 import { createAdminClient } from "@/lib/supabase-admin";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+  // Troca qual numero de WhatsApp a empresa inteira usa pra mandar mensagem
+  // -- alcance de conta, nao de comercial individual.
+  if (sessao.gc.role !== "gestor") return Response.json({ error: "Sem acesso." }, { status: 403 });
+
   try {
     const { phoneNumberId } = await request.json();
     if (!phoneNumberId) {

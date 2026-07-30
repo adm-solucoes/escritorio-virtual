@@ -4,6 +4,7 @@ import type { Atividade, ConfiguracaoRelatorio, Empresa, Gc, Oportunidade, Pipel
 import { calcularAlertasRelatorio, calcularResumoRelatorio, montarRelatorioHtml } from "@/lib/relatorio-email";
 import { gerarResumoRelatorioIA } from "@/lib/relatorio-ia";
 import { isGanha, isPerdida } from "@/lib/relatorios";
+import { exigirSessao } from "@/lib/auth-api";
 
 const moedaCompacta = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
 
@@ -105,7 +106,13 @@ async function gerarEEnviar({ respeitarEnvioAutomatico }: { respeitarEnvioAutoma
   return { enviado: true };
 }
 
+// Chamada manual (botão "Enviar agora" em /relatorios) — precisa de sessão
+// real, senão qualquer um na internet conseguia forçar o envio do relatório
+// repetidas vezes só de achar a URL.
 export async function POST() {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   try {
     const resultado = await gerarEEnviar({ respeitarEnvioAutomatico: false });
     return Response.json({ ok: true, ...resultado });

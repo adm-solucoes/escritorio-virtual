@@ -1,3 +1,5 @@
+import { exigirSessao } from "@/lib/auth-api";
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -9,6 +11,9 @@ export const dynamic = "force-dynamic";
  * no painel de cada um.
  */
 export async function GET() {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   const resultado: Record<string, { disponivel: boolean; valor?: string; moeda?: string; erro?: string; painel?: string }> = {
     twilio: { disponivel: false },
     deepgram: { disponivel: false },

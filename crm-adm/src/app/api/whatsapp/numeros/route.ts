@@ -1,9 +1,13 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { adicionarNumero, solicitarCodigo } from "@/lib/whatsapp-api";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   const admin = createAdminClient();
   const { data, error } = await admin.from("whatsapp_numeros").select("*").order("criado_em", { ascending: true });
   if (error) return Response.json({ error: error.message }, { status: 500 });
@@ -11,6 +15,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+  if (sessao.gc.role !== "gestor") return Response.json({ error: "Sem acesso." }, { status: 403 });
+
   try {
     const { cc, numero, nomeExibicao } = await request.json();
     if (!cc || !numero || !nomeExibicao) {

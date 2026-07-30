@@ -35,8 +35,17 @@ export async function POST(req: Request) {
 
   const corpo = (await req.json()) as CorpoRequisicao;
   const baseUrl = corpo.baseUrl?.trim().replace(/\/$/, "");
-  if (!baseUrl || !/^https:\/\//.test(baseUrl)) {
-    return Response.json({ error: "URL do agente de voz inválida (precisa começar com https://)." }, { status: 400 });
+  // Só aceita domínios de túnel conhecidos (ngrok / Cloudflare Tunnel, os
+  // dois sugeridos no README do agente de voz). Sem isso, qualquer usuário
+  // logado poderia colar uma URL própria aqui e o servidor mandaria o
+  // segredo compartilhado (x-api-key) + telefone/nome de leads reais pra
+  // ela — vazamento de segredo e de dado pessoal.
+  const dominioPermitido = /^https:\/\/[a-z0-9-]+\.(ngrok-free\.app|ngrok\.app|ngrok\.io|trycloudflare\.com)$/i;
+  if (!baseUrl || !dominioPermitido.test(baseUrl)) {
+    return Response.json(
+      { error: "URL do agente de voz inválida — precisa ser um domínio ngrok ou Cloudflare Tunnel (ex: https://xxxx.ngrok-free.app)." },
+      { status: 400 }
+    );
   }
 
   const empresaIds = (corpo.empresaIds ?? []).slice(0, MAX_POR_DISPARO);

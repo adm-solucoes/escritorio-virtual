@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import type { Atividade, ConfiguracaoRelatorio } from "@/lib/types";
 import { buscarAtividadesAtrasadas } from "@/lib/notificacoes";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,9 @@ async function gerarEEnviar({ respeitarConfig }: { respeitarConfig: boolean }) {
 }
 
 export async function POST() {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   try {
     const resultado = await gerarEEnviar({ respeitarConfig: false });
     return Response.json({ ok: true, ...resultado });

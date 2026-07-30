@@ -702,7 +702,7 @@ function ConfiguracoesConteudo() {
           ) : (
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-navy/60">Nenhuma conta Google conectada ainda.</p>
-              <a href={`/api/google/conectar?gcId=${gcAtual.id}`} className="btn-primary whitespace-nowrap">
+              <a href="/api/google/conectar" className="btn-primary whitespace-nowrap">
                 <CalendarCheck size={15} /> Conectar Google
               </a>
             </div>

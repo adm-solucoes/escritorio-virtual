@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import type { Empresa, Gc, Oportunidade, Solicitacao } from "@/lib/types";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ function linha(label: string, valor: string) {
 }
 
 export async function POST(request: Request) {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   try {
     const { solicitacaoId } = await request.json();
     if (!solicitacaoId) {

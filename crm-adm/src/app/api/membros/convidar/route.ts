@@ -1,8 +1,16 @@
 import { enviarLinkDeAcesso } from "@/lib/link-acesso";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+  // Convidar gente pro CRM (cria acesso ativo) é uma ação de gestão — não
+  // pode ser feita por qualquer comercial, senão vira porta de entrada pra
+  // criar conta pra qualquer um.
+  if (sessao.gc.role !== "gestor") return Response.json({ error: "Sem acesso." }, { status: 403 });
+
   try {
     const { nome, email } = await request.json();
     if (!nome || !email) {

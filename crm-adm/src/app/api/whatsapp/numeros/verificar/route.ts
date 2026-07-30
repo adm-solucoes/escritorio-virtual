@@ -1,9 +1,14 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { verificarCodigo } from "@/lib/whatsapp-api";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+  if (sessao.gc.role !== "gestor") return Response.json({ error: "Sem acesso." }, { status: 403 });
+
   try {
     const { phoneNumberId, codigo } = await request.json();
     if (!phoneNumberId || !codigo) {

@@ -1,8 +1,12 @@
 import { interpretarComandoIA } from "@/lib/acao-rapida-parser-ia";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   const { texto } = await request.json();
   if (typeof texto !== "string" || !texto.trim()) {
     return Response.json({ error: "Texto vazio" }, { status: 400 });

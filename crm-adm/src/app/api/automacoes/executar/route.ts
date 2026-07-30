@@ -1,10 +1,16 @@
 import { executarAutomacoesAtivas } from "@/lib/automacoes-engine";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Chamada manual (botão "Executar agora" no canvas, opcional) — sem checar o CRON_SECRET.
+// Chamada manual (botão "Executar agora" no canvas). Precisa de sessão real —
+// sem isso, qualquer um na internet conseguia disparar as automações (que
+// mandam mensagem de verdade pra lead/cliente) só de achar a URL.
 export async function POST() {
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+
   try {
     const resultado = await executarAutomacoesAtivas();
     return Response.json({ ok: true, ...resultado });
