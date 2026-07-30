@@ -159,7 +159,7 @@ function parseCsv(texto: string): string[][] {
   return linhas.filter((l) => l.length > 1 || l[0] !== "");
 }
 
-function decodificarTexto(bytes: ArrayBuffer): string {
+function decodificarTexto(bytes: ArrayBuffer | Buffer): string {
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
@@ -214,9 +214,24 @@ function lerEntradasZip(buffer: Buffer): Map<string, Buffer> {
   return entradas;
 }
 
-function lerPlanilhaXlsx(buffer: ArrayBuffer): string[][] {
+/** O zip pode ser um .xlsx de verdade (estrutura xl/worksheets/...) ou só um
+ * .csv compactado (o que a API devolve quando pedimos tipo "csv") — tenta os
+ * dois formatos antes de desistir. */
+function lerArquivoZip(buffer: ArrayBuffer): string[][] {
   const entradas = lerEntradasZip(Buffer.from(buffer));
 
+  const nomeAba = Array.from(entradas.keys()).find((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  if (nomeAba) return lerPlanilhaXlsx(entradas, nomeAba);
+
+  const nomeCsv = Array.from(entradas.keys()).find((n) => /\.(csv|txt)$/i.test(n));
+  if (nomeCsv) return parseCsv(decodificarTexto(entradas.get(nomeCsv)!));
+
+  throw new Error(
+    `Arquivo da Casa dos Dados veio num formato zip inesperado (conteúdo: ${Array.from(entradas.keys()).join(", ")}).`
+  );
+}
+
+function lerPlanilhaXlsx(entradas: Map<string, Buffer>, nomeAba: string): string[][] {
   let sharedStrings: string[] = [];
   const sharedStringsBuf = entradas.get("xl/sharedStrings.xml");
   if (sharedStringsBuf) {
@@ -227,8 +242,6 @@ function lerPlanilhaXlsx(buffer: ArrayBuffer): string[][] {
     });
   }
 
-  const nomeAba = Array.from(entradas.keys()).find((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
-  if (!nomeAba) throw new Error("Não encontrei nenhuma planilha dentro do arquivo .xlsx da Casa dos Dados.");
   const xmlAba = entradas.get(nomeAba)!.toString("utf8");
 
   const linhasXml = xmlAba.match(/<row[^>]*>[\s\S]*?<\/row>/g) ?? [];
@@ -266,8 +279,8 @@ function lerPlanilhaXlsx(buffer: ArrayBuffer): string[][] {
 
 function extrairLinhas(bytes: ArrayBuffer): string[][] {
   const primeiros2 = new Uint8Array(bytes.slice(0, 2));
-  const ehXlsx = primeiros2[0] === 0x50 && primeiros2[1] === 0x4b; // "PK"
-  return ehXlsx ? lerPlanilhaXlsx(bytes) : parseCsv(decodificarTexto(bytes));
+  const ehZip = primeiros2[0] === 0x50 && primeiros2[1] === 0x4b; // "PK"
+  return ehZip ? lerArquivoZip(bytes) : parseCsv(decodificarTexto(bytes));
 }
 
 function primeiroValor(campo: string | undefined): string | null {
