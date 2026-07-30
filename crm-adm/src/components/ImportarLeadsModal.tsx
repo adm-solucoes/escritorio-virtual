@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X, Search, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { X, Search, Loader2, ChevronDown } from "lucide-react";
 
 interface Props {
   onClose: () => void;
@@ -15,12 +15,115 @@ interface Resultado {
   duplicadas: number;
 }
 
+interface OpcaoCnae {
+  codigo: string;
+  descricao: string;
+}
+
 const SITUACOES = ["ATIVA", "BAIXADA", "INAPTA", "NULA", "SUSPENSA"] as const;
+
+function SeletorCnae({ selecionados, onChange }: { selecionados: OpcaoCnae[]; onChange: (v: OpcaoCnae[]) => void }) {
+  const [opcoes, setOpcoes] = useState<OpcaoCnae[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [aberto, setAberto] = useState(false);
+  const [busca, setBusca] = useState("");
+
+  useEffect(() => {
+    fetch("/api/cnae")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setOpcoes(Array.isArray(d) ? d : []))
+      .finally(() => setCarregando(false));
+  }, []);
+
+  const filtradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return opcoes.slice(0, 200);
+    return opcoes.filter((o) => o.descricao.toLowerCase().includes(termo) || o.codigo.includes(termo)).slice(0, 200);
+  }, [opcoes, busca]);
+
+  function alternar(opcao: OpcaoCnae) {
+    const jaTem = selecionados.some((s) => s.codigo === opcao.codigo);
+    onChange(jaTem ? selecionados.filter((s) => s.codigo !== opcao.codigo) : [...selecionados, opcao]);
+  }
+
+  return (
+    <div className="relative">
+      <label className="text-xs font-semibold text-navy/50 uppercase tracking-wide">CNAE (atividade principal)</label>
+      <button
+        type="button"
+        onClick={() => setAberto((a) => !a)}
+        className="input mt-1 w-full flex items-center justify-between text-left"
+      >
+        <span className={selecionados.length ? "text-navy" : "text-navy/40"}>
+          {carregando
+            ? "Carregando lista do IBGE..."
+            : selecionados.length
+              ? `${selecionados.length} atividade(s) selecionada(s)`
+              : "Todas (opcional)"}
+        </span>
+        <ChevronDown size={14} className="text-navy/40 shrink-0" />
+      </button>
+
+      {selecionados.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {selecionados.map((s) => (
+            <span
+              key={s.codigo}
+              className="flex items-center gap-1 text-[11px] font-semibold bg-navy/5 text-navy/70 rounded-full pl-2.5 pr-1.5 py-1"
+            >
+              {s.descricao}
+              <button type="button" onClick={() => alternar(s)} className="hover:text-red">
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {aberto && (
+        <div className="absolute z-10 mt-1 w-full bg-white border border-navy/15 rounded-lg shadow-lg max-h-72 overflow-hidden flex flex-col">
+          <input
+            autoFocus
+            className="input rounded-none border-0 border-b border-navy/10 m-0"
+            placeholder="Buscar por nome ou código..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          <div className="overflow-y-auto">
+            {filtradas.length === 0 ? (
+              <p className="text-xs text-navy/40 px-3 py-3">Nenhuma atividade encontrada.</p>
+            ) : (
+              filtradas.map((o) => {
+                const marcada = selecionados.some((s) => s.codigo === o.codigo);
+                return (
+                  <label
+                    key={o.codigo}
+                    className="flex items-start gap-2 px-3 py-2 text-xs hover:bg-navy/5 cursor-pointer"
+                  >
+                    <input type="checkbox" className="w-3.5 h-3.5 mt-0.5" checked={marcada} onChange={() => alternar(o)} />
+                    <span className="text-navy/80">
+                      {o.descricao} <span className="text-navy/40">({o.codigo})</span>
+                    </span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+          <div className="border-t border-navy/10 px-3 py-2 flex justify-end">
+            <button type="button" onClick={() => setAberto(false)} className="text-xs font-semibold text-blue">
+              Pronto
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
   const [uf, setUf] = useState("");
   const [municipio, setMunicipio] = useState("");
-  const [cnae, setCnae] = useState("");
+  const [cnae, setCnae] = useState<OpcaoCnae[]>([]);
   const [situacao, setSituacao] = useState<(typeof SITUACOES)[number]>("ATIVA");
   const [comTelefone, setComTelefone] = useState(false);
   const [comEmail, setComEmail] = useState(false);
@@ -42,7 +145,7 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
           filtros: {
             uf: uf.trim() ? uf.split(",").map((v) => v.trim().toLowerCase()) : undefined,
             municipio: municipio.trim() ? municipio.split(",").map((v) => v.trim().toLowerCase()) : undefined,
-            codigo_atividade_principal: cnae.trim() ? cnae.split(",").map((v) => v.trim()) : undefined,
+            codigo_atividade_principal: cnae.length ? cnae.map((c) => c.codigo) : undefined,
             situacao_cadastral: [situacao],
             mais_filtros: {
               com_telefone: comTelefone || undefined,
@@ -97,15 +200,7 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-navy/50 uppercase tracking-wide">CNAE (atividade principal)</label>
-            <input
-              className="input mt-1 w-full"
-              placeholder="6201500, 6202300 (opcional, separado por vírgula)"
-              value={cnae}
-              onChange={(e) => setCnae(e.target.value)}
-            />
-          </div>
+          <SeletorCnae selecionados={cnae} onChange={setCnae} />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
