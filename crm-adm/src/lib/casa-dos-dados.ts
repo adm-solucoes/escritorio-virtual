@@ -1,12 +1,18 @@
+import { inflateRawSync } from "node:zlib";
+
 /** Cliente da API v5 da Casa dos Dados (busca de empresas por CNPJ/filtros).
  * Doc oficial: https://docs.casadosdados.com.br — cada resultado consome
  * saldo da conta, então nunca chame isso a partir do client.
  *
  * Usamos o fluxo de "gerar arquivo" (POST /v5/cnpj/pesquisa/arquivo + polling
- * em /v4/.../arquivo/{uuid} até sair o link + download do CSV) em vez do
- * endpoint síncrono de pesquisa, porque o síncrono não devolve telefone/
- * e-mail/atividade — confirmado comparando com uma planilha real exportada
- * pelo portal deles, que tem essas colunas. */
+ * em /v4/.../arquivo/{uuid} até sair o arquivo) em vez do endpoint síncrono
+ * de pesquisa, porque o síncrono não devolve telefone/e-mail/atividade —
+ * confirmado comparando com uma planilha real exportada pelo portal deles.
+ *
+ * Na prática a API às vezes devolve o arquivo (xlsx, binário) direto em vez
+ * do JSON documentado com {link}, então o código aqui lê a resposta como
+ * bytes primeiro e só tenta interpretar como JSON se não parecer um arquivo
+ * — em vez de presumir o formato e quebrar com "Unexpected token 'P'". */
 
 const HOST = "https://api.casadosdados.com.br";
 
@@ -40,41 +46,73 @@ function apiKeyObrigatoria(): string {
   return apiKey;
 }
 
-async function solicitarArquivo(filtros: FiltrosBuscaEmpresas, limite: number): Promise<string> {
-  const resposta = await fetch(`${HOST}/v5/cnpj/pesquisa/arquivo`, {
+type RespostaFlexivel = { json: Record<string, unknown> } | { bytes: ArrayBuffer };
+
+/** Lê a resposta sem presumir o formato: só interpreta como JSON se os bytes
+ * realmente parecerem JSON (não começam com a assinatura de um ZIP/xlsx). */
+async function lerRespostaFlexivel(resposta: Response): Promise<RespostaFlexivel> {
+  const buffer = await resposta.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const pareceZip = bytes[0] === 0x50 && bytes[1] === 0x4b; // "PK"
+  if (!pareceZip) {
+    const texto = new TextDecoder("utf-8").decode(buffer).trim();
+    if (texto.startsWith("{") || texto.startsWith("[")) {
+      try {
+        return { json: JSON.parse(texto) };
+      } catch {
+        // não era JSON de verdade apesar da aparência — trata como arquivo
+      }
+    }
+  }
+  return { bytes: buffer };
+}
+
+/** Devolve os bytes do arquivo final (xlsx ou csv, tanto faz — detectamos o
+ * formato depois), já resolvendo o fluxo de solicitação + espera assíncrona
+ * + eventual download por link. */
+async function obterArquivoFinal(filtros: FiltrosBuscaEmpresas, limite: number): Promise<ArrayBuffer> {
+  const apiKey = apiKeyObrigatoria();
+
+  const respostaCriacao = await fetch(`${HOST}/v5/cnpj/pesquisa/arquivo`, {
     method: "POST",
-    headers: { "api-key": apiKeyObrigatoria(), "Content-Type": "application/json" },
+    headers: { "api-key": apiKey, "Content-Type": "application/json" },
     body: JSON.stringify({
       tipo: "csv",
       total_linhas: Math.min(Math.max(limite, 1), 1000),
       pesquisa: filtros,
     }),
   });
-
-  if (!resposta.ok) {
-    const corpo = await resposta.text();
-    throw new Error(`Casa dos Dados (gerar arquivo) respondeu ${resposta.status}: ${corpo.slice(0, 300)}`);
+  if (!respostaCriacao.ok) {
+    const corpo = await respostaCriacao.text();
+    throw new Error(`Casa dos Dados (gerar arquivo) respondeu ${respostaCriacao.status}: ${corpo.slice(0, 300)}`);
   }
 
-  const dados = (await resposta.json()) as { arquivo_uuid?: string };
-  if (!dados.arquivo_uuid) throw new Error("Casa dos Dados não retornou o id do arquivo gerado.");
-  return dados.arquivo_uuid;
-}
+  const criacao = await lerRespostaFlexivel(respostaCriacao);
+  if ("bytes" in criacao) return criacao.bytes; // veio pronto na hora
 
-/** O arquivo é gerado de forma assíncrona — fica tentando por até ~50s. */
-async function aguardarLinkDoArquivo(uuid: string): Promise<string> {
-  const apiKey = apiKeyObrigatoria();
+  const uuid = criacao.json.arquivo_uuid as string | undefined;
+  if (!uuid) throw new Error("Casa dos Dados não retornou o id do arquivo gerado.");
+
   for (let tentativa = 0; tentativa < 17; tentativa++) {
-    const resposta = await fetch(`${HOST}/v4/public/cnpj/pesquisa/arquivo/${uuid}`, {
+    const respostaStatus = await fetch(`${HOST}/v4/public/cnpj/pesquisa/arquivo/${uuid}`, {
       headers: { "api-key": apiKey },
     });
-    if (resposta.status === 200) {
-      const dados = (await resposta.json()) as { link?: string };
-      if (dados.link) return dados.link;
-    } else if (resposta.status !== 202) {
-      const corpo = await resposta.text();
-      throw new Error(`Casa dos Dados (status do arquivo) respondeu ${resposta.status}: ${corpo.slice(0, 300)}`);
+
+    if (respostaStatus.status === 200) {
+      const status = await lerRespostaFlexivel(respostaStatus);
+      if ("bytes" in status) return status.bytes; // arquivo veio direto
+      const link = status.json.link as string | undefined;
+      if (link) {
+        const respostaArquivo = await fetch(link);
+        if (!respostaArquivo.ok) throw new Error(`Falha ao baixar o arquivo gerado (status ${respostaArquivo.status}).`);
+        return respostaArquivo.arrayBuffer();
+      }
+      // JSON sem link ainda — provavelmente "processando", continua tentando
+    } else if (respostaStatus.status !== 202) {
+      const corpo = await respostaStatus.text();
+      throw new Error(`Casa dos Dados (status do arquivo) respondeu ${respostaStatus.status}: ${corpo.slice(0, 300)}`);
     }
+
     await new Promise((r) => setTimeout(r, 3000));
   }
   throw new Error("O arquivo da Casa dos Dados demorou demais pra ficar pronto. Tente novamente em instantes.");
@@ -121,7 +159,7 @@ function parseCsv(texto: string): string[][] {
   return linhas.filter((l) => l.length > 1 || l[0] !== "");
 }
 
-function decodificarCsv(bytes: ArrayBuffer): string {
+function decodificarTexto(bytes: ArrayBuffer): string {
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
@@ -130,21 +168,123 @@ function decodificarCsv(bytes: ArrayBuffer): string {
   }
 }
 
+// ---- Leitor mínimo de .xlsx (é um .zip com XML dentro) ----
+
+function colunaParaIndice(letras: string): number {
+  let indice = 0;
+  for (const ch of letras) indice = indice * 26 + (ch.charCodeAt(0) - 64);
+  return indice - 1;
+}
+
+function lerEntradasZip(buffer: Buffer): Map<string, Buffer> {
+  let eocdOffset = -1;
+  for (let i = buffer.length - 22; i >= 0; i--) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) {
+      eocdOffset = i;
+      break;
+    }
+  }
+  if (eocdOffset === -1) throw new Error("Arquivo ZIP/xlsx inválido (fim do diretório central não encontrado).");
+
+  const cdOffset = buffer.readUInt32LE(eocdOffset + 16);
+  const cdCount = buffer.readUInt16LE(eocdOffset + 10);
+  const entradas = new Map<string, Buffer>();
+  let offset = cdOffset;
+
+  for (let i = 0; i < cdCount; i++) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) break;
+    const compMetodo = buffer.readUInt16LE(offset + 10);
+    const compSize = buffer.readUInt32LE(offset + 20);
+    const nameLen = buffer.readUInt16LE(offset + 28);
+    const extraLen = buffer.readUInt16LE(offset + 30);
+    const commentLen = buffer.readUInt16LE(offset + 32);
+    const localOffset = buffer.readUInt32LE(offset + 42);
+    const nome = buffer.toString("utf8", offset + 46, offset + 46 + nameLen);
+
+    if (buffer.readUInt32LE(localOffset) === 0x04034b50) {
+      const lhNameLen = buffer.readUInt16LE(localOffset + 26);
+      const lhExtraLen = buffer.readUInt16LE(localOffset + 28);
+      const dataInicio = localOffset + 30 + lhNameLen + lhExtraLen;
+      const dados = buffer.subarray(dataInicio, dataInicio + compSize);
+      entradas.set(nome, compMetodo === 8 ? inflateRawSync(dados) : Buffer.from(dados));
+    }
+
+    offset += 46 + nameLen + extraLen + commentLen;
+  }
+  return entradas;
+}
+
+function lerPlanilhaXlsx(buffer: ArrayBuffer): string[][] {
+  const entradas = lerEntradasZip(Buffer.from(buffer));
+
+  let sharedStrings: string[] = [];
+  const sharedStringsBuf = entradas.get("xl/sharedStrings.xml");
+  if (sharedStringsBuf) {
+    const xml = sharedStringsBuf.toString("utf8");
+    sharedStrings = Array.from(xml.matchAll(/<si[^>]*>([\s\S]*?)<\/si>/g)).map((m) => {
+      const textos = Array.from(m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)).map((t) => t[1]);
+      return textos.join("");
+    });
+  }
+
+  const nomeAba = Array.from(entradas.keys()).find((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  if (!nomeAba) throw new Error("Não encontrei nenhuma planilha dentro do arquivo .xlsx da Casa dos Dados.");
+  const xmlAba = entradas.get(nomeAba)!.toString("utf8");
+
+  const linhasXml = xmlAba.match(/<row[^>]*>[\s\S]*?<\/row>/g) ?? [];
+  const linhas: string[][] = [];
+
+  for (const linhaXml of linhasXml) {
+    const linha: string[] = [];
+    const celulas = Array.from(linhaXml.matchAll(/<c r="([A-Z]+)\d+"(?:[^>]*t="([a-zA-Z]+)")?[^>]*>([\s\S]*?)<\/c>/g));
+    for (const [, colLetra, tipo, conteudo] of celulas) {
+      let valor = "";
+      if (tipo === "inlineStr") {
+        valor = Array.from(conteudo.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g))
+          .map((m) => m[1])
+          .join("");
+      } else if (tipo === "s") {
+        const vMatch = conteudo.match(/<v>([\s\S]*?)<\/v>/);
+        valor = vMatch ? sharedStrings[Number(vMatch[1])] ?? "" : "";
+      } else {
+        const vMatch = conteudo.match(/<v>([\s\S]*?)<\/v>/);
+        valor = vMatch ? vMatch[1] : "";
+      }
+      const idx = colunaParaIndice(colLetra);
+      linha[idx] = valor
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&amp;/g, "&");
+    }
+    linhas.push(linha.map((v) => v ?? ""));
+  }
+
+  return linhas;
+}
+
+function extrairLinhas(bytes: ArrayBuffer): string[][] {
+  const primeiros2 = new Uint8Array(bytes.slice(0, 2));
+  const ehXlsx = primeiros2[0] === 0x50 && primeiros2[1] === 0x4b; // "PK"
+  return ehXlsx ? lerPlanilhaXlsx(bytes) : parseCsv(decodificarTexto(bytes));
+}
+
 function primeiroValor(campo: string | undefined): string | null {
   if (!campo) return null;
   const valor = campo.split(",")[0].trim();
   return valor || null;
 }
 
-async function baixarEParsearCsv(link: string): Promise<EmpresaImportada[]> {
-  const resposta = await fetch(link);
-  if (!resposta.ok) throw new Error(`Falha ao baixar o arquivo gerado (status ${resposta.status}).`);
-
-  const texto = decodificarCsv(await resposta.arrayBuffer());
-  const linhas = parseCsv(texto);
+export async function buscarEmpresasCasaDosDados(
+  filtros: FiltrosBuscaEmpresas,
+  limite: number
+): Promise<EmpresaImportada[]> {
+  const bytes = await obterArquivoFinal(filtros, limite);
+  const linhas = extrairLinhas(bytes);
   if (linhas.length < 1) return [];
 
-  const cabecalho = linhas[0].map((c) => c.trim().toLowerCase());
+  const cabecalho = linhas[0].map((c) => (c ?? "").trim().toLowerCase());
   const idx = (nome: string) => cabecalho.indexOf(nome);
 
   const iCnpj = idx("cnpj");
@@ -155,6 +295,10 @@ async function baixarEParsearCsv(link: string): Promise<EmpresaImportada[]> {
   const iTelefones = idx("telefones");
   const iEmail = idx("e-mail");
   const iAtividade = idx("descricao da atividade principal");
+
+  if (iCnpj < 0) {
+    throw new Error(`Arquivo da Casa dos Dados veio num formato inesperado (colunas: ${cabecalho.join(", ")}).`);
+  }
 
   return linhas
     .slice(1)
@@ -168,13 +312,4 @@ async function baixarEParsearCsv(link: string): Promise<EmpresaImportada[]> {
       email: iEmail >= 0 ? primeiroValor(l[iEmail]) : null,
       segmento: iAtividade >= 0 ? l[iAtividade] || null : null,
     }));
-}
-
-export async function buscarEmpresasCasaDosDados(
-  filtros: FiltrosBuscaEmpresas,
-  limite: number
-): Promise<EmpresaImportada[]> {
-  const uuid = await solicitarArquivo(filtros, limite);
-  const link = await aguardarLinkDoArquivo(uuid);
-  return baixarEParsearCsv(link);
 }
