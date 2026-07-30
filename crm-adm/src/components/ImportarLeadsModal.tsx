@@ -245,7 +245,7 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
 
           {resultado && (
             <div className="text-sm text-navy/70 bg-navy/[0.03] border border-navy/10 rounded-lg px-4 py-3">
-              Encontradas {resultado.encontradas} de {resultado.totalDisponivel} disponíveis. Importadas{" "}
+              Encontradas {resultado.encontradas}. Importadas{" "}
               <strong>{resultado.importadas}</strong>, {resultado.duplicadas} já estavam cadastradas.
             </div>
           )}
@@ -256,7 +256,7 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
             </button>
             <button onClick={buscarEImportar} disabled={buscando} className="btn-primary text-sm disabled:opacity-50">
               {buscando ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-              {buscando ? "Buscando..." : "Buscar e importar"}
+              {buscando ? "Gerando e importando... (pode levar até 1 min)" : "Buscar e importar"}
             </button>
           </div>
         </div>

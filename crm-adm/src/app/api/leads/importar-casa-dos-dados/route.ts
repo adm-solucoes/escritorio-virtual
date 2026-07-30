@@ -3,6 +3,9 @@ import { exigirSessao } from "@/lib/auth-api";
 import { buscarEmpresasCasaDosDados, type FiltrosBuscaEmpresas } from "@/lib/casa-dos-dados";
 
 export const dynamic = "force-dynamic";
+// O fluxo de geração de arquivo da Casa dos Dados é assíncrono (gera + poll),
+// pode passar dos 10s padrão da Vercel.
+export const maxDuration = 60;
 
 interface CorpoRequisicao {
   filtros: FiltrosBuscaEmpresas;
@@ -10,8 +13,8 @@ interface CorpoRequisicao {
 }
 
 /** Importa empresas da Casa dos Dados pra tabela `empresas`, pulando CNPJs
- * que já existem no CRM. Cada linha retornada pela API consome saldo da
- * conta, então limitamos a 1 página (máx. 1000, que já é o teto da API). */
+ * que já existem no CRM. Cada linha consome saldo da conta, então a
+ * quantidade é limitada a 1000 (teto da própria API). */
 export async function POST(req: Request) {
   const sessao = await exigirSessao();
   if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
@@ -19,26 +22,29 @@ export async function POST(req: Request) {
   const corpo = (await req.json()) as CorpoRequisicao;
   const quantidade = Math.min(Math.max(Math.trunc(corpo.quantidade || 0), 1), 1000);
 
-  let resultado;
+  let encontradas;
   try {
-    resultado = await buscarEmpresasCasaDosDados(corpo.filtros ?? {}, quantidade);
+    encontradas = await buscarEmpresasCasaDosDados(corpo.filtros ?? {}, quantidade);
   } catch (erro) {
     return Response.json({ error: erro instanceof Error ? erro.message : "Falha ao consultar a Casa dos Dados." }, { status: 502 });
   }
 
   const admin = createAdminClient();
-  const cnpjsEncontrados = resultado.cnpjs.map((e) => e.cnpj).filter(Boolean);
+  const cnpjsEncontrados = encontradas.map((e) => e.cnpj).filter(Boolean);
 
   const { data: existentes } = await admin.from("empresas").select("cnpj").in("cnpj", cnpjsEncontrados);
   const cnpjsJaCadastrados = new Set((existentes ?? []).map((e) => e.cnpj));
 
-  const novas = resultado.cnpjs.filter((e) => e.cnpj && !cnpjsJaCadastrados.has(e.cnpj));
+  const novas = encontradas.filter((e) => e.cnpj && !cnpjsJaCadastrados.has(e.cnpj));
 
   const linhas = novas.map((e) => ({
-    nome_empresa: e.nome_fantasia || e.razao_social || "Sem nome",
+    nome_empresa: e.nome,
     cnpj: e.cnpj,
-    cidade: e.endereco?.municipio ?? null,
-    estado: e.endereco?.uf ?? null,
+    cidade: e.cidade,
+    estado: e.estado,
+    telefone: e.telefone,
+    email: e.email,
+    segmento: e.segmento,
     origem_lead: "Casa dos Dados",
   }));
 
@@ -48,9 +54,9 @@ export async function POST(req: Request) {
   }
 
   return Response.json({
-    encontradas: resultado.cnpjs.length,
-    totalDisponivel: resultado.total,
+    encontradas: encontradas.length,
+    totalDisponivel: encontradas.length,
     importadas: linhas.length,
-    duplicadas: resultado.cnpjs.length - linhas.length,
+    duplicadas: encontradas.length - linhas.length,
   });
 }
