@@ -18,6 +18,7 @@ import {
   Trash2,
   UserPlus,
   Search,
+  ChevronLeft,
 } from "lucide-react";
 import Recorder from "opus-recorder";
 import { supabase } from "@/lib/supabase";
@@ -398,7 +399,12 @@ function WhatsappPageConteudo() {
   return (
     <>
     <div className="flex min-h-0 h-[calc(100dvh-56px)] md:h-dvh">
-      <div className="w-72 shrink-0 border-r border-navy/10 bg-white flex flex-col min-h-0">
+      <div
+        className={`w-full md:w-72 md:shrink-0 border-r border-navy/10 bg-white flex-col min-h-0 ${
+          conversaId ? "hidden md:flex" : "flex"
+        }`}
+      >
+
         <div className="px-4 py-4 border-b border-navy/10 flex items-center justify-between gap-2">
           <div>
             <h1 className="text-lg font-extrabold text-navy">WhatsApp</h1>
@@ -452,7 +458,7 @@ function WhatsappPageConteudo() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+      <div className={`flex-1 flex-col min-w-0 min-h-0 ${conversaId ? "flex" : "hidden md:flex"}`}>
         {!conversaSelecionada ? (
           <div className="flex-1 flex items-center justify-center text-navy/40 text-sm">
             Selecione uma conversa à esquerda
@@ -460,6 +466,13 @@ function WhatsappPageConteudo() {
         ) : (
           <>
             <div className="px-5 py-3 border-b border-navy/10 bg-white flex items-center gap-3">
+              <button
+                onClick={() => setConversaId(null)}
+                className="md:hidden -ml-1.5 p-1.5 rounded-md hover:bg-navy/5 text-navy/60 shrink-0"
+                title="Voltar pra lista de conversas"
+              >
+                <ChevronLeft size={20} />
+              </button>
               <Avatar nome={conversaSelecionada.empresas?.nome_empresa ?? conversaSelecionada.nome_perfil_whatsapp ?? conversaSelecionada.telefone} tamanho="md" />
               <div className="min-w-0">
                 <div className="font-semibold text-navy truncate">
