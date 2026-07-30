@@ -21,6 +21,7 @@ export interface FiltrosBuscaEmpresas {
   municipio?: string[];
   bairro?: string[];
   cep?: string[];
+  ddd?: string[];
   codigo_atividade_principal?: string[];
   situacao_cadastral?: ("ATIVA" | "BAIXADA" | "INAPTA" | "NULA" | "SUSPENSA")[];
   mais_filtros?: {
@@ -38,6 +39,8 @@ export interface EmpresaImportada {
   telefone: string | null;
   email: string | null;
   segmento: string | null;
+  contato: string | null;
+  cargo: string | null;
 }
 
 function apiKeyObrigatoria(): string {
@@ -299,6 +302,31 @@ function primeiroValor(campo: string | undefined): string | null {
   return valor || null;
 }
 
+/** A coluna "Telefones" pode trazer mais de um número separado por vírgula.
+ * Se filtramos por DDD específico, prefere o número que realmente bate com
+ * esse DDD (a empresa pode ter outros telefones registrados de outra praça). */
+function escolherTelefone(campo: string | undefined, ddds: string[] | undefined): string | null {
+  if (!campo) return null;
+  const numeros = campo.split(",").map((n) => n.trim()).filter(Boolean);
+  if (ddds && ddds.length > 0) {
+    const encontrado = numeros.find((n) => ddds.some((ddd) => n.replace(/\D/g, "").startsWith(ddd)));
+    if (encontrado) return encontrado;
+  }
+  return numeros[0] || null;
+}
+
+/** Extrai nome e cargo do primeiro sócio listado na coluna "Socios", que vem
+ * no formato "Qualificação - NOME [, Qualificação - NOME2, ...]". */
+function primeiroSocio(campo: string | undefined): { nome: string | null; cargo: string | null } {
+  if (!campo) return { nome: null, cargo: null };
+  const primeiro = campo.split(",")[0].trim();
+  const partes = primeiro.split(" - ");
+  if (partes.length >= 2) {
+    return { cargo: partes[0].trim() || null, nome: partes.slice(1).join(" - ").trim() || null };
+  }
+  return { nome: primeiro || null, cargo: null };
+}
+
 export async function buscarEmpresasCasaDosDados(
   filtros: FiltrosBuscaEmpresas,
   limite: number
@@ -318,6 +346,7 @@ export async function buscarEmpresasCasaDosDados(
   const iTelefones = idx("telefones");
   const iEmail = idx("e-mail");
   const iAtividade = idx("descricao da atividade principal");
+  const iSocios = idx("socios");
 
   if (iCnpj < 0) {
     throw new Error(`Arquivo da Casa dos Dados veio num formato inesperado (colunas: ${cabecalho.join(", ")}).`);
@@ -326,13 +355,18 @@ export async function buscarEmpresasCasaDosDados(
   return linhas
     .slice(1)
     .filter((l) => l[iCnpj])
-    .map((l) => ({
-      cnpj: l[iCnpj],
-      nome: (iFantasia >= 0 && l[iFantasia]?.trim()) || l[iRazao] || "Sem nome",
-      cidade: iMunicipio >= 0 ? l[iMunicipio] || null : null,
-      estado: iUf >= 0 ? l[iUf] || null : null,
-      telefone: iTelefones >= 0 ? primeiroValor(l[iTelefones]) : null,
-      email: iEmail >= 0 ? primeiroValor(l[iEmail]) : null,
-      segmento: iAtividade >= 0 ? l[iAtividade] || null : null,
-    }));
+    .map((l) => {
+      const socio = iSocios >= 0 ? primeiroSocio(l[iSocios]) : { nome: null, cargo: null };
+      return {
+        cnpj: l[iCnpj],
+        nome: (iFantasia >= 0 && l[iFantasia]?.trim()) || l[iRazao] || "Sem nome",
+        cidade: iMunicipio >= 0 ? l[iMunicipio] || null : null,
+        estado: iUf >= 0 ? l[iUf] || null : null,
+        telefone: iTelefones >= 0 ? escolherTelefone(l[iTelefones], filtros.ddd) : null,
+        email: iEmail >= 0 ? primeiroValor(l[iEmail]) : null,
+        segmento: iAtividade >= 0 ? l[iAtividade] || null : null,
+        contato: socio.nome,
+        cargo: socio.cargo,
+      };
+    });
 }

@@ -45,6 +45,8 @@ export async function POST(req: Request) {
     telefone: e.telefone,
     email: e.email,
     segmento: e.segmento,
+    nome_contato: e.contato,
+    cargo: e.cargo,
     origem_lead: "Casa dos Dados",
   }));
 

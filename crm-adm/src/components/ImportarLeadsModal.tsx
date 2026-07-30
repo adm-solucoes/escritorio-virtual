@@ -123,6 +123,7 @@ function SeletorCnae({ selecionados, onChange }: { selecionados: OpcaoCnae[]; on
 export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
   const [uf, setUf] = useState("");
   const [municipio, setMunicipio] = useState("");
+  const [ddd, setDdd] = useState("");
   const [cnae, setCnae] = useState<OpcaoCnae[]>([]);
   const [situacao, setSituacao] = useState<(typeof SITUACOES)[number]>("ATIVA");
   const [comTelefone, setComTelefone] = useState(false);
@@ -145,10 +146,11 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
           filtros: {
             uf: uf.trim() ? uf.split(",").map((v) => v.trim().toLowerCase()) : undefined,
             municipio: municipio.trim() ? municipio.split(",").map((v) => v.trim().toLowerCase()) : undefined,
+            ddd: ddd.trim() ? ddd.split(",").map((v) => v.trim()) : undefined,
             codigo_atividade_principal: cnae.length ? cnae.map((c) => c.codigo) : undefined,
             situacao_cadastral: [situacao],
             mais_filtros: {
-              com_telefone: comTelefone || undefined,
+              com_telefone: comTelefone || (ddd.trim() ? true : undefined),
               com_email: comEmail || undefined,
             },
           },
@@ -198,6 +200,14 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
                 onChange={(e) => setMunicipio(e.target.value)}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-navy/50 uppercase tracking-wide">DDD do telefone</label>
+            <p className="text-xs text-navy/50 mb-1">
+              Só traz empresas com telefone registrado nesse(s) DDD(s) — força &quot;só com telefone&quot; automaticamente.
+            </p>
+            <input className="input w-full" placeholder="85 (opcional, separado por vírgula)" value={ddd} onChange={(e) => setDdd(e.target.value)} />
           </div>
 
           <SeletorCnae selecionados={cnae} onChange={setCnae} />
