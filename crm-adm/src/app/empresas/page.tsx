@@ -22,6 +22,7 @@ export default function EmpresasPage() {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [ordenarPorScore, setOrdenarPorScore] = useState(false);
+  const [soCasaDosDados, setSoCasaDosDados] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [empresaEditando, setEmpresaEditando] = useState<Empresa | null>(null);
   const [importarAberto, setImportarAberto] = useState(false);
@@ -83,11 +84,14 @@ export default function EmpresasPage() {
           .some((v) => v!.toLowerCase().includes(termo))
       );
     }
+    if (soCasaDosDados) {
+      lista = lista.filter((e) => e.origem_lead === "Casa dos Dados");
+    }
     if (ordenarPorScore) {
       lista = [...lista].sort((a, b) => (scorePorEmpresa.get(b.id) ?? 0) - (scorePorEmpresa.get(a.id) ?? 0));
     }
     return lista;
-  }, [empresas, busca, ordenarPorScore, scorePorEmpresa, gcAtual]);
+  }, [empresas, busca, ordenarPorScore, soCasaDosDados, scorePorEmpresa, gcAtual]);
 
   function abrirNovo() {
     setEmpresaEditando(null);
@@ -143,7 +147,7 @@ export default function EmpresasPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-navy">Empresas</h1>
-          <p className="text-sm text-navy/60">{empresas.length} empresas cadastradas</p>
+          <p className="text-sm text-navy/60">{filtradas.length} empresas {filtradas.length !== empresas.length ? "(filtradas)" : "cadastradas"}</p>
         </div>
         <div className="flex gap-2">
           <input
@@ -152,6 +156,14 @@ export default function EmpresasPage() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
+          <button
+            onClick={() => setSoCasaDosDados((v) => !v)}
+            className={`px-3 py-2 rounded-md text-sm font-semibold border whitespace-nowrap flex items-center gap-1.5 ${
+              soCasaDosDados ? "bg-navy text-white border-navy" : "text-navy/70 border-navy/15 hover:bg-navy/5"
+            }`}
+          >
+            <DatabaseZap size={15} /> Só Casa dos Dados
+          </button>
           <button onClick={exportarCsvEmpresas} className="px-3 py-2 rounded-md text-sm font-semibold text-navy/70 border border-navy/15 hover:bg-navy/5 whitespace-nowrap flex items-center gap-1.5">
             <Download size={15} /> Exportar CSV
           </button>
@@ -211,7 +223,14 @@ export default function EmpresasPage() {
                       >
                         {empresa.nome_empresa}
                       </button>
-                      <div className="text-navy/50 text-xs">{empresa.segmento}</div>
+                      <div className="text-navy/50 text-xs flex items-center gap-1.5">
+                        {empresa.segmento}
+                        {empresa.origem_lead === "Casa dos Dados" && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue/10 text-blue text-[10px] font-semibold">
+                            Casa dos Dados
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div>{empresa.nome_contato}</div>
