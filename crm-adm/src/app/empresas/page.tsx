@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpDown, Download, MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowUpDown, Download, MessagesSquare, Pencil, Plus, Trash2, DatabaseZap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, Oportunidade, ScoreRule } from "@/lib/types";
 import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
@@ -10,6 +10,7 @@ import { calcularScoreLead, classificarScore } from "@/lib/score";
 import { useGcAtual } from "@/lib/useGcAtual";
 import { exportarCSV } from "@/lib/csv";
 import EmpresaModal from "@/components/EmpresaModal";
+import ImportarLeadsModal from "@/components/ImportarLeadsModal";
 
 export default function EmpresasPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function EmpresasPage() {
   const [ordenarPorScore, setOrdenarPorScore] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [empresaEditando, setEmpresaEditando] = useState<Empresa | null>(null);
+  const [importarAberto, setImportarAberto] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   function carregar() {
@@ -153,11 +155,21 @@ export default function EmpresasPage() {
           <button onClick={exportarCsvEmpresas} className="px-3 py-2 rounded-md text-sm font-semibold text-navy/70 border border-navy/15 hover:bg-navy/5 whitespace-nowrap flex items-center gap-1.5">
             <Download size={15} /> Exportar CSV
           </button>
+          <button
+            onClick={() => setImportarAberto(true)}
+            className="px-3 py-2 rounded-md text-sm font-semibold text-navy/70 border border-navy/15 hover:bg-navy/5 whitespace-nowrap flex items-center gap-1.5"
+          >
+            <DatabaseZap size={15} /> Importar leads
+          </button>
           <button onClick={abrirNovo} className="btn-primary whitespace-nowrap">
             <Plus size={16} /> Nova empresa
           </button>
         </div>
       </div>
+
+      {importarAberto && (
+        <ImportarLeadsModal onClose={() => setImportarAberto(false)} onImportado={carregar} />
+      )}
 
       <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
         {loading ? (
