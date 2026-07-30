@@ -118,8 +118,18 @@ async function obterArquivoFinal(filtros: FiltrosBuscaEmpresas, limite: number):
   throw new Error("O arquivo da Casa dos Dados demorou demais pra ficar pronto. Tente novamente em instantes.");
 }
 
-/** Parser de CSV simples que respeita aspas (campos podem ter vírgula dentro). */
+/** Parser de CSV simples que respeita aspas (campos podem ter o delimitador
+ * dentro). Detecta ";" vs "," olhando a primeira linha — CSV brasileiro
+ * geralmente usa ";" porque "," é separador decimal. */
+function detectarDelimitador(texto: string): string {
+  const primeiraLinha = texto.slice(0, texto.indexOf("\n") > -1 ? texto.indexOf("\n") : texto.length);
+  const pontoEVirgula = (primeiraLinha.match(/;/g) ?? []).length;
+  const virgula = (primeiraLinha.match(/,/g) ?? []).length;
+  return pontoEVirgula > virgula ? ";" : ",";
+}
+
 function parseCsv(texto: string): string[][] {
+  const delimitador = detectarDelimitador(texto);
   const linhas: string[][] = [];
   let campo = "";
   let linha: string[] = [];
@@ -138,7 +148,7 @@ function parseCsv(texto: string): string[][] {
       }
     } else if (c === '"') {
       dentroDeAspas = true;
-    } else if (c === ",") {
+    } else if (c === delimitador) {
       linha.push(campo);
       campo = "";
     } else if (c === "\r") {
