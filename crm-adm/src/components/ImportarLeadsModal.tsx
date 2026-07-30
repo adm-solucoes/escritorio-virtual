@@ -152,6 +152,9 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
             mais_filtros: {
               com_telefone: comTelefone || (ddd.trim() ? true : undefined),
               com_email: comEmail || undefined,
+              // O cadastro na Receita Federal às vezes traz o e-mail do
+              // escritório de contabilidade que abriu o CNPJ, não da empresa.
+              excluir_email_contab: true,
             },
           },
         }),

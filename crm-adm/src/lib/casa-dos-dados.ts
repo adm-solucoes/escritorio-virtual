@@ -28,6 +28,7 @@ export interface FiltrosBuscaEmpresas {
     com_email?: boolean;
     com_telefone?: boolean;
     somente_matriz?: boolean;
+    excluir_email_contab?: boolean;
   };
 }
 
