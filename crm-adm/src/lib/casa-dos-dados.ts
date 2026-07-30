@@ -54,7 +54,9 @@ export async function buscarEmpresasCasaDosDados(
     throw new Error("CASA_DOS_DADOS_API_KEY não configurada.");
   }
 
-  const resposta = await fetch(`${HOST}/v5/cnpj/pesquisa?tipo_resultado=simples`, {
+  // "simples" só traz cnpj/razão social/nome fantasia/situação — sem
+  // endereço. Precisamos de "completo" pra preencher cidade/estado.
+  const resposta = await fetch(`${HOST}/v5/cnpj/pesquisa?tipo_resultado=completo`, {
     method: "POST",
     headers: {
       "api-key": apiKey,
