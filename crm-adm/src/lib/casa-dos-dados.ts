@@ -328,6 +328,25 @@ function primeiroSocio(campo: string | undefined): { nome: string | null; cargo:
   return { nome: primeiro || null, cargo: null };
 }
 
+/** MEI/empresário individual não tem sócio cadastrado à parte — o nome do
+ * dono já vem embutido na razão social (ex: "68.169.811 CARLOS ANDRE PEREIRA
+ * DA SILVA" ou "MARCOS JOSE MAGALHAES PEREIRA 07554333780"). Tira os pedaços
+ * numéricos (raiz do CNPJ, CPF) das pontas e usa o que sobrar como contato. */
+function nomeDaRazaoSocial(razaoSocial: string | undefined): string | null {
+  if (!razaoSocial) return null;
+  const tokens = razaoSocial.trim().split(/\s+/);
+  const ehNumerico = (t: string) => /^[\d./-]+$/.test(t);
+  const nomeTokens = tokens.filter((t) => !ehNumerico(t));
+  // Só é padrão de MEI/empresário individual se de fato tinha um pedaço
+  // numérico (raiz do CNPJ, CPF) pra tirar — senão é só o nome da empresa
+  // mesmo, não vira "contato".
+  const removeuAlgumToken = nomeTokens.length < tokens.length;
+  if (removeuAlgumToken && nomeTokens.length >= 2) {
+    return nomeTokens.join(" ");
+  }
+  return null;
+}
+
 export async function buscarEmpresasCasaDosDados(
   filtros: FiltrosBuscaEmpresas,
   limite: number
@@ -366,7 +385,7 @@ export async function buscarEmpresasCasaDosDados(
         telefone: iTelefones >= 0 ? escolherTelefone(l[iTelefones], filtros.ddd) : null,
         email: iEmail >= 0 ? primeiroValor(l[iEmail]) : null,
         segmento: iAtividade >= 0 ? l[iAtividade] || null : null,
-        contato: socio.nome,
+        contato: socio.nome ?? nomeDaRazaoSocial(iRazao >= 0 ? l[iRazao] : undefined),
         cargo: socio.cargo,
       };
     });
