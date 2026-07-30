@@ -12,6 +12,8 @@ import {
   ExternalLink,
   Download,
   Users,
+  PhoneCall,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -71,6 +73,13 @@ export default function AgenteVozPage() {
   const [filtroData, setFiltroData] = useState(""); // cadastradas a partir desta data
   const [filtroStatus, setFiltroStatus] = useState<StatusContato | "todos">("nunca_ligado");
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [urlAgente, setUrlAgente] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("agenteVozUrlBase") ?? "" : ""
+  );
+  const [ligando, setLigando] = useState(false);
+  const [resultadoLigacoes, setResultadoLigacoes] = useState<
+    { empresaId: string; nome: string; ok: boolean; detalhe: string }[] | null
+  >(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -159,6 +168,44 @@ export default function AgenteVozPage() {
     setSelecionados((prev) =>
       prev.size === prospectsFiltrados.length ? new Set() : new Set(prospectsFiltrados.map((e) => e.id))
     );
+  }
+
+  async function ligarAgora() {
+    const url = urlAgente.trim().replace(/\/$/, "");
+    if (!url) {
+      alert("Cola a URL pública (ngrok) do agente de voz antes de ligar.");
+      return;
+    }
+    localStorage.setItem("agenteVozUrlBase", url);
+
+    const ids = Array.from(selecionados);
+    if (
+      !confirm(
+        `Isso vai discar de verdade pra ${ids.length} empresa(s) selecionada(s) agora, via Twilio (custo real). Confirma?`
+      )
+    ) {
+      return;
+    }
+
+    setLigando(true);
+    setResultadoLigacoes(null);
+    try {
+      const resposta = await fetch("/api/agente-voz/ligar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ baseUrl: url, empresaIds: ids }),
+      });
+      const dados = await resposta.json();
+      if (!resposta.ok) {
+        alert(dados.error ?? "Falha ao disparar as ligações.");
+      } else {
+        setResultadoLigacoes(dados.resultados);
+      }
+    } catch {
+      alert("Falha de conexão com o CRM.");
+    } finally {
+      setLigando(false);
+    }
   }
 
   function exportarCsv() {
@@ -357,11 +404,50 @@ export default function AgenteVozPage() {
             </button>
           </div>
 
+          <div className="bg-white rounded-lg border border-navy/10 p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+            <div className="flex flex-col gap-1 flex-1">
+              <label className="text-xs font-semibold text-navy/60">URL pública do agente de voz (ngrok)</label>
+              <input
+                type="text"
+                placeholder="https://xxxx.ngrok-free.app"
+                value={urlAgente}
+                onChange={(e) => setUrlAgente(e.target.value)}
+                className="text-sm border border-navy/15 rounded-md px-2 py-1.5"
+              />
+            </div>
+            <button
+              onClick={ligarAgora}
+              disabled={selecionados.size === 0 || ligando}
+              className="flex items-center gap-1.5 text-sm font-semibold bg-red text-white px-3 py-1.5 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {ligando ? <Loader2 size={14} className="animate-spin" /> : <PhoneCall size={14} />}
+              {ligando ? "Ligando..." : `Ligar agora (${selecionados.size})`}
+            </button>
+          </div>
+
           <p className="text-xs text-navy/50">
-            O CSV exportado (colunas <code>telefone,nome</code>) é compatível com{" "}
-            <code>node scripts/batchDial.js</code> no projeto do agente de voz — dispara direto do seu computador,
-            já que o servidor de ligação não roda no site hospedado.
+            O agente de voz roda no seu computador, exposto via ngrok — precisa estar rodando (
+            <code>npm run dev</code> no projeto do agente) com a URL colada acima pra &quot;Ligar agora&quot; funcionar. Se
+            preferir, o CSV exportado (colunas <code>telefone,nome</code>) continua compatível com{" "}
+            <code>node scripts/batchDial.js</code>.
           </p>
+
+          {resultadoLigacoes && (
+            <div className="bg-white rounded-lg border border-navy/10 p-4 flex flex-col gap-1.5">
+              <p className="text-xs font-semibold text-navy/60 mb-1">Resultado do disparo</p>
+              {resultadoLigacoes.map((r) => (
+                <div key={r.empresaId} className="flex items-center gap-2 text-sm">
+                  {r.ok ? (
+                    <CheckCircle2 size={14} className="text-green-600 shrink-0" />
+                  ) : (
+                    <XCircle size={14} className="text-red shrink-0" />
+                  )}
+                  <span className="font-semibold text-navy">{r.nome}</span>
+                  <span className="text-navy/50 text-xs">{r.detalhe}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {loadingProspects ? (
             <p className="text-sm text-navy/50">Carregando...</p>
