@@ -7,6 +7,7 @@ import { LayoutDashboard, Building2, KanbanSquare, ListChecks, MessageCircle, Ca
 import { supabase } from "@/lib/supabase";
 import { useGcAtual } from "@/lib/useGcAtual";
 import Avatar from "./Avatar";
+import MarcaAdm from "./MarcaAdm";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -78,6 +79,7 @@ export default function Sidebar() {
         <button onClick={() => setMobileOpen(true)} className="text-cream p-1" aria-label="Abrir menu">
           <Menu size={22} />
         </button>
+        <MarcaAdm tamanho={16} />
         <span className="font-bold text-sm text-cream" style={{ fontFamily: "var(--font-serif-accent)" }}>
           ADM Soluções
         </span>
@@ -98,10 +100,7 @@ export default function Sidebar() {
         } ${expanded ? "md:w-64" : "md:w-16"} ${!mobileOpen ? "w-64" : ""}`}
       >
         <div className="flex items-center gap-2.5 px-4 h-16 shrink-0">
-          <span className="relative inline-flex w-4 h-4 shrink-0">
-            <span className="absolute top-0 right-0 w-3 h-3 rounded-[3px] bg-red" />
-            <span className="absolute bottom-0 left-0 w-2 h-2 rounded-[2px] bg-red/70" />
-          </span>
+          <MarcaAdm tamanho={16} className="shrink-0" />
           <span
             className="font-bold text-sm text-cream whitespace-nowrap overflow-hidden transition-opacity duration-150"
             style={{ opacity: mostrarTexto ? 1 : 0 }}

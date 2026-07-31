@@ -5,23 +5,9 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { ArrowLeft } from "lucide-react";
 import PasswordInput from "@/components/PasswordInput";
+import MarcaAdm from "@/components/MarcaAdm";
 
 const UM_DIA = 60 * 60 * 24;
-
-function MarcaAdm({ tamanho = 16 }: { tamanho?: number }) {
-  return (
-    <span className="relative inline-flex shrink-0" style={{ width: tamanho, height: tamanho }}>
-      <span
-        className="absolute top-0 right-0 bg-red"
-        style={{ width: tamanho * 0.75, height: tamanho * 0.75, borderRadius: tamanho * 0.06 }}
-      />
-      <span
-        className="absolute bottom-0 left-0 bg-red/70"
-        style={{ width: tamanho * 0.5, height: tamanho * 0.5, borderRadius: tamanho * 0.05 }}
-      />
-    </span>
-  );
-}
 
 /** Painel de marca — metade esquerda em telas largas. Puramente decorativo
  * (textura de pontos + mark ampliado), então não atrapalha se alguém não
