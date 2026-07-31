@@ -1,12 +1,20 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { enviarEmail } from "@/lib/email";
 import { enviarWhatsappGenerico } from "@/lib/whatsapp-envio";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  // CRÍTICO: aprovar uma sugestão dispara a mensagem pro cliente. Sem login
+  // aqui, qualquer um furava a trava de "humano precisa aprovar" que é a
+  // base da seguranca da IA. Quem revisou = a sessão, nunca o corpo.
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+  const gcId = sessao.gc.id;
+
   try {
-    const { sugestaoId, acao, conteudoEditado, gcId } = await request.json();
+    const { sugestaoId, acao, conteudoEditado } = await request.json();
     if (!sugestaoId || (acao !== "aprovar" && acao !== "descartar")) {
       return Response.json({ error: "Parâmetros inválidos" }, { status: 400 });
     }

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { enviarMidia, enviarTexto } from "@/lib/instagram-api";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,13 @@ const TIPO_MIDIA_PARA_GRAPH: Record<string, "image" | "video"> = {
 };
 
 export async function POST(request: Request) {
+  // Mesma correção do WhatsApp: exige login e o remetente vem da sessão.
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+  const gcId = sessao.gc.id;
+
   try {
-    const { conversaId, texto, midia, nota, gcId } = await request.json();
+    const { conversaId, texto, midia, nota } = await request.json();
     if (!conversaId) {
       return Response.json({ error: "conversaId é obrigatório" }, { status: 400 });
     }

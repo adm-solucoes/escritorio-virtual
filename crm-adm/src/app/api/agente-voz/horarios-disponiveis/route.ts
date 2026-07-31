@@ -69,7 +69,15 @@ function calcularSlotsLivres(eventosPorGc: Map<string, EventoOcupado[]>): Horari
   return slots;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Chamado pelo servidor do agente de voz (não é sessão de navegador), então
+  // autentica pelo segredo compartilhado — antes vazava a disponibilidade da
+  // agenda do time pra qualquer um que batesse na URL.
+  const chave = request.headers.get("x-api-key");
+  if (!chave || chave !== process.env.AGENTE_VOZ_WEBHOOK_SECRET) {
+    return Response.json({ error: "Chave de API ausente ou inválida" }, { status: 401 });
+  }
+
   try {
     const admin = createAdminClient();
     // Só entra agenda de quem tem papel "comercial" — não pode misturar com

@@ -3,6 +3,7 @@ import { criarEventoReuniao } from "@/lib/google-calendar";
 import { enviarEmail, montarEmailConfirmacaoReuniao } from "@/lib/email";
 import { enviarWhatsappGenerico } from "@/lib/whatsapp-envio";
 import { normalizarTelefoneE164 } from "@/lib/whatsapp";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
@@ -46,11 +47,18 @@ async function registrarLog(
 }
 
 export async function POST(request: Request) {
+  // Exige login e usa o GC da sessão como responsável — antes agia sem
+  // autenticação e confiando no gcId do corpo (dava pra agendar em nome de
+  // qualquer GC e disparar e-mail/WhatsApp de confirmação sem estar logado).
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+  const gcId = sessao.gc.id;
+
   try {
     const corpo: CorpoRequisicao = await request.json();
-    const { gcId, nome, email, telefone, dataISO, hora, motivo } = corpo;
+    const { nome, email, telefone, dataISO, hora, motivo } = corpo;
 
-    if (!gcId || !nome || !email || !dataISO || !hora || !motivo) {
+    if (!nome || !email || !dataISO || !hora || !motivo) {
       return Response.json({ error: "Faltam campos obrigatórios (nome, e-mail, data, hora ou motivo)." }, { status: 400 });
     }
 

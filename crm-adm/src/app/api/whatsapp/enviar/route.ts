@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { enviarMidia, enviarTemplate, enviarTexto } from "@/lib/whatsapp-api";
+import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +11,15 @@ const TIPO_MIDIA_PARA_GRAPH: Record<string, "image" | "document" | "audio"> = {
 };
 
 export async function POST(request: Request) {
+  // Sem isso, qualquer um na internet mandava mensagem de WhatsApp pros
+  // clientes pelo número oficial da empresa. O gcId (quem envia) vem sempre
+  // da sessão real — nunca do corpo, pra não dar pra se passar por outro GC.
+  const sessao = await exigirSessao();
+  if ("erro" in sessao) return Response.json({ error: sessao.erro }, { status: sessao.status });
+  const gcId = sessao.gc.id;
+
   try {
-    const { conversaId, texto, template, midia, nota, gcId } = await request.json();
+    const { conversaId, texto, template, midia, nota } = await request.json();
     if (!conversaId) {
       return Response.json({ error: "conversaId é obrigatório" }, { status: 400 });
     }
