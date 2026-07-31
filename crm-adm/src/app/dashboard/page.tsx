@@ -1,6 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  Users,
+  Briefcase,
+  Wallet,
+  Target,
+  Trophy,
+  Ticket,
+  Percent,
+  ThumbsUp,
+  ThumbsDown,
+  TrendingUp,
+  PieChart,
+  Layers,
+  GitBranch,
+  Timer,
+  Table2,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   ETAPAS_FUNIL,
@@ -176,36 +193,45 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-extrabold text-navy">Dashboard comercial</h1>
-        <p className="text-sm text-navy/60">Visão geral do funil e da carteira de empresas</p>
+    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-7 flex flex-col gap-7">
+      <div className="flex items-baseline justify-between gap-3 border-b border-navy/[0.07] pb-5">
+        <div>
+          <h1 className="text-2xl font-extrabold text-navy tracking-tight">Dashboard comercial</h1>
+          <p className="text-sm text-navy/50 mt-0.5">Visão geral do funil e da carteira de empresas</p>
+        </div>
+        <p className="text-xs font-semibold text-navy/40 uppercase tracking-wide hidden sm:block">
+          {mesAtual.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label="Total de leads" value={empresas.length.toString()} />
-        <StatCard label="Oportunidades" value={oportunidades.length.toString()} />
-        <StatCard label="Pipeline aberto" value={moeda(metricas.valorPipeline)} />
-        <StatCard label="Pipeline ponderado" value={moeda(metricas.valorPonderado)} destaque />
-        <StatCard label="Receita fechada" value={moeda(metricas.receitaFechada)} delta={deltaReceita} sub="vs. mês anterior" />
-        <StatCard label="Ticket médio" value={moeda(metricas.ticketMedio)} />
+        <StatCard label="Total de leads" value={empresas.length.toString()} icon={Users} />
+        <StatCard label="Oportunidades" value={oportunidades.length.toString()} icon={Briefcase} />
+        <StatCard label="Pipeline aberto" value={moeda(metricas.valorPipeline)} icon={Wallet} />
+        <StatCard label="Pipeline ponderado" value={moeda(metricas.valorPonderado)} icon={Target} destaque />
+        <StatCard label="Receita fechada" value={moeda(metricas.receitaFechada)} delta={deltaReceita} sub="vs. mês anterior" icon={Trophy} />
+        <StatCard label="Ticket médio" value={moeda(metricas.ticketMedio)} icon={Ticket} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <StatCard label="Taxa de conversão" value={`${metricas.taxaConversao.toFixed(0)}%`} sub={`${metricas.ganhas} ganhas · ${metricas.perdidas} perdidas`} />
-        <StatCard label="Oportunidades ganhas" value={metricas.ganhas.toString()} />
+        <StatCard label="Taxa de conversão" value={`${metricas.taxaConversao.toFixed(0)}%`} sub={`${metricas.ganhas} ganhas · ${metricas.perdidas} perdidas`} icon={Percent} />
+        <StatCard label="Oportunidades ganhas" value={metricas.ganhas.toString()} icon={ThumbsUp} />
         <StatCard
           label="Oportunidades perdidas"
           value={metricas.perdidas.toString()}
           delta={deltaPerdas}
           deltaGoodDirection="down"
           sub="valor perdido vs. mês anterior"
+          icon={ThumbsDown}
         />
       </div>
 
       {(metaEquipe || gcs.length > 0) && (
-        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-navy mb-3">
+        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-elevated">
+          <h2 className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
+              <Target size={13} />
+            </span>
             Metas de {mesAtual.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
           </h2>
           <div className="flex flex-col gap-3">
@@ -228,8 +254,13 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
-        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-navy mb-4">Receita por mês — Ganhas × Perdidas</h2>
+        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-elevated">
+          <h2 className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
+              <TrendingUp size={13} />
+            </span>
+            Receita por mês — Ganhas × Perdidas
+          </h2>
           <LineChart
             series={[
               { name: "Ganhas", color: COR_GANHOS, valores: serieMensal.map((m) => m.ganho) },
@@ -241,8 +272,13 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm flex flex-col">
-          <h2 className="text-sm font-bold text-navy mb-3">Top 5 leads (score)</h2>
+        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-sm flex flex-col">
+          <h2 className="text-sm font-bold text-navy mb-3.5 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
+              <Trophy size={13} />
+            </span>
+            Top 5 leads (score)
+          </h2>
           <div className="flex flex-col gap-2.5">
             {topLeads.map(({ empresa, score }) => {
               const classificacao = classificarScore(score);
@@ -261,9 +297,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-sm">
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-sm font-bold text-navy">Empresas por temperatura</h2>
+            <h2 className="text-sm font-bold text-navy flex items-center gap-2">
+              <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
+                <PieChart size={13} />
+              </span>
+              Empresas por temperatura
+            </h2>
             <span className="text-xs text-navy/40">{empresas.length} no total</span>
           </div>
           <DonutChart
@@ -274,9 +315,14 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-sm">
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-sm font-bold text-navy">Empresas por ICP</h2>
+            <h2 className="text-sm font-bold text-navy flex items-center gap-2">
+              <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
+                <Layers size={13} />
+              </span>
+              Empresas por ICP
+            </h2>
             <span className="text-xs text-navy/40">{empresas.length} no total</span>
           </div>
           <DonutChart
@@ -288,9 +334,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
-        <h2 className="text-sm font-bold text-navy px-4 pt-4">Oportunidades por etapa</h2>
-        <table className="w-full text-sm mt-2">
+      <div className="bg-white rounded-xl border border-navy/[0.07] overflow-x-auto shadow-sm">
+        <h2 className="text-sm font-bold text-navy px-5 pt-5 flex items-center gap-2">
+          <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
+            <Table2 size={13} />
+          </span>
+          Oportunidades por etapa
+        </h2>
+        <table className="w-full text-sm mt-3">
           <thead>
             <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
               <th className="px-4 py-2 font-semibold">Etapa</th>
@@ -317,8 +368,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-navy/10 p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-navy mb-3">Funil de conversão (Comercial)</h2>
+        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-navy mb-3.5 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
+              <GitBranch size={13} />
+            </span>
+            Funil de conversão (Comercial)
+          </h2>
           {funil[0]?.qtd === 0 ? (
             <p className="text-xs text-navy/40">Sem oportunidades comerciais suficientes ainda.</p>
           ) : (
@@ -332,10 +388,16 @@ export default function DashboardPage() {
               label="Ciclo médio de vendas"
               value={cicloVendas.amostras ? `${cicloVendas.diasMedios} dias` : "—"}
               sub={cicloVendas.amostras ? `${cicloVendas.amostras} oportunidade${cicloVendas.amostras > 1 ? "s" : ""} fechada${cicloVendas.amostras > 1 ? "s" : ""} · Prospect → Contrato Fechado` : "Ainda sem oportunidades fechadas"}
+              icon={Timer}
             />
           </div>
-          <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm flex-1">
-            <h2 className="text-sm font-bold text-navy px-4 pt-4 pb-1">Tempo médio por etapa</h2>
+          <div className="bg-white rounded-xl border border-navy/[0.07] overflow-x-auto shadow-sm flex-1">
+            <h2 className="text-sm font-bold text-navy px-5 pt-5 pb-1 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
+                <Table2 size={13} />
+              </span>
+              Tempo médio por etapa
+            </h2>
             {tempoPorEtapa.length === 0 ? (
               <p className="px-4 pb-4 text-xs text-navy/40">Ainda sem histórico suficiente.</p>
             ) : (
