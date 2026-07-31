@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-admin";
-import { trocarCodigoPorTokens } from "@/lib/google-calendar";
+import { trocarCodigoPorTokens, verificarStateGoogle } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +7,10 @@ export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const gcId = searchParams.get("state");
+  // O gcId vem do state ASSINADO — se veio adulterado/forjado/expirado,
+  // verificarStateGoogle devolve null e a gente recusa. Fecha o sequestro de
+  // vínculo (gravar tokens do atacante na conta de outra pessoa).
+  const gcId = verificarStateGoogle(searchParams.get("state"));
 
   if (!code || !gcId) {
     return Response.redirect(`${siteUrl}/configuracoes?google=erro`);

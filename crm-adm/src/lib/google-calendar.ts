@@ -1,10 +1,52 @@
 // Integração com o Google Calendar do próprio GC (OAuth individual — cada GC conecta a
 // conta Google com o mesmo e-mail que usa pra logar no CRM). Nunca expor tokens no client.
 
+import crypto from "node:crypto";
 import { google } from "googleapis";
 import { createAdminClient } from "@/lib/supabase-admin";
 
 const SCOPES = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/userinfo.email"];
+
+// O `state` do OAuth carrega o gcId, mas ASSINADO — senão um atacante podia
+// montar a URL de consentimento do Google com o gcId de uma vítima, autorizar
+// com a PRÓPRIA conta Google e o callback gravaria os tokens dele na conta da
+// vítima (sequestro de vínculo). Só quem tem sessão (rota /api/google/conectar)
+// consegue gerar um state válido, e ele expira em 15 min.
+const STATE_TTL_MS = 15 * 60 * 1000;
+
+function segredoState(): string {
+  const s = process.env.SUPABASE_SECRET_KEY;
+  if (!s) throw new Error("SUPABASE_SECRET_KEY não configurada (necessária pra assinar o state do OAuth)");
+  return s;
+}
+
+export function assinarStateGoogle(gcId: string): string {
+  const payload = `${gcId}.${Date.now()}`;
+  const assinatura = crypto.createHmac("sha256", segredoState()).update(payload).digest("base64url");
+  return Buffer.from(`${payload}.${assinatura}`).toString("base64url");
+}
+
+/** Devolve o gcId se o state for válido e não expirado; senão null. */
+export function verificarStateGoogle(state: string | null): string | null {
+  if (!state) return null;
+  let decodificado: string;
+  try {
+    decodificado = Buffer.from(state, "base64url").toString("utf8");
+  } catch {
+    return null;
+  }
+  const partes = decodificado.split(".");
+  if (partes.length !== 3) return null;
+  const [gcId, ts, assinatura] = partes;
+
+  const esperada = crypto.createHmac("sha256", segredoState()).update(`${gcId}.${ts}`).digest("base64url");
+  const a = Buffer.from(assinatura);
+  const b = Buffer.from(esperada);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+
+  if (Date.now() - Number(ts) > STATE_TTL_MS) return null;
+  return gcId;
+}
 
 function oauthClientBase() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -21,7 +63,7 @@ export function gerarUrlAutorizacaoGoogle(gcId: string) {
     access_type: "offline",
     prompt: "consent",
     scope: SCOPES,
-    state: gcId,
+    state: assinarStateGoogle(gcId),
   });
 }
 
