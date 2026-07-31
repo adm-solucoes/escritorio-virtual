@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { enviarMidia } from "@/lib/whatsapp-api";
+import { assinaturaMetaValida } from "@/lib/meta-webhook";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +75,13 @@ interface StatusRecebido {
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json();
+    // Lê o corpo cru pra validar a assinatura HMAC da Meta antes de confiar
+    // em qualquer coisa do payload.
+    const rawBody = await request.text();
+    if (!assinaturaMetaValida(rawBody, request.headers.get("x-hub-signature-256"), process.env.WHATSAPP_APP_SECRET)) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    const payload = JSON.parse(rawBody);
     const admin = createAdminClient();
 
     const changes = payload?.entry?.[0]?.changes?.[0]?.value;

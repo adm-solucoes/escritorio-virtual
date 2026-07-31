@@ -472,9 +472,16 @@ function ConfiguracoesConteudo() {
 
   async function alternarStatus(gc: Gc) {
     const novoStatus = gc.status === "Ativo" ? "Inativo" : "Ativo";
-    const { error } = await supabase.from("gcs").update({ status: novoStatus }).eq("id", gc.id);
-    if (error) {
-      alert("Erro ao atualizar: " + error.message);
+    // Vai pelo servidor (gestor-only). O banco não deixa mais o cliente
+    // escrever status/role direto — era a brecha de privilege escalation.
+    const res = await fetch("/api/membros/atualizar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gcId: gc.id, status: novoStatus }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert("Erro ao atualizar: " + (d.error ?? res.status));
       return;
     }
     setRefreshGcsKey((k) => k + 1);
@@ -500,9 +507,14 @@ function ConfiguracoesConteudo() {
   }, [souGestor]);
 
   async function atualizarPapel(gc: Gc, novoRole: RoleGc) {
-    const { error } = await supabase.from("gcs").update({ role: novoRole }).eq("id", gc.id);
-    if (error) {
-      alert("Erro ao atualizar papel: " + error.message);
+    const res = await fetch("/api/membros/atualizar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gcId: gc.id, role: novoRole }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert("Erro ao atualizar papel: " + (d.error ?? res.status));
       return;
     }
     setRefreshGcsKey((k) => k + 1);

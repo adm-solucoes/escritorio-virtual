@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { buscarPerfil } from "@/lib/instagram-api";
+import { assinaturaMetaValida } from "@/lib/meta-webhook";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,11 @@ interface ItemMessaging {
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json();
+    const rawBody = await request.text();
+    if (!assinaturaMetaValida(rawBody, request.headers.get("x-hub-signature-256"), process.env.INSTAGRAM_APP_SECRET)) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    const payload = JSON.parse(rawBody);
     if (payload?.object !== "instagram") return Response.json({ ok: true });
 
     const admin = createAdminClient();
