@@ -18,12 +18,25 @@
 -- login aqui não afeta nenhuma tela.
 -- ==========================================================
 
--- Remove as políticas antigas de leitura pública (nomes exatos das migrations
--- originais: 013_whatsapp_extras, 025_instagram, 023_fase_h_anexos, 029_avatares).
-drop policy if exists "whatsapp media leitura publica" on storage.objects;
-drop policy if exists "instagram media leitura publica" on storage.objects;
-drop policy if exists "anexos leitura publica" on storage.objects;
-drop policy if exists "avatares leitura publica" on storage.objects;
+-- Remove QUALQUER política de SELECT em storage.objects concedida a `public`
+-- ou `anon` (independe do nome exato — se sobrar uma `to public`, o RLS soma
+-- as políticas por OU e a listagem anônima continuaria valendo). Só mexe em
+-- SELECT; upload/delete já foram tratados na 034 e ficam como estão.
+do $st$
+declare
+  p record;
+begin
+  for p in
+    select policyname, roles, cmd
+    from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and cmd in ('SELECT', 'ALL')
+      and (roles && array['public','anon']::name[])
+  loop
+    execute format('drop policy %I on storage.objects', p.policyname);
+  end loop;
+end
+$st$;
 
 -- Recria a leitura restrita a usuários logados, bucket a bucket.
 drop policy if exists "whatsapp media leitura autenticada" on storage.objects;
