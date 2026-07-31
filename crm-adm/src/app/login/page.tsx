@@ -28,7 +28,7 @@ function PainelDeMarca() {
       />
 
       <div className="relative flex items-center gap-2.5">
-        <MarcaAdm tamanho={18} />
+        <MarcaAdm tamanho={18} variante="branco" />
         <span className="font-bold text-cream" style={{ fontFamily: "var(--font-serif-accent)" }}>
           ADM Soluções
         </span>

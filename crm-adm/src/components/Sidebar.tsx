@@ -79,7 +79,7 @@ export default function Sidebar() {
         <button onClick={() => setMobileOpen(true)} className="text-cream p-1" aria-label="Abrir menu">
           <Menu size={22} />
         </button>
-        <MarcaAdm tamanho={16} />
+        <MarcaAdm tamanho={16} variante="branco" />
         <span className="font-bold text-sm text-cream" style={{ fontFamily: "var(--font-serif-accent)" }}>
           ADM Soluções
         </span>
@@ -100,7 +100,7 @@ export default function Sidebar() {
         } ${expanded ? "md:w-64" : "md:w-16"} ${!mobileOpen ? "w-64" : ""}`}
       >
         <div className="flex items-center gap-2.5 px-4 h-16 shrink-0">
-          <MarcaAdm tamanho={16} className="shrink-0" />
+          <MarcaAdm tamanho={16} variante="branco" className="shrink-0" />
           <span
             className="font-bold text-sm text-cream whitespace-nowrap overflow-hidden transition-opacity duration-150"
             style={{ opacity: mostrarTexto ? 1 : 0 }}

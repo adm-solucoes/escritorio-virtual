@@ -1,19 +1,26 @@
-/** Mark oficial da ADM Soluções: três quadrados arredondados vermelhos em
- * cascata diagonal, crescendo do canto inferior esquerdo pro superior
- * direito. Componente único pra sidebar e login nunca ficarem dessincronizados. */
-export default function MarcaAdm({ tamanho = 16, className }: { tamanho?: number; className?: string }) {
+/* eslint-disable @next/next/no-img-element */
+
+/** Mark oficial da ADM Soluções — arquivo real extraído do Branding Book
+ * (2026.1), não uma recriação. "vermelho" pra fundo claro, "branco" pra
+ * fundo escuro (navy). Nunca redesenhar isso à mão de novo — se precisar de
+ * outra variante/tamanho, tirar do PDF do branding book. */
+export default function MarcaAdm({
+  tamanho = 16,
+  variante = "vermelho",
+  className,
+}: {
+  tamanho?: number;
+  variante?: "vermelho" | "branco";
+  className?: string;
+}) {
   return (
-    <svg
-      viewBox="0 0 100 100"
+    <img
+      src={variante === "branco" ? "/brand/marca-icone-branco.png" : "/brand/marca-icone-vermelho.png"}
+      alt="ADM Soluções"
       width={tamanho}
       height={tamanho}
       className={className}
-      style={{ display: "block" }}
-      aria-hidden
-    >
-      <rect x="0" y="76" width="24" height="24" rx="7" fill="var(--adm-red)" />
-      <rect x="16" y="44" width="40" height="40" rx="11" fill="var(--adm-red)" />
-      <rect x="34" y="0" width="66" height="66" rx="16" fill="var(--adm-red)" />
-    </svg>
+      style={{ display: "block", width: tamanho, height: tamanho, objectFit: "contain" }}
+    />
   );
 }
