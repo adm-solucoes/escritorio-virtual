@@ -245,6 +245,18 @@ export function gestoresDaArea(gcs: Gc[], area: string | null): Gc[] {
   return gcs.filter((gc) => gc.cargo && cargosGestores.has(gc.cargo));
 }
 
+/** O cargo agora É o controle de acesso — não existe mais um "papel"
+ * escolhido à parte. Cargo de gestor de área vira acesso de gestor no
+ * sistema; cargo de linha vira acesso comercial; sem cargo nenhum, sem
+ * acesso — obriga alguém a atribuir um cargo antes da pessoa ver qualquer
+ * coisa. */
+export function nivelAcessoDoCargo(cargo: string | null | undefined): RoleGc {
+  if (!cargo) return "sem_acesso";
+  const config = CARGOS.find((c) => c.label === cargo);
+  if (!config) return "sem_acesso";
+  return config.gestor ? "gestor" : "comercial";
+}
+
 export type StatusSolicitacao = "Pendente" | "Em andamento" | "Atendida" | "Recusada";
 
 export interface Solicitacao {

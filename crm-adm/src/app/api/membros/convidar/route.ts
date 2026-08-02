@@ -30,7 +30,16 @@ export async function POST(request: Request) {
       return Response.json({ error: resultado.error }, { status: 400 });
     }
 
-    const { error: erroGc } = await resultado.admin!.from("gcs").upsert({ nome, email, status: "Ativo" }, { onConflict: "email" });
+    // Se já existe um GC com esse e-mail (reenvio de convite), só reativa —
+    // não mexe no cargo/acesso que a pessoa já tinha. Se for gente nova de
+    // verdade, nasce sem cargo e sem acesso: alguém precisa atribuir o cargo
+    // em Configurações antes dela ver qualquer coisa (o cargo é o que agora
+    // define o nível de acesso, não tem mais um "papel" escolhido à parte).
+    const admin = resultado.admin!;
+    const { data: existente } = await admin.from("gcs").select("id").eq("email", email).maybeSingle();
+    const { error: erroGc } = existente
+      ? await admin.from("gcs").update({ nome, status: "Ativo" }).eq("id", existente.id)
+      : await admin.from("gcs").insert({ nome, email, status: "Ativo", cargo: null, role: "sem_acesso" });
     if (erroGc) {
       return Response.json({ error: erroGc.message }, { status: 400 });
     }

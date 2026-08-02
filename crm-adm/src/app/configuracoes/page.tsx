@@ -8,6 +8,7 @@ import {
   CARGOS,
   ETAPAS_FUNIL,
   META_EQUIPE_ID,
+  nivelAcessoDoCargo,
   type AcaoRapidaContato,
   type ChecklistEtapaItem,
   type ConfiguracaoRelatorio,
@@ -21,6 +22,12 @@ import {
   type ScoreRule,
   type WhatsappNumero,
 } from "@/lib/types";
+
+const ROTULO_NIVEL_ACESSO: Record<RoleGc, string> = {
+  gestor: "Gestor (acesso total)",
+  comercial: "Comercial (própria carteira)",
+  sem_acesso: "Sem acesso",
+};
 import TrocarSenha from "@/components/TrocarSenha";
 import EditarFoto from "@/components/EditarFoto";
 import { badgeClasses } from "@/components/Badge";
@@ -500,20 +507,6 @@ export default function ConfiguracoesPage() {
       });
   }, [souGestor]);
 
-  async function atualizarPapel(gc: Gc, novoRole: RoleGc) {
-    const res = await fetch("/api/membros/atualizar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gcId: gc.id, role: novoRole }),
-    });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      alert("Erro ao atualizar papel: " + (d.error ?? res.status));
-      return;
-    }
-    setRefreshGcsKey((k) => k + 1);
-  }
-
   async function atualizarCargo(gc: Gc, novoCargo: string) {
     const res = await fetch("/api/membros/atualizar", {
       method: "POST",
@@ -747,7 +740,6 @@ export default function ConfiguracoesPage() {
                 <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                   <th className="px-4 py-3 font-semibold">Nome</th>
                   <th className="px-4 py-3 font-semibold">E-mail</th>
-                  <th className="px-4 py-3 font-semibold">Papel</th>
                   <th className="px-4 py-3 font-semibold">Cargo</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-4 py-3 font-semibold"></th>
@@ -761,27 +753,19 @@ export default function ConfiguracoesPage() {
                     <td className="px-4 py-3">
                       <select
                         className="input py-1"
-                        value={gc.role}
-                        onChange={(e) => atualizarPapel(gc, e.target.value as RoleGc)}
-                      >
-                        <option value="gestor">Gestor</option>
-                        <option value="comercial">Comercial</option>
-                        <option value="sem_acesso">Sem acesso (Pipeline/WhatsApp)</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        className="input py-1"
                         value={gc.cargo ?? ""}
                         onChange={(e) => atualizarCargo(gc, e.target.value)}
                       >
-                        <option value="">— Sem cargo definido —</option>
+                        <option value="">— Sem cargo (sem acesso) —</option>
                         {CARGOS.map((c) => (
                           <option key={c.label} value={c.label}>
                             {c.label}
                           </option>
                         ))}
                       </select>
+                      <p className="text-[11px] text-navy/40 mt-0.5">
+                        Acesso: {ROTULO_NIVEL_ACESSO[nivelAcessoDoCargo(gc.cargo)]}
+                      </p>
                     </td>
                     <td className="px-4 py-3">
                       <span
