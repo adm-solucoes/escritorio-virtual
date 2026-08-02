@@ -1,7 +1,15 @@
+import { z } from "zod";
 import { enviarLinkDeAcesso } from "@/lib/link-acesso";
 import { exigirSessao } from "@/lib/auth-api";
+import { emailValido, lerCorpoValidado, textoLivre } from "@/lib/validacao";
+import { limitarPorIdentificador, respostaLimiteExcedido } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const schema = z.object({
+  nome: textoLivre(120).min(1),
+  email: emailValido,
+});
 
 export async function POST(request: Request) {
   const sessao = await exigirSessao();
@@ -12,10 +20,15 @@ export async function POST(request: Request) {
   if (sessao.gc.role !== "gestor") return Response.json({ error: "Sem acesso." }, { status: 403 });
 
   try {
-    const { nome, email } = await request.json();
-    if (!nome || !email) {
-      return Response.json({ error: "Nome e e-mail são obrigatórios" }, { status: 400 });
-    }
+    const corpo = await lerCorpoValidado(request, schema);
+    if (!corpo.ok) return corpo.resposta;
+    const { nome, email } = corpo.dados;
+
+    // Limite por e-mail além do limite por IP: mesmo um gestor legítimo (ou
+    // uma conta de gestor comprometida) não deve conseguir usar o convite pra
+    // bombardear a caixa de entrada de alguém.
+    const cota = await limitarPorIdentificador(email);
+    if (!cota.permitido) return respostaLimiteExcedido(cota);
 
     const resultado = await enviarLinkDeAcesso({
       email,

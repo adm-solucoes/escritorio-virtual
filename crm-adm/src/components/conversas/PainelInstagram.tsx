@@ -164,7 +164,7 @@ export default function PainelInstagram({ conversa, gcAtual, onVoltarMobile, onC
             <ChevronLeft size={20} />
           </button>
           <div className="relative shrink-0">
-            <Avatar nome={nomeContato} tamanho="md" />
+            <Avatar nome={nomeContato} fotoUrl={conversa.foto_perfil_url} tamanho="md" />
             <CanalBadge canal="instagram" tamanho="sm" />
           </div>
           <div className="min-w-0">
@@ -197,7 +197,7 @@ export default function PainelInstagram({ conversa, gcAtual, onVoltarMobile, onC
             <NotaInternaBubble key={m.id} autor={m.gcs?.nome} conteudo={m.conteudo} criadoEm={m.criado_em} />
           ) : (
             <div key={m.id} className={`flex items-end gap-2 ${m.direcao === "enviada" ? "justify-end" : "justify-start"}`}>
-              {m.direcao === "recebida" && <Avatar nome={nomeContato} tamanho="sm" />}
+              {m.direcao === "recebida" && <Avatar nome={nomeContato} fotoUrl={conversa.foto_perfil_url} tamanho="sm" />}
               <div
                 className={`max-w-[70%] rounded-xl px-3 py-2 text-sm ${
                   m.direcao === "enviada" ? "bg-blue text-white rounded-br-sm" : "bg-white text-navy border border-navy/15 rounded-bl-sm"

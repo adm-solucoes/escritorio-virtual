@@ -1,14 +1,24 @@
+import { z } from "zod";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { emailValido, lerCorpoValidado } from "@/lib/validacao";
+import { limitarPorIdentificador, respostaLimiteExcedido } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
+const schema = z.object({ email: emailValido });
+
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
-    if (!email) {
-      return Response.json({ error: "E-mail é obrigatório" }, { status: 400 });
-    }
+    const corpo = await lerCorpoValidado(request, schema);
+    if (!corpo.ok) return corpo.resposta;
+    const { email } = corpo.dados;
+
+    // Segundo limite, por e-mail, somado ao limite por IP que o proxy já
+    // aplicou. O de IP sozinho não segura uma botnet — cada requisição viria
+    // de um IP virgem e ainda assim martelaria a mesma caixa de entrada.
+    const cota = await limitarPorIdentificador(email);
+    if (!cota.permitido) return respostaLimiteExcedido(cota);
 
     const admin = createAdminClient();
 

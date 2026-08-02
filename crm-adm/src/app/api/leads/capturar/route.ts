@@ -1,12 +1,30 @@
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { lerCorpoValidado, textoLivre } from "@/lib/validacao";
 
 export const dynamic = "force-dynamic";
 
-function limpar(valor: unknown, max = 200): string | null {
-  if (typeof valor !== "string") return null;
-  const v = valor.trim().slice(0, max);
-  return v || null;
-}
+/** Campo opcional de texto: normaliza "" e ausência pro mesmo `null` que o
+ * banco espera, e corta no tamanho da coluna. Vazio não vira string vazia. */
+const opcional = (max: number) =>
+  textoLivre(max)
+    .transform((v) => v || null)
+    .nullish()
+    .transform((v) => v ?? null);
+
+/** Formulário público hospedado por terceiro (site do cliente) — pode mandar
+ * campos extras que não são nossos (utm, honeypot, etc). `looseObject` deixa
+ * passar sem quebrar; só consumimos o que está declarado aqui. */
+const schema = z.looseObject({
+  nome_empresa: textoLivre(200).min(1, "obrigatório"),
+  nome_contato: opcional(200),
+  cargo: opcional(200),
+  telefone: opcional(30),
+  email: opcional(200),
+  cidade: opcional(100),
+  estado: opcional(2),
+  segmento: opcional(100),
+});
 
 export async function POST(request: Request) {
   const chave = request.headers.get("x-api-key");
@@ -29,29 +47,21 @@ export async function POST(request: Request) {
     return Response.json({ error: "Chave de API inválida ou formulário desativado" }, { status: 401 });
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Corpo da requisição inválido (esperado JSON)" }, { status: 400 });
-  }
-
-  const nomeEmpresa = limpar(body.nome_empresa);
-  if (!nomeEmpresa) {
-    return Response.json({ error: "Campo nome_empresa é obrigatório" }, { status: 400 });
-  }
+  const corpo = await lerCorpoValidado(request, schema);
+  if (!corpo.ok) return corpo.resposta;
+  const body = corpo.dados;
 
   const { data, error } = await supabase
     .from("empresas")
     .insert({
-      nome_empresa: nomeEmpresa,
-      nome_contato: limpar(body.nome_contato),
-      cargo: limpar(body.cargo),
-      telefone: limpar(body.telefone, 30),
-      email: limpar(body.email),
-      cidade: limpar(body.cidade, 100),
-      estado: limpar(body.estado, 2),
-      segmento: limpar(body.segmento, 100),
+      nome_empresa: body.nome_empresa,
+      nome_contato: body.nome_contato,
+      cargo: body.cargo,
+      telefone: body.telefone,
+      email: body.email,
+      cidade: body.cidade,
+      estado: body.estado,
+      segmento: body.segmento,
       origem_lead: formulario.origem_lead ?? "Formulário público",
       data_cadastro: new Date().toISOString().slice(0, 10),
     })

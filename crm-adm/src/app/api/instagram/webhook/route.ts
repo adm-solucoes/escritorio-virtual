@@ -37,7 +37,13 @@ async function encontrarOuCriarConversa(admin: ReturnType<typeof createAdminClie
 
   const { data: nova } = await admin
     .from("instagram_conversas")
-    .insert({ instagram_scoped_id: igsid, username: perfil.username, nome_perfil: perfil.nome, empresa_id: empresaId })
+    .insert({
+      instagram_scoped_id: igsid,
+      username: perfil.username,
+      nome_perfil: perfil.nome,
+      foto_perfil_url: perfil.fotoUrl,
+      empresa_id: empresaId,
+    })
     .select("*")
     .single();
 

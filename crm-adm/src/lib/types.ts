@@ -492,6 +492,7 @@ export interface InstagramConversa {
   instagram_scoped_id: string;
   username: string | null;
   nome_perfil: string | null;
+  foto_perfil_url: string | null;
   ultima_mensagem_em: string | null;
   status: StatusConversaInstagram;
   nao_lidas: number;

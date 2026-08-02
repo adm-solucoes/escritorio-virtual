@@ -81,14 +81,17 @@ export async function marcarComoLida(igsid: string): Promise<RespostaEnvio> {
   }
 }
 
-/** Busca nome e username do perfil pelo IGSID — usado pra exibir na lista de conversas. */
-export async function buscarPerfil(igsid: string): Promise<{ nome: string | null; username: string | null }> {
+/** Busca nome, username e foto de perfil pelo IGSID — usado pra exibir na
+ * lista de conversas. Diferente do WhatsApp Business API (que não expõe
+ * foto de contato nenhuma), a Graph API do Instagram devolve `profile_pic`
+ * de quem mandou mensagem pro negócio. */
+export async function buscarPerfil(igsid: string): Promise<{ nome: string | null; username: string | null; fotoUrl: string | null }> {
   try {
-    const res = await fetch(graphUrl(`${igsid}?fields=name,username&access_token=${accessToken()}`));
+    const res = await fetch(graphUrl(`${igsid}?fields=name,username,profile_pic&access_token=${accessToken()}`));
     const data = await res.json();
-    if (!res.ok) return { nome: null, username: null };
-    return { nome: data?.name ?? null, username: data?.username ?? null };
+    if (!res.ok) return { nome: null, username: null, fotoUrl: null };
+    return { nome: data?.name ?? null, username: data?.username ?? null, fotoUrl: data?.profile_pic ?? null };
   } catch {
-    return { nome: null, username: null };
+    return { nome: null, username: null, fotoUrl: null };
   }
 }

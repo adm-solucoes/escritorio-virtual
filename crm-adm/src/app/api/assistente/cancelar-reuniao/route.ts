@@ -1,15 +1,19 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createClient as createServerClient } from "@/lib/supabase-server";
+import { z } from "zod";
 import { excluirEvento } from "@/lib/google-calendar";
+import { lerCorpoValidado, textoLivre } from "@/lib/validacao";
 
 export const dynamic = "force-dynamic";
 
+// eventoId é id do Google Calendar (alfanumérico), não UUID nosso.
+const schema = z.object({ eventoId: textoLivre(200).min(1) });
+
 export async function POST(request: Request) {
   try {
-    const { eventoId } = await request.json();
-    if (typeof eventoId !== "string") {
-      return Response.json({ error: "eventoId é obrigatório" }, { status: 400 });
-    }
+    const corpo = await lerCorpoValidado(request, schema);
+    if (!corpo.ok) return corpo.resposta;
+    const { eventoId } = corpo.dados;
 
     // gcId sempre da sessão real, nunca do corpo — mesmo motivo das outras
     // rotas do assistente: sem isso, dava pra cancelar reunião na agenda de

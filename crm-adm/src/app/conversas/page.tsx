@@ -19,6 +19,7 @@ interface ItemUnificado {
   subtitulo: string;
   naoLidas: number;
   ultimaMensagemEm: string | null;
+  fotoUrl: string | null;
 }
 
 function paramsAtuais() {
@@ -96,6 +97,8 @@ export default function ConversasPage() {
       subtitulo: c.telefone,
       naoLidas: c.nao_lidas,
       ultimaMensagemEm: c.ultima_mensagem_em,
+      // WhatsApp Business API não expõe foto de contato — só o Instagram dá.
+      fotoUrl: null,
     }));
     const doInstagram: ItemUnificado[] = conversasInstagram.map((c) => ({
       id: c.id,
@@ -104,6 +107,7 @@ export default function ConversasPage() {
       subtitulo: c.username ? `@${c.username}` : "sem @usuário",
       naoLidas: c.nao_lidas,
       ultimaMensagemEm: c.ultima_mensagem_em,
+      fotoUrl: c.foto_perfil_url,
     }));
 
     const termo = busca.trim().toLowerCase();
@@ -222,7 +226,7 @@ export default function ConversasPage() {
                   }`}
                 >
                   <div className="relative shrink-0">
-                    <Avatar nome={item.nome} tamanho="md" />
+                    <Avatar nome={item.nome} fotoUrl={item.fotoUrl} tamanho="md" />
                     <CanalBadge canal={item.canal} tamanho="sm" />
                   </div>
                   <div className="min-w-0 flex-1">

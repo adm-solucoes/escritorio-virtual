@@ -1,9 +1,15 @@
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createClient as createServerClient } from "@/lib/supabase-server";
+import { lerCorpoValidado, textoLivre } from "@/lib/validacao";
 import { chamarClaude } from "@/lib/ai";
 import { detectarPedidoDeAgendamento, detectarPedidoDeCancelamento, type DeteccaoCancelamento } from "@/lib/assistente-agendamento";
 import { listarEventosPeriodo, type EventoAgenda } from "@/lib/google-calendar";
 import type { Empresa, Gc, Oportunidade } from "@/lib/types";
+
+// Teto de 4000 caracteres: a pergunta vai no prompt do Claude, então tamanho
+// aqui é custo direto em token. Uma pergunta real do time nunca chega perto.
+const schemaPergunta = z.object({ pergunta: textoLivre(4000).min(1) });
 
 function normalizar(s: string) {
   return s
@@ -85,8 +91,10 @@ function montarContexto(empresas: Empresa[], oportunidades: (Oportunidade & { em
 }
 
 export async function POST(request: Request) {
-  const { pergunta } = await request.json();
-  if (typeof pergunta !== "string" || !pergunta.trim()) {
+  const corpo = await lerCorpoValidado(request, schemaPergunta);
+  if (!corpo.ok) return corpo.resposta;
+  const { pergunta } = corpo.dados;
+  if (!pergunta.trim()) {
     return Response.json({ error: "Pergunta vazia" }, { status: 400 });
   }
 
