@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { listarEventosPeriodo } from "@/lib/google-calendar";
+import { CARGOS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -80,14 +81,17 @@ export async function GET(request: Request) {
 
   try {
     const admin = createAdminClient();
-    // Só entra agenda de quem tem papel "comercial" — não pode misturar com
-    // outros times (marketing etc), senão o agente oferece horário que na
-    // real não é do time que vai atender o briefing.
+    // Só entra agenda de quem é da área Comercial (gestor ou não) — não pode
+    // misturar com outros times (marketing etc), senão o agente oferece
+    // horário que na real não é do time que vai atender o briefing. Filtra
+    // pelo cargo/área, não pelo nível de acesso (role) — um Gestor Comercial
+    // tem role "gestor" mas continua sendo do time comercial.
+    const cargosComerciais = CARGOS.filter((c) => c.area === "Comercial").map((c) => c.label);
     const { data: integracoes } = await admin
       .from("integracoes_google")
-      .select("gc_id, gcs!inner(role)")
+      .select("gc_id, gcs!inner(cargo)")
       .eq("compartilhar_agenda", true)
-      .eq("gcs.role", "comercial");
+      .in("gcs.cargo", cargosComerciais);
 
     const agora = new Date();
     const fimPeriodo = new Date(agora.getTime() + (DIAS_UTEIS_A_OFERECER + 4) * 86_400_000);
