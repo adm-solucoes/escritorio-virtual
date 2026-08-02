@@ -25,6 +25,16 @@ export async function GET(request: Request) {
     }
 
     const admin = createAdminClient();
+
+    // Só liga o compartilhamento automaticamente na PRIMEIRA conexão — se a
+    // pessoa já tinha desligado antes e está só reconectando (ex: token
+    // expirou), reconectar não pode reverter a preferência dela sem avisar.
+    const { data: jaExistia } = await admin
+      .from("integracoes_google")
+      .select("gc_id")
+      .eq("gc_id", gcId)
+      .maybeSingle();
+
     await admin.from("integracoes_google").upsert(
       {
         gc_id: gcId,
@@ -32,6 +42,7 @@ export async function GET(request: Request) {
         access_token: accessToken,
         refresh_token: refreshToken,
         expira_em: expiraEm,
+        ...(jaExistia ? {} : { compartilhar_agenda: true }),
       },
       { onConflict: "gc_id" }
     );
