@@ -49,7 +49,7 @@ export default function ListaAutomacoesSidebar() {
   }
 
   return (
-    <div className="w-60 shrink-0 border-r border-navy/10 bg-white flex flex-col">
+    <div className="w-60 shrink-0 border-r border-navy/15 bg-white flex flex-col">
       <div className="px-3 pt-3 pb-2">
         <h2 className="font-bold text-sm text-navy flex items-center gap-1.5">
           <Workflow size={15} /> Automações

@@ -60,7 +60,7 @@ export default function TrocarSenha() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 shadow-sm p-4 flex flex-col gap-4 max-w-md">
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/15 shadow-sm p-4 flex flex-col gap-4 max-w-md">
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-navy/60 font-medium">Senha atual</span>
         <PasswordInput value={senhaAtual} onChange={setSenhaAtual} required autoComplete="current-password" />

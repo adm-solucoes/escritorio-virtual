@@ -270,7 +270,7 @@ export default function CommandBar() {
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-navy/10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-navy/15">
               <div className="flex items-center gap-2 text-sm font-bold text-navy">
                 <Zap size={15} className="text-red" /> Ação rápida
               </div>
@@ -340,7 +340,7 @@ export default function CommandBar() {
                 )}
 
                 {sugestoes.length > 0 && (
-                  <div className="border border-navy/10 rounded-md overflow-hidden">
+                  <div className="border border-navy/15 rounded-md overflow-hidden">
                     <p className="text-[10px] font-bold text-navy/40 uppercase px-2 py-1 bg-navy/[0.03]">
                       Contatos salvos
                     </p>

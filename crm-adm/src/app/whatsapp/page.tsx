@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   CheckCheck,
@@ -12,7 +11,6 @@ import {
   Image as ImageIcon,
   FileText,
   Mic,
-  StickyNote,
   X,
   File as FileIcon,
   Trash2,
@@ -25,19 +23,13 @@ import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, WhatsappConversa, WhatsappMensagem } from "@/lib/types";
 import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 import Avatar from "@/components/Avatar";
+import { NotaInternaBubble, NotaInternaMenuItem, NotaInternaModal } from "@/components/NotaInterna";
 
 export default function WhatsappPage() {
-  return (
-    <Suspense fallback={<p className="p-6 text-sm text-navy/50">Carregando...</p>}>
-      <WhatsappPageConteudo />
-    </Suspense>
-  );
-}
-
-function WhatsappPageConteudo() {
-  const searchParams = useSearchParams();
   const [conversas, setConversas] = useState<WhatsappConversa[]>([]);
-  const [conversaId, setConversaId] = useState<string | null>(() => searchParams.get("conversa"));
+  const [conversaId, setConversaId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("conversa") : null
+  );
   const [mensagens, setMensagens] = useState<WhatsappMensagem[]>([]);
   const [gcAtual, setGcAtual] = useState<Gc | null>(null);
   const [texto, setTexto] = useState("");
@@ -268,7 +260,7 @@ function WhatsappPageConteudo() {
       analiser.getByteTimeDomainData(dataArray);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.lineWidth = 2;
-      ctx.strokeStyle = "#dc2626";
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--adm-red").trim() || "#c81e1e";
       ctx.beginPath();
       const sliceWidth = canvas.width / bufferLength;
       let x = 0;
@@ -400,12 +392,12 @@ function WhatsappPageConteudo() {
     <>
     <div className="flex min-h-0 h-[calc(100dvh-56px)] md:h-dvh">
       <div
-        className={`w-full md:w-72 md:shrink-0 border-r border-navy/10 bg-white flex-col min-h-0 ${
+        className={`w-full md:w-72 md:shrink-0 border-r border-navy/15 bg-white flex-col min-h-0 ${
           conversaId ? "hidden md:flex" : "flex"
         }`}
       >
 
-        <div className="px-4 py-4 border-b border-navy/10 flex items-center justify-between gap-2">
+        <div className="px-4 py-4 border-b border-navy/15 flex items-center justify-between gap-2">
           <div>
             <h1 className="text-lg font-extrabold text-navy">WhatsApp</h1>
             <p className="text-xs text-navy/50">{conversas.length} conversas</p>
@@ -465,11 +457,12 @@ function WhatsappPageConteudo() {
           </div>
         ) : (
           <>
-            <div className="px-5 py-3 border-b border-navy/10 bg-white flex items-center gap-3">
+            <div className="px-5 py-3 border-b border-navy/15 bg-white flex items-center gap-3">
               <button
                 onClick={() => setConversaId(null)}
-                className="md:hidden -ml-1.5 p-1.5 rounded-md hover:bg-navy/5 text-navy/60 shrink-0"
+                className="md:hidden -ml-1.5 p-2.5 rounded-md hover:bg-navy/5 text-navy/60 shrink-0"
                 title="Voltar pra lista de conversas"
+                aria-label="Voltar pra lista de conversas"
               >
                 <ChevronLeft size={20} />
               </button>
@@ -490,17 +483,7 @@ function WhatsappPageConteudo() {
             <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2 bg-navy/[0.02]">
               {mensagens.map((m) =>
                 m.interna ? (
-                  <div key={m.id} className="flex justify-center">
-                    <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-amber-50 border border-amber-200 text-amber-900">
-                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 mb-0.5">
-                        <StickyNote size={12} /> Nota interna {m.gcs?.nome ? `· ${m.gcs.nome}` : ""}
-                      </div>
-                      <div className="whitespace-pre-wrap break-words">{m.conteudo}</div>
-                      <div className="text-[10px] text-amber-600 mt-1">
-                        {new Date(m.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                      </div>
-                    </div>
-                  </div>
+                  <NotaInternaBubble key={m.id} autor={m.gcs?.nome} conteudo={m.conteudo} criadoEm={m.criado_em} />
                 ) : (
                   <div key={m.id} className={`flex items-end gap-2 ${m.direcao === "enviada" ? "justify-end" : "justify-start"}`}>
                     {m.direcao === "recebida" && (
@@ -511,7 +494,7 @@ function WhatsappPageConteudo() {
                     )}
                     <div
                       className={`max-w-[70%] rounded-xl px-3 py-2 text-sm ${
-                        m.direcao === "enviada" ? "bg-blue text-white rounded-br-sm" : "bg-white text-navy border border-navy/10 rounded-bl-sm"
+                        m.direcao === "enviada" ? "bg-blue text-white rounded-br-sm" : "bg-white text-navy border border-navy/15 rounded-bl-sm"
                       }`}
                     >
                       {m.direcao === "enviada" && m.gcs?.nome && (
@@ -533,7 +516,7 @@ function WhatsappPageConteudo() {
               <div ref={fimDasMensagensRef} />
             </div>
 
-            <form onSubmit={enviar} className="border-t border-navy/10 bg-white p-3 flex flex-col gap-2">
+            <form onSubmit={enviar} className="border-t border-navy/15 bg-white p-3 flex flex-col gap-2">
               <div className="flex gap-2 items-center relative">
                 <div ref={menuAnexoRef} className="relative">
                   <button
@@ -546,7 +529,7 @@ function WhatsappPageConteudo() {
                     <Paperclip size={18} />
                   </button>
                   {menuAnexoAberto && (
-                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-lg shadow-lg border border-navy/10 overflow-hidden z-10">
+                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-lg shadow-lg border border-navy/15 overflow-hidden z-10">
                       <button
                         type="button"
                         onClick={() => imagemInputRef.current?.click()}
@@ -569,16 +552,12 @@ function WhatsappPageConteudo() {
                         <Mic size={14} /> Áudio
                       </button>
                       <div className="border-t border-navy/5" />
-                      <button
-                        type="button"
+                      <NotaInternaMenuItem
                         onClick={() => {
                           setNotaAberta(true);
                           setMenuAnexoAberto(false);
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-700 hover:bg-amber-50"
-                      >
-                        <StickyNote size={14} /> Nota interna
-                      </button>
+                      />
                     </div>
                   )}
                   <input
@@ -665,36 +644,12 @@ function WhatsappPageConteudo() {
             </form>
 
             {notaAberta && (
-              <div className="fixed inset-0 z-50 bg-navy/40 flex items-center justify-center p-4" onClick={() => setNotaAberta(false)}>
-                <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-bold text-navy flex items-center gap-2">
-                      <StickyNote size={16} className="text-amber-600" /> Nota interna
-                    </h2>
-                    <button onClick={() => setNotaAberta(false)} className="text-navy/40 hover:text-navy">
-                      <X size={18} />
-                    </button>
-                  </div>
-                  <p className="text-xs text-navy/50 mb-3">
-                    Visível só aqui no CRM, para o time. O cliente nunca recebe isso no WhatsApp.
-                  </p>
-                  <textarea
-                    className="input w-full min-h-[100px] resize-none"
-                    placeholder="Ex: cliente pediu desconto, confirmar com o financeiro..."
-                    value={notaTexto}
-                    onChange={(e) => setNotaTexto(e.target.value)}
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2 mt-3">
-                    <button onClick={() => setNotaAberta(false)} className="btn-secondary">
-                      Cancelar
-                    </button>
-                    <button onClick={enviarNotaInterna} disabled={!notaTexto.trim()} className="btn-primary">
-                      Salvar nota
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <NotaInternaModal
+                texto={notaTexto}
+                onTextoChange={setNotaTexto}
+                onCancelar={() => setNotaAberta(false)}
+                onSalvar={enviarNotaInterna}
+              />
             )}
           </>
         )}
@@ -707,13 +662,13 @@ function WhatsappPageConteudo() {
         onClick={() => setSeletorEmpresaAberto(false)}
       >
         <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-navy/10">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-navy/15">
             <h2 className="font-bold text-navy">Iniciar conversa</h2>
             <button onClick={() => setSeletorEmpresaAberto(false)} className="text-navy/40 hover:text-navy">
               <X size={18} />
             </button>
           </div>
-          <div className="px-5 py-3 border-b border-navy/10">
+          <div className="px-5 py-3 border-b border-navy/15">
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-navy/40" />
               <input

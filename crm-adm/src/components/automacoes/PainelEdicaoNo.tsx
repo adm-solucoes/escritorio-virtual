@@ -27,8 +27,8 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
   }
 
   return (
-    <div className="w-80 shrink-0 border-l border-navy/10 bg-white flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-navy/10">
+    <div className="w-80 shrink-0 border-l border-navy/15 bg-white flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-navy/15">
         <div>
           <h3 className="font-bold text-sm text-navy">{definicao.label}</h3>
           <p className="text-xs text-navy/50">{definicao.descricao}</p>
@@ -306,7 +306,7 @@ export default function PainelEdicaoNo({ tipo, config, templates, onChange, onFe
         )}
       </div>
 
-      <div className="p-4 border-t border-navy/10">
+      <div className="p-4 border-t border-navy/15">
         <button onClick={onExcluir} className="w-full text-center text-xs font-semibold text-red hover:underline">
           Excluir este nó
         </button>

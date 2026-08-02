@@ -11,6 +11,7 @@ import { useGcAtual } from "@/lib/useGcAtual";
 import { exportarCSV } from "@/lib/csv";
 import EmpresaModal from "@/components/EmpresaModal";
 import ImportarLeadsModal from "@/components/ImportarLeadsModal";
+import { Badge, type BadgeVariant } from "@/components/Badge";
 
 export default function EmpresasPage() {
   const router = useRouter();
@@ -146,7 +147,7 @@ export default function EmpresasPage() {
     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-navy">Empresas</h1>
+          <h1 className="titulo-pagina">Empresas</h1>
           <p className="text-sm text-navy/60">{filtradas.length} empresas {filtradas.length !== empresas.length ? "(filtradas)" : "cadastradas"}</p>
         </div>
         <div className="flex gap-2">
@@ -183,7 +184,7 @@ export default function EmpresasPage() {
         <ImportarLeadsModal onClose={() => setImportarAberto(false)} onImportado={carregar} />
       )}
 
-      <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+      <div className="bg-white rounded-xl border border-navy/15 overflow-x-auto shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-navy/50">Carregando...</p>
         ) : filtradas.length === 0 ? (
@@ -191,7 +192,7 @@ export default function EmpresasPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+              <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                 <th className="px-4 py-3 font-semibold">Empresa</th>
                 <th className="px-4 py-3 font-semibold">Contato</th>
                 <th className="px-4 py-3 font-semibold">Cidade</th>
@@ -248,7 +249,11 @@ export default function EmpresasPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {empresa.temperatura && <Badge temperatura={empresa.temperatura} />}
+                      {empresa.temperatura && (
+                        <Badge variant={TEMPERATURA_VARIANTE[empresa.temperatura] ?? "neutral"}>
+                          {empresa.temperatura}
+                        </Badge>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${classificacao.cor}`}>
@@ -262,22 +267,25 @@ export default function EmpresasPage() {
                       <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                         <button
                           onClick={() => abrirConversaWhatsapp(empresa)}
-                          className="p-1.5 rounded-md hover:bg-green-50 text-green-600"
+                          className="p-2.5 rounded-md hover:bg-whatsapp/10 text-whatsapp"
                           title="Conversar no WhatsApp (pelo CRM)"
+                          aria-label="Conversar no WhatsApp"
                         >
                           <MessagesSquare size={16} />
                         </button>
                         <button
                           onClick={() => abrirEdicao(empresa)}
-                          className="p-1.5 rounded-md hover:bg-blue/10 text-blue"
+                          className="p-2.5 rounded-md hover:bg-blue/10 text-blue"
                           title="Editar"
+                          aria-label="Editar empresa"
                         >
                           <Pencil size={16} />
                         </button>
                         <button
                           onClick={() => excluir(empresa)}
-                          className="p-1.5 rounded-md hover:bg-red/10 text-red"
+                          className="p-2.5 rounded-md hover:bg-red/10 text-red"
                           title="Excluir"
+                          aria-label="Excluir empresa"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -307,15 +315,8 @@ export default function EmpresasPage() {
   );
 }
 
-function Badge({ temperatura }: { temperatura: string }) {
-  const cores: Record<string, string> = {
-    Frio: "bg-blue/10 text-blue",
-    Morno: "bg-amber-100 text-amber-700",
-    Quente: "bg-red/10 text-red",
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cores[temperatura] ?? "bg-navy/5"}`}>
-      {temperatura}
-    </span>
-  );
-}
+const TEMPERATURA_VARIANTE: Record<string, BadgeVariant> = {
+  Frio: "info",
+  Morno: "warning",
+  Quente: "danger",
+};

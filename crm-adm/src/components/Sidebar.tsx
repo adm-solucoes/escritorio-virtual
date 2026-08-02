@@ -116,7 +116,7 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <nav className="flex-1 flex flex-col gap-1 px-2.5 py-2 overflow-x-hidden overflow-y-auto">
+        <nav className="flex-1 flex flex-col gap-1 px-2.5 py-2 overflow-x-hidden overflow-y-auto sem-scrollbar">
           {linksVisiveis.map((link) => {
             const active = pathname?.startsWith(link.href);
             const Icon = link.icon;
@@ -126,7 +126,7 @@ export default function Sidebar() {
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
                 title={mostrarTexto ? undefined : link.label}
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-2.5 px-2.5 py-3 rounded-md text-sm font-semibold transition-colors whitespace-nowrap ${
                   active ? "bg-red text-white" : "text-cream/70 hover:bg-white/10 hover:text-cream"
                 }`}
               >
@@ -142,7 +142,7 @@ export default function Sidebar() {
             href="/configuracoes"
             onClick={() => setMobileOpen(false)}
             title={mostrarTexto ? undefined : "Configurações"}
-            className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap ${
+            className={`flex items-center gap-2.5 px-2.5 py-3 rounded-md text-sm font-semibold transition-colors whitespace-nowrap ${
               pathname?.startsWith("/configuracoes") ? "bg-red text-white" : "text-cream/70 hover:bg-white/10 hover:text-cream"
             }`}
           >
@@ -155,7 +155,7 @@ export default function Sidebar() {
 
         <div ref={profileRef} className="relative px-2.5 py-3 border-t border-white/10">
           {profileOpen && (
-            <div className="absolute bottom-full left-2.5 mb-2 w-56 bg-white rounded-lg shadow-lg border border-navy/10 overflow-hidden">
+            <div className="absolute bottom-full left-2.5 mb-2 w-56 bg-white rounded-lg shadow-lg border border-navy/15 overflow-hidden">
               <div className="px-3 py-2.5 border-b border-navy/5">
                 <p className="text-sm font-semibold text-navy truncate">{usuario?.nome}</p>
                 <p className="text-xs text-navy/50 truncate">{usuario?.email}</p>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Plus, Sparkles, Trash2, Workflow, XCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Automacao } from "@/lib/types";
+import { badgeClasses } from "@/components/Badge";
 
 type ContadorExecucao = { sucessos: number; erros: number };
 
@@ -142,7 +143,7 @@ export default function AutomacoesPage() {
     <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-navy flex items-center gap-2">
+          <h1 className="titulo-pagina flex items-center gap-2">
             <Workflow size={20} /> Automações
           </h1>
           <p className="text-sm text-navy/60">
@@ -171,7 +172,7 @@ export default function AutomacoesPage() {
         </button>
       )}
 
-      <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+      <div className="bg-white rounded-xl border border-navy/15 overflow-x-auto shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-navy/50">Carregando...</p>
         ) : automacoes.length === 0 ? (
@@ -179,7 +180,7 @@ export default function AutomacoesPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+              <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                 <th className="px-4 py-3 font-semibold">Nome</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Execuções</th>
@@ -202,8 +203,9 @@ export default function AutomacoesPage() {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => alternarStatus(automacao)}
+                      aria-label={automacao.status === "ativa" ? "Desativar automação" : "Ativar automação"}
                       className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        automacao.status === "ativa" ? "bg-green-100 text-green-700" : "bg-navy/5 text-navy/50"
+                        automacao.status === "ativa" ? badgeClasses("success") : "bg-navy/5 text-navy/50"
                       }`}
                     >
                       {automacao.status === "ativa" ? "Ativa" : "Rascunho"}
@@ -217,7 +219,7 @@ export default function AutomacoesPage() {
                       }
                       return (
                         <div className="flex items-center gap-3 text-xs font-semibold">
-                          <span className="flex items-center gap-1 text-green-700">
+                          <span className="flex items-center gap-1 text-success">
                             <CheckCircle2 size={13} /> {c.sucessos}
                           </span>
                           {c.erros > 0 && (
@@ -233,7 +235,12 @@ export default function AutomacoesPage() {
                     {new Date(automacao.atualizado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => excluir(automacao)} className="p-1.5 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                    <button
+                      onClick={() => excluir(automacao)}
+                      className="p-2.5 rounded-md hover:bg-red/10 text-red"
+                      title="Excluir"
+                      aria-label="Excluir automação"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </td>

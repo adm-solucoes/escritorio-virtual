@@ -194,9 +194,9 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-7 flex flex-col gap-7">
-      <div className="flex items-baseline justify-between gap-3 border-b border-navy/[0.07] pb-5">
+      <div className="flex items-baseline justify-between gap-3 border-b border-navy/15 pb-5">
         <div>
-          <h1 className="text-2xl font-extrabold text-navy tracking-tight">Dashboard comercial</h1>
+          <h1 className="titulo-pagina">Dashboard comercial</h1>
           <p className="text-sm text-navy/50 mt-0.5">Visão geral do funil e da carteira de empresas</p>
         </div>
         <p className="text-xs font-semibold text-navy/40 uppercase tracking-wide hidden sm:block">
@@ -227,7 +227,7 @@ export default function DashboardPage() {
       </div>
 
       {(metaEquipe || gcs.length > 0) && (
-        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-elevated">
+        <div className="bg-white rounded-xl border border-navy/15 p-5 shadow-elevated">
           <h2 className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
             <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
               <Target size={13} />
@@ -254,7 +254,7 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
-        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-elevated">
+        <div className="bg-white rounded-xl border border-navy/15 p-5 shadow-elevated">
           <h2 className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
             <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
               <TrendingUp size={13} />
@@ -272,7 +272,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-sm flex flex-col">
+        <div className="bg-white rounded-xl border border-navy/15 p-5 shadow-sm flex flex-col">
           <h2 className="text-sm font-bold text-navy mb-3.5 flex items-center gap-2">
             <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
               <Trophy size={13} />
@@ -297,7 +297,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/15 p-5 shadow-sm">
           <div className="flex items-baseline justify-between mb-4">
             <h2 className="text-sm font-bold text-navy flex items-center gap-2">
               <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
@@ -315,7 +315,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/15 p-5 shadow-sm">
           <div className="flex items-baseline justify-between mb-4">
             <h2 className="text-sm font-bold text-navy flex items-center gap-2">
               <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
@@ -334,7 +334,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-navy/[0.07] overflow-x-auto shadow-sm">
+      <div className="bg-white rounded-xl border border-navy/15 overflow-x-auto shadow-sm">
         <h2 className="text-sm font-bold text-navy px-5 pt-5 flex items-center gap-2">
           <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
             <Table2 size={13} />
@@ -343,7 +343,7 @@ export default function DashboardPage() {
         </h2>
         <table className="w-full text-sm mt-3">
           <thead>
-            <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+            <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
               <th className="px-4 py-2 font-semibold">Etapa</th>
               <th className="px-4 py-2 font-semibold">Probabilidade</th>
               <th className="px-4 py-2 font-semibold">Qtd</th>
@@ -368,7 +368,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-navy/[0.07] p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/15 p-5 shadow-sm">
           <h2 className="text-sm font-bold text-navy mb-3.5 flex items-center gap-2">
             <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
               <GitBranch size={13} />
@@ -391,7 +391,7 @@ export default function DashboardPage() {
               icon={Timer}
             />
           </div>
-          <div className="bg-white rounded-xl border border-navy/[0.07] overflow-x-auto shadow-sm flex-1">
+          <div className="bg-white rounded-xl border border-navy/15 overflow-x-auto shadow-sm flex-1">
             <h2 className="text-sm font-bold text-navy px-5 pt-5 pb-1 flex items-center gap-2">
               <span className="w-6 h-6 rounded-md bg-navy/[0.05] flex items-center justify-center text-navy/60">
                 <Table2 size={13} />
@@ -403,7 +403,7 @@ export default function DashboardPage() {
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                  <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                     <th className="px-4 py-2 font-semibold">Etapa</th>
                     <th className="px-4 py-2 font-semibold">Dias médios</th>
                     <th className="px-4 py-2 font-semibold">Amostras</th>
@@ -449,7 +449,7 @@ function BarraMeta({
         </span>
       </div>
       <div className="h-2.5 rounded-full bg-navy/5 overflow-hidden">
-        <div className={`h-full rounded-full ${bateu ? "bg-green-500" : "bg-red"}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full ${bateu ? "bg-success" : "bg-red"}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

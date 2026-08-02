@@ -80,7 +80,7 @@ export default function RelatoriosPage() {
     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-navy">Relatórios</h1>
+          <h1 className="titulo-pagina">Relatórios</h1>
           <p className="text-sm text-navy/60">Vendas, perdas, origem de lead, responsáveis e evolução</p>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -225,7 +225,7 @@ function Secao({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+    <div className="bg-white rounded-xl border border-navy/15 overflow-x-auto shadow-sm">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h2 className="text-sm font-bold text-navy">{titulo}</h2>
         {linhas.length > 0 && (
@@ -249,7 +249,7 @@ function Tabela({ colunas, linhas, vazio }: { colunas: string[]; linhas: string[
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+        <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
           {colunas.map((c) => (
             <th key={c} className="px-4 py-2 font-semibold whitespace-nowrap">
               {c}

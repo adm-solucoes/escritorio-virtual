@@ -104,7 +104,7 @@ export default function NotificacoesSino() {
     <div ref={painelRef} className="fixed top-4 right-5 z-40">
       <button
         onClick={() => setAberto((v) => !v)}
-        className="relative w-11 h-11 rounded-full bg-white shadow-lg border border-navy/10 flex items-center justify-center text-navy/70 hover:text-navy"
+        className="relative w-11 h-11 rounded-full bg-white shadow-lg border border-navy/15 flex items-center justify-center text-navy/70 hover:text-navy"
         title="Notificações"
       >
         <Bell size={18} />
@@ -116,8 +116,8 @@ export default function NotificacoesSino() {
       </button>
 
       {aberto && (
-        <div className="absolute right-0 mt-2 w-80 max-h-[70vh] overflow-y-auto bg-white rounded-xl shadow-2xl border border-navy/10">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-navy/10 sticky top-0 bg-white">
+        <div className="absolute right-0 mt-2 w-80 max-h-[70vh] overflow-y-auto bg-white rounded-xl shadow-2xl border border-navy/15">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-navy/15 sticky top-0 bg-white">
             <span className="text-sm font-bold text-navy">Notificações</span>
             {notificacoes.length > 0 && (
               <button onClick={marcarTodasComoLidas} className="text-xs font-semibold text-blue hover:underline">

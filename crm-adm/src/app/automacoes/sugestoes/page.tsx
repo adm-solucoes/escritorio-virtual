@@ -63,7 +63,7 @@ export default function SugestoesIaPage() {
       </Link>
 
       <div>
-        <h1 className="text-xl font-extrabold text-navy flex items-center gap-2">
+        <h1 className="titulo-pagina flex items-center gap-2">
           <Sparkles size={20} /> Sugestões de IA pendentes
         </h1>
         <p className="text-sm text-navy/60">
@@ -76,13 +76,13 @@ export default function SugestoesIaPage() {
       {loading ? (
         <p className="text-sm text-navy/50">Carregando...</p>
       ) : sugestoes.length === 0 ? (
-        <p className="text-sm text-navy/50 bg-white rounded-xl border border-navy/10 p-6 text-center">
+        <p className="text-sm text-navy/50 bg-white rounded-xl border border-navy/15 p-6 text-center">
           Nenhuma sugestão pendente no momento.
         </p>
       ) : (
         <div className="flex flex-col gap-3">
           {sugestoes.map((s) => (
-            <div key={s.id} className="bg-white rounded-xl border border-navy/10 shadow-sm p-4 flex flex-col gap-3">
+            <div key={s.id} className="bg-white rounded-xl border border-navy/15 shadow-sm p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <span className="font-semibold text-navy text-sm">{s.empresas?.nome_empresa ?? "Empresa"}</span>

@@ -11,6 +11,7 @@ export interface Gc {
   ordem_round_robin: number;
   role: RoleGc;
   foto_url: string | null;
+  cargo: string | null;
 }
 
 export interface Empresa {
@@ -208,8 +209,41 @@ export interface Atividade {
   oportunidades?: Oportunidade;
 }
 
+// Mantido só por compatibilidade com solicitações antigas (a tela nova usa
+// "área", ver AREAS abaixo) — não usar em código novo.
 export const TIPOS_APOIO = ["Financeiro", "Divulgação", "Material", "Espaço", "Pessoas"] as const;
 export type TipoApoio = (typeof TIPOS_APOIO)[number];
+
+/** Áreas da empresa — cada solicitação é destinada a uma delas, e cada área
+ * tem um cargo de gestor (que recebe/controla as solicitações da própria
+ * área) e um cargo "de linha" (colaborador, sem ser gestor). Presidência é a
+ * exceção: só existe o cargo único de Presidente. */
+export const AREAS = ["Presidência", "Marketing", "Gente e Gestão (GG)", "Comercial", "Projetos"] as const;
+export type Area = (typeof AREAS)[number];
+
+export interface CargoConfig {
+  label: string;
+  area: Area;
+  gestor: boolean;
+}
+
+export const CARGOS: CargoConfig[] = [
+  { label: "Presidente", area: "Presidência", gestor: true },
+  { label: "Gestor de Marketing", area: "Marketing", gestor: true },
+  { label: "Marketing", area: "Marketing", gestor: false },
+  { label: "Gestor de Gente e Gestão (GG)", area: "Gente e Gestão (GG)", gestor: true },
+  { label: "Gente e Gestão (GG)", area: "Gente e Gestão (GG)", gestor: false },
+  { label: "Gestor Comercial", area: "Comercial", gestor: true },
+  { label: "Comercial", area: "Comercial", gestor: false },
+  { label: "Gestor de Projetos", area: "Projetos", gestor: true },
+  { label: "Projetos", area: "Projetos", gestor: false },
+];
+
+export function gestoresDaArea(gcs: Gc[], area: string | null): Gc[] {
+  if (!area) return [];
+  const cargosGestores = new Set(CARGOS.filter((c) => c.gestor && c.area === area).map((c) => c.label));
+  return gcs.filter((gc) => gc.cargo && cargosGestores.has(gc.cargo));
+}
 
 export type StatusSolicitacao = "Pendente" | "Em andamento" | "Atendida" | "Recusada";
 
@@ -220,6 +254,7 @@ export interface Solicitacao {
   objetivo: string | null;
   tipo_apoio: string[];
   tipo_apoio_outro: string | null;
+  area: string | null;
   justificativa: string | null;
   data_evento: string | null;
   prazo: string | null;
@@ -229,6 +264,15 @@ export interface Solicitacao {
   status: StatusSolicitacao;
   data_solicitacao: string;
   data_resposta: string | null;
+}
+
+export interface SolicitacaoMensagem {
+  id: string;
+  solicitacao_id: string;
+  autor_gc_id: string | null;
+  mensagem: string;
+  criado_em: string;
+  gcs?: { nome: string; foto_url: string | null } | null;
 }
 
 export interface ScoreRule {

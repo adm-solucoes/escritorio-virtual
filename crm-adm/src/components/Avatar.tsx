@@ -3,8 +3,11 @@
 // dão acesso à foto de perfil do cliente), cai pras iniciais com uma cor
 // determinística a partir do nome — o mesmo comportamento do WhatsApp Web.
 
+// Sem tons de vermelho/coral aqui de propósito — bateriam com o --adm-red da
+// marca (usado no item ativo do menu e em ações destrutivas) e criariam uma
+// falsa sensação de alerta/erro só por coincidência de hash do nome.
 const CORES_INICIAIS = [
-  "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#4a3aa7", "#008300", "#e34948",
+  "#2a78d6", "#1baf7a", "#eda100", "#e87ba4", "#4a3aa7", "#008300", "#6d5acf", "#0f8b8d",
 ];
 
 function corPara(texto: string): string {

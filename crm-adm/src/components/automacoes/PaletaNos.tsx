@@ -14,8 +14,8 @@ export default function PaletaNos({ onAdicionar }: { onAdicionar: (tipo: TipoNoA
   const categorias: CategoriaNo[] = ["gatilho", "condicao", "acao", "espera"];
 
   return (
-    <div className="w-64 shrink-0 border-r border-navy/10 bg-white overflow-y-auto">
-      <div className="px-4 py-3 border-b border-navy/10">
+    <div className="w-64 shrink-0 border-r border-navy/15 bg-white overflow-y-auto">
+      <div className="px-4 py-3 border-b border-navy/15">
         <h2 className="font-bold text-sm text-navy">Nós disponíveis</h2>
         <p className="text-xs text-navy/50">Clique pra adicionar ao canvas</p>
       </div>

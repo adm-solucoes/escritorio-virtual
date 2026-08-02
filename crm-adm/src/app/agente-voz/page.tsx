@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { Badge, badgeClasses } from "@/components/Badge";
 
 type SaldoApi = { disponivel: boolean; valor?: string; moeda?: string; erro?: string; painel?: string };
 type SaldoResposta = { twilio: SaldoApi; deepgram: SaldoApi; groq: SaldoApi; cartesia: SaldoApi };
@@ -227,7 +228,7 @@ export default function AgenteVozPage() {
   return (
     <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-extrabold text-navy flex items-center gap-2">
+        <h1 className="titulo-pagina flex items-center gap-2">
           <Phone size={20} className="text-red" />
           Agente de Voz
         </h1>
@@ -236,7 +237,7 @@ export default function AgenteVozPage() {
         </p>
       </div>
 
-      <div className="flex gap-1 border-b border-navy/10">
+      <div className="flex gap-1 border-b border-navy/15">
         <button
           onClick={() => setAba("ligacoes")}
           className={`px-3 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
@@ -256,7 +257,7 @@ export default function AgenteVozPage() {
       </div>
 
       {aba === "ligacoes" && (
-      <div className="bg-white rounded-lg border border-navy/10 p-4">
+      <div className="bg-white rounded-lg border border-navy/15 p-4">
         <p className="text-xs font-semibold text-navy/60 flex items-center gap-1.5 mb-3">
           <Wallet size={14} /> Saldo das APIs
         </p>
@@ -297,7 +298,7 @@ export default function AgenteVozPage() {
       {aba === "ligacoes" && (loading ? (
         <p className="text-sm text-navy/50">Carregando...</p>
       ) : ligacoes.length === 0 ? (
-        <div className="bg-white rounded-lg border border-navy/10 p-8 text-center text-sm text-navy/50">
+        <div className="bg-white rounded-lg border border-navy/15 p-8 text-center text-sm text-navy/50">
           Nenhuma ligação registrada ainda. Assim que o agente de voz concluir uma ligação, ela aparece aqui
           automaticamente.
         </div>
@@ -306,14 +307,14 @@ export default function AgenteVozPage() {
           {ligacoes.map((l) => {
             const expandido = expandidoId === l.id;
             return (
-              <div key={l.id} className="bg-white rounded-lg border border-navy/10 overflow-hidden">
+              <div key={l.id} className="bg-white rounded-lg border border-navy/15 overflow-hidden">
                 <button
                   onClick={() => setExpandidoId(expandido ? null : l.id)}
                   className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-navy/[0.02] transition-colors"
                 >
                   <div className="mt-0.5 shrink-0">
                     {l.interessado ? (
-                      <CheckCircle2 size={18} className="text-green-600" />
+                      <CheckCircle2 size={18} className="text-success" />
                     ) : (
                       <XCircle size={18} className="text-navy/30" />
                     )}
@@ -325,9 +326,9 @@ export default function AgenteVozPage() {
                       </span>
                       <span className="text-xs text-navy/40">{l.telefone}</span>
                       {l.trigger_whatsapp_followup && (
-                        <span className="flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
-                          <MessageCircleMore size={11} /> follow-up sugerido
-                        </span>
+                        <Badge variant="success" icon={MessageCircleMore}>
+                          follow-up sugerido
+                        </Badge>
                       )}
                     </div>
                     <p className="text-sm text-navy/70 truncate">{l.resumo ?? "(sem resumo)"}</p>
@@ -337,7 +338,7 @@ export default function AgenteVozPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-xs text-green-700 font-semibold hover:underline mt-0.5 inline-block"
+                        className="text-xs text-success font-semibold hover:underline mt-0.5 inline-block"
                       >
                         Briefing agendado — ver no Google Calendar
                       </a>
@@ -357,7 +358,7 @@ export default function AgenteVozPage() {
                 </button>
 
                 {expandido && (
-                  <div className="border-t border-navy/10 px-4 py-3 bg-navy/[0.015]">
+                  <div className="border-t border-navy/15 px-4 py-3 bg-navy/[0.015]">
                     <p className="text-xs font-semibold text-navy/60 mb-1.5">Transcrição completa</p>
                     <pre className="text-xs text-navy/70 whitespace-pre-wrap font-sans leading-relaxed">
                       {l.transcricao_completa ?? "(transcrição não disponível)"}
@@ -372,7 +373,7 @@ export default function AgenteVozPage() {
 
       {aba === "prospects" && (
         <div className="flex flex-col gap-3">
-          <div className="bg-white rounded-lg border border-navy/10 p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div className="bg-white rounded-lg border border-navy/15 p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-navy/60">Cadastradas a partir de</label>
               <input
@@ -404,7 +405,7 @@ export default function AgenteVozPage() {
             </button>
           </div>
 
-          <div className="bg-white rounded-lg border border-navy/10 p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div className="bg-white rounded-lg border border-navy/15 p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-xs font-semibold text-navy/60">URL pública do agente de voz (ngrok)</label>
               <input
@@ -433,12 +434,12 @@ export default function AgenteVozPage() {
           </p>
 
           {resultadoLigacoes && (
-            <div className="bg-white rounded-lg border border-navy/10 p-4 flex flex-col gap-1.5">
+            <div className="bg-white rounded-lg border border-navy/15 p-4 flex flex-col gap-1.5">
               <p className="text-xs font-semibold text-navy/60 mb-1">Resultado do disparo</p>
               {resultadoLigacoes.map((r) => (
                 <div key={r.empresaId} className="flex items-center gap-2 text-sm">
                   {r.ok ? (
-                    <CheckCircle2 size={14} className="text-green-600 shrink-0" />
+                    <CheckCircle2 size={14} className="text-success shrink-0" />
                   ) : (
                     <XCircle size={14} className="text-red shrink-0" />
                   )}
@@ -452,14 +453,14 @@ export default function AgenteVozPage() {
           {loadingProspects ? (
             <p className="text-sm text-navy/50">Carregando...</p>
           ) : prospectsFiltrados.length === 0 ? (
-            <div className="bg-white rounded-lg border border-navy/10 p-8 text-center text-sm text-navy/50">
+            <div className="bg-white rounded-lg border border-navy/15 p-8 text-center text-sm text-navy/50">
               Nenhuma empresa encontrada com esses filtros.
             </div>
           ) : (
-            <div className="bg-white rounded-lg border border-navy/10 overflow-hidden">
+            <div className="bg-white rounded-lg border border-navy/15 overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-navy/10 text-left text-xs text-navy/50">
+                  <tr className="border-b border-navy/15 text-left text-xs text-navy/50">
                     <th className="px-3 py-2 w-8">
                       <input
                         type="checkbox"
@@ -492,10 +493,10 @@ export default function AgenteVozPage() {
                           <span
                             className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
                               status === "interessado"
-                                ? "text-green-700 bg-green-50"
+                                ? badgeClasses("success")
                                 : status === "sem_interesse"
                                 ? "text-navy/50 bg-navy/5"
-                                : "text-red bg-red/5"
+                                : badgeClasses("danger")
                             }`}
                           >
                             {LABEL_STATUS[status]}

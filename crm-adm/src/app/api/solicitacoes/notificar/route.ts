@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { Resend } from "resend";
-import type { Empresa, Gc, Oportunidade, Solicitacao } from "@/lib/types";
+import { gestoresDaArea, type Empresa, type Gc, type Oportunidade, type Solicitacao } from "@/lib/types";
 import { exigirSessao } from "@/lib/auth-api";
 
 export const dynamic = "force-dynamic";
@@ -47,9 +47,15 @@ export async function POST(request: Request) {
     ]);
 
     const op = oportunidade as (Oportunidade & { empresas: Empresa }) | null;
-    const responsavel = (gcs as Gc[] | null)?.find((g) => g.id === sol.responsavel_solicitacao_id);
+    const listaGcs = (gcs as Gc[] | null) ?? [];
+    const responsavel = listaGcs.find((g) => g.id === sol.responsavel_solicitacao_id);
 
-    const tipos = [...sol.tipo_apoio, sol.tipo_apoio_outro].filter(Boolean).join(", ");
+    // Todo gestor da área entra em cópia — é o "controle" deles sobre o que
+    // acontece na própria área, mesmo quando não é ele quem vai atender.
+    const gestoresArea = gestoresDaArea(listaGcs, sol.area);
+    const emailsCc = gestoresArea
+      .map((g) => g.email)
+      .filter((email) => email && email !== sol.email_responsavel_atendimento);
 
     function montarHtml(avisoRedirecionamento: string) {
       return `
@@ -65,7 +71,7 @@ export async function POST(request: Request) {
           <table style="width:100%;border-collapse:collapse">
             ${linha("Evento/projeto", sol.nome_evento_projeto)}
             ${linha("Objetivo", sol.objetivo ?? "")}
-            ${linha("Tipo de apoio", tipos)}
+            ${linha("Área", sol.area ?? "")}
             ${linha("Justificativa", sol.justificativa ?? "")}
             ${linha("Data do evento", sol.data_evento ? new Date(sol.data_evento).toLocaleDateString("pt-BR") : "")}
             ${linha("Prazo", sol.prazo ? new Date(sol.prazo).toLocaleDateString("pt-BR") : "")}
@@ -82,6 +88,7 @@ export async function POST(request: Request) {
     const { error } = await resend.emails.send({
       from: "ADM Soluções <crm@admsolucoes.com.br>",
       to: [sol.email_responsavel_atendimento],
+      cc: emailsCc.length > 0 ? emailsCc : undefined,
       subject: `Nova solicitação: ${sol.nome_evento_projeto}`,
       html: montarHtml(""),
     });

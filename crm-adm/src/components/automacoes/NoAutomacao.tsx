@@ -66,8 +66,8 @@ export default function NoAutomacao({ data, selected }: NodeProps<DadosNoAutomac
       {data.resumo && <div className="text-[11px] text-navy/60 mt-0.5 break-words">{data.resumo}</div>}
 
       {data.contador && (data.contador.sucessos > 0 || data.contador.erros > 0) && (
-        <div className="flex items-center gap-2.5 mt-1.5 pt-1.5 border-t border-navy/10 text-[10px] font-semibold">
-          <span className="flex items-center gap-0.5 text-green-700">
+        <div className="flex items-center gap-2.5 mt-1.5 pt-1.5 border-t border-navy/15 text-[10px] font-semibold">
+          <span className="flex items-center gap-0.5 text-success">
             <CheckCircle2 size={11} /> {data.contador.sucessos}
           </span>
           {data.contador.erros > 0 && (
@@ -88,7 +88,7 @@ export default function NoAutomacao({ data, selected }: NodeProps<DadosNoAutomac
       {ehCondicao ? (
         <>
           <Handle type="source" position={Position.Bottom} id="nao" style={{ left: "25%" }} className="!bg-red" />
-          <Handle type="source" position={Position.Bottom} id="sim" style={{ left: "75%" }} className="!bg-green-600" />
+          <Handle type="source" position={Position.Bottom} id="sim" style={{ left: "75%" }} className="!bg-success" />
         </>
       ) : (
         <Handle type="source" position={Position.Bottom} className="!bg-navy/40" />

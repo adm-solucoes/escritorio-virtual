@@ -5,6 +5,7 @@ import { AlertTriangle, Pencil, Plus, RefreshCw, Trash2, Zap } from "lucide-reac
 import { supabase } from "@/lib/supabase";
 import type { Atividade, Empresa, Gc, Oportunidade, StatusAtividade } from "@/lib/types";
 import AtividadeModal from "@/components/AtividadeModal";
+import { Badge, badgeClasses, type BadgeVariant } from "@/components/Badge";
 
 const STATUS_OPCOES: StatusAtividade[] = ["Pendente", "Em andamento", "Concluído", "Atrasado"];
 
@@ -115,7 +116,7 @@ export default function AtividadesPage() {
     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-navy">Atividades</h1>
+          <h1 className="titulo-pagina">Atividades</h1>
           <p className="text-sm text-navy/60">
             {atividades.length} atividades
             {pendentesAtrasadas > 0 && (
@@ -153,7 +154,7 @@ export default function AtividadesPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-navy/10 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-navy/15 overflow-hidden shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-navy/50">Carregando...</p>
         ) : filtradas.length === 0 ? (
@@ -173,14 +174,14 @@ export default function AtividadesPage() {
                         {atividade.tipo_atividade}
                       </span>
                       {atividade.alerta_disparado && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue bg-blue/10 rounded-full px-2 py-0.5">
-                          <Zap size={10} /> automático
-                        </span>
+                        <Badge variant="info" icon={Zap}>
+                          automático
+                        </Badge>
                       )}
                       {atrasada && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red bg-red/10 rounded-full px-2 py-0.5">
-                          <AlertTriangle size={10} /> atrasada
-                        </span>
+                        <Badge variant="danger" icon={AlertTriangle}>
+                          atrasada
+                        </Badge>
                       )}
                     </div>
                     <div className="text-xs text-navy/50 mt-0.5">
@@ -194,7 +195,8 @@ export default function AtividadesPage() {
                   <select
                     value={atividade.status}
                     onChange={(e) => mudarStatus(atividade, e.target.value as StatusAtividade)}
-                    className={`shrink-0 text-xs font-semibold rounded-full px-2.5 py-1 border-0 cursor-pointer ${STATUS_CORES[atividade.status]}`}
+                    aria-label="Status da atividade"
+                    className={`shrink-0 text-xs font-semibold rounded-full px-2.5 py-1 border-0 cursor-pointer ${badgeClasses(STATUS_VARIANTE[atividade.status])}`}
                   >
                     {STATUS_OPCOES.map((s) => (
                       <option key={s} value={s}>
@@ -205,15 +207,17 @@ export default function AtividadesPage() {
 
                   <button
                     onClick={() => abrirEdicao(atividade)}
-                    className="p-1.5 rounded-md hover:bg-blue/10 text-blue shrink-0"
+                    className="p-2.5 rounded-md hover:bg-blue/10 text-blue shrink-0"
                     title="Editar"
+                    aria-label="Editar atividade"
                   >
                     <Pencil size={15} />
                   </button>
                   <button
                     onClick={() => excluir(atividade)}
-                    className="p-1.5 rounded-md hover:bg-red/10 text-red/70 hover:text-red shrink-0"
+                    className="p-2.5 rounded-md hover:bg-red/10 text-red/70 hover:text-red shrink-0"
                     title="Excluir"
+                    aria-label="Excluir atividade"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -251,9 +255,9 @@ function formatarData(iso: string) {
   return `${dia}/${mes}/${ano}`;
 }
 
-const STATUS_CORES: Record<StatusAtividade, string> = {
-  Pendente: "bg-amber-100 text-amber-700",
-  "Em andamento": "bg-blue/10 text-blue",
-  Concluído: "bg-green-100 text-green-700",
-  Atrasado: "bg-red/10 text-red",
+const STATUS_VARIANTE: Record<StatusAtividade, BadgeVariant> = {
+  Pendente: "warning",
+  "Em andamento": "info",
+  Concluído: "success",
+  Atrasado: "danger",
 };

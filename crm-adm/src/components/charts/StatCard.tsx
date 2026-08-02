@@ -1,11 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 
-const COR_BOA = "#0ca30c";
-const COR_RUIM = "#e34948";
+const COR_BOA = "var(--adm-success)";
+const COR_RUIM = "var(--adm-danger)";
 
-// Card de estatística com valor grande e badge de variação (à la "Income by
-// Last Month" da referência) — a cor da variação segue o sentido do negócio,
-// não sempre "alta é boa" (ex: perdas subindo é ruim).
+// Card de estatística — número grande é o protagonista. Sem ícone-em-caixa
+// (padrão gasto de dashboard genérico); a barra de acento à esquerda é o
+// único elemento decorativo, sempre presente (não só quando "destaque").
 export function StatCard({
   label,
   value,
@@ -29,10 +29,10 @@ export function StatCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl p-4 transition-shadow duration-150 ${
+      className={`relative overflow-hidden rounded-lg border-l-[3px] p-4 transition-shadow duration-150 ${
         destaque
-          ? "bg-navy text-cream shadow-elevated"
-          : "bg-white border border-navy/[0.07] shadow-sm hover:shadow-elevated"
+          ? "bg-navy border-l-red text-cream shadow-elevated"
+          : "bg-white border-l-navy border-y border-r border-navy/15 shadow-sm hover:shadow-elevated"
       }`}
     >
       {destaque && (
@@ -42,29 +42,23 @@ export function StatCard({
         />
       )}
 
-      <div className="relative flex items-start justify-between gap-2">
+      <div className="relative flex items-center gap-1.5">
+        {Icon && <Icon size={13} className={destaque ? "text-cream/60" : "text-navy/45"} />}
         <p className={`text-xs font-semibold uppercase tracking-wide ${destaque ? "text-cream/60" : "text-navy/45"}`}>
           {label}
         </p>
-        {Icon && (
-          <span
-            className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center ${
-              destaque ? "bg-white/10 text-cream" : "bg-navy/[0.05] text-navy/55"
-            }`}
-          >
-            <Icon size={14} />
-          </span>
-        )}
       </div>
 
       <div className="relative flex items-baseline gap-2 mt-2 flex-wrap">
-        <p className={`text-2xl font-extrabold tracking-tight ${destaque ? "text-cream" : "text-navy"}`}>{value}</p>
+        <p className={`text-3xl font-extrabold tracking-tight tabular-nums ${destaque ? "text-cream" : "text-navy"}`}>
+          {value}
+        </p>
         {temDelta && (
           <span
             className="text-[11px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-full"
             style={{
               color: bom ? COR_BOA : COR_RUIM,
-              backgroundColor: bom ? "rgb(12 163 12 / 0.1)" : "rgb(227 73 72 / 0.1)",
+              backgroundColor: bom ? "var(--adm-success-bg)" : "var(--adm-danger-bg)",
             }}
           >
             {subiu ? "↑" : delta === 0 ? "" : "↓"}

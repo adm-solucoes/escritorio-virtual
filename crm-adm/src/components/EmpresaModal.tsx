@@ -154,7 +154,7 @@ export default function EmpresaModal({ empresa, gcs, onClose, onSaved }: Props) 
   return (
     <div className="fixed inset-0 z-30 bg-navy/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/10 sticky top-0 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/15 sticky top-0 bg-white">
           <h2 className="font-extrabold text-lg text-navy">
             {empresa ? "Editar empresa" : "Nova empresa"}
           </h2>

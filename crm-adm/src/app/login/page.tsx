@@ -152,7 +152,7 @@ export default function LoginPage() {
                 </label>
 
                 {mensagemRecuperacao && (
-                  <p className="text-sm text-navy/70 bg-navy/[0.04] border border-navy/10 rounded-lg px-3.5 py-2.5 leading-relaxed">
+                  <p className="text-sm text-navy/70 bg-navy/[0.04] border border-navy/15 rounded-lg px-3.5 py-2.5 leading-relaxed">
                     {mensagemRecuperacao}
                   </p>
                 )}

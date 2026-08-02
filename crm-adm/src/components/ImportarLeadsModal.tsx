@@ -84,7 +84,7 @@ function SeletorCnae({ selecionados, onChange }: { selecionados: OpcaoCnae[]; on
         <div className="absolute z-10 mt-1 w-full bg-white border border-navy/15 rounded-lg shadow-lg max-h-72 overflow-hidden flex flex-col">
           <input
             autoFocus
-            className="input rounded-none border-0 border-b border-navy/10 m-0"
+            className="input rounded-none border-0 border-b border-navy/15 m-0"
             placeholder="Buscar por nome ou código..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -109,7 +109,7 @@ function SeletorCnae({ selecionados, onChange }: { selecionados: OpcaoCnae[]; on
               })
             )}
           </div>
-          <div className="border-t border-navy/10 px-3 py-2 flex justify-end">
+          <div className="border-t border-navy/15 px-3 py-2 flex justify-end">
             <button type="button" onClick={() => setAberto(false)} className="text-xs font-semibold text-blue">
               Pronto
             </button>
@@ -176,7 +176,7 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
   return (
     <div className="fixed inset-0 z-30 bg-navy/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/10 sticky top-0 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/15 sticky top-0 bg-white">
           <h2 className="font-extrabold text-lg text-navy">Importar leads (Casa dos Dados)</h2>
           <button onClick={onClose} className="text-navy/40 hover:text-navy">
             <X size={20} />
@@ -257,7 +257,7 @@ export default function ImportarLeadsModal({ onClose, onImportado }: Props) {
           {erro && <div className="text-sm text-red bg-red/5 border border-red/20 rounded-lg px-4 py-3">{erro}</div>}
 
           {resultado && (
-            <div className="text-sm text-navy/70 bg-navy/[0.03] border border-navy/10 rounded-lg px-4 py-3">
+            <div className="text-sm text-navy/70 bg-navy/[0.03] border border-navy/15 rounded-lg px-4 py-3">
               Encontradas {resultado.encontradas}. Importadas{" "}
               <strong>{resultado.importadas}</strong>, {resultado.duplicadas} já estavam cadastradas.
             </div>

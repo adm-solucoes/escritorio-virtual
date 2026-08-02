@@ -197,7 +197,7 @@ export default function PipelinePage() {
     <div className="flex flex-col flex-1 w-full">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-navy">Pipeline</h1>
+          <h1 className="titulo-pagina">Pipeline</h1>
           <p className="text-sm text-navy/60">
             {oportunidadesFiltradas.length} de {oportunidades.length} oportunidades no funil
           </p>

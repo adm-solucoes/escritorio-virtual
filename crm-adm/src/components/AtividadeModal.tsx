@@ -92,7 +92,7 @@ export default function AtividadeModal({
   return (
     <div className="fixed inset-0 z-30 bg-navy/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/10 sticky top-0 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/15 sticky top-0 bg-white">
           <h2 className="font-extrabold text-lg text-navy">{atividade ? "Editar atividade" : "Nova atividade"}</h2>
           <button onClick={onClose} className="p-1 rounded-md hover:bg-navy/5 text-navy/60" aria-label="Fechar">
             <X size={18} />

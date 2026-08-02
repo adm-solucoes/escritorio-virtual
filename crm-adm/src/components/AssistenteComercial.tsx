@@ -212,7 +212,7 @@ export default function AssistenteComercial() {
             className="bg-white rounded-xl shadow-2xl w-full max-w-md h-[70vh] sm:h-[520px] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-navy/10 shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-navy/15 shrink-0">
               <div className="flex items-center gap-2 text-sm font-bold text-navy">
                 <Sparkles size={15} className="text-blue" /> Assistente comercial
               </div>
@@ -271,7 +271,7 @@ export default function AssistenteComercial() {
               <div ref={fimRef} />
             </div>
 
-            <div className="p-3 border-t border-navy/10 flex gap-2 shrink-0">
+            <div className="p-3 border-t border-navy/15 flex gap-2 shrink-0">
               <input
                 ref={inputRef}
                 className="input flex-1"

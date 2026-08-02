@@ -14,15 +14,19 @@ import {
 } from "lucide-react";
 import type { EventoAgendaEquipe, ParticipanteAgenda } from "@/app/api/calendario/eventos/route";
 
-/** Mesma paleta usada antes — cor é a identidade de cada pessoa na grade,
- * igual ao papel que a cor de cada agenda tem no Google Calendar. */
+/** Paleta CATEGÓRICA (não é status) — cor é só a identidade de cada pessoa na
+ * grade, igual ao papel que a cor de cada agenda tem no Google Calendar. Os
+ * dois primeiros reaproveitam os tokens da marca; os demais são intencionalmente
+ * fora da marca pra dar variedade visual entre pessoas, mas escolhidos/ajustados
+ * (ex: amber-700 em vez de amber-500) pra manter texto branco em cima com
+ * contraste >=4.5:1. */
 const PALETA_CORES = [
   { bg: "bg-blue", texto: "text-white", dot: "bg-blue" },
   { bg: "bg-red", texto: "text-white", dot: "bg-red" },
-  { bg: "bg-green-600", texto: "text-white", dot: "bg-green-600" },
-  { bg: "bg-amber-500", texto: "text-white", dot: "bg-amber-500" },
-  { bg: "bg-purple-600", texto: "text-white", dot: "bg-purple-600" },
-  { bg: "bg-pink-600", texto: "text-white", dot: "bg-pink-600" },
+  { bg: "bg-green-700", texto: "text-white", dot: "bg-green-700" },
+  { bg: "bg-amber-700", texto: "text-white", dot: "bg-amber-700" },
+  { bg: "bg-purple-700", texto: "text-white", dot: "bg-purple-700" },
+  { bg: "bg-pink-700", texto: "text-white", dot: "bg-pink-700" },
 ];
 
 function corPorNome(nome: string) {
@@ -347,7 +351,7 @@ export default function CalendarioPage() {
     <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-navy flex items-center gap-2">
+          <h1 className="titulo-pagina flex items-center gap-2">
             <CalendarDays size={20} /> Agenda da equipe
           </h1>
           <p className="text-sm text-navy/60">
@@ -369,7 +373,7 @@ export default function CalendarioPage() {
                   key={p.gcId}
                   onClick={() => alternarFiltroPessoa(p.gcId)}
                   className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border transition ${
-                    oculta ? "border-navy/10 text-navy/30" : "border-navy/10 text-navy/70 bg-navy/[0.02]"
+                    oculta ? "border-navy/15 text-navy/30" : "border-navy/15 text-navy/70 bg-navy/[0.02]"
                   }`}
                   title={oculta ? "Clique pra mostrar de novo" : "Clique pra esconder"}
                 >
@@ -423,13 +427,13 @@ export default function CalendarioPage() {
       </div>
 
       {erros.length > 0 && (
-        <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <div className="flex items-start gap-2 text-xs text-warning bg-warning-bg border border-warning/25 rounded-lg px-3 py-2">
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <span>{erros.join(" · ")}</span>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-navy/15 shadow-sm overflow-hidden">
         {loading ? (
           <p className="p-6 text-sm text-navy/50">Carregando...</p>
         ) : erro ? (
@@ -451,7 +455,7 @@ export default function CalendarioPage() {
                 </p>
               )}
               {/* Cabeçalho: dias da semana, dia atual destacado igual ao Google Calendar */}
-              <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-navy/10">
+              <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-navy/15">
                 <div />
                 {dias.map((dia) => {
                   const hoje = mesmoDia(dia, new Date());
@@ -623,7 +627,7 @@ function ModalDetalheEvento({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <p className="text-xs font-semibold text-navy/50 uppercase tracking-wide">{dia}</p>
-          <button onClick={onFechar} className="text-navy/40 hover:text-navy">
+          <button onClick={onFechar} className="text-navy/40 hover:text-navy p-1" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -727,7 +731,7 @@ function ModalCriarEvento({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <p className="text-xs font-semibold text-navy/50 uppercase tracking-wide">Novo compromisso — {rotuloDia}</p>
-          <button onClick={onFechar} className="text-navy/40 hover:text-navy">
+          <button onClick={onFechar} className="text-navy/40 hover:text-navy p-1" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>

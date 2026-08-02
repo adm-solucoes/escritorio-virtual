@@ -23,6 +23,7 @@ import { definicaoDoTipo, resumoConfig } from "@/lib/automacoes-nos";
 import NoAutomacao, { type DadosNoAutomacao } from "@/components/automacoes/NoAutomacao";
 import PaletaNos from "@/components/automacoes/PaletaNos";
 import PainelEdicaoNo from "@/components/automacoes/PainelEdicaoNo";
+import { badgeClasses } from "@/components/Badge";
 
 const NODE_TYPES = { noAutomacao: NoAutomacao };
 
@@ -230,20 +231,21 @@ export default function AutomacaoCanvasPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="px-4 py-3 border-b border-navy/10 bg-white flex items-center gap-3 flex-wrap">
-        <Link href="/automacoes" className="p-1.5 rounded-md hover:bg-navy/5 text-navy/60 shrink-0">
+      <div className="px-4 py-3 border-b border-navy/15 bg-white flex items-center gap-3 flex-wrap">
+        <Link
+          href="/automacoes"
+          className="p-2.5 rounded-md hover:bg-navy/5 text-navy/60 shrink-0"
+          aria-label="Voltar para automações"
+        >
           <ArrowLeft size={18} />
         </Link>
         <input
           className="font-bold text-navy text-lg bg-transparent border-none outline-none focus:bg-navy/5 rounded px-1 min-w-0 flex-1"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
+          aria-label="Nome da automação"
         />
-        <span
-          className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
-            status === "ativa" ? "bg-green-100 text-green-700" : "bg-navy/5 text-navy/50"
-          }`}
-        >
+        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${status === "ativa" ? badgeClasses("success") : "bg-navy/5 text-navy/50"}`}>
           {status === "ativa" ? "Ativa" : "Rascunho"}
         </span>
         {mensagem && <span className="text-xs text-navy/60">{mensagem}</span>}

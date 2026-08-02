@@ -63,7 +63,7 @@ export default function EditarFoto({ gc, onAtualizado }: { gc: Gc; onAtualizado:
   }
 
   return (
-    <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4 flex items-center gap-4 max-w-md">
+    <div className="bg-white rounded-xl border border-navy/15 shadow-sm p-4 flex items-center gap-4 max-w-md">
       <Avatar nome={gc.nome} fotoUrl={gc.foto_url} tamanho="lg" />
       <div className="flex flex-col gap-1.5">
         <div className="flex gap-2">

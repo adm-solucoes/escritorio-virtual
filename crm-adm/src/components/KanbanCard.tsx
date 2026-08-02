@@ -6,10 +6,11 @@ import { MessageCircle } from "lucide-react";
 import type { Empresa, Oportunidade } from "@/lib/types";
 import { obterOuCriarConversaWhatsapp } from "@/lib/whatsapp";
 import { probabilidadeAjustada } from "@/lib/relatorios";
+import { badgeClasses } from "@/components/Badge";
 
 const TEMP_COLOR: Record<string, string> = {
   Frio: "border-l-blue",
-  Morno: "border-l-amber-400",
+  Morno: "border-l-warning",
   Quente: "border-l-red",
 };
 
@@ -74,7 +75,7 @@ export default function KanbanCard({
           ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 }
           : undefined
       }
-      className={`bg-white rounded-lg border border-navy/10 border-l-4 ${borderColor} p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
+      className={`bg-white rounded-lg border border-navy/15 border-l-4 ${borderColor} p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
         isDragging ? "opacity-50" : ""
       }`}
     >
@@ -95,7 +96,7 @@ export default function KanbanCard({
           )}
           {probAjustadaDiferente && (
             <span
-              className="ml-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-1.5 py-0.5"
+              className={`ml-1 text-[10px] font-bold rounded-full px-1.5 py-0.5 ${badgeClasses("warning")}`}
               title="Probabilidade ajustada pra baixo: essa oportunidade está parada nesta etapa bem além da média histórica. Só um indicador visual, não muda o valor gravado."
             >
               ~{Math.round((probAjustada ?? 0) * 100)}%
@@ -106,8 +107,9 @@ export default function KanbanCard({
           <button
             onClick={abrirConversa}
             onPointerDown={(e) => e.stopPropagation()}
-            className="p-1 rounded-md hover:bg-green-50 text-green-600"
+            className="p-2.5 rounded-md hover:bg-whatsapp/10 text-whatsapp"
             title="Conversar no WhatsApp (pelo CRM)"
+            aria-label="Conversar no WhatsApp"
           >
             <MessageCircle size={14} />
           </button>

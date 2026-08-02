@@ -87,7 +87,7 @@ export default function EditarAgenteIaPage({ params }: { params: Promise<{ chave
               <Bot size={18} className="text-navy" />
             </div>
             <div>
-              <h1 className="text-xl font-extrabold text-navy">Editar {agente.nome}</h1>
+              <h1 className="titulo-pagina">Editar {agente.nome}</h1>
               <p className="text-sm text-navy/60">
                 {ehVoz ? "Agente de voz outbound (ligações de prospecção)" : "Assistente comercial (chat do CRM)"}
               </p>
@@ -95,14 +95,14 @@ export default function EditarAgenteIaPage({ params }: { params: Promise<{ chave
           </div>
 
           {ehVoz && (
-            <div className="text-xs text-navy/60 bg-navy/[0.03] border border-navy/10 rounded-lg px-4 py-3">
+            <div className="text-xs text-navy/60 bg-navy/[0.03] border border-navy/15 rounded-lg px-4 py-3">
               O agente de voz roda num serviço separado (fora deste CRM). O que você salvar aqui fica guardado, mas
               pra valer numa ligação de verdade ainda precisa de um passo extra de integração naquele serviço —
               ainda não feito.
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-5 flex flex-col gap-4">
+          <div className="bg-white rounded-xl border border-navy/15 shadow-sm p-5 flex flex-col gap-4">
             <div>
               <label className="text-xs font-semibold text-navy/50 uppercase tracking-wide">Nome</label>
               <input

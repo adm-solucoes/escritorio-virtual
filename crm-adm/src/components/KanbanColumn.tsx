@@ -56,8 +56,9 @@ export default function KanbanColumn({
         {colapsada ? (
           <button
             onClick={alternarColapso}
-            className="flex flex-col items-center gap-1 w-full text-navy/60 hover:text-navy"
+            className="flex flex-col items-center gap-1 w-full text-navy/60 hover:text-navy p-2"
             title={`Expandir ${etapa}`}
+            aria-label={`Expandir coluna ${etapa}`}
           >
             <ChevronRight size={14} />
             <span className="text-[10px] font-bold">{oportunidades.length}</span>
@@ -66,7 +67,12 @@ export default function KanbanColumn({
           <>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <button onClick={alternarColapso} className="text-navy/40 hover:text-navy shrink-0" title="Colapsar coluna">
+                <button
+                  onClick={alternarColapso}
+                  className="text-navy/40 hover:text-navy shrink-0 p-2"
+                  title="Colapsar coluna"
+                  aria-label="Colapsar coluna"
+                >
                   <ChevronDown size={14} />
                 </button>
                 <h3 className="text-sm font-bold text-navy truncate">{etapa}</h3>
@@ -91,8 +97,9 @@ export default function KanbanColumn({
             </div>
             <button
               onClick={onAddClick}
-              className="p-1 rounded-md hover:bg-navy/10 text-navy/50 shrink-0"
+              className="p-2.5 rounded-md hover:bg-navy/10 text-navy/50 shrink-0"
               title="Nova oportunidade nesta etapa"
+              aria-label={`Nova oportunidade em ${etapa}`}
             >
               <Plus size={16} />
             </button>

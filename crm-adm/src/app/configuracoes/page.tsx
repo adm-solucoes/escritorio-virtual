@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { CalendarCheck, ExternalLink, MessageCircle, Plus, Save, Trash2, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
+  CARGOS,
   ETAPAS_FUNIL,
   META_EQUIPE_ID,
   type AcaoRapidaContato,
@@ -23,6 +23,7 @@ import {
 } from "@/lib/types";
 import TrocarSenha from "@/components/TrocarSenha";
 import EditarFoto from "@/components/EditarFoto";
+import { badgeClasses } from "@/components/Badge";
 
 const MESES_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -50,15 +51,6 @@ const SECOES_RELATORIO: { campo: keyof ConfiguracaoRelatorio; label: string }[] 
 ];
 
 export default function ConfiguracoesPage() {
-  return (
-    <Suspense fallback={<p className="p-6 text-sm text-navy/50">Carregando...</p>}>
-      <ConfiguracoesConteudo />
-    </Suspense>
-  );
-}
-
-function ConfiguracoesConteudo() {
-  const searchParams = useSearchParams();
   const [etapas, setEtapas] = useState<EtapaFunilConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [salvandoId, setSalvandoId] = useState<number | null>(null);
@@ -89,7 +81,9 @@ function ConfiguracoesConteudo() {
   const [compartilharAgenda, setCompartilharAgenda] = useState(false);
   const [carregandoGoogle, setCarregandoGoogle] = useState(true);
   const [refreshGoogleKey, setRefreshGoogleKey] = useState(0);
-  const googleStatus = searchParams.get("google");
+  const [googleStatus] = useState<string | null>(() =>
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("google") : null
+  );
 
   const [numeros, setNumeros] = useState<WhatsappNumero[]>([]);
   const [loadingNumeros, setLoadingNumeros] = useState(true);
@@ -520,6 +514,20 @@ function ConfiguracoesConteudo() {
     setRefreshGcsKey((k) => k + 1);
   }
 
+  async function atualizarCargo(gc: Gc, novoCargo: string) {
+    const res = await fetch("/api/membros/atualizar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gcId: gc.id, cargo: novoCargo || null }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert("Erro ao atualizar cargo: " + (d.error ?? res.status));
+      return;
+    }
+    setRefreshGcsKey((k) => k + 1);
+  }
+
   useEffect(() => {
     let cancelado = false;
     supabase
@@ -644,7 +652,7 @@ function ConfiguracoesConteudo() {
     <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-8">
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-navy">Minha conta</h1>
+          <h1 className="titulo-pagina">Minha conta</h1>
           <p className="text-sm text-navy/60">Sua foto de perfil e senha de acesso ao sistema.</p>
         </div>
         {gcAtual && (
@@ -662,12 +670,12 @@ function ConfiguracoesConteudo() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4 flex flex-col gap-3">
+        <div className="bg-white rounded-xl border border-navy/15 shadow-sm p-4 flex flex-col gap-3">
           {googleStatus === "erro" && (
             <p className="text-xs text-red">Não deu pra conectar sua conta Google. Tente de novo.</p>
           )}
           {googleStatus === "sem_refresh_token" && (
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-warning">
               O Google não devolveu permissão renovável. Vá em{" "}
               <a
                 href="https://myaccount.google.com/permissions"
@@ -688,7 +696,7 @@ function ConfiguracoesConteudo() {
             <>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm text-navy/70">
-                  <CalendarCheck size={16} className="text-green-600" />
+                  <CalendarCheck size={16} className="text-success" />
                   Conectado como <strong>{googleConectado}</strong>
                 </div>
                 <button onClick={desconectarGoogle} className="text-xs font-semibold text-red hover:underline">
@@ -733,13 +741,14 @@ function ConfiguracoesConteudo() {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+          <div className="bg-white rounded-xl border border-navy/15 shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                   <th className="px-4 py-3 font-semibold">Nome</th>
                   <th className="px-4 py-3 font-semibold">E-mail</th>
                   <th className="px-4 py-3 font-semibold">Papel</th>
+                  <th className="px-4 py-3 font-semibold">Cargo</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-4 py-3 font-semibold"></th>
                 </tr>
@@ -761,9 +770,23 @@ function ConfiguracoesConteudo() {
                       </select>
                     </td>
                     <td className="px-4 py-3">
+                      <select
+                        className="input py-1"
+                        value={gc.cargo ?? ""}
+                        onChange={(e) => atualizarCargo(gc, e.target.value)}
+                      >
+                        <option value="">— Sem cargo definido —</option>
+                        {CARGOS.map((c) => (
+                          <option key={c.label} value={c.label}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                          gc.status === "Ativo" ? "bg-green-100 text-green-700" : "bg-navy/5 text-navy/50"
+                          gc.status === "Ativo" ? badgeClasses("success") : "bg-navy/5 text-navy/50"
                         }`}
                       >
                         {gc.status}
@@ -782,7 +805,7 @@ function ConfiguracoesConteudo() {
               </tbody>
             </table>
 
-            <form onSubmit={convidarMembro} className="p-4 border-t border-navy/10 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+            <form onSubmit={convidarMembro} className="p-4 border-t border-navy/15 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-navy/60 font-medium">Nome</span>
                 <input className="input w-48" value={nomeConvite} onChange={(e) => setNomeConvite(e.target.value)} />
@@ -814,7 +837,7 @@ function ConfiguracoesConteudo() {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+        <div className="bg-white rounded-xl border border-navy/15 shadow-sm overflow-x-auto">
           {loadingNumeros ? (
             <p className="p-6 text-sm text-navy/50">Carregando...</p>
           ) : numeros.length === 0 ? (
@@ -822,7 +845,7 @@ function ConfiguracoesConteudo() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                   <th className="px-4 py-3 font-semibold">Número</th>
                   <th className="px-4 py-3 font-semibold">Nome</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
@@ -838,10 +861,10 @@ function ConfiguracoesConteudo() {
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                           n.ativo
-                            ? "bg-green-100 text-green-700"
+                            ? badgeClasses("success")
                             : n.status === "verificado"
-                            ? "bg-blue/10 text-blue"
-                            : "bg-amber-100 text-amber-700"
+                            ? badgeClasses("info")
+                            : badgeClasses("warning")
                         }`}
                       >
                         {n.ativo ? "Ativo" : n.status === "verificado" ? "Verificado" : "Aguardando código"}
@@ -941,7 +964,7 @@ function ConfiguracoesConteudo() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/15 overflow-x-auto shadow-sm">
           {loadingContatos ? (
             <p className="p-6 text-sm text-navy/50">Carregando...</p>
           ) : contatosAcaoRapida.length === 0 ? (
@@ -949,7 +972,7 @@ function ConfiguracoesConteudo() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                   <th className="px-4 py-3 font-semibold">Nome</th>
                   <th className="px-4 py-3 font-semibold">E-mail</th>
                   <th className="px-4 py-3 font-semibold">Telefone</th>
@@ -1009,7 +1032,7 @@ function ConfiguracoesConteudo() {
                           >
                             Editar
                           </button>
-                          <button onClick={() => excluirContato(contato)} className="p-1.5 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                          <button onClick={() => excluirContato(contato)} className="p-2.5 rounded-md hover:bg-red/10 text-red" title="Excluir" aria-label="Excluir contato">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -1032,13 +1055,13 @@ function ConfiguracoesConteudo() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/15 overflow-x-auto shadow-sm">
           {loadingRegrasScore ? (
             <p className="p-6 text-sm text-navy/50">Carregando...</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                   <th className="px-4 py-3 font-semibold">Critério</th>
                   <th className="px-4 py-3 font-semibold">Peso</th>
                   <th className="px-4 py-3 font-semibold">Ativo</th>
@@ -1093,7 +1116,7 @@ function ConfiguracoesConteudo() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/15 shadow-sm">
           {loadingMotivosPerda ? (
             <p className="p-6 text-sm text-navy/50">Carregando...</p>
           ) : (
@@ -1108,7 +1131,7 @@ function ConfiguracoesConteudo() {
                     >
                       {motivo.ativo ? "Desativar" : "Ativar"}
                     </button>
-                    <button onClick={() => excluirMotivoPerda(motivo)} className="p-1 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                    <button onClick={() => excluirMotivoPerda(motivo)} className="p-2.5 rounded-md hover:bg-red/10 text-red" title="Excluir" aria-label="Excluir motivo de perda">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -1116,7 +1139,7 @@ function ConfiguracoesConteudo() {
               ))}
             </div>
           )}
-          <form onSubmit={adicionarMotivoPerda} className="p-4 border-t border-navy/10 flex gap-2">
+          <form onSubmit={adicionarMotivoPerda} className="p-4 border-t border-navy/15 flex gap-2">
             <input
               className="input flex-1"
               placeholder="Novo motivo..."
@@ -1145,7 +1168,7 @@ function ConfiguracoesConteudo() {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+          <div className="bg-white rounded-xl border border-navy/15 shadow-sm overflow-x-auto">
             {loadingFormularios ? (
               <p className="p-6 text-sm text-navy/50">Carregando...</p>
             ) : formularios.length === 0 ? (
@@ -1153,7 +1176,7 @@ function ConfiguracoesConteudo() {
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                  <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                     <th className="px-4 py-3 font-semibold">Nome</th>
                     <th className="px-4 py-3 font-semibold">Origem do lead</th>
                     <th className="px-4 py-3 font-semibold">Chave de API</th>
@@ -1170,7 +1193,7 @@ function ConfiguracoesConteudo() {
                       <td className="px-4 py-3">
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                            f.ativo ? "bg-green-100 text-green-700" : "bg-navy/5 text-navy/50"
+                            f.ativo ? badgeClasses("success") : "bg-navy/5 text-navy/50"
                           }`}
                         >
                           {f.ativo ? "Ativo" : "Inativo"}
@@ -1181,7 +1204,7 @@ function ConfiguracoesConteudo() {
                           <button onClick={() => alternarFormularioAtivo(f)} className="text-xs font-semibold text-blue hover:underline">
                             {f.ativo ? "Desativar" : "Ativar"}
                           </button>
-                          <button onClick={() => excluirFormulario(f)} className="p-1 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                          <button onClick={() => excluirFormulario(f)} className="p-2.5 rounded-md hover:bg-red/10 text-red" title="Excluir" aria-label="Excluir formulário">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -1192,7 +1215,7 @@ function ConfiguracoesConteudo() {
               </table>
             )}
 
-            <form onSubmit={criarFormulario} className="p-4 border-t border-navy/10 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+            <form onSubmit={criarFormulario} className="p-4 border-t border-navy/15 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-navy/60 font-medium">Nome do formulário</span>
                 <input className="input w-48" value={nomeFormulario} onChange={(e) => setNomeFormulario(e.target.value)} />
@@ -1218,13 +1241,13 @@ function ConfiguracoesConteudo() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 overflow-x-auto shadow-sm">
+        <div className="bg-white rounded-xl border border-navy/15 overflow-x-auto shadow-sm">
           {loading ? (
             <p className="p-6 text-sm text-navy/50">Carregando...</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                   <th className="px-4 py-3 font-semibold">Etapa</th>
                   <th className="px-4 py-3 font-semibold">Probabilidade (%)</th>
                   <th className="px-4 py-3 font-semibold">Alerta de follow-up (dias sem interação)</th>
@@ -1301,7 +1324,7 @@ function ConfiguracoesConteudo() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+        <div className="bg-white rounded-xl border border-navy/15 shadow-sm overflow-x-auto">
           {loadingChecklist ? (
             <p className="p-6 text-sm text-navy/50">Carregando...</p>
           ) : (
@@ -1317,7 +1340,7 @@ function ConfiguracoesConteudo() {
                           <span className="text-navy">{item.nome_item}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             <span className="text-xs text-navy/50">+{item.prazo_dias}d</span>
-                            <button onClick={() => excluirItemChecklist(item)} className="p-1 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                            <button onClick={() => excluirItemChecklist(item)} className="p-2.5 rounded-md hover:bg-red/10 text-red" title="Excluir" aria-label="Excluir item do checklist">
                               <Trash2 size={13} />
                             </button>
                           </div>
@@ -1330,7 +1353,7 @@ function ConfiguracoesConteudo() {
             </div>
           )}
 
-          <form onSubmit={adicionarItemChecklist} className="p-4 border-t border-navy/10 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+          <form onSubmit={adicionarItemChecklist} className="p-4 border-t border-navy/15 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-navy/60 font-medium">Etapa</span>
               <select className="input" value={etapaChecklist} onChange={(e) => setEtapaChecklist(e.target.value as EtapaFunil)}>
@@ -1386,13 +1409,13 @@ function ConfiguracoesConteudo() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm overflow-x-auto">
+        <div className="bg-white rounded-xl border border-navy/15 shadow-sm overflow-x-auto">
           {loadingMetas ? (
             <p className="p-6 text-sm text-navy/50">Carregando...</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-navy/50 border-b border-navy/10 bg-navy/[0.03]">
+                <tr className="text-left text-navy/50 border-b border-navy/15 bg-navy/[0.03]">
                   <th className="px-4 py-3 font-semibold">Quem</th>
                   <th className="px-4 py-3 font-semibold">Meta de receita (R$)</th>
                   <th className="px-4 py-3 font-semibold"></th>
@@ -1468,7 +1491,7 @@ function ConfiguracoesConteudo() {
           </Link>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4 flex flex-col gap-4">
+        <div className="bg-white rounded-xl border border-navy/15 shadow-sm p-4 flex flex-col gap-4">
           {loadingRelatorio || !relatorio ? (
             <p className="text-sm text-navy/50">Carregando...</p>
           ) : (
@@ -1556,7 +1579,7 @@ function ConfiguracoesConteudo() {
             </a>
           </div>
 
-          <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4">
+          <div className="bg-white rounded-xl border border-navy/15 shadow-sm p-4">
             {!usoIA ? (
               <p className="text-sm text-navy/50">Carregando...</p>
             ) : (
@@ -1577,7 +1600,7 @@ function ConfiguracoesConteudo() {
                 </div>
 
                 {usoIA.porOrigem.length > 0 && (
-                  <div className="border-t border-navy/10 pt-3">
+                  <div className="border-t border-navy/15 pt-3">
                     <p className="text-xs text-navy/50 uppercase tracking-wide font-semibold mb-2">Por origem (este mês)</p>
                     <div className="flex flex-col gap-1.5">
                       {usoIA.porOrigem

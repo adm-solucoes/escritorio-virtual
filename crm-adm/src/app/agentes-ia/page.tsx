@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bot, Phone, MessageSquareText, Workflow, ExternalLink, CheckCircle2, Settings } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { Badge } from "@/components/Badge";
 
 type UsoIA = { custoHojeUsd: number; custoMesUsd: number };
 
@@ -30,44 +31,42 @@ export default function AgentesIaPage() {
   return (
     <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-extrabold text-navy flex items-center gap-2">
+        <h1 className="titulo-pagina flex items-center gap-2">
           <Bot size={20} /> Agentes de IA
         </h1>
         <p className="text-sm text-navy/60">Onde a inteligência artificial já trabalha pra ADM Soluções hoje.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4">
+        <div className="bg-white rounded-lg border-l-[3px] border-l-navy border-y border-r border-navy/15 shadow-sm p-4">
           <p className="text-xs font-semibold text-navy/50">Custo de IA hoje</p>
           <p className="text-lg font-extrabold text-navy mt-1">
             {uso ? `$${uso.custoHojeUsd.toFixed(3)}` : "—"}
           </p>
         </div>
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4">
+        <div className="bg-white rounded-lg border-l-[3px] border-l-navy border-y border-r border-navy/15 shadow-sm p-4">
           <p className="text-xs font-semibold text-navy/50">Custo de IA este mês</p>
           <p className="text-lg font-extrabold text-navy mt-1">{uso ? `$${uso.custoMesUsd.toFixed(2)}` : "—"}</p>
         </div>
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-4">
+        <div className="bg-white rounded-lg border-l-[3px] border-l-navy border-y border-r border-navy/15 shadow-sm p-4">
           <p className="text-xs font-semibold text-navy/50">Passos de IA em automações</p>
           <p className="text-lg font-extrabold text-navy mt-1">{totalAutomacoesIA ?? "—"}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-5 flex flex-col gap-3">
+        <div className="bg-white rounded-lg border-l-[3px] border-l-navy border-y border-r border-navy/15 shadow-sm p-5 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-navy/5 flex items-center justify-center shrink-0">
-                <Phone size={17} className="text-navy" />
-              </div>
+              <Phone size={18} className="text-navy shrink-0" />
               <div>
                 <p className="font-bold text-navy text-sm">Fernanda</p>
                 <p className="text-xs text-navy/50">Agente de voz outbound</p>
               </div>
             </div>
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full shrink-0">
-              <CheckCircle2 size={11} /> Ativo
-            </span>
+            <Badge variant="success" icon={CheckCircle2}>
+              Ativo
+            </Badge>
           </div>
           <p className="text-sm text-navy/70">
             Liga pra prospects, qualifica o interesse com SPIN Selling leve e agenda um briefing direto na agenda real
@@ -83,20 +82,18 @@ export default function AgentesIaPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-5 flex flex-col gap-3">
+        <div className="bg-white rounded-lg border-l-[3px] border-l-navy border-y border-r border-navy/15 shadow-sm p-5 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-navy/5 flex items-center justify-center shrink-0">
-                <MessageSquareText size={17} className="text-navy" />
-              </div>
+              <MessageSquareText size={18} className="text-navy shrink-0" />
               <div>
                 <p className="font-bold text-navy text-sm">Assistente comercial</p>
                 <p className="text-xs text-navy/50">Chat embutido no CRM</p>
               </div>
             </div>
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full shrink-0">
-              <CheckCircle2 size={11} /> Ativo
-            </span>
+            <Badge variant="success" icon={CheckCircle2}>
+              Ativo
+            </Badge>
           </div>
           <p className="text-sm text-navy/70">
             Botão flutuante disponível em todas as telas (menos login) — responde perguntas sobre a carteira, marca e
@@ -110,12 +107,10 @@ export default function AgentesIaPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-5 flex flex-col gap-3 md:col-span-2">
+        <div className="bg-white rounded-lg border-l-[3px] border-l-navy border-y border-r border-navy/15 shadow-sm p-5 flex flex-col gap-3 md:col-span-2">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-navy/5 flex items-center justify-center shrink-0">
-                <Workflow size={17} className="text-navy" />
-              </div>
+              <Workflow size={18} className="text-navy shrink-0" />
               <div>
                 <p className="font-bold text-navy text-sm">Nós de IA nas automações</p>
                 <p className="text-xs text-navy/50">Dentro do canvas de automação</p>

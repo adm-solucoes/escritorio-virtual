@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   CheckCheck,
@@ -11,7 +10,6 @@ import {
   Paperclip,
   Image as ImageIcon,
   Video as VideoIcon,
-  StickyNote,
   X,
   Link2,
   Unlink,
@@ -21,19 +19,13 @@ import { supabase } from "@/lib/supabase";
 import type { Empresa, Gc, InstagramConversa, InstagramMensagem } from "@/lib/types";
 import { linkInstagram, vincularEmpresaConversaInstagram } from "@/lib/instagram";
 import Avatar from "@/components/Avatar";
+import { NotaInternaBubble, NotaInternaMenuItem, NotaInternaModal } from "@/components/NotaInterna";
 
 export default function InstagramPage() {
-  return (
-    <Suspense fallback={<p className="p-6 text-sm text-navy/50">Carregando...</p>}>
-      <InstagramPageConteudo />
-    </Suspense>
-  );
-}
-
-function InstagramPageConteudo() {
-  const searchParams = useSearchParams();
   const [conversas, setConversas] = useState<InstagramConversa[]>([]);
-  const [conversaId, setConversaId] = useState<string | null>(() => searchParams.get("conversa"));
+  const [conversaId, setConversaId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("conversa") : null
+  );
   const [mensagens, setMensagens] = useState<InstagramMensagem[]>([]);
   const [gcAtual, setGcAtual] = useState<Gc | null>(null);
   const [texto, setTexto] = useState("");
@@ -276,8 +268,8 @@ function InstagramPageConteudo() {
   return (
     <>
       <div className="flex min-h-0 h-[calc(100dvh-56px)] md:h-dvh">
-        <div className="w-72 shrink-0 border-r border-navy/10 bg-white flex flex-col min-h-0">
-          <div className="px-4 py-4 border-b border-navy/10">
+        <div className="w-72 shrink-0 border-r border-navy/15 bg-white flex flex-col min-h-0">
+          <div className="px-4 py-4 border-b border-navy/15">
             <h1 className="text-lg font-extrabold text-navy">Instagram</h1>
             <p className="text-xs text-navy/50">{conversas.length} conversas</p>
           </div>
@@ -328,7 +320,7 @@ function InstagramPageConteudo() {
             <div className="flex-1 flex items-center justify-center text-navy/40 text-sm">Selecione uma conversa à esquerda</div>
           ) : (
             <>
-              <div className="px-5 py-3 border-b border-navy/10 bg-white flex items-center justify-between gap-3">
+              <div className="px-5 py-3 border-b border-navy/15 bg-white flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar nome={conversaSelecionada.empresas?.nome_empresa ?? conversaSelecionada.nome_perfil ?? conversaSelecionada.username ?? "?"} tamanho="md" />
                   <div className="min-w-0">
@@ -360,17 +352,7 @@ function InstagramPageConteudo() {
               <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2 bg-navy/[0.02]">
                 {mensagens.map((m) =>
                   m.interna ? (
-                    <div key={m.id} className="flex justify-center">
-                      <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-amber-50 border border-amber-200 text-amber-900">
-                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 mb-0.5">
-                          <StickyNote size={12} /> Nota interna {m.gcs?.nome ? `· ${m.gcs.nome}` : ""}
-                        </div>
-                        <div className="whitespace-pre-wrap break-words">{m.conteudo}</div>
-                        <div className="text-[10px] text-amber-600 mt-1">
-                          {new Date(m.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                      </div>
-                    </div>
+                    <NotaInternaBubble key={m.id} autor={m.gcs?.nome} conteudo={m.conteudo} criadoEm={m.criado_em} />
                   ) : (
                     <div key={m.id} className={`flex items-end gap-2 ${m.direcao === "enviada" ? "justify-end" : "justify-start"}`}>
                       {m.direcao === "recebida" && (
@@ -381,7 +363,7 @@ function InstagramPageConteudo() {
                       )}
                       <div
                         className={`max-w-[70%] rounded-xl px-3 py-2 text-sm ${
-                          m.direcao === "enviada" ? "bg-blue text-white rounded-br-sm" : "bg-white text-navy border border-navy/10 rounded-bl-sm"
+                          m.direcao === "enviada" ? "bg-blue text-white rounded-br-sm" : "bg-white text-navy border border-navy/15 rounded-bl-sm"
                         }`}
                       >
                         {m.direcao === "enviada" && m.gcs?.nome && (
@@ -403,9 +385,9 @@ function InstagramPageConteudo() {
                 <div ref={fimDasMensagensRef} />
               </div>
 
-              <form onSubmit={enviar} className="border-t border-navy/10 bg-white p-3 flex flex-col gap-2">
+              <form onSubmit={enviar} className="border-t border-navy/15 bg-white p-3 flex flex-col gap-2">
                 {!dentroDaJanela && (
-                  <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-md px-2.5 py-1.5">
+                  <div className="flex items-center gap-2 text-xs text-warning bg-warning-bg rounded-md px-2.5 py-1.5">
                     <AlertTriangle size={13} />
                     Fora da janela de 24h — o Instagram não tem template pra reabrir. Espere o contato escrever de novo.
                   </div>
@@ -423,7 +405,7 @@ function InstagramPageConteudo() {
                       <Paperclip size={18} />
                     </button>
                     {menuAnexoAberto && (
-                      <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-lg shadow-lg border border-navy/10 overflow-hidden z-10">
+                      <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-lg shadow-lg border border-navy/15 overflow-hidden z-10">
                         <button
                           type="button"
                           onClick={() => imagemInputRef.current?.click()}
@@ -439,16 +421,12 @@ function InstagramPageConteudo() {
                           <VideoIcon size={14} /> Vídeo
                         </button>
                         <div className="border-t border-navy/5" />
-                        <button
-                          type="button"
+                        <NotaInternaMenuItem
                           onClick={() => {
                             setNotaAberta(true);
                             setMenuAnexoAberto(false);
                           }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-700 hover:bg-amber-50"
-                        >
-                          <StickyNote size={14} /> Nota interna
-                        </button>
+                        />
                       </div>
                     )}
                     <input
@@ -492,36 +470,12 @@ function InstagramPageConteudo() {
               </form>
 
               {notaAberta && (
-                <div className="fixed inset-0 z-50 bg-navy/40 flex items-center justify-center p-4" onClick={() => setNotaAberta(false)}>
-                  <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="font-bold text-navy flex items-center gap-2">
-                        <StickyNote size={16} className="text-amber-600" /> Nota interna
-                      </h2>
-                      <button onClick={() => setNotaAberta(false)} className="text-navy/40 hover:text-navy">
-                        <X size={18} />
-                      </button>
-                    </div>
-                    <p className="text-xs text-navy/50 mb-3">
-                      Visível só aqui no CRM, para o time. O contato nunca recebe isso no Instagram.
-                    </p>
-                    <textarea
-                      className="input w-full min-h-[100px] resize-none"
-                      placeholder="Ex: cliente pediu desconto, confirmar com o financeiro..."
-                      value={notaTexto}
-                      onChange={(e) => setNotaTexto(e.target.value)}
-                      autoFocus
-                    />
-                    <div className="flex justify-end gap-2 mt-3">
-                      <button onClick={() => setNotaAberta(false)} className="btn-secondary">
-                        Cancelar
-                      </button>
-                      <button onClick={enviarNotaInterna} disabled={!notaTexto.trim()} className="btn-primary">
-                        Salvar nota
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <NotaInternaModal
+                  texto={notaTexto}
+                  onTextoChange={setNotaTexto}
+                  onCancelar={() => setNotaAberta(false)}
+                  onSalvar={enviarNotaInterna}
+                />
               )}
             </>
           )}
@@ -531,13 +485,13 @@ function InstagramPageConteudo() {
       {seletorEmpresaAberto && (
         <div className="fixed inset-0 z-50 bg-navy/40 flex items-center justify-center p-4" onClick={() => setSeletorEmpresaAberto(false)}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-navy/10">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-navy/15">
               <h2 className="font-bold text-navy">Vincular a uma empresa</h2>
               <button onClick={() => setSeletorEmpresaAberto(false)} className="text-navy/40 hover:text-navy">
                 <X size={18} />
               </button>
             </div>
-            <div className="px-5 py-3 border-b border-navy/10">
+            <div className="px-5 py-3 border-b border-navy/15">
               <div className="relative">
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-navy/40" />
                 <input

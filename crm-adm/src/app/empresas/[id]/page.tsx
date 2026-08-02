@@ -326,10 +326,10 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
         <ArrowLeft size={15} /> Empresas
       </Link>
 
-      <div className="bg-white rounded-xl border border-navy/10 shadow-sm p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <div className="bg-white rounded-xl border border-navy/15 shadow-sm p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-extrabold text-navy">{empresa.nome_empresa}</h1>
+            <h1 className="titulo-pagina">{empresa.nome_empresa}</h1>
             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${classificacao.cor}`}>
               {score} · {classificacao.label}
             </span>
@@ -348,14 +348,14 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
         </div>
         <div className="flex gap-2 shrink-0">
           {empresa.telefone && (
-            <button onClick={abrirConversaWhatsapp} className="btn-primary whitespace-nowrap bg-green-600 hover:bg-green-700">
+            <button onClick={abrirConversaWhatsapp} className="btn-primary whitespace-nowrap bg-whatsapp hover:bg-whatsapp/90">
               <MessagesSquare size={15} /> WhatsApp
             </button>
           )}
           {conversaInstagram && (
             <button
               onClick={() => router.push(`/instagram?conversa=${conversaInstagram.id}`)}
-              className="btn-primary whitespace-nowrap bg-fuchsia-600 hover:bg-fuchsia-700"
+              className="btn-primary whitespace-nowrap bg-instagram hover:bg-instagram/90"
             >
               <Camera size={15} /> Instagram
             </button>
@@ -391,7 +391,7 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
                     setOportunidadeEditando(o);
                     setModalOportunidadeAberto(true);
                   }}
-                  className="bg-white rounded-lg border border-navy/10 p-3 cursor-pointer hover:border-blue/40"
+                  className="bg-white rounded-lg border border-navy/15 p-3 cursor-pointer hover:border-blue/40"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-semibold text-navy truncate">{o.projeto || o.etapa_atual}</span>
@@ -443,7 +443,7 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
           ) : (
             <ul className="flex flex-col gap-2">
               {atividades.map((a) => (
-                <li key={a.id} className="bg-white rounded-lg border border-navy/10 p-3 flex items-center justify-between gap-2">
+                <li key={a.id} className="bg-white rounded-lg border border-navy/15 p-3 flex items-center justify-between gap-2">
                   <span className="text-sm text-navy truncate flex items-center gap-1.5">
                     {a.tipo_atividade.startsWith("E-mail:") && <Mail size={13} className="text-navy/40 shrink-0" />}
                     {a.tipo_atividade}
@@ -467,7 +467,7 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
           ) : (
             <ul className="flex flex-col gap-2">
               {nps.map((n) => (
-                <li key={n.id} className="bg-white rounded-lg border border-navy/10 p-3">
+                <li key={n.id} className="bg-white rounded-lg border border-navy/15 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-navy">Nota {n.nota}/10</span>
                     <span className="text-xs text-navy/40">{new Date(n.data).toLocaleDateString("pt-BR")}</span>
@@ -490,7 +490,7 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
               {anexos.map((a) => {
                 const { data: pub } = supabase.storage.from("anexos").getPublicUrl(a.caminho_storage);
                 return (
-                  <li key={a.id} className="bg-white rounded-lg border border-navy/10 p-3 flex items-center justify-between gap-2">
+                  <li key={a.id} className="bg-white rounded-lg border border-navy/15 p-3 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm text-navy truncate">{a.nome_arquivo}</p>
                       <p className="text-[11px] text-navy/40">
@@ -500,10 +500,22 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <a href={pub.publicUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md hover:bg-blue/10 text-blue" title="Baixar">
+                      <a
+                        href={pub.publicUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 rounded-md hover:bg-blue/10 text-blue"
+                        title="Baixar"
+                        aria-label={`Baixar ${a.nome_arquivo}`}
+                      >
                         <Download size={15} />
                       </a>
-                      <button onClick={() => excluirAnexo(a)} className="p-1.5 rounded-md hover:bg-red/10 text-red" title="Excluir">
+                      <button
+                        onClick={() => excluirAnexo(a)}
+                        className="p-2.5 rounded-md hover:bg-red/10 text-red"
+                        title="Excluir"
+                        aria-label={`Excluir ${a.nome_arquivo}`}
+                      >
                         <Trash2 size={15} />
                       </button>
                     </div>

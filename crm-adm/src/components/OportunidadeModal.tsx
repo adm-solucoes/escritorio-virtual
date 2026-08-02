@@ -8,6 +8,7 @@ import { ETAPAS_FUNIL, type Empresa, type EtapaFunil, type Gc, type MotivoPerdaC
 
 const ETAPAS_CS: EtapaFunil[] = ["Onboarding", "Adoção", "Expansão", "Indicação", "Renovação"];
 import SolicitacaoModal from "./SolicitacaoModal";
+import SolicitacaoDetalheModal from "./SolicitacaoDetalheModal";
 
 const OUTRO_MOTIVO = "Outro";
 
@@ -67,6 +68,7 @@ export default function OportunidadeModal({
 
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [modalSolicitacaoAberto, setModalSolicitacaoAberto] = useState(false);
+  const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<Solicitacao | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -99,6 +101,16 @@ export default function OportunidadeModal({
       cancelado = true;
     };
   }, [oportunidade]);
+
+  function recarregarSolicitacoes() {
+    if (!oportunidade) return;
+    supabase
+      .from("solicitacoes")
+      .select("*")
+      .eq("oportunidade_id", oportunidade.id)
+      .order("data_solicitacao", { ascending: false })
+      .then(({ data }) => setSolicitacoes((data as Solicitacao[]) ?? []));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -169,7 +181,7 @@ export default function OportunidadeModal({
   return (
     <div className="fixed inset-0 z-30 bg-navy/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/10 sticky top-0 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-navy/15 sticky top-0 bg-white">
           <h2 className="font-extrabold text-lg text-navy">
             {oportunidade ? "Editar oportunidade" : "Nova oportunidade"}
           </h2>
@@ -313,7 +325,7 @@ export default function OportunidadeModal({
 
         {oportunidade && (
           <div className="px-6 pb-6">
-            <div className="flex items-center justify-between border-t border-navy/10 pt-4">
+            <div className="flex items-center justify-between border-t border-navy/15 pt-4">
               <h3 className="text-sm font-bold text-navy flex items-center gap-1.5">
                 <ClipboardList size={15} /> Solicitações
               </h3>
@@ -331,16 +343,20 @@ export default function OportunidadeModal({
             ) : (
               <ul className="mt-2 flex flex-col gap-2">
                 {solicitacoes.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between gap-2 bg-navy/[0.03] rounded-lg px-3 py-2">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-navy truncate">{s.nome_evento_projeto}</div>
-                      <div className="text-xs text-navy/50">
-                        {[...s.tipo_apoio, s.tipo_apoio_outro].filter(Boolean).join(", ") || "—"}
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSolicitacaoSelecionada(s)}
+                      className="w-full flex items-center justify-between gap-2 bg-navy/[0.03] hover:bg-navy/[0.06] rounded-lg px-3 py-2 text-left transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-navy truncate">{s.nome_evento_projeto}</div>
+                        <div className="text-xs text-navy/50">{s.area ?? "Sem área definida"}</div>
                       </div>
-                    </div>
-                    <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_SOLICITACAO_CORES[s.status] ?? ""}`}>
-                      {s.status}
-                    </span>
+                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_SOLICITACAO_CORES[s.status] ?? ""}`}>
+                        {s.status}
+                      </span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -356,12 +372,19 @@ export default function OportunidadeModal({
           onClose={() => setModalSolicitacaoAberto(false)}
           onSaved={() => {
             setModalSolicitacaoAberto(false);
-            supabase
-              .from("solicitacoes")
-              .select("*")
-              .eq("oportunidade_id", oportunidade.id)
-              .order("data_solicitacao", { ascending: false })
-              .then(({ data }) => setSolicitacoes((data as Solicitacao[]) ?? []));
+            recarregarSolicitacoes();
+          }}
+        />
+      )}
+
+      {solicitacaoSelecionada && (
+        <SolicitacaoDetalheModal
+          solicitacao={solicitacaoSelecionada}
+          gcs={gcs}
+          onClose={() => setSolicitacaoSelecionada(null)}
+          onStatusChanged={(novoStatus) => {
+            setSolicitacaoSelecionada((prev) => (prev ? { ...prev, status: novoStatus } : prev));
+            recarregarSolicitacoes();
           }}
         />
       )}

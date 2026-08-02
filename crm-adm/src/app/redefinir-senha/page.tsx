@@ -41,7 +41,7 @@ export default function RedefinirSenhaPage() {
 
   return (
     <div className="flex-1 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-sm border border-navy/10 p-6">
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-sm border border-navy/15 p-6">
         <h1 className="text-lg font-extrabold text-navy mb-1">Defina sua senha</h1>
         <p className="text-sm text-navy/60 mb-6">Escolha uma senha para acessar o CRM daqui pra frente.</p>
 
