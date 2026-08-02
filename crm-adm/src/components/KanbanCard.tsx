@@ -61,7 +61,7 @@ export default function KanbanCard({
       alert(resultado.erro);
       return;
     }
-    router.push(`/whatsapp?conversa=${resultado.id}`);
+    router.push(`/conversas?conversa=${resultado.id}&canal=whatsapp`);
   }
 
   return (

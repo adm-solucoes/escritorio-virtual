@@ -110,7 +110,7 @@ export default function EmpresasPage() {
       alert(resultado.erro);
       return;
     }
-    router.push(`/whatsapp?conversa=${resultado.id}`);
+    router.push(`/conversas?conversa=${resultado.id}&canal=whatsapp`);
   }
 
   async function excluir(empresa: Empresa) {

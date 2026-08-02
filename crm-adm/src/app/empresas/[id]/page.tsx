@@ -260,7 +260,7 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
       alert(resultado.erro);
       return;
     }
-    router.push(`/whatsapp?conversa=${resultado.id}`);
+    router.push(`/conversas?conversa=${resultado.id}&canal=whatsapp`);
   }
 
   async function salvarNps(e: React.FormEvent) {
@@ -354,7 +354,7 @@ export default function EmpresaPerfilPage({ params }: { params: Promise<{ id: st
           )}
           {conversaInstagram && (
             <button
-              onClick={() => router.push(`/instagram?conversa=${conversaInstagram.id}`)}
+              onClick={() => router.push(`/conversas?conversa=${conversaInstagram.id}&canal=instagram`)}
               className="btn-primary whitespace-nowrap bg-instagram hover:bg-instagram/90"
             >
               <Camera size={15} /> Instagram
