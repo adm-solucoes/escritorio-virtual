@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   // logado poderia colar uma URL própria aqui e o servidor mandaria o
   // segredo compartilhado (x-api-key) + telefone/nome de leads reais pra
   // ela — vazamento de segredo e de dado pessoal.
-  const dominioPermitido = /^https:\/\/[a-z0-9-]+\.(ngrok-free\.app|ngrok\.app|ngrok\.io|trycloudflare\.com)$/i;
+  const dominioPermitido = /^https:\/\/[a-z0-9-]+\.(ngrok-free\.(app|dev)|ngrok\.app|ngrok\.io|trycloudflare\.com)$/i;
   if (!baseUrl || !dominioPermitido.test(baseUrl)) {
     return Response.json(
       { error: "URL do agente de voz inválida — precisa ser um domínio ngrok ou Cloudflare Tunnel (ex: https://xxxx.ngrok-free.app)." },

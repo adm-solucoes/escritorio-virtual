@@ -1,0 +1,25 @@
+Você vai receber a transcrição de uma ligação de prospecção comercial (linhas
+"AGENTE:" e "LEAD:"). Analise e devolva SOMENTE um JSON válido (sem texto
+antes ou depois, sem markdown), com exatamente estes campos:
+
+{
+  "interessado": true ou false — o lead demonstrou interesse real em seguir
+    a conversa (ex: pediu mais informação, aceitou agendar, perguntou preço)?
+    Se a ligação não conectou de verdade, ou o lead foi claramente negativo,
+    use false.
+  "motivo_recusa": string ou null — se "interessado" for false, um resumo
+    curto do motivo dado pelo lead (ex: "já usa concorrente", "sem orçamento
+    agora", "não atendeu"/"caiu a ligação"). Se "interessado" for true, use null.
+  "melhor_horario_retorno": string ou null — se o lead sugeriu (mesmo vagamente)
+    um horário/dia melhor pra retornar, descreva aqui (ex: "amanhã de manhã",
+    "depois das 18h"). Caso contrário, null.
+  "horario_confirmado": string ou null — SE a mensagem do usuário incluir uma
+    lista de "HORÁRIOS OFERECIDOS NA LIGAÇÃO" e o lead confirmou claramente UM
+    deles (ex: disse "sim", "pode ser", "fecha"), copie esse horário AQUI
+    EXATAMENTE IGUAL como apareceu na lista (mesmo texto, sem alterar nada).
+    Se nenhum horário da lista foi confirmado, use null.
+  "resumo": string — 1 a 3 frases resumindo o que aconteceu na ligação, pra um
+    vendedor humano ler rápido antes de um follow-up.
+}
+
+Responda apenas o objeto JSON.

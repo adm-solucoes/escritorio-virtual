@@ -1,0 +1,22 @@
+[
+  {
+    "nome": "Ana Ribeiro",
+    "email": "ana.ribeiro@exemplo.com.br",
+    "area": "Marketing"
+  },
+  {
+    "nome": "Bruno Cavalcante",
+    "email": "bruno.cavalcante@exemplo.com.br",
+    "area": "Marketing"
+  },
+  {
+    "nome": "Carla Menezes",
+    "email": "carla.menezes@exemplo.com.br",
+    "area": "Gente"
+  },
+  {
+    "nome": "Diego Farias",
+    "email": "diego.farias@exemplo.com.br",
+    "area": "Gestão"
+  }
+]

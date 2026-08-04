@@ -74,9 +74,6 @@ export default function AgenteVozPage() {
   const [filtroData, setFiltroData] = useState(""); // cadastradas a partir desta data
   const [filtroStatus, setFiltroStatus] = useState<StatusContato | "todos">("nunca_ligado");
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
-  const [urlAgente, setUrlAgente] = useState(() =>
-    typeof window !== "undefined" ? localStorage.getItem("agenteVozUrlBase") ?? "" : ""
-  );
   const [ligando, setLigando] = useState(false);
   const [resultadoLigacoes, setResultadoLigacoes] = useState<
     { empresaId: string; nome: string; ok: boolean; detalhe: string }[] | null
@@ -172,12 +169,11 @@ export default function AgenteVozPage() {
   }
 
   async function ligarAgora() {
-    const url = urlAgente.trim().replace(/\/$/, "");
+    const url = process.env.NEXT_PUBLIC_AGENTE_VOZ_URL?.trim().replace(/\/$/, "");
     if (!url) {
-      alert("Cola a URL pública (ngrok) do agente de voz antes de ligar.");
+      alert("URL do agente de voz não configurada (NEXT_PUBLIC_AGENTE_VOZ_URL). Avisa o Caio.");
       return;
     }
-    localStorage.setItem("agenteVozUrlBase", url);
 
     const ids = Array.from(selecionados);
     if (
@@ -405,21 +401,11 @@ export default function AgenteVozPage() {
             </button>
           </div>
 
-          <div className="bg-white rounded-lg border border-navy/15 p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs font-semibold text-navy/60">URL pública do agente de voz (ngrok)</label>
-              <input
-                type="text"
-                placeholder="https://xxxx.ngrok-free.app"
-                value={urlAgente}
-                onChange={(e) => setUrlAgente(e.target.value)}
-                className="text-sm border border-navy/15 rounded-md px-2 py-1.5"
-              />
-            </div>
+          <div className="bg-white rounded-lg border border-navy/15 p-4 flex items-center">
             <button
               onClick={ligarAgora}
               disabled={selecionados.size === 0 || ligando}
-              className="flex items-center gap-1.5 text-sm font-semibold bg-red text-white px-3 py-1.5 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 text-sm font-semibold bg-red text-white px-3 py-1.5 rounded-md disabled:opacity-40 disabled:cursor-not-allowed sm:ml-auto"
             >
               {ligando ? <Loader2 size={14} className="animate-spin" /> : <PhoneCall size={14} />}
               {ligando ? "Ligando..." : `Ligar agora (${selecionados.size})`}
@@ -428,8 +414,8 @@ export default function AgenteVozPage() {
 
           <p className="text-xs text-navy/50">
             O agente de voz roda no seu computador, exposto via ngrok — precisa estar rodando (
-            <code>npm run dev</code> no projeto do agente) com a URL colada acima pra &quot;Ligar agora&quot; funcionar. Se
-            preferir, o CSV exportado (colunas <code>telefone,nome</code>) continua compatível com{" "}
+            <code>npm run dev</code> no projeto do agente) pra &quot;Ligar agora&quot; funcionar. Se preferir, o CSV
+            exportado (colunas <code>telefone,nome</code>) continua compatível com{" "}
             <code>node scripts/batchDial.js</code>.
           </p>
 

@@ -276,6 +276,9 @@ export interface Solicitacao {
   status: StatusSolicitacao;
   data_solicitacao: string;
   data_resposta: string | null;
+  /** Cartão correspondente no quadro do Trello. Nulo = ainda não foi enviada. */
+  trello_card_id?: string | null;
+  trello_card_url?: string | null;
 }
 
 export interface SolicitacaoMensagem {
@@ -529,4 +532,159 @@ export interface FormularioCaptura {
   origem_lead: string | null;
   ativo: boolean;
   criado_em: string;
+}
+
+// ==========================================================
+// Kanban nativo — substitui o Trello dentro do CRM
+// ==========================================================
+
+/** Cores de etiqueta. Mesmo conjunto do Trello, pra quem vem de lá reconhecer. */
+export type CorEtiqueta = "blue" | "green" | "yellow" | "red" | "black" | "orange" | "purple" | "sky" | "lime" | "pink";
+
+export const CORES_ETIQUETA: { cor: CorEtiqueta; label: string; classe: string }[] = [
+  { cor: "blue", label: "Azul", classe: "bg-blue-100 text-blue-800 border-blue-300" },
+  { cor: "green", label: "Verde", classe: "bg-green-100 text-green-800 border-green-300" },
+  { cor: "yellow", label: "Amarelo", classe: "bg-amber-100 text-amber-800 border-amber-300" },
+  { cor: "red", label: "Vermelho", classe: "bg-red-100 text-red-800 border-red-300" },
+  { cor: "black", label: "Preto", classe: "bg-navy/15 text-navy border-navy/30" },
+  { cor: "orange", label: "Laranja", classe: "bg-orange-100 text-orange-800 border-orange-300" },
+  { cor: "purple", label: "Roxo", classe: "bg-purple-100 text-purple-800 border-purple-300" },
+  { cor: "sky", label: "Ciano", classe: "bg-sky-100 text-sky-800 border-sky-300" },
+  { cor: "lime", label: "Lima", classe: "bg-lime-100 text-lime-800 border-lime-300" },
+  { cor: "pink", label: "Rosa", classe: "bg-pink-100 text-pink-800 border-pink-300" },
+];
+
+export function classeEtiqueta(cor: string): string {
+  return CORES_ETIQUETA.find((c) => c.cor === cor)?.classe ?? "bg-navy/10 text-navy border-navy/20";
+}
+
+export interface KanbanQuadro {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  criado_por: string | null;
+  arquivado: boolean;
+  criado_em: string;
+  /** Diretoria dona do quadro. null = quadro geral, visível a todos. */
+  area: string | null;
+  cor_tema: string;
+  imagem_capa: string | null;
+}
+
+/** Cores de cabeçalho do quadro. Lista fixa (e não CSS livre) porque o
+ * Tailwind precisa ver a classe no código pra gerá-la no build. */
+export const TEMAS_QUADRO: { cor: string; label: string; classe: string }[] = [
+  { cor: 'navy', label: 'Azul-marinho', classe: 'bg-navy' },
+  { cor: 'blue', label: 'Azul', classe: 'bg-blue' },
+  { cor: 'red', label: 'Vermelho', classe: 'bg-red' },
+  { cor: 'green', label: 'Verde', classe: 'bg-green-700' },
+  { cor: 'purple', label: 'Roxo', classe: 'bg-purple-700' },
+  { cor: 'orange', label: 'Laranja', classe: 'bg-orange-600' },
+  { cor: 'teal', label: 'Turquesa', classe: 'bg-teal-700' },
+  { cor: 'slate', label: 'Grafite', classe: 'bg-slate-700' },
+];
+
+export function classeTemaQuadro(cor: string): string {
+  return TEMAS_QUADRO.find((t) => t.cor === cor)?.classe ?? 'bg-navy';
+}
+
+export interface KanbanLista {
+  id: string;
+  quadro_id: string;
+  nome: string;
+  posicao: number;
+  arquivada: boolean;
+  criado_em: string;
+}
+
+export interface KanbanEtiqueta {
+  id: string;
+  quadro_id: string;
+  nome: string;
+  cor: CorEtiqueta;
+  criado_em: string;
+}
+
+export interface KanbanCartao {
+  id: string;
+  lista_id: string;
+  titulo: string;
+  descricao: string | null;
+  posicao: number;
+  data_inicio: string | null;
+  prazo: string | null;
+  prazo_concluido: boolean;
+  arquivado: boolean;
+  criado_por: string | null;
+  solicitacao_id: string | null;
+  criado_em: string;
+  atualizado_em: string;
+  /** Preenchidos pela tela a partir das tabelas de ligação. */
+  etiquetas?: KanbanEtiqueta[];
+  membros?: Gc[];
+  totalItens?: number;
+  itensConcluidos?: number;
+  totalComentarios?: number;
+  totalAnexos?: number;
+}
+
+export interface KanbanAnexo {
+  id: string;
+  cartao_id: string;
+  nome: string;
+  url: string;
+  caminho: string | null;
+  tamanho_bytes: number | null;
+  tipo: string | null;
+  enviado_por: string | null;
+  criado_em: string;
+}
+
+export interface KanbanAtividade {
+  id: string;
+  cartao_id: string;
+  gc_id: string | null;
+  tipo: string;
+  descricao: string;
+  criado_em: string;
+  gcs?: { nome: string; foto_url: string | null } | null;
+}
+
+export interface KanbanChecklist {
+  id: string;
+  cartao_id: string;
+  titulo: string;
+  posicao: number;
+  itens?: KanbanChecklistItem[];
+}
+
+export interface KanbanChecklistItem {
+  id: string;
+  checklist_id: string;
+  texto: string;
+  concluido: boolean;
+  posicao: number;
+}
+
+export interface KanbanComentario {
+  id: string;
+  cartao_id: string;
+  gc_id: string | null;
+  texto: string;
+  criado_em: string;
+  gcs?: { nome: string; foto_url: string | null } | null;
+}
+
+/**
+ * Posição para inserir entre dois cartões/listas.
+ *
+ * O truque que permite arrastar escrevendo uma linha só: em vez de renumerar
+ * todo mundo, a posição nova é a média entre o vizinho de cima e o de baixo.
+ * Quando não há vizinho de baixo, joga pro fim (+1000).
+ */
+export function posicaoEntre(anterior: number | null, seguinte: number | null): number {
+  if (anterior === null && seguinte === null) return 1000;
+  if (anterior === null) return (seguinte as number) / 2;
+  if (seguinte === null) return anterior + 1000;
+  return (anterior + seguinte) / 2;
 }

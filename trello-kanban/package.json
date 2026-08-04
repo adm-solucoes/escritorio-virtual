@@ -1,0 +1,18 @@
+{
+  "name": "trello-kanban-setup",
+  "version": "1.0.0",
+  "description": "Configura um quadro Kanban no Trello (listas, etiquetas, cartão-modelo) e convida os membros por e-mail. Idempotente: pode rodar quantas vezes quiser.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dry-run": "node src/index.js --dry-run"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "nodemailer": "^6.9.16"
+  }
+}

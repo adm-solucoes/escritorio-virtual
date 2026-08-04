@@ -5,7 +5,8 @@
       "name": "crm-adm",
       "runtimeExecutable": "crm-adm\\dev.cmd",
       "runtimeArgs": [],
-      "port": 3000
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

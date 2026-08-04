@@ -1,0 +1,27 @@
+{
+  "name": "agente-voz-outbound",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agente de voz outbound para prospecção comercial — Twilio + Deepgram + Groq (LLM abstraído) + Cartesia.",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "call:single": "node scripts/callSingle.js",
+    "call:batch": "node scripts/batchDial.js",
+    "call:crm": "node scripts/dialFromCrm.js"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^3.11.2",
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "twilio": "^5.4.3",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13"
+  }
+}

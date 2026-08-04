@@ -1,0 +1,10 @@
+node_modules/
+
+# Credenciais — NUNCA versionar
+.env
+
+# Dados reais das pessoas (e-mails) — só o .example vai pro git
+members.json
+
+# Registro local de quem já foi convidado (ver README, seção de idempotência)
+.estado-convites.json

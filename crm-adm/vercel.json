@@ -1,24 +1,9 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "path": "/api/relatorios/enviar",
-      "schedule": "0 8 1 * *"
-    },
-    {
-      "path": "/api/atividades/alertar",
-      "schedule": "0 8 * * 1"
-    },
-    {
-      "path": "/api/automacoes/executar",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/pipeline/snapshot",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/notificacoes/gerar",
-      "schedule": "0 8 * * *"
+      "path": "/api/kanban/prazos",
+      "schedule": "0 11 * * 1-5"
     }
   ]
 }

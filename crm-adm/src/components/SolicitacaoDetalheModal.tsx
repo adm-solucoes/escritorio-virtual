@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Send } from "lucide-react";
+import { X, Send, Columns3, ExternalLink, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useGcAtual } from "@/lib/useGcAtual";
 import type { Gc, Solicitacao, SolicitacaoMensagem, StatusSolicitacao } from "@/lib/types";
@@ -45,6 +45,31 @@ export default function SolicitacaoDetalheModal({ solicitacao, gcs, onClose, onS
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const fimDoChatRef = useRef<HTMLDivElement>(null);
+
+  // Link do cartão no Trello. Começa com o que veio do banco; se a
+  // solicitação ainda não foi pro quadro, o botão preenche isso.
+  const [cartaoUrl, setCartaoUrl] = useState<string | null>(solicitacao.trello_card_url ?? null);
+  const [enviandoTrello, setEnviandoTrello] = useState(false);
+  const [erroTrello, setErroTrello] = useState<string | null>(null);
+
+  async function mandarProKanban() {
+    setEnviandoTrello(true);
+    setErroTrello(null);
+    try {
+      const resposta = await fetch("/api/trello/criar-cartao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solicitacaoId: solicitacao.id }),
+      });
+      const dados = await resposta.json();
+      if (!resposta.ok) setErroTrello(dados.error ?? "Falha ao criar o cartão.");
+      else setCartaoUrl(dados.url);
+    } catch {
+      setErroTrello("Falha de conexão.");
+    } finally {
+      setEnviandoTrello(false);
+    }
+  }
 
   const responsavel = gcs.find((g) => g.id === solicitacao.responsavel_solicitacao_id);
 
@@ -144,6 +169,29 @@ export default function SolicitacaoDetalheModal({ solicitacao, gcs, onClose, onS
             {linha("Notificado", solicitacao.email_responsavel_atendimento)}
             {linha("Data do evento", solicitacao.data_evento ? new Date(solicitacao.data_evento).toLocaleDateString("pt-BR") : null)}
             {linha("Prazo", solicitacao.prazo ? new Date(solicitacao.prazo).toLocaleDateString("pt-BR") : null)}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {cartaoUrl ? (
+              <a
+                href={cartaoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm font-semibold text-navy border border-navy/15 px-3 py-1.5 rounded-md hover:bg-navy/5"
+              >
+                <Columns3 size={14} /> Ver no Kanban <ExternalLink size={12} />
+              </a>
+            ) : (
+              <button
+                onClick={mandarProKanban}
+                disabled={enviandoTrello}
+                className="flex items-center gap-1.5 text-sm font-semibold bg-navy text-white px-3 py-1.5 rounded-md hover:bg-navy/90 disabled:opacity-40"
+              >
+                {enviandoTrello ? <Loader2 size={14} className="animate-spin" /> : <Columns3 size={14} />}
+                {enviandoTrello ? "Criando cartão..." : "Mandar pro Kanban"}
+              </button>
+            )}
+            {erroTrello && <span className="text-xs text-red">{erroTrello}</span>}
           </div>
         </div>
 
