@@ -58,19 +58,67 @@ reclamou tres vezes que estava "sem detalhe" e por fim pediu: **"faça em 128px"
   1x (`prerenderMap` testa escrevendo 1 pixel). O canvas 4x da **~96 MB** e o
   redesenho completo leva **~55 ms** na maquina do Caio.
 
-### O que NAO foi verificado
+### ~~O que NAO foi verificado~~ — VERIFICADO em 06/09
 
-O ultimo lote (os objetos de mesa em 128) **foi escrito mas nao chegou a ser
-visto no navegador** — o Caio interrompeu antes do screenshot. `node --check`
-passou, mas **abre e confere visualmente antes de seguir**.
+O ultimo lote (os objetos de mesa em 128) ficou sem conferir no navegador. **Foi
+conferido depois e esta ok**: os 10 objetos (monitor, monitor duplo, notebook,
+teclado, caneca, papelada, telefone, luminaria, plantinha, livros) desenham sem
+erro e pousam certo no tampo da mesa.
+
+Como conferir arte **sem passar pelo login** (util, porque o app agora pede
+conta e ninguem deve digitar senha de teste a toa): a tela de login ja carrega
+`map.js` e `game.js`, e o `window.Game` expoe `desenharObjeto`, `desenharApoiado`
+e `desenharPiso` (usados pelas miniaturas do decorador). Da pra montar uma folha
+de contato com tudo lado a lado:
+
+```js
+const TILE = OfficeMap.TILE, ESC = 4, CEL = TILE * ESC, COLUNAS = 8;
+const tipos = Object.entries(OfficeMap)
+  .filter(([k, v]) => typeof v === 'number' && k === k.toUpperCase()
+    && !['TILE', 'COLS', 'ROWS', 'LIVRE'].includes(k))
+  .sort((a, b) => a[1] - b[1]);
+const cv = document.createElement('canvas');
+cv.width = COLUNAS * CEL;
+cv.height = Math.ceil(tipos.length / COLUNAS) * (CEL + 20);
+cv.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#f3e9db;width:100%';
+document.body.appendChild(cv);
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+tipos.forEach(([nome, valor], i) => {
+  const cx = (i % COLUNAS) * CEL, cy = Math.floor(i / COLUNAS) * (CEL + 20);
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(ESC, ESC);
+  Game.desenharPiso(ctx, 0, 0, TILE, 'tijolo');
+  Game.desenharObjeto(ctx, 0, 0, valor, TILE, [[0, 0, 0], [0, valor, 0], [0, 0, 0]]);
+  ctx.restore();
+  ctx.fillStyle = '#2b3038'; ctx.font = '600 11px Manrope, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(nome, cx + CEL / 2, cy + CEL + 14);
+});
+```
+
+Ver tudo junto e o jeito mais rapido de achar o que ainda esta na grade antiga:
+o item chapado ao lado de um refeito denuncia sozinho.
 
 ### O que falta
 
-Cerca de **95 chamadas do helper antigo `p()`** ainda existem em `game.js`: parede,
-pisos, sofa, banco, armario, balcao, estante, arvore, arbusto, pedra, agua, cerca,
-janela, quadro, lousa, cavalete, cabide, impressora, TV, relogio, bebedouro,
-plantas grandes, tapetes. Esses continuam na grade de 32 e **destoam** dos que ja
-foram refeitos.
+Eram 115 chamadas do helper antigo `p()` (a estimativa de ~95 estava baixa).
+**Ja migrados depois: piso de tijolinho, parede, sofa e estante** — restam
+**102**: banco, armario, balcao, arvore, arbusto, pedra, agua, cerca, janela,
+quadro, lousa, cavalete, cabide, impressora, TV, relogio, bebedouro, plantas
+grandes e tapetes. Esses continuam na grade de 32 e **destoam**.
+
+Duas licoes da leva de piso/parede/sofa/estante, que valem pras proximas:
+
+- **Traco de 1 unidade some.** O canvas e feito em 4x, mas a tela desenha ele em
+  zoom 2, ou seja, pela metade. Detalhe de 1 unidade vira meio pixel e evapora.
+  Use **2 unidades** pro tracinho mais fino que precisa aparecer (foi o que
+  aconteceu com a junta do tijolinho).
+- **Contorno e faixa por tile riscam o movel inteiro.** Parede desenhava face de
+  cima e rodape em todo tile, e um muro vertical virava faixas horizontais
+  repetidas; o contorno em todo tile riscava uma grade por cima do muro. O certo
+  e usar `bordasParede()` / `bordasDoMovel()` e so desenhar **na ponta do
+  bloco**. Mesma ideia no sofa: uma almofada por tile, com o vao caindo na
+  emenda — foi isso que fez ele deixar de parecer uma frente de gavetas.
 
 Migrar um item e mecanico: trocar `p(ctx, x + A, y + B, W, H, cor)` por
 `q(ctx, x, y, A*4, B*4, W*4, H*4, cor)` e depois **aproveitar o espaco novo** pra

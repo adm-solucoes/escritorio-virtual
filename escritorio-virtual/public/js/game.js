@@ -199,10 +199,10 @@
   // Cada ambiente tem seu proprio chao (duas tonalidades alternadas, em xadrez
   // sutil), no lugar do piso de madeira unico que valia pro escritorio inteiro.
   const CORES_PISO = {
-    tijolo: { base: '#ece0cb', junta: 'rgba(186,166,136,0.55)' },
-    tijolo_quente: { base: '#e6d3b4', junta: 'rgba(176,146,110,0.5)' },
-    cinza: { base: '#d2d6dd', junta: 'rgba(146,152,164,0.45)' },
-    ladrilho: { base: '#e4e7ee', junta: 'rgba(150,158,178,0.45)' },
+    tijolo: { base: '#ece0cb', junta: '#c9b696', luz: '#f6efe1', sombra: '#dccdb2' },
+    tijolo_quente: { base: '#e6d3b4', junta: '#c0a37c', luz: '#f2e5cd', sombra: '#d6bf9a' },
+    cinza: { base: '#d2d6dd', junta: '#adb4c0', luz: '#e4e7ec', sombra: '#c2c7d1' },
+    ladrilho: { base: '#e4e7ee', junta: '#b6bece', luz: '#f2f4f8', sombra: '#d3d8e3' },
     carpete_roxo: { base: '#8b7fd0', claro: '#a294de' },
     carpete_azul: { base: '#5d6577', claro: '#6e7789' },
     grama: { base: '#8ecb7c', claro: 'rgba(58,124,58,0.28)' },
@@ -210,23 +210,25 @@
 
   // Piso de tijolinho em fiada alternada (a fiada usa a linha global, senao a
   // emenda entre tiles fica visivel).
+  // Na grade fina, a junta e 1 unidade (= 1 pixel de verdade no canvas 4x), em vez
+  // do traco de lineWidth 1 que virava 4 pixels e engrossava o piso todo. Cada
+  // tijolo ganha um fio de luz em cima e sombra embaixo, dando relevo.
   function pisoTijolo(ctx, x, y, TILE, c, r, cores) {
-    ctx.fillStyle = cores.base;
-    ctx.fillRect(x, y, TILE, TILE);
-    ctx.strokeStyle = cores.junta;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
+    // A junta tem 2 unidades: com 1 ela vira 1 pixel no canvas 4x e some quando a
+    // tela desenha esse canvas em zoom 2 (metade). Com 2, sobra 1 pixel na tela.
+    q(ctx, x, y, 0, 0, 128, 128, cores.base);
     for (let i = 0; i < 4; i++) {
-      const fy = y + i * 8;
-      ctx.moveTo(x, fy + 0.5);
-      ctx.lineTo(x + TILE, fy + 0.5);
-      const desloc = ((r * 4 + i) % 2 === 0) ? 0 : 8;
-      for (let vx = desloc; vx < TILE; vx += 16) {
-        ctx.moveTo(x + vx + 0.5, fy);
-        ctx.lineTo(x + vx + 0.5, fy + 8);
+      const fy = i * 32;
+      q(ctx, x, y, 0, fy, 128, 2, cores.junta);
+      q(ctx, x, y, 0, fy + 2, 128, 2, cores.luz);
+      q(ctx, x, y, 0, fy + 29, 128, 3, cores.sombra);
+      // fiada alternada pela linha global, senao a emenda entre tiles aparece
+      const desloc = ((r * 4 + i) % 2 === 0) ? 0 : 32;
+      for (let vx = desloc; vx < 128; vx += 64) {
+        q(ctx, x, y, vx, fy, 2, 32, cores.junta);
+        q(ctx, x, y, vx + 2, fy + 2, 2, 27, cores.luz);
       }
     }
-    ctx.stroke();
   }
 
   function pisoCarpete(ctx, x, y, TILE, c, r, cores, listrado) {
@@ -322,6 +324,21 @@
   function sombra(ctx, x, y, TILE, altura) {
     ctx.fillStyle = 'rgba(120,100,70,0.16)';
     ctx.fillRect(x + 2, y + TILE - altura, TILE - 4, altura);
+  }
+
+  // Parede e janela formam um muro so: pra decidir a borda, as duas contam como
+  // parede (senao aparece um traco entre a parede e o janelao ao lado).
+  function ehParede(t) {
+    return t === OfficeMap.PAREDE || t === OfficeMap.JANELA;
+  }
+
+  function bordasParede(tiles, r, c) {
+    return {
+      cima: !(tiles[r - 1] && ehParede(tiles[r - 1][c])),
+      baixo: !(tiles[r + 1] && ehParede(tiles[r + 1][c])),
+      esq: !ehParede(tiles[r][c - 1]),
+      dir: !ehParede(tiles[r][c + 1]),
+    };
   }
 
   // Moveis que ocupam varios tiles (mesa de reuniao, sofa, tapete) so desenham
@@ -580,16 +597,29 @@
     const meio = TILE / 2;
 
     if (type === M.PAREDE) {
-      // parede cinza-azulada escura, como as divisorias do Gather
-      ctx.fillStyle = '#4a5162';
-      ctx.fillRect(x, y, TILE, TILE);
-      ctx.fillStyle = '#5b6376';
-      ctx.fillRect(x, y, TILE, 8);
-      ctx.fillStyle = '#343a48';
-      ctx.fillRect(x, y + TILE - 6, TILE, 6);
-      ctx.strokeStyle = 'rgba(24,28,36,0.5)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+      // parede cinza-azulada escura, como as divisorias do Gather.
+      // O contorno so sai na borda do bloco de parede: desenhar em todo tile
+      // riscava uma grade por cima do muro inteiro.
+      const b = bordasParede(tiles, r, c);
+      q(ctx, x, y, 0, 0, 128, 128, '#4a5162');
+      // face de cima e rodape so nas pontas do muro: desenhar em todo tile
+      // listrava a parede vertical de faixas horizontais repetidas
+      if (b.cima) {
+        q(ctx, x, y, 0, 0, 128, 30, '#5b6376');
+        q(ctx, x, y, 0, 0, 128, 3, '#6f7889'); // luz na quina
+        q(ctx, x, y, 0, 30, 128, 2, '#3c4354'); // sombra sob a face de cima
+      }
+      if (b.baixo) {
+        q(ctx, x, y, 0, 104, 128, 24, '#343a48'); // rodape
+        q(ctx, x, y, 0, 104, 128, 2, '#59617a'); // fio de luz
+      }
+      // emenda de painel: vertical no muro deitado, horizontal no muro em pe
+      if (b.cima || b.baixo) q(ctx, x, y, 63, 34, 2, 68, 'rgba(38,43,56,0.35)');
+      else q(ctx, x, y, 0, 63, 128, 2, 'rgba(38,43,56,0.30)');
+      if (b.cima) q(ctx, x, y, 0, 0, 128, 2, TRACO);
+      if (b.baixo) q(ctx, x, y, 0, 126, 128, 2, TRACO);
+      if (b.esq) q(ctx, x, y, 0, 0, 2, 128, TRACO);
+      if (b.dir) q(ctx, x, y, 126, 0, 2, 128, TRACO);
 
     } else if (type === M.MESA_MONITOR || type === M.MESA) {
       const b = bordasDoMovel(tiles, r, c, type);
@@ -618,27 +648,45 @@
       // recepcao usa sofa azul (como o Lobby do Gather); o lounge, marrom
       const sala = OfficeMap.getRoomAtTile(c, r);
       const paleta = (sala && sala.id === 'entrada')
-        ? { base: '#6d84b4', escuro: '#4a5e86', claro: '#8fa3ca' }
-        : { base: '#c08a5a', escuro: '#96633c', claro: '#d6a173' };
+        ? { base: '#7d93bf', escuro: '#41537a', encosto: '#5a6f9e', claro: '#9db0d3' }
+        : { base: '#c99566', escuro: '#8a5931', encosto: '#a97244', claro: '#dcab7c' };
 
-      p(ctx, x, y + TILE - 3, TILE, 2, 'rgba(45,50,64,0.20)');
-      p(ctx, x, y + 2, TILE, TILE - 5, paleta.base);
-      // encosto (mais escuro) na metade de cima ou de baixo
-      p(ctx, x, encostoEmCima ? y + 2 : y + TILE - 13, TILE, 11, paleta.escuro);
-      p(ctx, x, encostoEmCima ? y + 3 : y + TILE - 12, TILE, 1, paleta.claro);
-      // almofada do assento com costura no meio
-      const ay = encostoEmCima ? y + 14 : y + 5;
-      p(ctx, x + 2, ay, TILE - 4, 11, paleta.claro);
-      p(ctx, x + 2, ay, TILE - 4, 1, '#ffffff33');
-      p(ctx, x + TILE / 2 - 1, ay, 1, 11, paleta.escuro);
-      // bracos nas pontas livres
-      if (b.esq) p(ctx, x, y + 2, 5, TILE - 5, paleta.escuro);
-      if (b.dir) p(ctx, x + TILE - 5, y + 2, 5, TILE - 5, paleta.escuro);
+      const corpoY = 8; // topo do sofa na grade fina
+      const corpoH = 108;
+      q(ctx, x, y, 4, 120, 120, 6, 'rgba(45,50,64,0.18)'); // sombra no chao
+
+      q(ctx, x, y, 0, corpoY, 128, corpoH, paleta.base);
+
+      // encosto: faixa bem mais escura que o assento, senao o sofa vira balcao
+      const encY = encostoEmCima ? corpoY : corpoY + corpoH - 46;
+      q(ctx, x, y, 0, encY, 128, 46, paleta.escuro);
+      q(ctx, x, y, 0, encostoEmCima ? encY + 3 : encY + 41, 128, 3, paleta.claro);
+      // almofadas do encosto, uma por tile, com vinco entre elas
+      qArred(ctx, x, y, 8, encY + 8, 112, 30, 6, paleta.encosto);
+      q(ctx, x, y, 12, encY + 10, 104, 2, 'rgba(255,255,255,0.18)');
+
+      // uma almofada de assento por tile: o vao cai na emenda entre os tiles,
+      // que e o que faz parecer sofa e nao uma frente de gavetas
+      const assY = encostoEmCima ? corpoY + 50 : corpoY + 10;
+      q(ctx, x, y, 6, assY + 44, 116, 6, 'rgba(0,0,0,0.16)'); // sombra sob a almofada
+      qArred(ctx, x, y, 6, assY, 116, 46, 10, paleta.base);
+      q(ctx, x, y, 16, assY + 3, 96, 3, 'rgba(255,255,255,0.26)'); // luz na quina
+
+      // bracos so nas pontas livres do sofa
+      if (b.esq) {
+        qArred(ctx, x, y, 0, corpoY, 22, corpoH, 5, paleta.escuro);
+        q(ctx, x, y, 3, corpoY + 4, 16, 3, paleta.claro);
+      }
+      if (b.dir) {
+        qArred(ctx, x, y, 106, corpoY, 22, corpoH, 5, paleta.escuro);
+        q(ctx, x, y, 109, corpoY + 4, 16, 3, paleta.claro);
+      }
+
       // contorno so onde o sofa termina
-      if (b.cima) p(ctx, x, y + 2, TILE, 1, TRACO);
-      if (b.baixo) p(ctx, x, y + TILE - 4, TILE, 1, TRACO);
-      if (b.esq) p(ctx, x, y + 2, 1, TILE - 5, TRACO);
-      if (b.dir) p(ctx, x + TILE - 1, y + 2, 1, TILE - 5, TRACO);
+      if (b.cima) q(ctx, x, y, 0, corpoY, 128, 2, TRACO);
+      if (b.baixo) q(ctx, x, y, 0, corpoY + corpoH - 2, 128, 2, TRACO);
+      if (b.esq) q(ctx, x, y, 0, corpoY, 2, corpoH, TRACO);
+      if (b.dir) q(ctx, x, y, 126, corpoY, 2, corpoH, TRACO);
 
     } else if (type === M.TAPETE) {
       const b = bordasDoMovel(tiles, r, c, type);
@@ -671,22 +719,33 @@
       ctx.fill();
 
     } else if (type === M.ESTANTE) {
-      sombra(ctx, x, y, TILE, 3);
-      ctx.fillStyle = '#5e6678';
-      ctx.fillRect(x + 1, y + 2, TILE - 2, TILE - 5);
-      ctx.fillStyle = '#474e5e';
-      ctx.fillRect(x + 1, y + 12, TILE - 2, 2);
-      ctx.fillRect(x + 1, y + 22, TILE - 2, 2);
-      const livros = ['#e05a5a', '#5a86d0', '#e0a25a', '#5ab07a', '#a76fd0'];
-      for (let i = 0; i < 5; i++) {
-        ctx.fillStyle = livros[(i + c + r) % livros.length];
-        ctx.fillRect(x + 3 + i * 5, y + 4, 4, 7);
-        ctx.fillStyle = livros[(i + c + r + 2) % livros.length];
-        ctx.fillRect(x + 3 + i * 5, y + 15, 4, 6);
-      }
-      ctx.strokeStyle = 'rgba(35,40,52,0.55)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x + 1.5, y + 2.5, TILE - 3, TILE - 6);
+      const LIVROS = ['#e05a5a', '#5a86d0', '#e0a25a', '#5ab07a', '#a76fd0', '#4ec0c0'];
+      q(ctx, x, y, 6, 118, 116, 6, 'rgba(45,50,64,0.18)'); // sombra no chao
+
+      qContorno(ctx, x, y, 2, 6, 124, 116, 4, TRACO);
+      qArred(ctx, x, y, 4, 8, 120, 112, 3, '#5e6678'); // caixa
+      q(ctx, x, y, 6, 10, 116, 3, '#79839a'); // luz no topo
+      q(ctx, x, y, 6, 10, 4, 108, '#6b7488'); // lateral iluminada
+      q(ctx, x, y, 118, 10, 4, 108, '#4b5266'); // lateral na sombra
+
+      // tres prateleiras, cada uma com fundo escuro e livros de altura variada
+      [16, 52, 88].forEach((prat, nivel) => {
+        q(ctx, x, y, 10, prat, 108, 28, '#3b4152'); // vao escuro
+        let bx = 13;
+        let i = 0;
+        while (bx < 112) {
+          const larg = 7 + ((c + r + nivel + i) % 3) * 3;
+          const alt = 20 + ((c * 3 + r + nivel + i) % 4) * 2;
+          const cor = LIVROS[(i + c + r + nivel) % LIVROS.length];
+          q(ctx, x, y, bx, prat + 28 - alt, larg, alt, cor);
+          q(ctx, x, y, bx, prat + 28 - alt, larg, 2, 'rgba(255,255,255,0.30)');
+          q(ctx, x, y, bx + larg - 1, prat + 28 - alt, 1, alt, 'rgba(0,0,0,0.22)');
+          bx += larg + 2;
+          i++;
+        }
+        q(ctx, x, y, 8, prat + 28, 112, 4, '#474e5e'); // tabua
+        q(ctx, x, y, 8, prat + 28, 112, 1, '#7d879d');
+      });
 
     } else if (type === M.PLANTA) {
       // vasos coloridos (rosa/azul/roxo/teal), como a decoracao do Gather
