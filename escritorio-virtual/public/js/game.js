@@ -232,18 +232,32 @@
   }
 
   function pisoCarpete(ctx, x, y, TILE, c, r, cores, listrado) {
-    ctx.fillStyle = cores.base;
-    ctx.fillRect(x, y, TILE, TILE);
-    ctx.fillStyle = cores.claro;
+    q(ctx, x, y, 0, 0, 128, 128, cores.base);
+
     if (listrado) {
-      for (let vx = 0; vx < TILE; vx += 9) ctx.fillRect(x + vx, y, 4, TILE);
+      for (let vx = 0; vx < 128; vx += 36) {
+        q(ctx, x, y, vx, 0, 16, 128, cores.claro);
+        q(ctx, x, y, vx, 0, 4, 128, 'rgba(255,255,255,0.10)');
+      }
       return;
     }
-    // manchinhas estaveis (dependem so de c/r), pra dar textura de carpete
-    for (let i = 0; i < 7; i++) {
-      const px = x + ((c * 13 + r * 7 + i * 11) % (TILE - 3));
-      const py = y + ((c * 5 + r * 17 + i * 23) % (TILE - 3));
-      ctx.fillRect(px, py, 3, 3);
+
+    // Mosaico de pecas encaixadas em dois tons, como o carpete da referencia
+    // (`referencias/...154025.png`) - a versao antiga era manchinha aleatoria,
+    // que de longe virava ruido em vez de padrao.
+    const BL = 32; // peca de 1/4 de tile
+    for (let by = 0; by < 128; by += BL) {
+      for (let bx = 0; bx < 128; bx += BL) {
+        // xadrez continuo entre tiles: usa a posicao global da peca
+        const gx = c * 4 + bx / BL;
+        const gy = r * 4 + by / BL;
+        if ((gx + gy) % 2 !== 0) continue;
+        q(ctx, x, y, bx + 1, by + 1, BL - 2, BL - 2, cores.claro);
+        // dente pra cima e encaixe embaixo, que e o que da o ar de quebra-cabeca
+        q(ctx, x, y, bx + 11, by - 5, 10, 6, cores.claro);
+        q(ctx, x, y, bx + 11, by + BL - 6, 10, 6, cores.base);
+        q(ctx, x, y, bx + 1, by + 1, BL - 2, 2, 'rgba(255,255,255,0.10)');
+      }
     }
   }
 
@@ -256,28 +270,29 @@
     if (piso === 'carpete_azul') return pisoCarpete(ctx, x, y, TILE, c, r, cores, true);
 
     if (piso === 'ladrilho') {
-      // ladrilho em losango, como o piso das salas de reuniao do Gather
-      ctx.fillStyle = cores.base;
-      ctx.fillRect(x, y, TILE, TILE);
-      ctx.strokeStyle = cores.junta;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, y + meioTile); ctx.lineTo(x + meioTile, y);
-      ctx.moveTo(x + meioTile, y); ctx.lineTo(x + TILE, y + meioTile);
-      ctx.moveTo(x + TILE, y + meioTile); ctx.lineTo(x + meioTile, y + TILE);
-      ctx.moveTo(x + meioTile, y + TILE); ctx.lineTo(x, y + meioTile);
-      ctx.stroke();
+      // ladrilho em losango, em degraus (a linha diagonal do ctx.stroke saia
+      // borrada e fugia da cara de pixel do resto)
+      q(ctx, x, y, 0, 0, 128, 128, cores.base);
+      for (let i = 0; i < 16; i++) {
+        const d = i * 4;
+        q(ctx, x, y, d, 60 - d, 4, 4, cores.junta);
+        q(ctx, x, y, 64 + d, d, 4, 4, cores.junta);
+        q(ctx, x, y, 124 - d, 64 + d, 4, 4, cores.junta);
+        q(ctx, x, y, 60 - d, 124 - d, 4, 4, cores.junta);
+      }
+      q(ctx, x, y, 60, 60, 8, 8, cores.luz); // brilho no centro do losango
       return;
     }
 
     if (piso === 'grama') {
-      ctx.fillStyle = cores.base;
-      ctx.fillRect(x, y, TILE, TILE);
-      ctx.fillStyle = cores.claro;
-      for (let i = 0; i < 3; i++) {
-        const gx = x + ((c * 7 + r * 13 + i * 11) % (TILE - 8)) + 4;
-        const gy = y + ((c * 5 + r * 17 + i * 9) % (TILE - 8)) + 4;
-        ctx.fillRect(gx, gy, 2, 3);
+      q(ctx, x, y, 0, 0, 128, 128, cores.base);
+      // tufos estaveis (dependem so de c/r), em dois tons
+      for (let i = 0; i < 5; i++) {
+        const gx = ((c * 29 + r * 53 + i * 37) % 104) + 8;
+        const gy = ((c * 41 + r * 23 + i * 43) % 104) + 8;
+        q(ctx, x, y, gx, gy, 4, 10, cores.claro);
+        q(ctx, x, y, gx + 5, gy + 3, 4, 7, cores.claro);
+        q(ctx, x, y, gx - 4, gy + 4, 3, 6, 'rgba(120,190,110,0.45)');
       }
       return;
     }
