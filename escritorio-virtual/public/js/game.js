@@ -2131,6 +2131,7 @@
     CallGrid.init();
     Chat.init();
     Calendario.init();
+    Trello.init();
     Pessoas.init();
     Network.connect(profile);
 

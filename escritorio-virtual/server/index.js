@@ -9,6 +9,7 @@ const sessao = require('./sessao');
 const auth = require('./auth');
 const google = require('./google');
 const agenda = require('./agenda');
+const trello = require('./trello');
 
 const PORT = process.env.PORT || 3500;
 
@@ -323,6 +324,12 @@ io.on('connection', (socket) => {
   socket.on('agenda-pedir', async () => {
     const dados = await agenda.obter();
     socket.emit('agenda', dados);
+  });
+
+  // Quadro do Trello, sob demanda e com cache no trello.js. O token nunca sai
+  // do servidor: o cliente recebe o quadro ja montado.
+  socket.on('trello-pedir', async () => {
+    socket.emit('trello', await trello.obter());
   });
 
   // Reivindicar/largar uma mesa. So vale em tile de mesa e cada pessoa fica com

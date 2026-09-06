@@ -46,6 +46,7 @@
     socket.on('mapa-atualizado', (data) => emitLocal('mapa-atualizado', data));
     socket.on('mapa-objeto-atualizado', (data) => emitLocal('mapa-objeto-atualizado', data));
     socket.on('agenda', (data) => emitLocal('agenda', data));
+    socket.on('trello', (data) => emitLocal('trello', data));
   }
 
   function sendMove(state) {
@@ -84,6 +85,10 @@
     if (socket && socket.connected) socket.emit('agenda-pedir');
   }
 
+  function pedirTrello() {
+    if (socket && socket.connected) socket.emit('trello-pedir');
+  }
+
   function editarMapa(c, r, t) {
     if (socket && socket.connected) socket.emit('mapa-editar', { c, r, t });
   }
@@ -95,6 +100,6 @@
   window.Network = {
     connect, on, sendMove, sendStatus, sendReaction, sendRtcSignal, sendChatMessage,
     pedirHistorico, reagirMensagem, reivindicarMesa, editarMapa, editarObjetoMapa,
-    pedirAgenda,
+    pedirAgenda, pedirTrello,
   };
 })();
