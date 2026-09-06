@@ -5,7 +5,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node server/index.js"
+    "dev": "node -e \"process.env.SEM_LOGIN='1'; require('./server/index.js')\""
   },
   "license": "MIT",
   "dependencies": {

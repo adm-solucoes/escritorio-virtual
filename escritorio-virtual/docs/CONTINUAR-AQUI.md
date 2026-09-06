@@ -169,6 +169,20 @@ Tem que dar **0 diferentes** e `true`.
 **Nao misture os dois numeros no mesmo item.** Foi assim que apareceu um bug de
 digitacao no meio da sessao.
 
+### Pular o login no desenvolvimento
+
+`npm run dev` liga `SEM_LOGIN=1` e o servidor entra sozinho numa conta fixa
+(`dev@local`, criada no arranque). A tela de login nao aparece. `npm start`
+continua com login normal.
+
+**O que isso NAO faz:** nao devolve pro cliente o direito de dizer quem ele e.
+A conta continua saindo do servidor (`sessao.usuarioDaRequisicao` /
+`usuarioDoSocket` retornam a conta de dev), o `join` segue sem aceitar `uid`,
+`nome` nem codigo de admin do cliente, e a flag e ignorada quando
+`NODE_ENV=production`. O furo das DMs continua fechado.
+
+Pra tirar: `npm start` em vez de `npm run dev`, ou apagar `SEM_LOGIN` do script.
+
 ### Duas identidades diferentes
 
 - `socket.id` = a conexao, muda a cada F5. Serve pra posicao, chamada e mesa.

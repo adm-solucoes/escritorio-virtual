@@ -11,8 +11,9 @@
     {
       "name": "escritorio-virtual",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "escritorio-virtual", "start"],
-      "port": 3500
+      "runtimeArgs": ["--prefix", "escritorio-virtual", "run", "dev"],
+      "port": 3500,
+      "autoPort": true
     }
   ]
 }

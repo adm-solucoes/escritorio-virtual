@@ -8,6 +8,17 @@ const NOME_COOKIE = 'adm_sessao';
 const DURACAO_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias
 const PRODUCAO = process.env.NODE_ENV === 'production';
 
+// Modo de desenvolvimento: pula a tela de login entrando sempre numa conta fixa.
+// A identidade continua vindo do servidor - o cliente NAO passa a mandar quem
+// ele e -, entao o furo que o login fechou (ler DM dos outros) segue fechado.
+// Nunca liga junto com NODE_ENV=production.
+const SEM_LOGIN = process.env.SEM_LOGIN === '1' && !PRODUCAO;
+let usuarioDev = null;
+
+function definirUsuarioDev(u) {
+  usuarioDev = u;
+}
+
 function assinar(dados) {
   return crypto.createHmac('sha256', usuarios.getSegredoSessao()).update(dados).digest('hex');
 }
@@ -69,6 +80,7 @@ function limparCookie(res) {
 
 // Usuario da requisicao HTTP (ou null).
 function usuarioDaRequisicao(req) {
+  if (SEM_LOGIN && usuarioDev) return usuarioDev;
   const cookies = lerCookies(req.headers.cookie);
   const id = lerToken(cookies[NOME_COOKIE]);
   return id ? usuarios.porId(id) : null;
@@ -76,6 +88,7 @@ function usuarioDaRequisicao(req) {
 
 // Usuario do handshake do socket (mesmo cookie).
 function usuarioDoSocket(socket) {
+  if (SEM_LOGIN && usuarioDev) return usuarioDev;
   const cookies = lerCookies(socket.handshake.headers.cookie);
   const id = lerToken(cookies[NOME_COOKIE]);
   return id ? usuarios.porId(id) : null;
@@ -95,4 +108,6 @@ module.exports = {
   usuarioDaRequisicao,
   usuarioDoSocket,
   exigirLogin,
+  SEM_LOGIN,
+  definirUsuarioDev,
 };

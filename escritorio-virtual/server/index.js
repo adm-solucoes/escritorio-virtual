@@ -460,9 +460,38 @@ io.on('connection', (socket) => {
 app.use('/api', auth.criarRotas(sanitizeAppearance));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// SEM_LOGIN=1: entra direto numa conta de desenvolvimento, sem a tela de login.
+// A conta e criada aqui no servidor e o cliente continua sem poder dizer quem e.
+function prepararContaDev() {
+  const EMAIL = 'dev@local';
+  let conta = usuariosStore.porEmail(EMAIL);
+  if (!conta) {
+    conta = usuariosStore.criar({
+      nome: 'Dev',
+      email: EMAIL,
+      senha: require('crypto').randomBytes(24).toString('hex'), // ninguem loga por senha nessa conta
+      isAdmin: true,
+    });
+    usuariosStore.atualizarPerfil(conta.id, { appearance: APARENCIA_DEV });
+    conta = usuariosStore.porId(conta.id);
+  }
+  sessao.definirUsuarioDev(conta);
+  return conta;
+}
+
+const APARENCIA_DEV = sanitizeAppearance({
+  skin: '#f1c27d', shirt: '#35bdf0', bottom: '#6a7ce0', shoes: '#2b2f38',
+  hairColor: '#2b3038', hairStyle: 'curto', glasses: false, glassesColor: '#2b3038',
+});
+
 server.listen(PORT, () => {
   console.log(`Escritorio virtual ADM Solucoes rodando em http://localhost:${PORT}`);
   console.log(`Contas cadastradas: ${usuariosStore.totalDeContas()}`);
+  if (sessao.SEM_LOGIN) {
+    const dev = prepararContaDev();
+    console.log(`SEM_LOGIN=1: tela de login desativada, entrando como "${dev.nome}".`);
+    console.log('Isso e so pra desenvolvimento - nao suba assim.');
+  }
   if (auth.CODIGO_SEDE === 'adm-solucoes') {
     console.log('Aviso: usando o codigo da sede padrao. Defina CODIGO_SEDE no deploy.');
   }
