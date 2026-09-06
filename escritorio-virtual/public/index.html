@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Escritorio Virtual - ADM Solucoes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- Tela 1: montar boneco -->
+  <section id="tela-criador" class="tela">
+    <div class="editor-card">
+      <div class="editor-topo">
+        <h1 class="titulo-pixel">ADM Solucoes <span>Escritorio Virtual</span></h1>
+        <p class="subtitulo">Monte seu avatar antes de entrar no escritorio</p>
+      </div>
+
+      <div class="editor-corpo">
+        <nav id="editor-categorias" class="editor-categorias"></nav>
+
+        <div class="editor-meio">
+          <div id="editor-opcoes" class="editor-opcoes"></div>
+          <div id="editor-paleta" class="editor-paleta"></div>
+        </div>
+
+        <div class="editor-preview">
+          <canvas id="canvas-preview" width="190" height="215"></canvas>
+          <button id="btn-aleatorio" class="btn-dado" type="button" title="Aparencia aleatoria">🎲</button>
+        </div>
+      </div>
+
+      <form id="form-criador" class="editor-rodape">
+        <input id="input-nome" type="text" maxlength="18" placeholder="Como te chamam?" autocomplete="off" required />
+        <details class="campo-admin">
+          <summary>Diretoria</summary>
+          <input id="input-admin-code" type="password" placeholder="Codigo da diretoria" autocomplete="off" />
+        </details>
+        <button id="btn-entrar" class="btn btn-primario" type="submit">Entrar no escritorio →</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Tela 2: escritorio -->
+  <section id="tela-jogo" class="tela oculto">
+    <div class="area-jogo">
+      <canvas id="canvas-jogo"></canvas>
+
+      <div class="vinheta"></div>
+
+      <div class="overlay-topo">
+        <div class="overlay-grupo">
+          <span class="titulo-pixel-sm">ADM Solucoes</span>
+          <div id="indicador-conexao" class="indicador indicador-conectando">
+            <span class="bolinha"></span>
+            <span class="texto-indicador">Conectando...</span>
+          </div>
+          <button id="btn-status" class="seletor-status status-livre" type="button" title="Clique para mudar seu status">
+            <span class="bolinha"></span>
+            <span class="texto-status">Livre</span>
+          </button>
+        </div>
+        <div class="overlay-grupo">
+          <button id="btn-busca" class="btn-icone" type="button" title="Buscar pessoa (Ctrl+K)">🔍</button>
+          <button id="btn-salas" class="btn-icone" type="button" title="Ver quem esta em cada sala">🗺️</button>
+          <button id="btn-chat" class="btn-icone" type="button" title="Chat da sede">
+            💬
+            <span id="chat-badge" class="chat-badge oculto"></span>
+          </button>
+          <button id="btn-camera" class="btn-icone" type="button" title="Ativar camera e microfone">🎥</button>
+          <button id="btn-sair" class="btn btn-secundario btn-pequeno" type="button">Trocar avatar</button>
+        </div>
+      </div>
+
+      <div id="grade-chamada" class="grade-chamada oculto">
+        <div id="grade-chamada-tiles" class="grade-chamada-tiles"></div>
+      </div>
+
+      <div class="dica-controles">Clique no chao para mover · Chegue perto de alguem para entrar em chamada</div>
+      <div id="aviso-camera" class="aviso-camera oculto"></div>
+
+      <div class="barra-reacoes">
+        <button class="btn-reacao" type="button" data-emoji="👋" title="Acenar">👋</button>
+        <button class="btn-reacao" type="button" data-emoji="👍" title="Reagir">👍</button>
+        <button class="btn-reacao" type="button" data-emoji="🎉" title="Reagir">🎉</button>
+        <button class="btn-reacao" type="button" data-emoji="😂" title="Reagir">😂</button>
+        <button class="btn-reacao" type="button" data-emoji="❤️" title="Reagir">❤️</button>
+        <button class="btn-reacao" type="button" data-emoji="👏" title="Reagir">👏</button>
+      </div>
+
+      <canvas id="minimapa" class="minimapa" width="160" height="120"></canvas>
+
+      <div id="preview-local" class="preview-local oculto">
+        <video id="video-local" autoplay muted playsinline></video>
+        <div id="preview-local-controles" class="preview-local-controles">
+          <button id="btn-mic" class="btn-icone-pequeno" type="button" title="Mudo/desmudo">🎙️</button>
+          <button id="btn-video-toggle" class="btn-icone-pequeno" type="button" title="Camera on/off">🎥</button>
+        </div>
+      </div>
+
+      <div id="palco-remoto" class="palco-remoto" aria-hidden="true"></div>
+
+      <div id="painel-salas" class="painel-salas oculto">
+        <div class="painel-salas-card">
+          <div class="painel-salas-topo">
+            <h2>Visao de salas</h2>
+            <button id="btn-fechar-salas" class="btn-icone-pequeno" type="button" title="Fechar">✕</button>
+          </div>
+          <div id="grade-salas" class="grade-salas"></div>
+        </div>
+      </div>
+
+      <aside id="painel-chat" class="painel-chat oculto">
+        <div class="painel-chat-topo">
+          <h2>Chat da sede</h2>
+          <button id="btn-fechar-chat" class="btn-icone-pequeno" type="button" title="Fechar">✕</button>
+        </div>
+        <div id="chat-lista" class="chat-lista"></div>
+        <form id="form-chat" class="chat-form">
+          <input id="chat-input" type="text" maxlength="500" placeholder="Escreva uma mensagem..." autocomplete="off" />
+          <button class="btn-icone-pequeno" type="submit" title="Enviar">➤</button>
+        </form>
+      </aside>
+
+      <div id="cartao-pessoa" class="cartao-pessoa oculto"></div>
+
+      <div id="busca-rapida" class="busca-rapida oculto">
+        <div class="busca-card">
+          <input id="busca-input" type="text" placeholder="Buscar pessoa..." autocomplete="off" />
+          <div id="busca-lista" class="busca-lista"></div>
+          <div class="busca-rodape">Enter para ir ate a pessoa · Esc para fechar</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/pathfinding.js"></script>
+  <script src="js/character.js"></script>
+  <script src="js/network.js"></script>
+  <script src="js/calls.js"></script>
+  <script src="js/creator.js"></script>
+  <script src="js/rooms.js"></script>
+  <script src="js/callgrid.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/pessoas.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

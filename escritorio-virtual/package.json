@@ -1,0 +1,15 @@
+{
+  "name": "escritorio-virtual-adm",
+  "version": "1.0.0",
+  "description": "Escritorio virtual 2D multiplayer da ADM Solucoes (empresa junior de administracao da UECE)",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
