@@ -540,7 +540,7 @@
   const MESA_FRENTE_SOMBRA = '#5f6880';
   const MESA_BORDA = '#a9b0c4';
 
-  function tampoDeMesa(ctx, x, y, TILE, b) {
+  function tampoDeMesa(ctx, x, y, TILE, b, gavetas) {
     // Tudo em unidades de 1/128 do tile. `b.baixo` false = tem mesa na celula de
     // baixo, entao esta e uma fileira do *fundo*: so tampo, sem faixa. A faixa
     // sai uma vez so, na fileira da frente - e o que faz o bloco de 2 fileiras
@@ -569,13 +569,13 @@
 
       // Gaveta larga numa ponta, armarinho na outra - uma vez por mesa, como na
       // referencia, e nao um puxador por celula.
-      if (b.esq) {
+      if (b.esq && gavetas !== false) {
         qArred(ctx, x, y, 14, fimTampo + 16, 100, 22, 3, '#c8cedd');
         q(ctx, x, y, 16, fimTampo + 18, 96, 3, '#e4e8f0');
         q(ctx, x, y, 40, fimTampo + 25, 48, 4, '#7b8399');        // puxador
         q(ctx, x, y, 40, fimTampo + 25, 48, 1, '#a9b0c4');
       }
-      if (b.dir) {
+      if (b.dir && gavetas !== false) {
         qArred(ctx, x, y, 86, fimTampo + 12, 30, 30, 3, '#c8cedd');
         q(ctx, x, y, 88, fimTampo + 14, 26, 3, '#e4e8f0');
         q(ctx, x, y, 96, fimTampo + 25, 12, 4, '#7b8399');        // puxador quadrado
@@ -594,6 +594,42 @@
       q(ctx, x, y, 126, topo, 2, fimTampo - topo, MESA_BORDA);
       if (b.baixo) q(ctx, x, y, 126, fimTampo, 2, alturaFrente, MESA_FRENTE_SOMBRA);
     }
+  }
+
+  // Monitor visto por tras: e o que se ve numa mesa virada pra cima da tela
+  // (quem usa senta acima e a tela olha pra ele, nao pra nos).
+  function monitorDeCostas(ctx, x, y, ax, ay, aw, ah) {
+    qContorno(ctx, x, y, ax, ay, aw, ah, 4, '#4e5a72');
+    qArred(ctx, x, y, ax + 1, ay + 1, aw - 2, ah - 2, 4, '#aab3c4');
+    q(ctx, x, y, ax + 3, ay + 3, aw - 6, 3, '#c9d0dc');          // luz no topo
+    q(ctx, x, y, ax + 3, ay + ah - 6, aw - 6, 3, '#8b95a8');     // sombra na base
+    // grade de ventilacao
+    for (let i = ax + 10; i < ax + aw - 10; i += 7) {
+      q(ctx, x, y, i, ay + 10, 2, ah - 22, 'rgba(78,90,114,0.28)');
+    }
+    const meio = Math.round(aw / 2);
+    qArred(ctx, x, y, ax + meio - 11, ay + Math.round(ah / 2) - 7, 22, 14, 3, '#98a2b5');
+    q(ctx, x, y, ax + meio - 4, ay + ah - 2, 8, 11, '#a7b1c2');  // pescoco
+    q(ctx, x, y, ax + meio - 4, ay + ah - 2, 2, 11, '#ccd3de');
+    qArred(ctx, x, y, ax + meio - 19, ay + ah + 9, 38, 6, 2, '#8e99ad'); // base
+    q(ctx, x, y, ax + meio - 17, ay + ah + 9, 34, 2, '#bcc4d1');
+  }
+
+  // Monitor de perfil, pras mesas viradas pros lados. `paraDireita` = a tela
+  // olha pra direita (ou seja, quem usa senta a direita da mesa).
+  function monitorDeLado(ctx, x, y, ax, ay, ah, paraDireita) {
+    const aw = 15;
+    qContorno(ctx, x, y, ax, ay, aw, ah, 3, '#4e5a72');
+    qArred(ctx, x, y, ax + 1, ay + 1, aw - 2, ah - 2, 3, '#c3cad8');
+    q(ctx, x, y, ax + 2, ay + 3, aw - 4, 2, '#eef1f7');          // luz no topo
+    // a lasquinha de tela que aparece do lado pra onde ela olha
+    const telaX = paraDireita ? ax + aw - 5 : ax + 1;
+    q(ctx, x, y, telaX, ay + 3, 4, ah - 7, '#2f8fc4');
+    q(ctx, x, y, telaX, ay + 3, 4, Math.round((ah - 7) * 0.45), '#4fb3dd');
+    const meio = ax + Math.round(aw / 2);
+    q(ctx, x, y, meio - 3, ay + ah - 2, 6, 10, '#a7b1c2');       // pescoco
+    qArred(ctx, x, y, meio - 12, ay + ah + 8, 24, 6, 2, '#8e99ad'); // base
+    q(ctx, x, y, meio - 10, ay + ah + 8, 20, 2, '#bcc4d1');
   }
 
   function bordasDoMovel(tiles, r, c, tipo) {
@@ -635,16 +671,47 @@
       if (b.esq) q(ctx, x, y, 0, 0, 2, 128, TRACO);
       if (b.dir) q(ctx, x, y, 126, 0, 2, 128, TRACO);
 
-    } else if (type === M.MESA_MONITOR || type === M.MESA) {
+    } else if (M.MESAS_DIRECIONAIS.has(type)) {
+      // A placa da mesa e sempre a mesma: a camera olha de cima e do sul, entao
+      // a face vertical aparece embaixo em qualquer mesa. O que muda com a
+      // direcao e de que lado fica quem usa - logo, onde ficam o computador e as
+      // gavetas, e se a gente ve a tela ou a traseira dela.
       const b = bordasDoMovel(tiles, r, c, type);
-      tampoDeMesa(ctx, x, y, TILE, b);
+      const direcao = M.DIRECAO_MESA[type];
+      const temPc = M.MESAS_DE_TRABALHO.has(type);
+      // gavetas ficam do lado de quem usa: numa mesa virada pra cima elas
+      // caem atras da placa e nao aparecem
+      tampoDeMesa(ctx, x, y, TILE, b, direcao !== 'down');
 
-      if (type === M.MESA_MONITOR) {
-        monitor(ctx, x, y, 20, -18, 88, 68);
+      if (temPc && direcao === 'down') {
+        monitorDeCostas(ctx, x, y, 34, 10, 60, 34);
+        caneca(ctx, x, y, 12, 34, '#e0705a');
+
+      } else if (temPc && direcao === 'left') {
+        // quem usa senta a direita: monitor encostado a esquerda, tela pra ca
+        monitorDeLado(ctx, x, y, 14, 8, 40, true);
+        teclado(ctx, x, y, 56, 26, 46);
+        mouse(ctx, x, y, 106, 28);
+
+      } else if (temPc && direcao === 'right') {
+        monitorDeLado(ctx, x, y, 99, 8, 40, false);
+        teclado(ctx, x, y, 26, 26, 46);
+        mouse(ctx, x, y, 6, 28);
+
+      } else if (temPc) {
+        // canonica: quem usa senta embaixo e ve a tela de frente. O monitor
+        // avanca pro tile de cima. Numa bancada de 2 fileiras isso e o certo (o
+        // monitor fica no fundo da placa); ja se o vizinho for outra mesa, o
+        // monitor cobriria a placa dela, entao encolhe pra caber no tile.
+        const acima = tiles[r - 1] && tiles[r - 1][c];
+        const outraMesaAcima = acima !== undefined && acima !== type && M.SUPERFICIES.has(acima);
+        if (outraMesaAcima) monitor(ctx, x, y, 26, 2, 76, 50);
+        else monitor(ctx, x, y, 20, -18, 88, 68);
         teclado(ctx, x, y, 30, 60, 68);
         mouse(ctx, x, y, 104, 62);
       }
-      // MESA e so a superficie: o que vai em cima entra pela camada de objetos.
+      // Sem monitor, a mesa e so superficie: o que vai em cima entra pela
+      // camada de objetos.
 
     } else if (type === M.MESA_REUNIAO) {
       const b = bordasDoMovel(tiles, r, c, type);
@@ -1947,7 +2014,7 @@
     const TILE = OfficeMap.TILE;
     const col = Math.floor(clickX / TILE);
     const row = Math.floor(clickY / TILE);
-    if (OfficeMap.tiles[row] && OfficeMap.tiles[row][col] === OfficeMap.MESA_MONITOR) {
+    if (OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col])) {
       Network.reivindicarMesa(col, row);
       return;
     }
@@ -2008,7 +2075,7 @@
       }
       celulaAlvo = null;
 
-      const ehMesa = OfficeMap.tiles[row] && OfficeMap.tiles[row][col] === OfficeMap.MESA_MONITOR;
+      const ehMesa = Boolean(OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col]));
       mesaHover = ehMesa ? { col, row } : null;
       canvas.style.cursor = (ehMesa || jogadorEm(x, y)) ? 'pointer' : 'default';
     });

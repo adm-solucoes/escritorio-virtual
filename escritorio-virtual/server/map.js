@@ -51,12 +51,20 @@ const CADEIRA_DIR = 39;
 const CADEIRA_VERMELHA_BAIXO = 40;
 const CADEIRA_VERMELHA_ESQ = 41;
 const CADEIRA_VERMELHA_DIR = 42;
+const MESA_BAIXO = 43;
+const MESA_ESQ = 44;
+const MESA_DIR = 45;
+const MESA_MONITOR_BAIXO = 46;
+const MESA_MONITOR_ESQ = 47;
+const MESA_MONITOR_DIR = 48;
 
 const SOLID_TILES = new Set([
   PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO, ESTANTE,
   PLANTA, ARVORE, QUADRO, LOUSA, ARMARIO, BALCAO, CERCA, MESA_REUNIAO,
   JANELA, AGUA, PEDRA, ARBUSTO, BANCO, CABIDE, IMPRESSORA, CAVALETE,
   MESA_DUPLA, MESA_NOTEBOOK, PLANTA_GRANDE, VASO_FLORES, CACTO, BEBEDOURO,
+  MESA_BAIXO, MESA_ESQ, MESA_DIR,
+  MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
   TV, RELOGIO,
 ]);
 
@@ -74,9 +82,30 @@ const DIRECAO_ASSENTO = {
 };
 const ASSENTOS = new Set(Object.keys(DIRECAO_ASSENTO).map(Number));
 
+// Pra que lado a mesa esta virada = pra que lado olha quem senta nela. 'up' e
+// a mesa canonica (monitor no fundo, quem senta fica embaixo); as outras sao a
+// mesma arte girada.
+const DIRECAO_MESA = {
+  [MESA]: 'up',
+  [MESA_MONITOR]: 'up',
+  [MESA_BAIXO]: 'down',
+  [MESA_ESQ]: 'left',
+  [MESA_DIR]: 'right',
+  [MESA_MONITOR_BAIXO]: 'down',
+  [MESA_MONITOR_ESQ]: 'left',
+  [MESA_MONITOR_DIR]: 'right',
+};
+const MESAS_DIRECIONAIS = new Set(Object.keys(DIRECAO_MESA).map(Number));
+// Mesas com computador: sao essas que da pra reivindicar como lugar.
+const MESAS_DE_TRABALHO = new Set([
+  MESA_MONITOR, MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
+]);
+
 // Superficies onde faz sentido apoiar coisa (a camada de objetos por cima).
 const SUPERFICIES = new Set([
   MESA, MESA_MONITOR, MESA_DUPLA, MESA_NOTEBOOK, MESA_REUNIAO, MESA_CENTRO,
+  MESA_BAIXO, MESA_ESQ, MESA_DIR,
+  MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
   BALCAO, ESTANTE, ARMARIO,
 ]);
 
@@ -185,22 +214,24 @@ function buildMap() {
 
   // ---------- Time ----------
   [[19, 17], [19, 25], [25, 17], [25, 25]].forEach(([r, c]) => {
+    // Bancada de 2 fileiras: uma placa so, com gente dos dois lados (e o que a
+    // referencia do Gather mostra). Quem da direcao aqui e a cadeira.
     rect(r, c, r + 1, c + 2, MESA_MONITOR);
-    linhaH(r - 1, c, c + 2, CADEIRA);
+    linhaH(r - 1, c, c + 2, CADEIRA_BAIXO);
     linhaH(r + 2, c, c + 2, CADEIRA);
   });
   set(17, 31, PLANTA);
   set(29, 15, PLANTA);
   set(22, 22, MESA_CENTRO);
-  set(21, 22, CADEIRA); set(23, 22, CADEIRA);
+  set(21, 22, CADEIRA_BAIXO); set(23, 22, CADEIRA);
 
   // ---------- Sala de Reuniao ----------
   linhaH(17, 37, 40, LOUSA);
   rect(21, 37, 22, 41, MESA_REUNIAO);
-  linhaH(20, 37, 41, CADEIRA);
-  linhaH(23, 37, 41, CADEIRA);
-  set(21, 36, CADEIRA); set(22, 36, CADEIRA);
-  set(21, 42, CADEIRA); set(22, 42, CADEIRA);
+  linhaH(20, 37, 41, CADEIRA_BAIXO);   // acima da mesa: olham pra baixo
+  linhaH(23, 37, 41, CADEIRA);         // abaixo: olham pra cima
+  set(21, 36, CADEIRA_DIR); set(22, 36, CADEIRA_DIR);   // a esquerda: olham pra direita
+  set(21, 42, CADEIRA_ESQ); set(22, 42, CADEIRA_ESQ);   // a direita: olham pra esquerda
   set(18, 43, PLANTA);
   set(28, 34, PLANTA);
   set(28, 43, ARMARIO);
@@ -282,4 +313,9 @@ module.exports = {
   CADEIRA_VERMELHA, BEBEDOURO, TV, RELOGIO, TAPETE_REDONDO,
   CADEIRA_BAIXO, CADEIRA_ESQ, CADEIRA_DIR,
   CADEIRA_VERMELHA_BAIXO, CADEIRA_VERMELHA_ESQ, CADEIRA_VERMELHA_DIR,
+  MESA_BAIXO, MESA_ESQ, MESA_DIR,
+  MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
+  DIRECAO_MESA,
+  MESAS_DIRECIONAIS,
+  MESAS_DE_TRABALHO,
 };

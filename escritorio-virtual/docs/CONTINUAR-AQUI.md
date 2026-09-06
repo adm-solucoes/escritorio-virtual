@@ -256,3 +256,49 @@ nao segura nada derruba junto o que estava em cima.
       de restart do servidor e enganam).
 - [ ] Screenshot do que mudou, com zoom, comparando com o print da referencia.
 - [ ] Registrar o resultado do teste no plano da feature.
+
+---
+
+## 9. Direcao de mesa e cadeira (06/09/2026)
+
+**Regra:** a direcao de um movel e **pra que lado olha quem senta nele**. Vale
+igual pra cadeira (`DIRECAO_ASSENTO`) e pra mesa (`DIRECAO_MESA`), nas duas
+copias do mapa.
+
+- Cadeiras: `CADEIRA`/`_BAIXO`/`_ESQ`/`_DIR` (+ as vermelhas). A arte das quatro
+  ja existia; o que estava errado era a **colocacao** - toda cadeira no mapa era
+  `CADEIRA` ('up'), entao quem sentava acima de uma mesa ficava de costas pra ela.
+- Mesas: `MESA`/`MESA_MONITOR` ('up', canonica) e as variantes `_BAIXO`, `_ESQ`,
+  `_DIR` (43-48).
+
+**A placa da mesa nao gira.** A camera olha de cima e do sul, entao a face
+vertical da mesa aparece embaixo em *qualquer* direcao - girar a arte 90/180 poe
+a face num lugar onde a projecao nao deixa ela existir. O que muda com a direcao:
+
+| Direcao | Computador | Gavetas |
+|---|---|---|
+| `up` | monitor de frente no fundo, teclado na frente | aparecem |
+| `down` | `monitorDeCostas()` (a tela olha pra quem esta acima) + caneca | escondidas (ficam do lado de la) |
+| `left` / `right` | `monitorDeLado()` encostado no lado oposto a quem senta | aparecem |
+
+**Bancada de 2 fileiras** (as baias da sala Time) continua sendo **uma placa so**
+de `MESA_MONITOR`, como na referencia do Gather - quem da a direcao ali e a
+cadeira. Por isso o monitor da fileira da frente avanca pro tile de cima; ele so
+encolhe (`outraMesaAcima`) quando o vizinho de cima e uma mesa **de outro tipo**,
+que seria uma segunda mesa e ficaria coberta.
+
+**Como conferir sem entrar no mapa:** `Game.desenharPiso` + `Game.desenharObjeto`
+desenham qualquer tile num canvas solto. Da pra montar uma folha de contato das
+variantes, ou recortar um pedaco do mapa real, sem precisar andar ate la.
+
+### Resultado dos testes (06/09/2026)
+
+| O que | Resultado |
+|---|---|
+| `node --check` nos 5 arquivos | ok |
+| Sincronia dos dois mapas | ok - 0 tiles diferentes, direcoes iguais |
+| Toda cadeira olha pra uma mesa | ok - 49 de 49 (script varre `ASSENTOS` e olha o tile da frente) |
+| Folha de contato das 8 mesas | ok - as 4 direcoes distintas, cadeira casando com cada uma |
+| Baias da sala Time | ok - cadeira de cima de frente, de baixo de costas, bancada inteira |
+| Sala de reuniao | ok - 14 cadeiras, os 4 lados olhando pra mesa |
+| Console | limpo |

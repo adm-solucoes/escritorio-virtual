@@ -20,6 +20,8 @@ const TILES_DO_CATALOGO = [
   map.RELOGIO, map.TAPETE_REDONDO,
   map.CADEIRA_BAIXO, map.CADEIRA_ESQ, map.CADEIRA_DIR,
   map.CADEIRA_VERMELHA_BAIXO, map.CADEIRA_VERMELHA_ESQ, map.CADEIRA_VERMELHA_DIR,
+  map.MESA_BAIXO, map.MESA_ESQ, map.MESA_DIR,
+  map.MESA_MONITOR_BAIXO, map.MESA_MONITOR_ESQ, map.MESA_MONITOR_DIR,
 ];
 
 // chave "c,r" -> tile. Mapa em vez de lista: editar a mesma celula duas vezes
