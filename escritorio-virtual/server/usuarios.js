@@ -39,6 +39,15 @@ function lerJson(arquivo, padrao) {
 function carregar() {
   usuarios = lerJson(ARQUIVO, { usuarios: [] }).usuarios || [];
 
+  // Em hospedagem sem disco persistente (Render free), server/data/ some a cada
+  // restart. Se o segredo fosse sorteado de novo, todo cookie de sessao virava
+  // invalido e todo mundo era deslogado. Por isso SESSION_SECRET vem primeiro.
+  const doAmbiente = (process.env.SESSION_SECRET || '').trim();
+  if (doAmbiente.length >= 16) {
+    segredoSessao = doAmbiente;
+    return;
+  }
+
   const config = lerJson(ARQUIVO_CONFIG, null);
   if (config && typeof config.segredoSessao === 'string') {
     segredoSessao = config.segredoSessao;

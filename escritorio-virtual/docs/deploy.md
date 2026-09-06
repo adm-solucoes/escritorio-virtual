@@ -16,23 +16,41 @@ Se a ideia e so **mandar um link pro pessoal entrar agora**, da pra abrir a sua
 propria maquina pra internet por um tunel, sem Render nem deploy.
 
 ```
-npm run publicar          # terminal 1: sobe a sede com login ligado
-ngrok http 3600           # terminal 2: devolve um endereco https publico
+npm run publicar          # so isso: sobe a sede E abre o tunel
 ```
 
-O `npm run publicar` e o `npm start` com as tres variaveis ja no lugar:
-`NODE_ENV=production` (cookie `Secure`, e a flag `SEM_LOGIN` passa a ser
-ignorada), mais um `CODIGO_SEDE` e um `ADMIN_CODE` sorteados. Ele imprime os
-dois codigos e salva em `server/data/` - **nao mudam** no proximo restart, entao
-quem ja tem o codigo continua entrando.
+**Um comando so.** Ele imprime um quadro com o **link https** e os dois codigos:
 
-O `ngrok` responde com uma linha `Forwarding https://algo.ngrok-free.app`. Esse
-https e o link. Manda junto o **codigo da sede** - sem ele ninguem cria conta.
+```
+  +---------------------------------------------------------------+
+  |  Link pra mandar pra pessoa testar:                           |
+  |                                                               |
+  |    https://algo.ngrok-free.dev                                |
+  |                                                               |
+  |  Codigo da sede (todo mundo precisa, pra criar conta):        |
+  |    adm-coco-2525                                              |
+  |  Codigo de diretoria (so pra quem vai decorar o escritorio):  |
+  |    chefe-vento-8987                                           |
+  +---------------------------------------------------------------+
+```
+
+Por baixo ele e o `npm start` com as tres variaveis ja no lugar:
+`NODE_ENV=production` (cookie `Secure`, e a flag `SEM_LOGIN` passa a ser
+ignorada), mais um `CODIGO_SEDE` e um `ADMIN_CODE` sorteados. Os codigos ficam
+salvos em `server/data/` - **nao mudam** no proximo restart, entao quem ja tem o
+codigo continua entrando.
+
+Manda o link **junto com o codigo da sede** - sem ele ninguem cria conta.
+`Ctrl+C` derruba o servidor e o tunel juntos.
+
+Precisa do **ngrok instalado e logado** uma vez (`ngrok config add-authtoken
+...`, conta gratuita em ngrok.com). Se ele nao estiver no PATH, o `publicar`
+avisa e o servidor local continua de pe - da pra abrir o tunel na mao com
+`ngrok http 3600`.
 
 **O que esse caminho nao resolve:**
 
-- **So funciona com o seu PC ligado e os dois terminais abertos.** Fechou,
-  o link morre.
+- **So funciona com o seu PC ligado e o terminal aberto.** Fechou, o link morre.
 - **O endereco muda** toda vez que voce reinicia o ngrok (no plano gratuito).
 - Quem abre vai ver uma tela do ngrok antes ("Visit Site"), tambem do plano
   gratuito.
@@ -56,14 +74,30 @@ producao, nao ao repositorio.
 
 O `render.yaml` na raiz do projeto ja descreve o servico.
 
-1. Suba o repositorio no GitHub (o Render le de la).
+1. Suba o repositorio no GitHub (o Render le de la). **Deixe privado**: a pasta
+   `referencias/` tem prints do Gather, que nao sao nossos pra republicar. O
+   plano free do Render funciona com repo privado normalmente.
+   Se o codigo estiver num monorepo junto com outros projetos, mande so esta
+   pasta:
+
+   ```bash
+   # na raiz do monorepo, com o repo novo ja criado e vazio no GitHub
+   git remote add sede git@github.com:SEU-USUARIO/escritorio-virtual.git
+   git subtree push --prefix=escritorio-virtual sede main
+   ```
+
+   Assim o CRM e os outros projetos **nao vao junto**.
 2. No Render: **New > Blueprint**, aponte pro repositorio. Ele le o
    `render.yaml` sozinho.
-3. Confirme as variaveis. `CODIGO_SEDE` e `ADMIN_CODE` estao como
-   `generateValue: true`, entao o Render sorteia um valor forte pra cada uma -
-   **anote os dois**, sao eles que o time vai usar pra criar conta e pra virar
-   diretoria.
-4. Deploy.
+3. Confirme as variaveis. `CODIGO_SEDE`, `ADMIN_CODE` e `SESSION_SECRET` estao
+   como `generateValue: true`, entao o Render sorteia um valor forte pra cada
+   uma - **anote os dois primeiros**, sao eles que o time vai usar pra criar
+   conta e pra virar diretoria. O `SESSION_SECRET` voce nunca precisa ver.
+4. Deploy. O primeiro leva uns minutos; depois o link e fixo.
+
+O `render.yaml` esta no **plano free**: nao pede cartao. Em troca, o servico
+dorme depois de ~15 min sem ninguem (a visita seguinte demora ~1 min pra
+acordar) e nao tem disco - veja a secao 3.
 
 Se preferir subir na mao (sem Blueprint): runtime Node, build `npm ci`, start
 `npm start`, e as variaveis `NODE_ENV=production`, `CODIGO_SEDE` e

@@ -104,6 +104,12 @@ function criarRotas(sanitizeAppearance) {
     res.json({ ok: true });
   });
 
+  // Health check da hospedagem: tem que responder 200 SEM login, senao o Render
+  // acha que o servico caiu. Nao use /eu pra isso - ele responde 401 de proposito.
+  rotas.get('/saude', (req, res) => {
+    res.json({ ok: true, contas: usuarios.totalDeContas() });
+  });
+
   rotas.get('/eu', (req, res) => {
     const usuario = sessao.usuarioDaRequisicao(req);
     if (!usuario) return res.status(401).json({ erro: 'Sem sessao.' });

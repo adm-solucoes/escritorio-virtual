@@ -209,8 +209,7 @@ nao segura nada derruba junto o que estava em cima.
 - `server/data/usuarios.json` tem contas de teste (`diretoria@admsolucoes.com` e
   outras, senha `senhaforte123`). **Senha fraca e conhecida** — apague o arquivo
   antes de qualquer deploy. A pasta `server/data/` esta no `.gitignore`.
-- `public/tmp-preview.png` esta solto no repo e nao e usado por nada. Provavelmente
-  lixo de sessao antiga; confirme e apague.
+- ~~`public/tmp-preview.png`~~ era um preview de tileset sem uso: **apagado**.
 - **Nada foi commitado nesta sessao.** Tem muita coisa nova sem versionar
   (`server/auth.js`, `sessao.js`, `usuarios.js`, `mapa-editado.js`,
   `public/js/auth.js`, `entrada.js`, `decorador.js`, a pasta `docs/`). Se o Caio
