@@ -172,6 +172,9 @@
           <svg viewBox="0 0 24 24" width="20" height="20"><path d="M20 12a7 7 0 0 1-7 7H8l-4 3v-4.5A7 7 0 0 1 6 5.6 7 7 0 0 1 13 5a7 7 0 0 1 7 7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           <span id="chat-badge" class="chat-badge oculto"></span>
         </button>
+        <button id="btn-calendario" class="trilho-btn" type="button" title="Agenda do time">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
         <button id="btn-decorar" class="trilho-btn oculto" type="button" title="Decorar o escritorio">
           <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 20l3.5-1 9-9a2.1 2.1 0 0 0-3-3l-9 9L4 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.5 5.5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
@@ -290,6 +293,31 @@
         </div>
       </aside>
 
+      <aside id="painel-calendario" class="painel-calendario oculto">
+        <div class="cal-lateral">
+          <div class="cal-lateral-topo">
+            <h2>Agenda</h2>
+            <button id="btn-fechar-calendario" class="btn-icone-pequeno" type="button" title="Fechar">✕</button>
+          </div>
+          <div id="cal-aviso" class="cal-aviso oculto"></div>
+          <div class="cal-lateral-rotulo">Seus proximos compromissos</div>
+          <div id="cal-lista" class="cal-lista"></div>
+          <div class="cal-lateral-nota">
+            Vem da agenda do Google que o time ja usa, atraves do CRM. So aparece
+            quem ligou o compartilhamento la.
+          </div>
+        </div>
+        <div class="cal-principal">
+          <div class="cal-barra">
+            <button id="cal-anterior" class="cal-nav" type="button" title="Semana anterior">‹</button>
+            <button id="cal-proxima" class="cal-nav" type="button" title="Proxima semana">›</button>
+            <button id="cal-hoje" class="cal-hoje-btn" type="button">Hoje</button>
+            <span id="cal-titulo" class="cal-titulo"></span>
+          </div>
+          <div id="cal-grade" class="cal-grade"></div>
+        </div>
+      </aside>
+
       <aside id="painel-chat" class="painel-chat oculto">
         <div class="chat-coluna-conversas">
           <div class="chat-coluna-topo">
@@ -350,6 +378,7 @@
   <script src="js/rooms.js"></script>
   <script src="js/callgrid.js"></script>
   <script src="js/chat.js"></script>
+  <script src="js/calendario.js"></script>
   <script src="js/decorador.js"></script>
   <script src="js/pessoas.js"></script>
   <script src="js/game.js"></script>

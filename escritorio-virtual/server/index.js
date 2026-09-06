@@ -7,6 +7,7 @@ const mapaEditado = require('./mapa-editado');
 const usuariosStore = require('./usuarios');
 const sessao = require('./sessao');
 const auth = require('./auth');
+const agendaCrm = require('./agenda-crm');
 
 const PORT = process.env.PORT || 3500;
 
@@ -314,6 +315,13 @@ io.on('connection', (socket) => {
     if (!player || !data) return;
     if (!EMOJIS_VALIDOS.includes(data.emoji)) return;
     io.emit('reacao', { id: socket.id, emoji: data.emoji });
+  });
+
+  // Agenda do time, vinda do CRM. Sob demanda (so quem abre o painel pede) e
+  // com cache no agenda-crm, entao abrir o painel nao vira chamada ao Google.
+  socket.on('agenda-pedir', async () => {
+    const agenda = await agendaCrm.obter();
+    socket.emit('agenda', agenda);
   });
 
   // Reivindicar/largar uma mesa. So vale em tile de mesa e cada pessoa fica com

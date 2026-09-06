@@ -1109,6 +1109,163 @@ button { font-family: inherit; }
 }
 .decor-historico:hover { background: var(--painel-alt); }
 
+/* ---------- calendario ---------- */
+.painel-calendario {
+  position: absolute;
+  inset: 0;
+  z-index: 26;
+  display: flex;
+  background: var(--painel);
+}
+
+.cal-lateral {
+  width: 300px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--borda);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+}
+.cal-lateral-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cal-lateral-topo h2 {
+  font-family: 'Pixelify Sans', sans-serif;
+  color: var(--ambar);
+  font-size: 18px;
+  margin: 0;
+}
+.cal-lateral-rotulo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--texto-fraco);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.cal-lista { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.cal-item {
+  display: flex;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: var(--painel-alt);
+  border: 1px solid var(--borda);
+}
+.cal-item-cor { width: 4px; border-radius: 2px; flex-shrink: 0; }
+.cal-item-titulo { font-size: 13px; font-weight: 700; }
+.cal-item-quando { font-size: 11px; color: var(--texto-fraco); margin-top: 2px; }
+.cal-vazio { font-size: 13px; color: var(--texto-fraco); padding: 10px 0; }
+.cal-lateral-nota {
+  font-size: 11px;
+  color: var(--texto-fraco);
+  line-height: 1.5;
+  border-top: 1px solid var(--borda);
+  padding-top: 10px;
+}
+.cal-aviso {
+  position: relative;
+  background: rgba(124,92,212,0.18);
+  border: 1px solid #7c5cd4;
+  border-radius: 10px;
+  padding: 10px 30px 10px 12px;
+  font-size: 12px;
+}
+.cal-aviso-fechar {
+  position: absolute;
+  top: 6px; right: 6px;
+  border: none; background: transparent;
+  color: var(--texto-fraco);
+  cursor: pointer;
+}
+
+.cal-principal { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.cal-barra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--borda);
+}
+.cal-nav, .cal-hoje-btn {
+  background: var(--painel-alt);
+  border: 1px solid var(--borda);
+  color: var(--texto);
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+}
+.cal-nav:hover, .cal-hoje-btn:hover { border-color: #7c5cd4; }
+.cal-titulo { font-size: 15px; font-weight: 700; margin-left: 6px; }
+
+.cal-grade { flex: 1; overflow: auto; padding: 0 18px 18px; }
+.cal-cabecalho, .cal-corpo {
+  display: grid;
+  grid-template-columns: 44px repeat(7, 1fr);
+}
+.cal-cabecalho { position: sticky; top: 0; background: var(--painel); z-index: 2; }
+.cal-dia-topo {
+  text-align: center;
+  padding: 10px 0;
+  font-size: 12px;
+  color: var(--texto-fraco);
+  border-bottom: 1px solid var(--borda);
+}
+.cal-dia-topo b { display: block; font-size: 15px; color: var(--texto); margin-top: 2px; }
+.cal-dia-topo b.cal-hoje {
+  background: var(--erro);
+  color: #fff;
+  border-radius: 50%;
+  width: 24px; height: 24px;
+  line-height: 24px;
+  margin: 2px auto 0;
+}
+
+.cal-corpo { position: relative; }
+.cal-regua { display: flex; flex-direction: column; }
+.cal-hora {
+  font-size: 10px;
+  color: var(--texto-fraco);
+  text-align: right;
+  padding-right: 6px;
+  transform: translateY(-6px);
+}
+.cal-coluna { position: relative; border-left: 1px solid var(--borda); }
+.cal-faixa { border-bottom: 1px dashed rgba(255,255,255,0.07); }
+
+.cal-evento {
+  position: absolute;
+  left: 3px; right: 3px;
+  border-radius: 6px;
+  padding: 3px 6px;
+  overflow: hidden;
+  color: #fff;
+}
+.cal-evento-titulo { font-size: 11px; font-weight: 700; line-height: 1.2; }
+.cal-evento-pessoa { font-size: 10px; opacity: 0.85; }
+
+.cal-agora {
+  position: absolute;
+  left: 44px; right: 0;
+  height: 2px;
+  background: var(--erro);
+  z-index: 3;
+}
+.cal-agora span {
+  position: absolute;
+  left: -42px; top: -8px;
+  background: var(--erro);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
 .painel-chat {
   position: absolute;
   top: 0;

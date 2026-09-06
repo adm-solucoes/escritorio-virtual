@@ -2130,6 +2130,7 @@
     Rooms.init();
     CallGrid.init();
     Chat.init();
+    Calendario.init();
     Pessoas.init();
     Network.connect(profile);
 

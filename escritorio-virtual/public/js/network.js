@@ -45,6 +45,7 @@
     socket.on('mesas-atualizadas', (data) => emitLocal('mesas-atualizadas', data));
     socket.on('mapa-atualizado', (data) => emitLocal('mapa-atualizado', data));
     socket.on('mapa-objeto-atualizado', (data) => emitLocal('mapa-objeto-atualizado', data));
+    socket.on('agenda', (data) => emitLocal('agenda', data));
   }
 
   function sendMove(state) {
@@ -79,6 +80,10 @@
     if (socket && socket.connected) socket.emit('mesa-reivindicar', { col, row });
   }
 
+  function pedirAgenda() {
+    if (socket && socket.connected) socket.emit('agenda-pedir');
+  }
+
   function editarMapa(c, r, t) {
     if (socket && socket.connected) socket.emit('mapa-editar', { c, r, t });
   }
@@ -90,5 +95,6 @@
   window.Network = {
     connect, on, sendMove, sendStatus, sendReaction, sendRtcSignal, sendChatMessage,
     pedirHistorico, reagirMensagem, reivindicarMesa, editarMapa, editarObjetoMapa,
+    pedirAgenda,
   };
 })();
