@@ -1119,7 +1119,7 @@ button { font-family: inherit; }
 }
 
 .cal-lateral {
-  width: 300px;
+  width: 240px;
   flex-shrink: 0;
   border-right: 1px solid var(--borda);
   display: flex;
@@ -1133,9 +1133,8 @@ button { font-family: inherit; }
   justify-content: space-between;
 }
 .cal-lateral-topo h2 {
-  font-family: 'Pixelify Sans', sans-serif;
-  color: var(--ambar);
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 800;
   margin: 0;
 }
 .cal-lateral-rotulo {
@@ -1158,6 +1157,31 @@ button { font-family: inherit; }
 .cal-item-titulo { font-size: 13px; font-weight: 700; }
 .cal-item-quando { font-size: 11px; color: var(--texto-fraco); margin-top: 2px; }
 .cal-vazio { font-size: 13px; color: var(--texto-fraco); padding: 10px 0; }
+.cal-google { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--texto-fraco); }
+.cal-google-btn {
+  display: block;
+  text-align: center;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--roxo);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.cal-google-btn:hover { background: var(--indigo-escuro); }
+.cal-google-ok { color: var(--verde); font-weight: 600; }
+.cal-google-sair {
+  background: transparent;
+  border: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
 .cal-lateral-nota {
   font-size: 11px;
   color: var(--texto-fraco);
@@ -1167,8 +1191,8 @@ button { font-family: inherit; }
 }
 .cal-aviso {
   position: relative;
-  background: rgba(124,92,212,0.18);
-  border: 1px solid #7c5cd4;
+  background: var(--indigo-claro);
+  border: 1px solid var(--roxo);
   border-radius: 10px;
   padding: 10px 30px 10px 12px;
   font-size: 12px;
@@ -1199,7 +1223,7 @@ button { font-family: inherit; }
   font-family: 'Manrope', sans-serif;
   font-size: 13px;
 }
-.cal-nav:hover, .cal-hoje-btn:hover { border-color: #7c5cd4; }
+.cal-nav:hover, .cal-hoje-btn:hover { border-color: var(--indigo); }
 .cal-titulo { font-size: 15px; font-weight: 700; margin-left: 6px; }
 
 .cal-grade { flex: 1; overflow: auto; padding: 0 18px 18px; }
@@ -1209,6 +1233,8 @@ button { font-family: inherit; }
 }
 .cal-cabecalho { position: sticky; top: 0; background: var(--painel); z-index: 2; }
 .cal-dia-topo {
+  min-width: 0;
+  overflow: hidden;
   text-align: center;
   padding: 10px 0;
   font-size: 12px;
@@ -1217,7 +1243,7 @@ button { font-family: inherit; }
 }
 .cal-dia-topo b { display: block; font-size: 15px; color: var(--texto); margin-top: 2px; }
 .cal-dia-topo b.cal-hoje {
-  background: var(--erro);
+  background: var(--vermelho);
   color: #fff;
   border-radius: 50%;
   width: 24px; height: 24px;
@@ -1234,8 +1260,8 @@ button { font-family: inherit; }
   padding-right: 6px;
   transform: translateY(-6px);
 }
-.cal-coluna { position: relative; border-left: 1px solid var(--borda); }
-.cal-faixa { border-bottom: 1px dashed rgba(255,255,255,0.07); }
+.cal-coluna { min-width: 0; position: relative; border-left: 1px solid var(--borda); }
+.cal-faixa { border-bottom: 1px dashed rgba(17,24,39,0.07); }
 
 .cal-evento {
   position: absolute;
@@ -1252,13 +1278,13 @@ button { font-family: inherit; }
   position: absolute;
   left: 44px; right: 0;
   height: 2px;
-  background: var(--erro);
+  background: var(--vermelho);
   z-index: 3;
 }
 .cal-agora span {
   position: absolute;
   left: -42px; top: -8px;
-  background: var(--erro);
+  background: var(--vermelho);
   color: #fff;
   font-size: 10px;
   font-weight: 700;

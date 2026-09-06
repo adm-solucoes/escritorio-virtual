@@ -4,7 +4,10 @@
   const HORA_MIN = 7;
   const HORA_MAX = 21;
   const ALTURA_HORA = 44; // px por hora
-  const DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+  // Abreviado: a coluna aqui tem ~60px, bem menos que a da referencia, e nome
+  // inteiro ("domingo") transborda por cima do dia seguinte.
+  const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+  const DIAS_LONGO = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
   const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho',
     'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
@@ -197,7 +200,7 @@
       const q = document.createElement('div');
       q.className = 'cal-item-quando';
       const d = new Date(ev.inicio);
-      q.textContent = DIAS[d.getDay()] + ', ' + horaDe(ev.inicio) + '–' + horaDe(ev.fim);
+      q.textContent = DIAS_LONGO[d.getDay()] + ', ' + horaDe(ev.inicio) + '–' + horaDe(ev.fim);
       txt.appendChild(t);
       txt.appendChild(q);
       item.appendChild(txt);
@@ -243,6 +246,7 @@
     aberto = true;
     painel.classList.remove('oculto');
     Network.pedirAgenda();
+    atualizarStatusGoogle();
     montarGrade();
     montarLista();
   }
@@ -260,6 +264,49 @@
       montarLista();
     }
     conferirProximos();
+  }
+
+  // ---------- conectar a propria conta Google ----------
+  async function atualizarStatusGoogle() {
+    const caixa = document.getElementById('cal-google');
+    try {
+      const r = await fetch('/api/google/status', { credentials: 'same-origin' });
+      if (!r.ok) throw new Error('sem status');
+      const s = await r.json();
+      caixa.innerHTML = '';
+
+      if (!s.configurado) {
+        caixa.textContent = 'O servidor ainda nao tem as credenciais do Google.';
+        return;
+      }
+
+      if (s.conectado) {
+        const txt = document.createElement('div');
+        txt.className = 'cal-google-ok';
+        txt.textContent = 'Agenda conectada' + (s.email ? ' (' + s.email + ')' : '');
+        caixa.appendChild(txt);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cal-google-sair';
+        btn.textContent = 'Desconectar';
+        btn.addEventListener('click', async () => {
+          await fetch('/api/google/desconectar', { method: 'POST', credentials: 'same-origin' });
+          atualizarStatusGoogle();
+          Network.pedirAgenda();
+        });
+        caixa.appendChild(btn);
+        return;
+      }
+
+      const link = document.createElement('a');
+      link.className = 'cal-google-btn';
+      link.href = '/api/google/conectar';
+      link.textContent = 'Conectar meu Google Agenda';
+      caixa.appendChild(link);
+    } catch (e) {
+      caixa.textContent = 'Nao consegui conferir a conexao com o Google.';
+    }
   }
 
   function init() {

@@ -7,7 +7,8 @@ const mapaEditado = require('./mapa-editado');
 const usuariosStore = require('./usuarios');
 const sessao = require('./sessao');
 const auth = require('./auth');
-const agendaCrm = require('./agenda-crm');
+const google = require('./google');
+const agenda = require('./agenda');
 
 const PORT = process.env.PORT || 3500;
 
@@ -318,10 +319,10 @@ io.on('connection', (socket) => {
   });
 
   // Agenda do time, vinda do CRM. Sob demanda (so quem abre o painel pede) e
-  // com cache no agenda-crm, entao abrir o painel nao vira chamada ao Google.
+  // com cache no agenda.js, entao abrir o painel nao vira chamada ao Google.
   socket.on('agenda-pedir', async () => {
-    const agenda = await agendaCrm.obter();
-    socket.emit('agenda', agenda);
+    const dados = await agenda.obter();
+    socket.emit('agenda', dados);
   });
 
   // Reivindicar/largar uma mesa. So vale em tile de mesa e cada pessoa fica com
@@ -464,6 +465,42 @@ io.on('connection', (socket) => {
   });
 });
 
+// ---- conectar o Google Agenda da propria pessoa ----
+// Quem esta conectando sai da sessao, nunca de um uid mandado na URL.
+app.get('/api/google/status', sessao.exigirLogin, (req, res) => {
+  res.json({
+    configurado: google.configurado(),
+    conectado: google.conectado(req.usuario.id),
+    email: google.emailConectado(req.usuario.id),
+  });
+});
+
+app.get('/api/google/conectar', sessao.exigirLogin, (req, res) => {
+  if (!google.configurado()) return res.status(503).send('Agenda nao configurada no servidor.');
+  res.redirect(google.urlDeConsentimento(req.usuario.id));
+});
+
+app.get('/api/google/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+  if (error) return res.redirect('/?agenda=recusada');
+  if (typeof code !== 'string' || typeof state !== 'string') {
+    return res.redirect('/?agenda=erro');
+  }
+  const r = await google.trocarCodigoPorToken(code, state);
+  if (r.erro) {
+    console.error('Conexao com o Google falhou:', r.erro);
+    return res.redirect('/?agenda=erro');
+  }
+  agenda.invalidarCache();
+  res.redirect('/?agenda=ok');
+});
+
+app.post('/api/google/desconectar', sessao.exigirLogin, (req, res) => {
+  google.desconectar(req.usuario.id);
+  agenda.invalidarCache();
+  res.json({ ok: true });
+});
+
 // Rotas de conta antes do estatico: /api/... nunca cai no index.html.
 app.use('/api', auth.criarRotas(sanitizeAppearance));
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -495,6 +532,13 @@ const APARENCIA_DEV = sanitizeAppearance({
 server.listen(PORT, () => {
   console.log(`Escritorio virtual ADM Solucoes rodando em http://localhost:${PORT}`);
   console.log(`Contas cadastradas: ${usuariosStore.totalDeContas()}`);
+  if (google.configurado()) {
+    console.log('Google Agenda: registre este redirect URI no Google Cloud:');
+    console.log('  ' + google.REDIRECT_URI);
+    if (!process.env.SITE_URL) {
+      console.log('  (veio do padrao; defina SITE_URL se o endereco for outro)');
+    }
+  }
   if (sessao.SEM_LOGIN) {
     const dev = prepararContaDev();
     console.log(`SEM_LOGIN=1: tela de login desativada, entrando como "${dev.nome}".`);

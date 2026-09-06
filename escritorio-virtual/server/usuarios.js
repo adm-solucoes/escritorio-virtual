@@ -146,4 +146,6 @@ module.exports = {
   atualizarPerfil,
   getSegredoSessao,
   totalDeContas: () => usuarios.length,
+  // copia rasa: quem le a lista nao mexe no estado interno
+  todos: () => usuarios.map((u) => ({ id: u.id, nome: u.nome, email: u.email })),
 };

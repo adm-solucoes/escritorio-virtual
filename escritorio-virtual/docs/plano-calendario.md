@@ -3,60 +3,67 @@
 Referencia: `referencias/Captura de tela 2026-09-06 111656.png` (o Calendar do
 Gather).
 
-## 1. Decisao: a sede le a agenda do CRM
+## 1. Decisao: a sede fala direto com o Google
 
-**Primeira versao deste plano dizia "calendario interno, sem Google", com o
-argumento de que Google exigiria criar projeto no Google Cloud e resolver
-OAuth. Estava errado: o CRM (`crm-adm`) ja tem tudo isso pronto** - projeto no
-Google Cloud, OAuth, `googleapis`, tokens por pessoa no Supabase
-(`integracoes_google`, com a flag `compartilhar_agenda`) e a funcao
-`listarEventosPeriodo` em `src/lib/google-calendar.ts`.
+Passou por tres versoes. Vale registrar, porque o caminho explica a escolha:
 
-Entao a sede **nao cria uma segunda agenda**: ela le a agenda que o time ja
-usa, atraves do CRM. Uma agenda so pra empresa.
+1. **Calendario interno** (agenda propria em JSON). Descartado: o Caio lembrou
+   que o CRM ja tinha calendario.
+2. **Ler a agenda pelo CRM** (rota nova la, segredo compartilhado). Chegou a ser
+   implementado e testado.
+3. **A sede falando direto com o Google** - decisao final do Caio.
 
-O que isso **nao** significa: a sede nao fala com o Google direto e nao guarda
-token de ninguem. Ela pergunta ao CRM, que ja tem a permissao de cada pessoa.
+Entao a sede tem **OAuth proprio e cofre de token proprio**. Cada pessoa conecta
+a propria conta Google aqui dentro, uma vez.
 
-> O `server/reunioes.js` que eu tinha comecado (agenda propria em JSON) fica
-> **sem uso**. Nao apaguei: se um dia a sede precisar de reuniao que nao existe
-> no Google, ele ja esta escrito e testado no formato do projeto.
+### Por que nao lemos os tokens do Supabase do CRM
 
-### Consentimento
+Era o atalho obvio (os tokens ja estao la), e foi recusado de proposito:
 
-So aparece a agenda de quem marcou `compartilhar_agenda = true` no CRM. Esse
-opt-in ja existe la e continua sendo a unica porta - a sede nao contorna isso.
+- Exigiria a **chave de servico do Supabase** dentro da sede. Essa chave ignora
+  RLS: abriria o banco inteiro do CRM a partir de um app menor, que ainda tem
+  modo `SEM_LOGIN` e guarda coisas em JSON.
+- Os dois apps renovando o **mesmo refresh token** disputariam a mesma linha, e
+  uma renovacao pode invalidar a outra.
 
-## 2. Como os dois servidores conversam
+Com OAuth proprio, a sede so tem token de calendario, so de leitura, e o CRM
+continua dono do dele. O preco: cada pessoa conecta o Google duas vezes (uma no
+CRM, outra aqui) e o redirect URI da sede precisa ser registrado no mesmo
+projeto do Google Cloud.
+
+### O que a sede pede ao Google
+
+Escopo **`calendar.readonly`** e mais nada. A sede mostra a agenda; nunca
+escreve nela.
+
+## 2. Variaveis
+
+| Variavel | Pra que |
+|---|---|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | mesmas credenciais do projeto do Google Cloud que o CRM ja usa |
+| `SITE_URL` | endereco publico da sede, pra montar o redirect URI |
+
+Sem as duas primeiras o painel abre e avisa que nao esta configurado, em vez de
+quebrar. O servidor imprime o redirect URI no arranque, pra registrar no Google
+Cloud sem adivinhar.
+
+## 3. Como funciona
 
 ```
-navegador da sede  ->  servidor da sede  ->  CRM  ->  Google Agenda
-                        (cache 60s)        (token ja
-                                            de cada pessoa)
+navegador -> servidor da sede -> Google Calendar API
+              (cache 60s)        (token da propria pessoa)
 ```
 
-O navegador **nunca** fala com o CRM. Quem chama e o servidor da sede, de
-servidor pra servidor, com um segredo compartilhado - o mesmo padrao do
-`ehCronAutorizado` que o CRM ja usa pro cron da Vercel:
-
-```
-Authorization: Bearer ${SEDE_TOKEN}
-```
-
-Variaveis novas: `CRM_URL` e `SEDE_TOKEN` na sede, `SEDE_TOKEN` no CRM. Sem
-elas, o painel aparece dizendo que a agenda nao esta configurada - nao quebra.
-
-**Cache de 60s** na sede: sem isso, cada pessoa abrindo o painel viraria uma
-chamada ao Google por pessoa do time, e a cota acaba rapido.
-
-## 3. Quem e quem
-
-A sede identifica por conta propria (`usuarios.json`), o CRM por `gcs`. Os dois
-tem **e-mail**, e e por ele que casam - normalizado do mesmo jeito que a sede ja
-faz em `chaveEmail` (minusculo, sem espaco).
-
-Quem esta na agenda do CRM mas nao tem conta na sede aparece pelo nome do CRM.
-Quem tem conta na sede e nao conectou o Google simplesmente nao tem evento.
+- `/api/google/conectar` manda pro consentimento do Google, com `state`
+  aleatorio contra CSRF. Quem esta conectando **sai da sessao**, nunca de um uid
+  na URL.
+- `/api/google/callback` troca o codigo por token e guarda em
+  `server/data/google.json` (fora do git).
+- `agenda.js` junta os eventos de todo mundo que conectou, com cache de 60s -
+  senao cada pessoa abrindo o painel viraria uma chamada ao Google por pessoa
+  conectada.
+- Renovacao de token e serializada por pessoa: duas chamadas simultaneas nao
+  gastam dois refresh.
 
 ## 4. O que entra
 
@@ -83,42 +90,49 @@ Quem tem conta na sede e nao conectou o Google simplesmente nao tem evento.
 
 | Arquivo | Papel |
 |---|---|
-| `crm-adm/src/app/api/calendario/sede/route.ts` | rota nova, autenticada por segredo |
-| `escritorio-virtual/server/agenda-crm.js` | busca no CRM, cache, casa por e-mail |
-| `escritorio-virtual/server/index.js` | manda a agenda no `init` e atualiza |
-| `escritorio-virtual/public/js/calendario.js` | painel e grade |
-| `escritorio-virtual/public/index.html` / `style.css` | botao no trilho e estilos |
+| `server/google.js` | OAuth, cofre de token, renovacao e leitura de eventos |
+| `server/agenda.js` | junta a agenda de quem conectou, com cache |
+| `server/index.js` | rotas `/api/google/*` e o evento `agenda-pedir` |
+| `public/js/calendario.js` | painel, grade da semana, aviso, botao de conectar |
+| `public/index.html` / `style.css` | botao no trilho e estilos |
 
-`server/reunioes.js` fica escrito porem desligado (ver secao 1).
+`server/reunioes.js` fica escrito porem desligado (era a versao 1). A rota
+`crm-adm/.../calendario/sede/route.ts` e o `server/agenda-crm.js` (versao 2)
+**foram removidos** - deixar um endpoint com segredo compartilhado sem ninguem
+usando e risco a toa.
 
 ## 7. Resultado dos testes
 
-Testado em 06/09/2026, no navegador, **pelo caminho real**: um stub em
-`localhost:4599` imitando a rota `/api/calendario/sede`, com a sede configurada
-via `CRM_URL` e `SEDE_TOKEN`. Nao injetei nada no cliente - a ideia era exercitar
-o `fetch`, o token e o casamento por e-mail de verdade.
+Testado em 06/09/2026, no navegador.
 
 | O que | Resultado |
 |---|---|
 | Grade da semana desenha | ok - 7 colunas, regua 7h-21h, mes por extenso |
-| Evento posicionado na hora certa | ok - 5 eventos, cada um no dia e horario certos |
-| Cor por pessoa | ok - Dev, Ana Paula e Bruno com cores diferentes |
-| Circulo vermelho no dia de hoje | ok (`temHoje: true`, 24px) |
-| Linha vermelha do horario atual | ok |
-| Casamento por e-mail | ok - evento de `dev@local` virou `uid` da conta e o nome passou a ser "Dev", o da sede; quem nao tem conta ficou com o nome do CRM e `uid: null` |
-| "Seus proximos compromissos" | ok - so os meus e so os que ainda nao acabaram |
-| Aviso de "comeca em 5 min" | ok - disparou com evento comecando em 3 min |
-| Sem `CRM_URL`/`SEDE_TOKEN` | ok - painel abre e avisa "Agenda nao configurada", sem quebrar |
+| Evento posicionado na hora certa | ok - testado na versao 2 com 5 eventos |
+| Cor por pessoa | ok |
+| Circulo vermelho no dia de hoje | ok |
+| Linha vermelha do horario atual | ok, com etiqueta da hora |
+| `/api/google/status` | ok nos tres estados (nao configurado, configurado sem conectar, e o painel reagindo a cada um) |
+| URL de consentimento | ok - escopo `calendar.readonly`, `access_type=offline`, `state` aleatorio |
+| `state` invalido no callback | ok - recusa e volta pra `/?agenda=erro` |
+| Sem `GOOGLE_CLIENT_ID` | ok - painel avisa, sem quebrar |
 | Console | limpo |
 
-**Um susto que nao era bug:** a lista lateral apareceu vazia no primeiro teste.
-Era comportamento certo - os eventos do dia ja tinham acabado (era 17:47 e eles
-eram das 9h e das 14h), e a lista so mostra o que ainda vai acontecer. So deu
-pra confirmar depois de por no stub um evento comecando em 3 minutos.
+### Dois bugs achados no teste, os dois ja corrigidos
 
-### Ainda nao testado com o CRM de verdade
+1. **Nome do dia por extenso transbordava.** A coluna aqui tem ~57px (o painel
+   divide espaco com o trilho e a barra lateral), e "domingo" invadia "segunda".
+   Passou a usar abreviacao na grade; a lista lateral segue com o nome inteiro.
+2. **Metade do calendario estava invisivel.** Eu escrevi o CSS usando `--erro` e
+   `--teal`, que **nao existem mais** - o tema virou claro e a paleta mudou pra
+   `--vermelho`, `--verde`, `--indigo`. O circulo do dia de hoje e a linha do
+   horario atual ficavam sem cor de fundo, e as linhas da grade eram brancas
+   sobre painel branco. **Licao: conferir as variaveis do `:root` antes de
+   escrever CSS novo** - o tema mudou no meio do projeto.
 
-O stub responde no formato certo, mas **a rota real do CRM
-(`crm-adm/src/app/api/calendario/sede/route.ts`) nao foi exercitada** - exige o
-CRM rodando, Supabase e alguem com Google conectado. Vale rodar os dois juntos
-uma vez antes de confiar.
+### Ainda nao testado de verdade
+
+O fluxo completo de OAuth (consentir no Google, voltar com o codigo, listar
+evento real) **nao foi exercitado** - eu nao faco login em conta Google. Falta:
+registrar o redirect URI no Google Cloud, por `GOOGLE_CLIENT_ID`/`SECRET`, e
+conectar uma conta pra ver evento de verdade na grade.
