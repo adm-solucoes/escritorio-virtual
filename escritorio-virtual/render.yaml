@@ -1,0 +1,30 @@
+# Deploy no Render. Importando este arquivo (Blueprint), ele ja sobe com o disco
+# persistente e as variaveis certas.
+#
+# ATENCAO: `disk` exige plano pago. No plano free o disco e efemero e
+# server/data/ (contas + decoracao do mapa) some a cada deploy ou restart.
+# Ver docs/deploy.md.
+services:
+  - type: web
+    name: escritorio-virtual-adm
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/eu
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Codigo que a pessoa digita pra criar conta na sede.
+      - key: CODIGO_SEDE
+        generateValue: true
+      # Codigo que marca a conta como diretoria.
+      - key: ADMIN_CODE
+        generateValue: true
+      # SEM_LOGIN nao entra aqui de proposito: e so pra desenvolvimento, e o
+      # codigo ja ignora a flag quando NODE_ENV=production.
+    disk:
+      name: dados
+      mountPath: /opt/render/project/src/server/data
+      sizeGB: 1

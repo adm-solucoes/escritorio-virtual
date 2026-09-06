@@ -1,0 +1,85 @@
+# Sair do local: colocar o escritorio no ar
+
+O projeto ja esta pronto pra rodar fora da sua maquina: o servidor usa
+`process.env.PORT`, o cookie de sessao vira `Secure` sozinho quando
+`NODE_ENV=production`, e a flag `SEM_LOGIN` e ignorada em producao.
+
+Falta escolher **onde** hospedar e resolver **duas coisas que so aparecem
+quando sai do localhost** (disco e chamada de video). Estao nas secoes 3 e 4 -
+vale ler antes de subir.
+
+---
+
+## 1. O que subir
+
+Tudo que esta no git. `server/data/` **nao** vai junto (esta no `.gitignore`) -
+e isso e o certo: sao as contas e a decoracao, que pertencem ao servidor de
+producao, nao ao repositorio.
+
+## 2. Passo a passo no Render
+
+O `render.yaml` na raiz do projeto ja descreve o servico.
+
+1. Suba o repositorio no GitHub (o Render le de la).
+2. No Render: **New > Blueprint**, aponte pro repositorio. Ele le o
+   `render.yaml` sozinho.
+3. Confirme as variaveis. `CODIGO_SEDE` e `ADMIN_CODE` estao como
+   `generateValue: true`, entao o Render sorteia um valor forte pra cada uma -
+   **anote os dois**, sao eles que o time vai usar pra criar conta e pra virar
+   diretoria.
+4. Deploy.
+
+Se preferir subir na mao (sem Blueprint): runtime Node, build `npm ci`, start
+`npm start`, e as variaveis `NODE_ENV=production`, `CODIGO_SEDE` e
+`ADMIN_CODE` definidas por voce.
+
+> **Nao defina `SEM_LOGIN` em producao.** O codigo ja ignora, mas nao custa.
+
+## 3. Disco: a pegadinha do plano free
+
+`server/data/` guarda **contas, senhas e a decoracao do mapa** em JSON no disco.
+
+- No **plano free do Render o disco e efemero**: some a cada deploy e a cada
+  restart automatico. Na pratica todo mundo perde a conta e o escritorio volta
+  pra planta original de tempos em tempos.
+- O `render.yaml` ja pede um disco de 1 GB montado em `server/data`, mas
+  **disco exige plano pago** (o Starter, mais barato). Sem ele o bloco `disk`
+  e recusado.
+
+Escolha uma:
+
+| Caminho | O que da | Custo |
+|---|---|---|
+| **Render Starter + disco** | funciona como esta escrito, sem mexer no codigo | pago (mensal) |
+| **Plano free, aceitando perder** | serve pra mostrar/testar; conta e decoracao somem sozinhas | gratis |
+| **Trocar o JSON por um banco** | resolve de vez, e o certo se virar ferramenta do dia a dia | Postgres free do Render/Neon, mas **exige reescrever `usuarios.js` e `mapa-editado.js`** |
+
+Isso e decisao sua - nao da pra fugir dela so com codigo.
+
+## 4. Chamada de video: vai falhar pra parte do time
+
+Hoje o WebRTC usa **so STUN** (`stun:stun.l.google.com:19302`), em
+`public/js/calls.js`.
+
+STUN sozinho resolve a maioria das redes domesticas, mas **nao** resolve NAT
+simetrico - tipico de rede corporativa, faculdade e alguns 4G. Nessas, os dois
+lados se veem no mapa e a chamada simplesmente nao conecta. No localhost isso
+nunca aparece, porque nao ha NAT no meio.
+
+Pra fechar isso precisa de um **servidor TURN**, que retransmite o audio/video
+quando a conexao direta falha. Opcoes: um TURN gerenciado (Twilio, Metered,
+Cloudflare Calls) ou subir um `coturn`. Em qualquer caso e so acrescentar o
+servidor na lista `ICE_SERVERS`, com usuario e senha vindos de variavel de
+ambiente.
+
+Enquanto nao tiver TURN, vale avisar o time: "se a chamada nao abrir, e a rede".
+
+## 5. Antes do primeiro deploy
+
+- [ ] Apagar `server/data/usuarios.json` local, ou pelo menos saber que as
+      contas de teste (`diretoria@admsolucoes.com` e `dev@local`) **nao** vao
+      junto - elas nao estao no git, entao o servidor novo comeca vazio.
+- [ ] Anotar `CODIGO_SEDE` e `ADMIN_CODE` gerados.
+- [ ] Criar a sua conta de diretoria logo no primeiro acesso.
+- [ ] Conferir que a URL abre em **https** (o cookie de sessao so vai com
+      `Secure` em producao; em http ele e descartado e ninguem consegue logar).

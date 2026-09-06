@@ -7,6 +7,9 @@
     "start": "node server/index.js",
     "dev": "node -e \"process.env.SEM_LOGIN='1'; require('./server/index.js')\""
   },
+  "engines": {
+    "node": ">=18"
+  },
   "license": "MIT",
   "dependencies": {
     "express": "^4.19.2",
