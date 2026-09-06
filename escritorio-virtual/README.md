@@ -12,9 +12,11 @@ automaticamente numa chamada de video/audio com essa pessoa, como no Gather de v
 - **Frontend:** HTML5 Canvas + JavaScript puro (sem framework, sem build step)
 - **Chamadas:** WebRTC peer-to-peer nativo do navegador (o servidor so entrega o
   "bilhete" de conexao entre dois navegadores; o video/audio nunca passa por ele)
-- **Sem banco de dados:** o perfil (nome + aparencia) fica salvo no `localStorage` do
-  navegador de quem acessa; a presenca (quem esta online e onde) vive só em memoria no
-  servidor Node enquanto ele estiver rodando
+- **Sem banco de dados externo:** as contas (nome, e-mail, senha com hash e a
+  aparencia do boneco) ficam num JSON no disco do servidor; a presenca (quem esta
+  online e onde) vive so em memoria enquanto o servidor estiver rodando
+- **App de computador:** o site e instalavel como PWA (janela propria, icone na
+  area de trabalho) — ver `docs/app-computador.md`
 
 ## Estrutura de pastas
 
@@ -30,6 +32,10 @@ escritorio-virtual/
 │   └── map.js          # mapa (grid de tiles) e colisao, usado pelo servidor
 ├── public/
 │   ├── index.html      # telas de login, avatar e escritorio
+│   ├── manifest.webmanifest # deixa a sede instalavel como app
+│   ├── sw.js               # service worker (so pra instalar, sem cache de codigo)
+│   ├── offline.html        # tela de "sem conexao" do app instalado
+│   ├── icones/             # icones do app (192, 512 e favicon)
 │   ├── css/style.css   # visual claro no estilo Gather
 │   ├── assets/lpc/      # sprites do boneco (LPC, ver CREDITS.md dentro da pasta)
 │   └── js/
@@ -47,6 +53,7 @@ escritorio-virtual/
 │       └── main.js        # liga as telas (login -> avatar -> escritorio)
 ├── docs/
 │   ├── CONTINUAR-AQUI.md   # handoff: estado atual, o que falta, armadilhas
+│   ├── app-computador.md   # como instalar a sede como app (PWA)
 │   ├── plano-chat.md       # como o chat foi pensado e validado
 │   ├── plano-login.md      # como o login foi pensado e validado
 │   └── plano-decorador.md  # como a decoracao foi pensada e validada

@@ -8,6 +8,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+
+  <!-- App instalavel no computador (PWA). Ver docs/app-computador.md. -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icones/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/icones/icone-192.png" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="description" content="Escritorio virtual 2D da ADM Solucoes: presenca, chat e chamada por proximidade." />
 </head>
 <body>
 
@@ -401,5 +408,16 @@
   <script src="js/pessoas.js"></script>
   <script src="js/game.js"></script>
   <script src="js/main.js"></script>
+  <script>
+    // Registra o service worker so em HTTPS (ou localhost): e o que faz o
+    // navegador oferecer "Instalar" e abrir o app em janela propria.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+          /* sem service worker o site continua funcionando normalmente */
+        });
+      });
+    }
+  </script>
 </body>
 </html>
