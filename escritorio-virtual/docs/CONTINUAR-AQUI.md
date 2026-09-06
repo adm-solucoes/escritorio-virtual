@@ -99,17 +99,22 @@ tipos.forEach(([nome, valor], i) => {
 Ver tudo junto e o jeito mais rapido de achar o que ainda esta na grade antiga:
 o item chapado ao lado de um refeito denuncia sozinho.
 
-### O que falta
+### ~~O que falta~~ — MIGRACAO CONCLUIDA
 
-Eram 115 chamadas do helper antigo `p()` (a estimativa de ~95 estava baixa).
-**Ja migrados depois: piso de tijolinho, parede, sofa, estante, arvore, agua,
-pedra, arbusto, janela, armario e balcao** — restam **84**: banco, cerca,
-quadro, lousa, cavalete, cabide, impressora, TV, relogio, bebedouro, plantas
-grandes, tapetes e mesa de reuniao. Esses continuam na grade de 32 e **destoam**.
+**Acabou.** Os 42 tipos de tile e os 10 objetos de mesa estao todos na grade de
+128. Os helpers da grade antiga (`p()`, `sombra()`, `contornoParcial()`) foram
+**removidos do arquivo** - nao da mais pra desenhar fora da grade fina sem
+reintroduzir um.
 
-Pra copa de arvore, arbusto e pedra entrou o helper **`blob()`**: elipse em
-degraus na grade fina. `ctx.arc` saia liso e vetorial, que era justamente o que
-fugia da cara de sprite do resto.
+Eram 115 chamadas de `p()` (a estimativa de ~95 no handoff estava baixa), mais
+uma leva de `ctx.fillRect` / `ctx.arc` direto que nao aparecia nessa conta -
+quadro, lousa, cerca, tapete, mesa de reuniao e mesa de centro. **Se for
+auditar, contar so `p(` engana**; procure tambem por `ctx.fillRect`,
+`ctx.arc(` e `ctx.ellipse` dentro de `drawObstacleTile`.
+
+Helper novo: **`blob()`**, elipse em degraus na grade fina. `ctx.arc` saia liso
+e vetorial, que era justamente o que fugia da cara de sprite do resto. Usado em
+copa de arvore, arbusto, pedra, flores, relogio e tapete redondo.
 
 Duas licoes da leva de piso/parede/sofa/estante, que valem pras proximas:
 
