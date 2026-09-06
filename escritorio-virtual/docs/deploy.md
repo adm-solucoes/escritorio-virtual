@@ -10,6 +10,42 @@ vale ler antes de subir.
 
 ---
 
+## 0. Link rapido com tunel (pra hoje, sem hospedar nada)
+
+Se a ideia e so **mandar um link pro pessoal entrar agora**, da pra abrir a sua
+propria maquina pra internet por um tunel, sem Render nem deploy.
+
+```
+npm run publicar          # terminal 1: sobe a sede com login ligado
+ngrok http 3600           # terminal 2: devolve um endereco https publico
+```
+
+O `npm run publicar` e o `npm start` com as tres variaveis ja no lugar:
+`NODE_ENV=production` (cookie `Secure`, e a flag `SEM_LOGIN` passa a ser
+ignorada), mais um `CODIGO_SEDE` e um `ADMIN_CODE` sorteados. Ele imprime os
+dois codigos e salva em `server/data/` - **nao mudam** no proximo restart, entao
+quem ja tem o codigo continua entrando.
+
+O `ngrok` responde com uma linha `Forwarding https://algo.ngrok-free.app`. Esse
+https e o link. Manda junto o **codigo da sede** - sem ele ninguem cria conta.
+
+**O que esse caminho nao resolve:**
+
+- **So funciona com o seu PC ligado e os dois terminais abertos.** Fechou,
+  o link morre.
+- **O endereco muda** toda vez que voce reinicia o ngrok (no plano gratuito).
+- Quem abre vai ver uma tela do ngrok antes ("Visit Site"), tambem do plano
+  gratuito.
+- Continua valendo a secao 4: sem servidor TURN, parte do time nao consegue
+  fechar a chamada de video.
+
+Pra um link que fica de pe sozinho, e a secao 2 (Render).
+
+> **Nunca use `npm run dev` pra isso.** Com `SEM_LOGIN=1` **todo mundo que
+> abrisse o link entraria na mesma conta** - mesmo nome, mesmo boneco, e lendo
+> as DMs uns dos outros. O `publicar` recusa rodar se essa variavel estiver
+> ligada, justamente por isso.
+
 ## 1. O que subir
 
 Tudo que esta no git. `server/data/` **nao** vai junto (esta no `.gitignore`) -
