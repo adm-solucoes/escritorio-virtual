@@ -1,10 +1,11 @@
-// Mapa 2D da sede da ADM Solucoes. Cada ambiente tem piso e cor de identidade
-// propria; os moveis moram no proprio grid (um tile = um movel).
+// Mapa 2D da sede da ADM Solucoes, no layout do Gather: predio cercado de area
+// verde, faixa de salas privativas com janelao na frente, patio com lago no
+// meio, corredor e area aberta atras.
 // ATENCAO: mantido em sincronia manualmente com server/map.js (sem bundler).
 (function () {
   const TILE = 32;
-  const COLS = 34;
-  const ROWS = 24;
+  const COLS = 48;
+  const ROWS = 32;
 
   const LIVRE = 0;
   const PAREDE = 1;
@@ -21,34 +22,56 @@
   const ARMARIO = 12;
   const BALCAO = 13;
   const CERCA = 14;
-  const CADEIRA = 15; // caminhavel: da pra "sentar" em cima
-  const TAPETE = 16; // caminhavel: so decoracao de chao
+  const CADEIRA = 15; // caminhavel
+  const TAPETE = 16; // caminhavel
   const MESA_REUNIAO = 17;
+  const JANELA = 18;
+  const AGUA = 19;
+  const PEDRA = 20;
+  const ARBUSTO = 21;
+  const BANCO = 22;
+  const CABIDE = 23;
+  const IMPRESSORA = 24;
+  const CAVALETE = 25;
 
   const SOLID_TILES = new Set([
     PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO, ESTANTE,
     PLANTA, ARVORE, QUADRO, LOUSA, ARMARIO, BALCAO, CERCA, MESA_REUNIAO,
+    JANELA, AGUA, PEDRA, ARBUSTO, BANCO, CABIDE, IMPRESSORA, CAVALETE,
   ]);
 
-  // Ambientes da sede. "piso" define o desenho do chao de toda a area e "cor" e a
-  // identidade visual usada na etiqueta do mapa e nos cards da Visao de salas.
-  const ROOMS = [
-    { id: 'entrada', nome: 'Entrada', r0: 1, c0: 1, r1: 8, c1: 8, piso: 'tijolo', cor: '#1f9c8a', labelR: 1, labelC: 1 },
-    { id: 'sala-principal', nome: 'Sala Principal', r0: 1, c0: 10, r1: 8, c1: 19, piso: 'tijolo_quente', cor: '#7a5cd0', labelR: 2, labelC: 10 },
-    { id: 'salinha', nome: 'Salinha', r0: 1, c0: 21, r1: 8, c1: 26, piso: 'cinza', cor: '#3f7fc4', labelR: 2, labelC: 21 },
-    { id: 'area-aberta', nome: 'Area Aberta', r0: 9, c0: 1, r1: 22, c1: 19, piso: 'tijolo', cor: '#d98324', labelR: 11, labelC: 1 },
-    { id: 'lounge', nome: 'Lounge', r0: 9, c0: 20, r1: 22, c1: 27, piso: 'tijolo', cor: '#c25a3f', labelR: 10, labelC: 20 },
-    { id: 'jardim', nome: 'Jardim', r0: 0, c0: 28, r1: 23, c1: 33, piso: 'grama', cor: '#3f9e57', labelR: 1, labelC: 28 },
+  // Salas privativas da faixa da frente (cada uma com janelao, carpete roxo,
+  // mesa e porta pro corredor). Compartilham parede com a vizinha.
+  const SALAS_FRENTE = [
+    { id: 'diretoria', nome: 'Diretoria', c0: 3, c1: 11 },
+    { id: 'financeiro', nome: 'Financeiro', c0: 11, c1: 19 },
+    { id: 'projetos', nome: 'Projetos', c0: 27, c1: 35 },
+    { id: 'marketing', nome: 'Marketing', c0: 35, c1: 44 },
   ];
 
-  // Ilhas de carpete por cima do piso de tijolinho, como no Gather: as baias de
-  // trabalho ficam sobre carpete roxo e o lounge sobre carpete listrado escuro.
+  const ROOMS = [
+    { id: 'diretoria', nome: 'Diretoria', r0: 4, c0: 3, r1: 11, c1: 11, piso: 'carpete_roxo', cor: '#7a5cd0', labelR: 5, labelC: 4 },
+    { id: 'financeiro', nome: 'Financeiro', r0: 4, c0: 12, r1: 11, c1: 19, piso: 'carpete_roxo', cor: '#3f7fc4', labelR: 5, labelC: 12 },
+    { id: 'patio', nome: 'Patio', r0: 4, c0: 20, r1: 11, c1: 26, piso: 'grama', cor: '#3f9e57', labelR: 4, labelC: 20 },
+    { id: 'projetos', nome: 'Projetos', r0: 4, c0: 27, r1: 35, c1: 35, piso: 'carpete_roxo', cor: '#c25a3f', labelR: 5, labelC: 28 },
+    { id: 'marketing', nome: 'Marketing', r0: 4, c0: 36, r1: 11, c1: 44, piso: 'carpete_roxo', cor: '#d98324', labelR: 5, labelC: 36 },
+    { id: 'corredor', nome: 'Corredor', r0: 12, c0: 3, r1: 15, c1: 44, piso: 'tijolo', cor: '#8b98a8', labelR: 14, labelC: 4 },
+    { id: 'lounge', nome: 'Lounge', r0: 16, c0: 3, r1: 29, c1: 13, piso: 'tijolo', cor: '#1f9c8a', labelR: 17, labelC: 4 },
+    { id: 'time', nome: 'Time', r0: 16, c0: 14, r1: 29, c1: 32, piso: 'tijolo', cor: '#7c5cd4', labelR: 17, labelC: 15 },
+    { id: 'reuniao', nome: 'Sala de Reuniao', r0: 16, c0: 33, r1: 29, c1: 44, piso: 'ladrilho', cor: '#e0607e', labelR: 17, labelC: 34 },
+    // pega tudo que sobrou: a area verde em volta do predio
+    { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 31, c1: 47, piso: 'grama', cor: '#3f9e57', labelR: 1, labelC: 1 },
+  ];
+
+  // Ilhas de carpete por cima do piso da sala. "contorno" desenha a moldura fina
+  // que o Gather usa pra marcar uma area.
   const ZONAS_PISO = [
-    { r0: 12, c0: 2, r1: 15, c1: 6, piso: 'carpete_roxo' },
-    { r0: 12, c0: 8, r1: 15, c1: 12, piso: 'carpete_roxo' },
-    { r0: 18, c0: 2, r1: 21, c1: 6, piso: 'carpete_roxo' },
-    { r0: 18, c0: 8, r1: 21, c1: 12, piso: 'carpete_roxo' },
-    { r0: 12, c0: 20, r1: 18, c1: 24, piso: 'carpete_azul' },
+    { r0: 18, c0: 16, r1: 21, c1: 20, piso: 'carpete_roxo' },
+    { r0: 18, c0: 24, r1: 21, c1: 28, piso: 'carpete_roxo' },
+    { r0: 24, c0: 16, r1: 27, c1: 20, piso: 'carpete_roxo' },
+    { r0: 24, c0: 24, r1: 27, c1: 28, piso: 'carpete_roxo' },
+    { r0: 19, c0: 5, r1: 26, c1: 11, piso: 'carpete_azul' },
+    { r0: 4, c0: 20, r1: 11, c1: 26, piso: 'grama', contorno: '#5fb87a' },
   ];
 
   function buildMap() {
@@ -63,96 +86,89 @@
     const linhaH = (r, c0, c1, t) => { for (let c = c0; c <= c1; c++) set(r, c, t); };
     const linhaV = (c, r0, r1, t) => { for (let r = r0; r <= r1; r++) set(r, c, t); };
 
-    // ---------- estrutura do predio ----------
-    linhaH(0, 0, 27, PAREDE);
-    linhaH(23, 0, 27, PAREDE);
-    linhaV(0, 0, 23, PAREDE);
-    linhaV(27, 0, 23, PAREDE);
+    // ---------- salas privativas da frente ----------
+    SALAS_FRENTE.forEach(({ c0, c1 }) => {
+      linhaH(4, c0, c1, PAREDE);
+      linhaH(4, c0 + 1, c1 - 1, JANELA); // janelao dando pro jardim
+      linhaH(11, c0, c1, PAREDE);
+      linhaV(c0, 4, 11, PAREDE);
+      linhaV(c1, 4, 11, PAREDE);
+      set(11, Math.floor((c0 + c1) / 2), LIVRE); // porta pro corredor
 
-    linhaV(9, 1, 8, PAREDE); // Entrada | Sala Principal
-    linhaV(20, 1, 8, PAREDE); // Sala Principal | Salinha
+      set(6, c0 + 2, MESA_MONITOR);
+      set(6, c0 + 3, MESA_MONITOR);
+      set(7, c0 + 2, CADEIRA);
+      set(7, c0 + 3, CADEIRA);
+      set(5, c1 - 1, PLANTA);
+      set(9, c0 + 1, ESTANTE);
+      set(9, c1 - 1, ARMARIO);
+    });
 
-    linhaH(9, 1, 26, PAREDE); // faixa da frente | fundo
-    set(9, 4, LIVRE); // porta da Entrada
-    set(9, 14, LIVRE); set(9, 15, LIVRE); // porta da Sala Principal
-    set(9, 24, LIVRE); // porta da Salinha (sai no Lounge)
+    // ---------- patio com lago (entre Financeiro e Projetos) ----------
+    // pedras e arbustos so nas bordas: o anel em volta do lago (col 21-25,
+    // linha 5-9) fica livre, senao o jardim vira uma ilha inalcancavel
+    rect(6, 22, 8, 24, AGUA);
+    [[4, 22], [4, 24], [10, 21], [10, 25], [6, 20], [8, 26]]
+      .forEach(([r, c]) => set(r, c, PEDRA));
+    [[4, 20], [4, 26], [10, 20], [10, 26]]
+      .forEach(([r, c]) => set(r, c, ARBUSTO));
+    set(7, 20, BANCO);
+    set(7, 26, BANCO);
 
-    linhaV(19, 12, 22, PAREDE); // divisoria do Lounge (passagem em cima, linhas 10-11)
+    // ---------- predio: paredes externas do corredor pra baixo ----------
+    linhaV(3, 12, 30, PAREDE);
+    linhaV(44, 12, 30, PAREDE);
+    linhaH(30, 3, 44, PAREDE);
 
-    set(16, 27, LIVRE); set(17, 27, LIVRE); // porta pro jardim
+    // ---------- corredor: mobilia encostada na parede ----------
+    // (evita as colunas das portas: 7, 15, 31, 39)
+    [[4, ESTANTE], [5, ESTANTE], [9, CAVALETE], [10, PLANTA],
+      [12, LOUSA], [13, LOUSA], [17, IMPRESSORA], [18, PLANTA],
+      [22, CABIDE], [28, ESTANTE], [29, ESTANTE], [33, IMPRESSORA],
+      [34, PLANTA], [36, LOUSA], [37, LOUSA], [41, ARMARIO], [42, ARMARIO]]
+      .forEach(([c, t]) => set(12, c, t));
 
-    // cerca do jardim
-    linhaH(0, 28, 33, CERCA);
-    linhaH(23, 28, 33, CERCA);
-    linhaV(33, 0, 23, CERCA);
+    // ---------- divisorias da area de tras (passagem pela linha 16) ----------
+    linhaV(14, 17, 29, PAREDE);
+    linhaV(33, 17, 29, PAREDE);
 
-    // ---------- Entrada (recepcao) ----------
-    linhaH(2, 2, 5, BALCAO);
-    set(1, 7, QUADRO);
-    set(2, 8, PLANTA);
-    linhaH(6, 2, 4, SOFA_CIMA);
-    set(7, 3, MESA_CENTRO);
-    set(4, 8, ESTANTE);
-    set(5, 8, ESTANTE);
-    set(7, 7, PLANTA);
+    // ---------- Lounge ----------
+    linhaH(20, 6, 8, SOFA_CIMA);
+    linhaH(25, 6, 8, SOFA_BAIXO);
+    set(22, 7, MESA_CENTRO);
+    set(17, 4, ESTANTE); set(17, 5, ESTANTE);
+    set(18, 12, PLANTA);
+    set(28, 4, PLANTA);
+    set(27, 11, MESA);
+    set(28, 11, CADEIRA);
 
-    // ---------- Sala Principal ----------
-    linhaH(1, 13, 16, LOUSA);
-    set(1, 10, ESTANTE); set(1, 11, ESTANTE);
-    set(1, 18, QUADRO);
-    rect(4, 13, 5, 16, MESA_REUNIAO);
-    linhaH(3, 13, 16, CADEIRA);
-    linhaH(6, 13, 16, CADEIRA);
-    set(4, 12, CADEIRA); set(5, 12, CADEIRA);
-    set(4, 17, CADEIRA); set(5, 17, CADEIRA);
-    set(2, 19, PLANTA);
-    set(7, 10, PLANTA);
-    set(7, 19, PLANTA);
-
-    // ---------- Salinha ----------
-    set(1, 25, ESTANTE); set(1, 26, ESTANTE);
-    set(1, 22, QUADRO);
-    linhaH(4, 23, 24, MESA_MONITOR);
-    set(5, 23, CADEIRA); set(5, 24, CADEIRA);
-    set(7, 26, PLANTA);
-
-    // ---------- Area aberta (baias de trabalho) ----------
-    linhaH(10, 1, 2, ARMARIO);
-    linhaH(10, 6, 8, ARMARIO);
-    linhaH(10, 12, 13, ARMARIO);
-    linhaH(10, 16, 17, ARMARIO);
-
-    [[13, 3], [13, 9], [19, 3], [19, 9]].forEach(([r, c]) => {
+    // ---------- Time: baias de trabalho ----------
+    [[19, 17], [19, 25], [25, 17], [25, 25]].forEach(([r, c]) => {
       rect(r, c, r + 1, c + 2, MESA_MONITOR);
       linhaH(r - 1, c, c + 2, CADEIRA);
       linhaH(r + 2, c, c + 2, CADEIRA);
     });
+    set(17, 31, PLANTA);
+    set(29, 15, PLANTA);
+    set(22, 22, MESA_CENTRO);
+    set(21, 22, CADEIRA); set(23, 22, CADEIRA);
 
-    // cantinho de conversa no meio da area aberta
-    set(16, 16, MESA_CENTRO);
-    set(15, 16, CADEIRA); set(17, 16, CADEIRA);
-    set(16, 15, CADEIRA); set(16, 17, CADEIRA);
+    // ---------- Sala de Reuniao ----------
+    linhaH(17, 37, 40, LOUSA);
+    rect(21, 37, 22, 41, MESA_REUNIAO);
+    linhaH(20, 37, 41, CADEIRA);
+    linhaH(23, 37, 41, CADEIRA);
+    set(21, 36, CADEIRA); set(22, 36, CADEIRA);
+    set(21, 42, CADEIRA); set(22, 42, CADEIRA);
+    set(18, 43, PLANTA);
+    set(28, 34, PLANTA);
+    set(28, 43, ARMARIO);
 
-    set(12, 17, PLANTA);
-    set(20, 16, PLANTA);
-    set(22, 1, PLANTA);
-    set(22, 18, PLANTA);
-
-    // ---------- Lounge ----------
-    linhaH(13, 21, 23, SOFA_CIMA);
-    linhaH(17, 21, 23, SOFA_BAIXO);
-    set(15, 22, MESA_CENTRO);
-    set(11, 25, ESTANTE); set(11, 26, ESTANTE);
-    set(12, 20, PLANTA);
-    set(21, 26, PLANTA);
-    set(20, 21, MESA);
-    set(21, 21, CADEIRA);
-
-    // ---------- Jardim ----------
-    [[2, 29], [4, 32], [7, 30], [10, 32], [13, 29], [19, 31], [21, 28], [22, 32]]
+    // ---------- area verde em volta ----------
+    [[1, 5], [2, 9], [1, 14], [2, 19], [1, 24], [2, 29], [1, 34], [2, 39], [1, 43],
+      [6, 1], [12, 1], [20, 1], [27, 1], [6, 46], [13, 46], [21, 46], [28, 46],
+      [31, 8], [31, 20], [31, 36], [1, 1], [1, 46]]
       .forEach(([r, c]) => set(r, c, ARVORE));
-    set(16, 30, MESA_CENTRO);
-    set(16, 29, CADEIRA); set(16, 31, CADEIRA);
 
     return tiles;
   }
@@ -167,13 +183,15 @@
     return getRoomAtTile(Math.floor(x / TILE), Math.floor(y / TILE));
   }
 
-  // Estilo de chao de um tile: vem do ambiente em que ele esta (corredores e
-  // paredes fora de qualquer sala caem no creme).
+  function zonaEmTile(col, row) {
+    return ZONAS_PISO.find((z) => row >= z.r0 && row <= z.r1 && col >= z.c0 && col <= z.c1) || null;
+  }
+
   function pisoEmTile(col, row) {
-    const zona = ZONAS_PISO.find((z) => row >= z.r0 && row <= z.r1 && col >= z.c0 && col <= z.c1);
+    const zona = zonaEmTile(col, row);
     if (zona) return zona.piso;
     const sala = getRoomAtTile(col, row);
-    return sala ? sala.piso : 'tijolo';
+    return sala ? sala.piso : 'grama';
   }
 
   function isWalkableTile(col, row) {
@@ -199,8 +217,10 @@
     TILE, COLS, ROWS, tiles,
     LIVRE, PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO,
     ESTANTE, PLANTA, ARVORE, QUADRO, LOUSA, ARMARIO, BALCAO, CERCA, CADEIRA,
-    TAPETE, MESA_REUNIAO,
+    TAPETE, MESA_REUNIAO, JANELA, AGUA, PEDRA, ARBUSTO, BANCO, CABIDE,
+    IMPRESSORA, CAVALETE,
     ROOMS,
+    ZONAS_PISO,
     isWalkable,
     isTileWalkable: isWalkableTile,
     getRoomAt,

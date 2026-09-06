@@ -340,10 +340,10 @@ html, body {
 }
 
 #canvas-jogo {
-  background: var(--piso);
+  background: #dff0d8;
   image-rendering: pixelated;
-  box-shadow: 0 18px 50px rgba(60,70,90,0.28);
   cursor: pointer;
+  display: block;
 }
 
 /* iluminacao suave de dia claro: so um brilho morno vindo da janela no canto

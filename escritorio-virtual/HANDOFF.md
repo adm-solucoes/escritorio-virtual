@@ -100,6 +100,32 @@ desenhados sem recolorir. Paletas passaram a 12 cores de cabelo e 16 de roupa.
   pessoa desconecta. Estado em `mesas` no servidor, evento `mesa-reivindicar` /
   `mesas-atualizadas`.
 
+## 9. Camera e mapa no layout do Gather
+
+A partir de um print do escritorio real do Gather, o mapa foi refeito de novo
+(48x32) e a camera mudou:
+
+- **Camera segue a pessoa com zoom fixo** (`ZOOM = 2` em `game.js`), presa nas
+  bordas do mapa. Antes o mapa inteiro era espremido pra caber na tela, o que
+  deixava tudo minusculo - era isso que mais diferenciava do Gather.
+  `coordsDoEvento()` converte clique -> mundo usando a camera.
+- **Layout novo:** faixa de 4 salas privativas na frente (Diretoria,
+  Financeiro, Projetos, Marketing), cada uma com **janelao** dando pro jardim;
+  **patio com lago** de carpas entre elas; corredor com mobilia encostada na
+  parede; e atras Lounge, Time e Sala de Reuniao. O predio fica cercado de
+  **area verde com arvores grandes**.
+- Tipos novos: `JANELA`, `AGUA`, `PEDRA`, `ARBUSTO`, `BANCO`, `CABIDE`,
+  `IMPRESSORA`, `CAVALETE`.
+- As arvores sao desenhadas **numa passada separada, por ultimo**, porque a copa
+  passa do proprio tile e seria cortada pelos tiles desenhados depois.
+- `ZONAS_PISO` aceita `contorno`, que desenha a moldura fina de area (usada no
+  patio).
+
+> Cuidado ao decorar area externa: na primeira versao as pedras e arbustos em
+> volta do lago fecharam o anel e **o jardim inteiro ficou inalcancavel**. Vale
+> rodar `Pathfinding.findPath` do spawn ate cada ambiente depois de mexer no
+> mapa - foi assim que isso apareceu.
+
 ---
 
 ## Coisas que e bom saber antes de mexer

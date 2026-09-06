@@ -70,10 +70,34 @@
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) drawFloorTile(mctx, c, r, TILE, OfficeMap.pisoEmTile(c, r));
     }
+    // moldura fina marcando as areas (o Gather usa isso pra delimitar zonas)
+    OfficeMap.ZONAS_PISO.forEach((z) => {
+      if (!z.contorno) return;
+      mctx.save();
+      mctx.strokeStyle = z.contorno;
+      mctx.lineWidth = 2;
+      mctx.beginPath();
+      mctx.roundRect(
+        z.c0 * TILE + 2, z.r0 * TILE + 2,
+        (z.c1 - z.c0 + 1) * TILE - 4, (z.r1 - z.r0 + 1) * TILE - 4, 6
+      );
+      mctx.stroke();
+      mctx.restore();
+    });
+
+    // arvores ficam por ultimo: a copa passa do proprio tile e nao pode ser
+    // cortada pelo tile desenhado depois
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const type = tiles[r][c];
-        if (type !== OfficeMap.LIVRE) drawObstacleTile(mctx, c, r, type, TILE, tiles);
+        if (type !== OfficeMap.LIVRE && type !== OfficeMap.ARVORE) {
+          drawObstacleTile(mctx, c, r, type, TILE, tiles);
+        }
+      }
+    }
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (tiles[r][c] === OfficeMap.ARVORE) drawObstacleTile(mctx, c, r, OfficeMap.ARVORE, TILE, tiles);
       }
     }
     OfficeMap.ROOMS.forEach((sala) => desenharEtiquetaSala(mctx, sala, TILE));
@@ -85,6 +109,7 @@
     tijolo: { base: '#ece0cb', junta: 'rgba(186,166,136,0.55)' },
     tijolo_quente: { base: '#e6d3b4', junta: 'rgba(176,146,110,0.5)' },
     cinza: { base: '#d2d6dd', junta: 'rgba(146,152,164,0.45)' },
+    ladrilho: { base: '#e4e7ee', junta: 'rgba(150,158,178,0.45)' },
     carpete_roxo: { base: '#8b7fd0', claro: '#a294de' },
     carpete_azul: { base: '#5d6577', claro: '#6e7789' },
     grama: { base: '#8ecb7c', claro: 'rgba(58,124,58,0.28)' },
@@ -129,10 +154,26 @@
 
   function drawFloorTile(ctx, c, r, TILE, piso) {
     const x = c * TILE, y = r * TILE;
+    const meioTile = TILE / 2;
     const cores = CORES_PISO[piso] || CORES_PISO.tijolo;
 
     if (piso === 'carpete_roxo') return pisoCarpete(ctx, x, y, TILE, c, r, cores, false);
     if (piso === 'carpete_azul') return pisoCarpete(ctx, x, y, TILE, c, r, cores, true);
+
+    if (piso === 'ladrilho') {
+      // ladrilho em losango, como o piso das salas de reuniao do Gather
+      ctx.fillStyle = cores.base;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.strokeStyle = cores.junta;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y + meioTile); ctx.lineTo(x + meioTile, y);
+      ctx.moveTo(x + meioTile, y); ctx.lineTo(x + TILE, y + meioTile);
+      ctx.moveTo(x + TILE, y + meioTile); ctx.lineTo(x + meioTile, y + TILE);
+      ctx.moveTo(x + meioTile, y + TILE); ctx.lineTo(x, y + meioTile);
+      ctx.stroke();
+      return;
+    }
 
     if (piso === 'grama') {
       ctx.fillStyle = cores.base;
@@ -356,18 +397,26 @@
       ctx.beginPath(); ctx.arc(x + meio, y + 10, 8, 0, Math.PI * 2); ctx.fill();
 
     } else if (type === M.ARVORE) {
-      ctx.fillStyle = 'rgba(50,90,50,0.22)';
+      // arvore grande: a copa passa do tile (por isso e desenhada por ultimo)
+      const cx = x + meio;
+      const base = y + TILE - 2;
+      ctx.fillStyle = 'rgba(50,90,50,0.20)';
       ctx.beginPath();
-      ctx.ellipse(x + meio, y + TILE - 4, 12, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, base, 17, 6, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#8a6242';
-      ctx.fillRect(x + meio - 3, y + 17, 6, 11);
+      ctx.fillRect(cx - 4, base - 14, 8, 14);
+      ctx.fillStyle = '#6f4d33';
+      ctx.fillRect(cx - 4, base - 14, 3, 14);
       ctx.fillStyle = '#3f8a4a';
-      ctx.beginPath(); ctx.arc(x + meio - 7, y + 15, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + meio + 7, y + 15, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + meio, y + 8, 11, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#5aa863';
-      ctx.beginPath(); ctx.arc(x + meio - 3, y + 8, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx - 13, base - 22, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 13, base - 22, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, base - 32, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx - 7, base - 14, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 7, base - 14, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#57a862';
+      ctx.beginPath(); ctx.arc(cx - 6, base - 34, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 8, base - 26, 7, 0, Math.PI * 2); ctx.fill();
 
     } else if (type === M.QUADRO) {
       ctx.fillStyle = '#a97f52';
@@ -438,6 +487,121 @@
       ctx.fillRect(x + 4, y + 5, 5, 22);
       ctx.fillRect(x + TILE - 9, y + 5, 5, 22);
 
+    } else if (type === M.JANELA) {
+      // janelao: mesma parede, com vidro e caixilho branco
+      ctx.fillStyle = '#4a5162';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#5b6376';
+      ctx.fillRect(x, y, TILE, 6);
+      ctx.fillStyle = '#eef2f5';
+      ctx.fillRect(x + 1, y + 7, TILE - 2, 17);
+      ctx.fillStyle = '#a8dbe2';
+      ctx.fillRect(x + 3, y + 9, TILE - 6, 13);
+      ctx.fillStyle = '#c9ebef';
+      ctx.fillRect(x + 3, y + 9, TILE - 6, 5);
+      ctx.strokeStyle = '#eef2f5';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + meio, y + 9); ctx.lineTo(x + meio, y + 22);
+      ctx.moveTo(x + 3, y + 15.5); ctx.lineTo(x + TILE - 3, y + 15.5);
+      ctx.stroke();
+      ctx.fillStyle = '#343a48';
+      ctx.fillRect(x, y + TILE - 6, TILE, 6);
+
+    } else if (type === M.AGUA) {
+      const b = bordasDoMovel(tiles, r, c, type);
+      ctx.fillStyle = '#4d9fd6';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#69b4e4';
+      for (let i = 0; i < 3; i++) {
+        const ox = x + ((c * 11 + r * 5 + i * 9) % (TILE - 10)) + 4;
+        const oy = y + ((c * 7 + r * 13 + i * 11) % (TILE - 8)) + 4;
+        ctx.fillRect(ox, oy, 7, 2);
+      }
+      // carpinha
+      if ((c + r) % 3 === 0) {
+        ctx.fillStyle = '#f08a3a';
+        ctx.beginPath();
+        ctx.ellipse(x + meio, y + meio, 5, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      contornoParcial(ctx, x, y, TILE, TILE, b, 'rgba(40,90,130,0.5)', 2);
+
+    } else if (type === M.PEDRA) {
+      ctx.fillStyle = 'rgba(60,70,60,0.2)';
+      ctx.beginPath();
+      ctx.ellipse(x + meio, y + 24, 11, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#9aa0a6';
+      ctx.beginPath();
+      ctx.ellipse(x + meio, y + 18, 12, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#b6bcc2';
+      ctx.beginPath();
+      ctx.ellipse(x + meio - 3, y + 15, 6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (type === M.ARBUSTO) {
+      ctx.fillStyle = '#3f8a4a';
+      ctx.beginPath(); ctx.arc(x + meio - 6, y + 20, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + meio + 6, y + 20, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + meio, y + 15, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#57a862';
+      ctx.beginPath(); ctx.arc(x + meio - 3, y + 13, 5, 0, Math.PI * 2); ctx.fill();
+
+    } else if (type === M.BANCO) {
+      sombra(ctx, x, y, TILE, 3);
+      ctx.fillStyle = '#5a86d0';
+      ctx.fillRect(x + 2, y + 12, TILE - 4, 9);
+      ctx.fillStyle = '#7ba3e0';
+      ctx.fillRect(x + 2, y + 12, TILE - 4, 3);
+      ctx.fillStyle = '#41639e';
+      ctx.fillRect(x + 2, y + 6, TILE - 4, 5);
+      ctx.fillRect(x + 4, y + 21, 3, 5);
+      ctx.fillRect(x + TILE - 7, y + 21, 3, 5);
+
+    } else if (type === M.CABIDE) {
+      ctx.fillStyle = 'rgba(60,66,82,0.16)';
+      ctx.beginPath();
+      ctx.ellipse(x + meio, y + 27, 7, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#4a5162';
+      ctx.fillRect(x + meio - 1.5, y + 6, 3, 21);
+      ctx.fillStyle = '#f0c65a';
+      ctx.beginPath(); ctx.arc(x + meio - 7, y + 9, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e05a5a';
+      ctx.beginPath(); ctx.arc(x + meio + 7, y + 10, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#5a86d0';
+      ctx.beginPath(); ctx.arc(x + meio, y + 6, 3.5, 0, Math.PI * 2); ctx.fill();
+
+    } else if (type === M.IMPRESSORA) {
+      sombra(ctx, x, y, TILE, 3);
+      ctx.fillStyle = '#7d879d';
+      ctx.fillRect(x + 3, y + 10, TILE - 6, 16);
+      ctx.fillStyle = '#98a3b8';
+      ctx.fillRect(x + 3, y + 10, TILE - 6, 4);
+      ctx.fillStyle = '#2c3240';
+      ctx.fillRect(x + 6, y + 16, TILE - 12, 4);
+      ctx.fillStyle = '#f7f8fc';
+      ctx.fillRect(x + 8, y + 6, TILE - 16, 5);
+      ctx.fillStyle = '#5ab07a';
+      ctx.fillRect(x + TILE - 9, y + 12, 3, 3);
+
+    } else if (type === M.CAVALETE) {
+      ctx.fillStyle = '#8a6242';
+      ctx.fillRect(x + 6, y + 18, 2.5, 10);
+      ctx.fillRect(x + TILE - 9, y + 18, 2.5, 10);
+      ctx.fillStyle = '#f7f8fc';
+      ctx.fillRect(x + 4, y + 3, TILE - 8, 16);
+      ctx.strokeStyle = '#b5ab9b';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 4.5, y + 3.5, TILE - 9, 15);
+      ctx.fillStyle = '#4da3d6';
+      ctx.fillRect(x + 7, y + 12, 4, 5);
+      ctx.fillRect(x + 13, y + 9, 4, 8);
+      ctx.fillStyle = '#e07a5f';
+      ctx.fillRect(x + 19, y + 6, 4, 11);
+
     } else if (type === M.CADEIRA) {
       // poltrona de escritorio vista de tras, escura como no Gather
       ctx.fillStyle = 'rgba(40,45,58,0.16)';
@@ -461,22 +625,42 @@
     }
   }
 
+  // Camera que segue a pessoa, com zoom fixo (o mapa e maior que a tela). Antes
+  // o mapa inteiro era espremido pra caber, o que deixava tudo minusculo.
+  const ZOOM = 2;
+  let camX = 0;
+  let camY = 0;
+
   function setCanvasSize() {
     const wrap = document.querySelector('.area-jogo');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.width = wrap.clientWidth + 'px';
+    canvas.style.height = wrap.clientHeight + 'px';
+    canvas.width = Math.round(wrap.clientWidth * dpr);
+    canvas.height = Math.round(wrap.clientHeight * dpr);
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  function tamanhoDaVista() {
+    return {
+      w: canvas.clientWidth / ZOOM,
+      h: canvas.clientHeight / ZOOM,
+    };
+  }
+
+  function atualizarCamera() {
+    const self = players.get(selfId);
+    if (!self) return;
+    const vista = tamanhoDaVista();
     const worldW = OfficeMap.COLS * OfficeMap.TILE;
     const worldH = OfficeMap.ROWS * OfficeMap.TILE;
-    const maxW = wrap.clientWidth;
-    const maxH = wrap.clientHeight;
-    const escala = Math.max(0.1, Math.min(maxW / worldW, maxH / worldH));
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.style.width = Math.floor(worldW * escala) + 'px';
-    canvas.style.height = Math.floor(worldH * escala) + 'px';
-    canvas.width = Math.round(worldW * escala * dpr);
-    canvas.height = Math.round(worldH * escala * dpr);
-
-    ctx.setTransform(escala * dpr, 0, 0, escala * dpr, 0, 0);
-    ctx.imageSmoothingEnabled = false;
+    // centraliza na pessoa, mas sem passar da borda do mapa
+    camX = worldW <= vista.w
+      ? (worldW - vista.w) / 2
+      : Math.max(0, Math.min(worldW - vista.w, self.displayX - vista.w / 2));
+    camY = worldH <= vista.h
+      ? (worldH - vista.h) / 2
+      : Math.max(0, Math.min(worldH - vista.h, self.displayY - vista.h / 2));
   }
 
   function tryMove(px, py, dx, dy) {
@@ -773,7 +957,12 @@
   }
 
   function render(now) {
-    ctx.clearRect(0, 0, OfficeMap.COLS * OfficeMap.TILE, OfficeMap.ROWS * OfficeMap.TILE);
+    atualizarCamera();
+    const dpr = window.devicePixelRatio || 1;
+    const vista = tamanhoDaVista();
+    ctx.setTransform(ZOOM * dpr, 0, 0, ZOOM * dpr, -camX * ZOOM * dpr, -camY * ZOOM * dpr);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(camX, camY, vista.w, vista.h);
     ctx.drawImage(mapCanvas, 0, 0, OfficeMap.COLS * OfficeMap.TILE, OfficeMap.ROWS * OfficeMap.TILE);
 
     const self = players.get(selfId);
@@ -885,8 +1074,8 @@
     const maxX = OfficeMap.COLS * TILE - 1;
     const maxY = OfficeMap.ROWS * TILE - 1;
     return {
-      x: Math.max(0, Math.min(maxX, (e.clientX - rect.left) * (OfficeMap.COLS * TILE / rect.width))),
-      y: Math.max(0, Math.min(maxY, (e.clientY - rect.top) * (OfficeMap.ROWS * TILE / rect.height))),
+      x: Math.max(0, Math.min(maxX, camX + (e.clientX - rect.left) / ZOOM)),
+      y: Math.max(0, Math.min(maxY, camY + (e.clientY - rect.top) / ZOOM)),
     };
   }
 
