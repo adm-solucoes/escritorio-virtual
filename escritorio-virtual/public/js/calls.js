@@ -12,6 +12,7 @@
   let temVideo = false;
   let micAtivo = true;
   let videoAtivo = true;
+  let streamPendente = null; // camera aberta na tela de entrada, esperando o init
 
   const peers = new Map(); // id do outro jogador -> { pc, videoEl, remoteDescDefinida, candidatosPendentes }
 
@@ -197,14 +198,18 @@
       if (sincronizarTracks(p)) renegociar(id);
     });
 
+    aplicarUiCamera();
+    if (avisoParcial) mostrarAviso(avisoParcial);
+  }
+
+  function aplicarUiCamera() {
     const videoLocal = document.getElementById('video-local');
     videoLocal.srcObject = localStream;
     document.getElementById('preview-local').classList.remove('oculto');
     document.getElementById('preview-local').classList.toggle('sem-video', !temVideo);
     document.getElementById('btn-camera').classList.add('ativo');
-    document.getElementById('btn-mic').classList.remove('desativado');
-    document.getElementById('btn-video-toggle').classList.toggle('desativado', !temVideo);
-    if (avisoParcial) mostrarAviso(avisoParcial);
+    document.getElementById('btn-mic').classList.toggle('desativado', !micAtivo);
+    document.getElementById('btn-video-toggle').classList.toggle('desativado', !videoAtivo);
   }
 
   function desligarCamera() {
@@ -235,9 +240,31 @@
     document.getElementById('btn-video-toggle').classList.toggle('desativado', !videoAtivo);
   }
 
+  // A tela de entrada ja pediu permissao e abriu a camera/microfone. Guardamos o
+  // stream aqui pra nao pedir tudo de novo quando a primeira chamada comecar.
+  function usarStreamDaEntrada(streamDaEntrada, prefs) {
+    streamPendente = { stream: streamDaEntrada, prefs: prefs || {} };
+  }
+
+  function adotarStreamPendente() {
+    if (!streamPendente) return;
+    const { stream, prefs } = streamPendente;
+    streamPendente = null;
+
+    localStream = stream;
+    temVideo = stream.getVideoTracks().length > 0;
+    cameraAtiva = true;
+    micAtivo = prefs.micAtivo !== false;
+    videoAtivo = temVideo && prefs.videoAtivo !== false;
+    localStream.getAudioTracks().forEach((t) => { t.enabled = micAtivo; });
+    localStream.getVideoTracks().forEach((t) => { t.enabled = videoAtivo; });
+    aplicarUiCamera();
+  }
+
   function init(idJogadorLocal) {
     selfId = idJogadorLocal;
     Network.on('rtc-signal', tratarSinal);
+    adotarStreamPendente();
     document.getElementById('btn-camera').addEventListener('click', alternarCamera);
     document.getElementById('btn-mic').addEventListener('click', alternarMic);
     document.getElementById('btn-video-toggle').addEventListener('click', alternarVideo);
@@ -282,5 +309,6 @@
   window.Calls = {
     init, updateProximity, temChamadaAtiva, temVideoRemoto, getVideoRemoto,
     getPeersConectados, getLocalStream, isCameraAtiva, temVideoLocal,
+    usarStreamDaEntrada,
   };
 })();

@@ -53,6 +53,16 @@
     });
     acoes.appendChild(btnAcenar);
 
+    const btnMensagem = document.createElement('button');
+    btnMensagem.type = 'button';
+    btnMensagem.className = 'btn btn-secundario btn-pequeno';
+    btnMensagem.textContent = '💬 Mensagem';
+    btnMensagem.addEventListener('click', () => {
+      Chat.abrirDm(id);
+      fecharCartao();
+    });
+    acoes.appendChild(btnMensagem);
+
     const btnIr = document.createElement('button');
     btnIr.type = 'button';
     btnIr.className = 'btn btn-primario btn-pequeno';

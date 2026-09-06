@@ -31,12 +31,71 @@ const BANCO = 22;
 const CABIDE = 23;
 const IMPRESSORA = 24;
 const CAVALETE = 25;
+// Variacoes do catalogo do decorador (ver docs/plano-decorador.md)
+const MESA_DUPLA = 26; // bancada com dois monitores, como a da referencia
+const MESA_NOTEBOOK = 27;
+const PLANTA_GRANDE = 28;
+const VASO_FLORES = 29;
+const CACTO = 30;
+const POLTRONA = 31; // caminhavel: da pra sentar
+const CADEIRA_VERMELHA = 32; // caminhavel: da pra sentar
+const BEBEDOURO = 33;
+const TV = 34;
+const RELOGIO = 35;
+const TAPETE_REDONDO = 36; // caminhavel
+// Cadeiras nas outras direcoes (a pessoa senta virada pro lado que a cadeira
+// aponta). Todas caminhaveis.
+const CADEIRA_BAIXO = 37;
+const CADEIRA_ESQ = 38;
+const CADEIRA_DIR = 39;
+const CADEIRA_VERMELHA_BAIXO = 40;
+const CADEIRA_VERMELHA_ESQ = 41;
+const CADEIRA_VERMELHA_DIR = 42;
 
 const SOLID_TILES = new Set([
   PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO, ESTANTE,
   PLANTA, ARVORE, QUADRO, LOUSA, ARMARIO, BALCAO, CERCA, MESA_REUNIAO,
   JANELA, AGUA, PEDRA, ARBUSTO, BANCO, CABIDE, IMPRESSORA, CAVALETE,
+  MESA_DUPLA, MESA_NOTEBOOK, PLANTA_GRANDE, VASO_FLORES, CACTO, BEBEDOURO,
+  TV, RELOGIO,
 ]);
+
+// Onde o boneco senta ao parar em cima, e pra que lado ele fica virado.
+const DIRECAO_ASSENTO = {
+  [CADEIRA]: 'up',
+  [CADEIRA_BAIXO]: 'down',
+  [CADEIRA_ESQ]: 'left',
+  [CADEIRA_DIR]: 'right',
+  [CADEIRA_VERMELHA]: 'up',
+  [CADEIRA_VERMELHA_BAIXO]: 'down',
+  [CADEIRA_VERMELHA_ESQ]: 'left',
+  [CADEIRA_VERMELHA_DIR]: 'right',
+  [POLTRONA]: 'up',
+};
+const ASSENTOS = new Set(Object.keys(DIRECAO_ASSENTO).map(Number));
+
+// Superficies onde faz sentido apoiar coisa (a camada de objetos por cima).
+const SUPERFICIES = new Set([
+  MESA, MESA_MONITOR, MESA_DUPLA, MESA_NOTEBOOK, MESA_REUNIAO, MESA_CENTRO,
+  BALCAO, ESTANTE, ARMARIO,
+]);
+
+// Camada de cima: coisinhas apoiadas na celula (monitor, caneca, papelada...).
+// Nao bloqueiam passagem - quem bloqueia e o movel embaixo.
+const OBJETOS = {
+  NENHUM: 0,
+  MONITOR: 1,
+  MONITOR_DUPLO: 2,
+  NOTEBOOK: 3,
+  TECLADO: 4,
+  CANECA: 5,
+  PAPELADA: 6,
+  TELEFONE: 7,
+  LUMINARIA: 8,
+  PLANTINHA: 9,
+  LIVROS: 10,
+};
+const OBJETO_MAX = 10;
 
 const SALAS_FRENTE = [
   { c0: 3, c1: 11 },
@@ -192,13 +251,35 @@ function getSpawnPoint() {
   return { x: p.x, y: p.y };
 }
 
+// Copia da planta original. O decorador escreve em `tiles`; guardar o original
+// deixa a gente saber quando uma celula voltou ao que era (e sai do arquivo de
+// diferencas). Ver server/mapa-editado.js.
+const baseTiles = tiles.map((linha) => linha.slice());
+
+// Grade da camada de cima, comeca vazia (o que tiver e decoracao salva).
+const objetos = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+
 module.exports = {
   TILE,
   COLS,
   ROWS,
   tiles,
+  baseTiles,
+  objetos,
   ROOMS,
-  MESA_MONITOR,
+  ASSENTOS,
+  DIRECAO_ASSENTO,
+  SUPERFICIES,
+  OBJETOS,
+  OBJETO_MAX,
   isWalkable,
   getSpawnPoint,
+  LIVRE, PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO,
+  ESTANTE, PLANTA, ARVORE, QUADRO, LOUSA, ARMARIO, BALCAO, CERCA, CADEIRA,
+  TAPETE, MESA_REUNIAO, JANELA, AGUA, PEDRA, ARBUSTO, BANCO, CABIDE,
+  IMPRESSORA, CAVALETE,
+  MESA_DUPLA, MESA_NOTEBOOK, PLANTA_GRANDE, VASO_FLORES, CACTO, POLTRONA,
+  CADEIRA_VERMELHA, BEBEDOURO, TV, RELOGIO, TAPETE_REDONDO,
+  CADEIRA_BAIXO, CADEIRA_ESQ, CADEIRA_DIR,
+  CADEIRA_VERMELHA_BAIXO, CADEIRA_VERMELHA_ESQ, CADEIRA_VERMELHA_DIR,
 };

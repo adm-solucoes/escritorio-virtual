@@ -21,11 +21,16 @@ automaticamente numa chamada de video/audio com essa pessoa, como no Gather de v
 ```
 escritorio-virtual/
 ├── server/
-│   ├── index.js       # servidor Express + Socket.io
+│   ├── index.js        # servidor Express + Socket.io
+│   ├── auth.js         # rotas de conta (criar, entrar, sair, perfil)
+│   ├── mapa-editado.js # decoracao: diferencas gravadas em cima do mapa base
+│   ├── usuarios.js     # contas em JSON no disco + hash de senha (scrypt)
+│   ├── sessao.js       # cookie de sessao assinado (HTTP e Socket.io)
+│   ├── data/           # gerado em runtime: contas e segredo (fora do git)
 │   └── map.js          # mapa (grid de tiles) e colisao, usado pelo servidor
 ├── public/
-│   ├── index.html      # tela de criar boneco + tela do escritorio
-│   ├── css/style.css   # visual pixel-art escuro
+│   ├── index.html      # telas de login, avatar e escritorio
+│   ├── css/style.css   # visual claro no estilo Gather
 │   ├── assets/lpc/      # sprites do boneco (LPC, ver CREDITS.md dentro da pasta)
 │   └── js/
 │       ├── map.js         # copia do mapa/colisao para uso no navegador
@@ -33,9 +38,18 @@ escritorio-virtual/
 │       ├── character.js   # composicao/recolorizacao dos sprites do boneco
 │       ├── network.js     # cliente Socket.io
 │       ├── calls.js       # chamada de video/audio por proximidade (WebRTC)
+│       ├── auth.js        # tela de login e chamadas /api
+│       ├── entrada.js     # tela de entrada (checagem de camera/microfone)
+│       ├── decorador.js   # painel de decoracao do escritorio
+│       ├── chat.js        # canais e mensagens diretas
 │       ├── creator.js     # logica da tela "montar boneco"
 │       ├── game.js        # loop do jogo, render, movimento, mapa
-│       └── main.js        # liga as duas telas
+│       └── main.js        # liga as telas (login -> avatar -> escritorio)
+├── docs/
+│   ├── CONTINUAR-AQUI.md   # handoff: estado atual, o que falta, armadilhas
+│   ├── plano-chat.md       # como o chat foi pensado e validado
+│   ├── plano-login.md      # como o login foi pensado e validado
+│   └── plano-decorador.md  # como a decoracao foi pensada e validada
 ├── package.json
 └── README.md
 ```
@@ -51,16 +65,42 @@ npm start
 ```
 
 O servidor sobe em **http://localhost:3500** (porta configuravel pela variavel de
-ambiente `PORT`). Abra esse endereco no navegador — cada aba/computador que acessar
-entra como um jogador diferente.
+ambiente `PORT`).
 
-Para testar o multiplayer sozinho, abra o mesmo link em duas abas ou dois navegadores.
+Na primeira vez, clique em **Criar conta**: nome, e-mail, senha e o **codigo da
+sede** (`CODIGO_SEDE`, padrao `adm-solucoes` — troque no deploy). Depois disso o
+login fica salvo por 30 dias, entao abrir o link ja cai direto no escritorio.
+
+Para testar o multiplayer sozinho use **navegadores diferentes** (ou uma janela
+anonima): duas abas do mesmo navegador dividem o cookie, ou seja, sao a mesma pessoa.
+
+### Variaveis de ambiente
+
+| Variavel | Padrao | Pra que serve |
+|---|---|---|
+| `PORT` | `3500` | porta do servidor |
+| `CODIGO_SEDE` | `adm-solucoes` | codigo que libera a criacao de conta |
+| `ADMIN_CODE` | `adm-solucoes-2026` | codigo opcional no cadastro que marca a conta como diretoria |
+| `NODE_ENV` | — | com `production` o cookie de sessao vai como `Secure` (exige HTTPS) |
+
+As contas ficam em `server/data/usuarios.json` (senhas com hash scrypt + salt) e o
+segredo que assina as sessoes em `server/data/config.json`. A pasta esta no
+`.gitignore`. Apagar `usuarios.json` zera todas as contas.
 
 ## Funcionalidades
 
+- **Login com conta propria:** e-mail e senha, cadastro liberado pelo codigo da sede.
+  A sessao dura 30 dias num cookie `HttpOnly`, entao normalmente ninguem precisa
+  digitar senha de novo. O menu no rodape do trilho mostra a conta, deixa trocar o
+  avatar e sair. Sem sessao valida o Socket.io recusa a conexao — ou seja, ninguem
+  entra no escritorio (nem le mensagem de ninguem) sem estar logado.
 - Tela de criacao de avatar: nome, tom de pele, cor da camisa, estilo/cor de cabelo e
-  oculos, com preview animado e botao "aleatorio". O perfil fica salvo no navegador,
-  entao da proxima vez que a pessoa entrar ja vem preenchido.
+  oculos, com preview animado e botao "aleatorio". Nome e aparencia ficam salvos na
+  **conta**, no servidor, entao o boneco te acompanha em qualquer computador.
+- **Chat da sede:** canais `#geral`, `#social` e `#projetos` mais mensagens diretas,
+  com nao lidas, reacoes e formatacao (`**negrito**`, `_italico_`, `` `codigo` ``).
+  As DMs sao identificadas pela conta, entao sobrevivem a recarregar a pagina e
+  continuam na lista mesmo com a outra pessoa offline.
 - Boneco com sprites reais estilo RPG (banco de assets aberto LPC - Liberated Pixel
   Cup), compostos em camadas (corpo, roupa, cabelo) e recoloridos no navegador conforme
   as escolhas da criacao de avatar — ver creditos em `public/assets/lpc/CREDITS.md`.
@@ -84,13 +124,13 @@ Para testar o multiplayer sozinho, abra o mesmo link em duas abas ou dois navega
   — clique e o emoji flutua acima do seu boneco por alguns segundos, pra todo mundo ver.
 - **Minimapa:** no canto inferior direito, mostra o contorno do escritorio e um pontinho
   colorido pra cada pessoa (o seu em ambar).
-- **Papel de administrador:** na tela de criar avatar, um campo opcional "Sou da
-  diretoria" aceita um codigo compartilhado (variavel de ambiente `ADMIN_CODE` no
-  servidor, padrao `adm-solucoes-2026` — troque isso em producao). Quem entra com o
-  codigo certo ganha uma coroa 👑 do lado do nome. Por enquanto e so um selo visual;
-  ainda nao da poderes extras (editar mapa, mover gente etc. ficam pra depois).
+- **Papel de administrador:** no cadastro, um campo opcional "Sou da diretoria" aceita
+  um codigo compartilhado (variavel de ambiente `ADMIN_CODE` no servidor, padrao
+  `adm-solucoes-2026` — troque isso em producao). Quem cria a conta com o codigo certo
+  ganha uma coroa 👑 do lado do nome. Por enquanto e so um selo visual; ainda nao da
+  poderes extras (editar mapa, mover gente etc. ficam pra depois).
 - Tela cheia com vinheta e iluminacao quente ("escritorio ao entardecer"), indicador de
-  conexao e botao de trocar avatar flutuando como overlay discreto nos cantos.
+  conexao e menu da conta flutuando como overlay discreto nos cantos.
 - Interface e todo o texto em portugues (pt-BR).
 
 ## Deploy (para o time acessar por um link)
@@ -107,8 +147,12 @@ um processo Node persistente (não é um site estatico). As opcoes mais simples:
    - **Build Command:** `npm install`
    - **Start Command:** `npm start`
 4. O Render define a variavel `PORT` automaticamente — o servidor ja respeita isso.
-   Se quiser trocar o codigo de administrador do padrao, adicione a variavel de
-   ambiente `ADMIN_CODE` com o valor que preferir.
+   Adicione tambem `NODE_ENV=production` (cookie de sessao `Secure`), `CODIGO_SEDE`
+   e `ADMIN_CODE` com os valores que a diretoria escolher.
+   **Atencao:** no plano gratuito o disco do Render e efemero, entao
+   `server/data/usuarios.json` some a cada novo deploy e todo mundo precisa se
+   cadastrar de novo. Pra evitar isso, monte um **disco persistente** apontando pra
+   `server/data`.
 5. Ao final, o Render gera um link tipo `https://escritorio-adm.onrender.com` para
    compartilhar com o time.
 
@@ -139,8 +183,13 @@ Garanta que a porta exposta no `fly.toml` bata com a que o servidor usa (`PORT`,
 
 ## Limitacoes atuais (por ser um MVP sem banco de dados)
 
-- Se o servidor reiniciar, todo mundo cai e precisa entrar de novo (o estado de quem
-  esta online vive so em memoria).
+- Se o servidor reiniciar, todo mundo cai e reconecta (as **contas** continuam, mas o
+  estado de quem esta online e o **historico do chat** vivem so em memoria e somem).
+- Nao ha "esqueci minha senha": sem servico de e-mail, a recuperacao teria que ser
+  manual. Se alguem perder a senha, hoje a saida e a diretoria apagar a conta no
+  `server/data/usuarios.json` e a pessoa se cadastrar de novo.
+- O freio de forca bruta bloqueia o **IP** por 15 minutos depois de 10 senhas erradas.
+  Numa rede compartilhada, isso pode pegar quem estiver do lado.
 - **Camera/microfone exigem HTTPS** (ou `localhost`): navegadores bloqueiam
   `getUserMedia` fora de um contexto seguro. Rodando local em `http://localhost` funciona
   normalmente; qualquer um dos deploys sugeridos abaixo (Render/Railway/Fly) ja serve com
@@ -151,8 +200,6 @@ Garanta que a porta exposta no `fly.toml` bata com a que o servidor usa (`PORT`,
   fechar. Se isso acontecer com frequencia no dia a dia da ADM Solucoes, da pra
   adicionar um TURN server (ex: [Twilio STUN/TURN](https://www.twilio.com/docs/stun-turn)
   ou um [coturn](https://github.com/coturn/coturn) proprio) depois, sem mudar o resto do app.
-- Nao ha autenticacao de verdade: qualquer pessoa com o link pode entrar com o nome que
-  quiser. O "codigo de administrador" e so um selo visual (coroa), nao uma senha forte —
-  da pra ver o codigo certo inspecionando o trafego da rede se alguem realmente quiser.
-  Para um uso interno da ADM Solucoes isso costuma ser suficiente, mas se quiser
-  restringir o acesso de verdade mais pra frente, da pra adicionar um login por tras.
+- O acesso e por conta (e-mail + senha) e o cadastro pede o codigo da sede, mas o
+  codigo e **compartilhado**: se ele vazar, qualquer pessoa cria conta. Trocar o
+  `CODIGO_SEDE` invalida os cadastros novos, nao as contas ja criadas.

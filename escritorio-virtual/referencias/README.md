@@ -3,26 +3,19 @@
 Pasta para guardar os prints do Gather usados como referencia de design do
 escritorio virtual.
 
-> **Faltam os arquivos de imagem.** O Caio colou os prints no chat da conversa,
-> e eu (Claude) nao consigo salvar imagem de conversa em disco - nao tenho o
-> arquivo, so vi o conteudo. Quem tiver os prints e so soltar os PNGs aqui,
-> usando os nomes sugeridos abaixo. O que da pra registrar sem os arquivos, que
-> e a **leitura de design que saiu deles**, esta documentado neste arquivo.
+Os PNGs **estao nesta pasta** (nomes do tipo `Captura de tela ... .png`). Os mais
+usados ate agora:
 
-## Arquivos sugeridos
-
-| Nome | O que mostra |
+| Arquivo | O que mostra |
 |---|---|
-| `01-gather2-chamada.png` | Grid de chamada de video estilo Meet ("Revisao de Design") |
-| `02-gather2-chat.png` | Painel de chat lateral estilo Slack, com card de reuniao |
-| `03-gather2-salas.png` | Visao de salas/pods: zonas nomeadas por time com avatares |
-| `04-mapa-escritorio.png` | Mapa 2D completo do Gather (o print mais importante) |
-| `05-zona-team.png` | Baia de trabalho: carpete roxo, mesas claras, cadeiras escuras |
-| `06-central-couches.png` | Lounge: carpete listrado escuro, sofas marrons |
-| `07-meeting-room.png` | Sala de reuniao "Media room": poltronas vermelhas |
-| `08-huddles.png` | Study Huddle / Coffee Huddle / Fishtank Huddle |
-| `09-mesa-propria.png` | "caiolucas1551's desk" e "Unclaimed desk" |
-| `10-editor-avatar.png` | Editor de avatar: categorias, grade e paleta |
+| `...154025.png` | **O mais importante pra mobilia**: mesa + cadeira + monitores em close |
+| `...153607.png` | Decorator, aba de eletronicos (o kit de dois monitores + teclado) |
+| `...153902.png` | Decorator, aba de mesas |
+| `...153844.png` | Decorator, aba de armarios/estantes |
+| `...111640.png` | Chat do Gather (canais, DMs, composer) |
+| `...112101.png` | Editor de avatar: categorias, grade e paleta |
+| `...092918.png` | Layout do escritorio em pods, com zonas nomeadas |
+| `...085718.png` | Grid de chamada de video estilo Meet |
 
 ## Leitura de design extraida dos prints
 
@@ -40,10 +33,34 @@ O que foi observado e aplicado no nosso projeto:
 - Mobilia fica embutida na linha da parede (estantes, quadros, armarios).
 
 ### Mobilia
-- Mesas = **bancadas cinza-claras** com borda escura na frente, nao madeira.
-- Cadeiras = **poltronas escuras vistas de tras**, com encosto de cabeca.
 - Vasos de planta sao **coloridos** (rosa, azul, roxo, teal), nao terracota.
 - Sofas: lobby azul, lounge marrom. Salas de reuniao usam poltronas vermelhas.
+
+### A mesa de trabalho, medida no print `...154025.png`
+
+Usando a cadeira como regua (1 cadeira = 1 tile):
+
+- A mesa tem **~4 tiles de largura por ~2 de altura**. Nao e uma mesa por celula.
+- O tampo e **lilas bem claro** (quase branco, puxando pro roxo), nao madeira nem
+  cinza.
+- A **faixa da frente ocupa ~1/4 da altura** da mesa e e **azul-acinzentada**.
+  Nela ficam **uma gaveta larga de um lado e um armarinho quadrado do outro** -
+  uma vez por mesa, nao um puxador por celula.
+- Os monitores sao **grandes** (~1 tile cada) e **passam pra cima do tampo**:
+  sobem cerca de meio tile acima da borda de tras da mesa.
+- Os dois monitores ficam **inclinados em "V"**, com o lado de fora mais baixo.
+  A tela e **ciano forte** com blocos brancos de "interface".
+- Entre uma mesa e a vizinha existe **um vao** com o piso aparecendo - as mesas
+  nao formam uma bancada continua sem fim.
+
+### A cadeira, no mesmo print
+
+- Vista **por tras**: quem senta aparece so com a **cabeca acima do encosto**.
+- Encosto escuro com **trama de tela** (nao liso).
+- **Duas barras laranja**, uma de cada lado do encosto, na altura dos bracos -
+  e o detalhe que mais identifica a cadeira.
+- Apoio de cabeca em cima, base em estrela embaixo.
+- Ela e **mais alta que 1 tile** e encosta na mesa, invadindo a faixa da frente.
 
 ### Etiquetas
 - Nome da pessoa: **pilula roxa** com bolinha verde de status. Vira icone de

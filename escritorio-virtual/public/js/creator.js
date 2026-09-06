@@ -2,9 +2,9 @@
 // opcoes e paleta de cores no meio, preview ao vivo do lado.
 // So existem as categorias que os sprites LPC cobrem (pele, cabelo, camisa,
 // calca, sapato e oculos) - barba/jaqueta/chapeu exigiriam novos assets.
+// O nome e a aparencia moram na conta (servidor), nao no navegador: assim o avatar
+// segue a pessoa em qualquer maquina. Ver docs/plano-login.md.
 (function () {
-  const STORAGE_KEY = 'adm-escritorio-perfil';
-
   const CATEGORIAS = [
     { id: 'skin', nome: 'Pele', campoCor: 'skin', paleta: () => Character.SKIN_TONES },
     {
@@ -26,35 +26,21 @@
 
   let appearance = null;
   let categoriaAtual = CATEGORIAS[0];
+  // Da pra voltar ao editor pelo menu da conta, entao esses ficam no modulo: os
+  // listeners entram uma vez so e leem sempre o estado da abertura atual.
+  let listenersProntos = false;
+  let onEntrarAtual = null;
+  let previewIntervalId = null;
 
-  function loadProfile() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || !parsed.appearance) return null;
-      return parsed;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function saveProfile(profile) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-    } catch (e) {
-      /* localStorage indisponivel: segue sem persistir */
-    }
-  }
 
   // Miniatura da opcao mostrando o boneco com a aparencia atual, so trocando o
   // item daquela categoria - igual ao Gather, que mostra voce em cada variacao.
-  function desenharMiniatura(canvas, variacao) {
+  function desenharMiniatura(canvas, variacao, escala) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const aparenciaVariante = Object.assign({}, appearance, variacao);
-    Character.draw(ctx, canvas.width / 2, canvas.height - 6, aparenciaVariante, {
-      dir: 'down', moving: false, walkTime: 0, scale: 1.05,
+    Character.draw(ctx, canvas.width / 2, canvas.height - 4, aparenciaVariante, {
+      dir: 'down', moving: false, walkTime: 0, scale: escala || 1.05,
     });
   }
 
@@ -65,7 +51,18 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'editor-categoria' + (cat.id === categoriaAtual.id ? ' ativa' : '');
-      btn.textContent = cat.nome;
+
+      // miniatura do proprio boneco ao lado do nome, como na referencia
+      const mini = document.createElement('canvas');
+      mini.width = 30;
+      mini.height = 34;
+      btn.appendChild(mini);
+      Character.ready.then(() => desenharMiniatura(mini, {}, 0.55));
+
+      const rotulo = document.createElement('span');
+      rotulo.textContent = cat.nome;
+      btn.appendChild(rotulo);
+
       btn.addEventListener('click', () => {
         categoriaAtual = cat;
         montarCategorias();
@@ -80,41 +77,49 @@
     const paleta = document.getElementById('editor-paleta');
     const cat = categoriaAtual;
 
+    // A grade sempre mostra variacoes do SEU boneco, como no editor do Gather:
+    // nas categorias com formato (cabelo, oculos) sao os formatos; nas que so
+    // tem cor (pele, camisa, calca, sapato) e uma variacao por cor da paleta.
+    const variacoes = cat.opcoes
+      ? cat.opcoes().map((opt) => ({
+        rotulo: opt.rotulo,
+        variacao: { [cat.campoOpcao]: opt.valor },
+        selecionada: appearance[cat.campoOpcao] === opt.valor,
+        aplicar: () => { appearance[cat.campoOpcao] = opt.valor; },
+      }))
+      : cat.paleta().map((cor) => ({
+        rotulo: '',
+        variacao: { [cat.campoCor]: cor },
+        selecionada: appearance[cat.campoCor] === cor,
+        aplicar: () => { appearance[cat.campoCor] = cor; },
+      }));
+
     grade.innerHTML = '';
-    if (cat.opcoes) {
-      cat.opcoes().forEach((opt) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        const selecionado = appearance[cat.campoOpcao] === opt.valor;
-        item.className = 'editor-opcao' + (selecionado ? ' selecionada' : '');
+    variacoes.forEach((v) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'editor-opcao' + (v.selecionada ? ' selecionada' : '');
 
-        const mini = document.createElement('canvas');
-        mini.width = 56;
-        mini.height = 62;
-        item.appendChild(mini);
+      const mini = document.createElement('canvas');
+      mini.width = 56;
+      mini.height = 62;
+      item.appendChild(mini);
 
+      if (v.rotulo) {
         const rotulo = document.createElement('span');
-        rotulo.textContent = opt.rotulo;
+        rotulo.textContent = v.rotulo;
         item.appendChild(rotulo);
+      }
 
-        Character.ready.then(() => {
-          const variacao = {};
-          variacao[cat.campoOpcao] = opt.valor;
-          desenharMiniatura(mini, variacao);
-        });
+      Character.ready.then(() => desenharMiniatura(mini, v.variacao));
 
-        item.addEventListener('click', () => {
-          appearance[cat.campoOpcao] = opt.valor;
-          montarPainel();
-        });
-        grade.appendChild(item);
+      item.addEventListener('click', () => {
+        v.aplicar();
+        montarPainel();
+        montarCategorias();
       });
-    } else {
-      const dica = document.createElement('p');
-      dica.className = 'editor-dica';
-      dica.textContent = 'Escolha a cor abaixo.';
-      grade.appendChild(dica);
-    }
+      grade.appendChild(item);
+    });
 
     paleta.innerHTML = '';
     cat.paleta().forEach((cor) => {
@@ -131,15 +136,13 @@
     });
   }
 
-  function init(onEntrar) {
-    const existing = loadProfile();
-    appearance = Character.resolver((existing && existing.appearance) || Character.randomAppearance());
-    let nome = (existing && existing.name) || '';
+  // `conta` e o usuario logado ({ nome, appearance, ... }).
+  function init(conta, onEntrar) {
+    appearance = Character.resolver((conta && conta.appearance) || Character.randomAppearance());
+    onEntrarAtual = onEntrar;
 
     const inputNome = document.getElementById('input-nome');
-    const inputAdminCode = document.getElementById('input-admin-code');
-    inputNome.value = nome;
-    inputAdminCode.value = (existing && existing.adminCode) || '';
+    inputNome.value = (conta && conta.nome) || '';
 
     const canvas = document.getElementById('canvas-preview');
     const ctx = canvas.getContext('2d');
@@ -152,30 +155,59 @@
         dir: 'down', moving: true, walkTime: previewTime * 0.4, scale: 2,
       });
     }
-    const previewIntervalId = setInterval(renderPreview, 1000 / 60);
+    clearInterval(previewIntervalId);
+    previewIntervalId = setInterval(renderPreview, 1000 / 60);
 
     montarCategorias();
     montarPainel();
+    ligarListeners();
+  }
+
+  function ligarListeners() {
+    if (listenersProntos) return;
+    listenersProntos = true;
+
+    const inputNome = document.getElementById('input-nome');
+    const botaoPronto = document.getElementById('btn-entrar');
 
     document.getElementById('btn-aleatorio').addEventListener('click', () => {
       appearance = Character.resolver(Character.randomAppearance());
       montarPainel();
     });
 
-    document.getElementById('form-criador').addEventListener('submit', (ev) => {
+    document.getElementById('form-criador').addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      nome = inputNome.value.trim();
+      const nome = inputNome.value.trim();
       if (!nome) {
         inputNome.focus();
         return;
       }
-      const adminCode = inputAdminCode.value.trim();
-      const profile = { name: nome, appearance, adminCode };
-      saveProfile(profile);
-      clearInterval(previewIntervalId);
-      onEntrar(profile);
+
+      botaoPronto.disabled = true;
+      try {
+        // O avatar e do dono da conta: quem manda e o servidor.
+        const salvo = await Auth.salvarPerfil({ nome, appearance });
+        clearInterval(previewIntervalId);
+        onEntrarAtual({ name: salvo.nome, appearance: salvo.appearance });
+      } catch (e) {
+        alertaSalvar(e.message);
+      } finally {
+        botaoPronto.disabled = false;
+      }
     });
   }
 
-  window.Creator = { init, loadProfile };
+  function alertaSalvar(mensagem) {
+    const rodape = document.querySelector('.editor-rodape');
+    let aviso = document.getElementById('editor-erro');
+    if (!aviso) {
+      aviso = document.createElement('p');
+      aviso.id = 'editor-erro';
+      aviso.className = 'login-erro';
+      rodape.appendChild(aviso);
+    }
+    aviso.textContent = mensagem;
+  }
+
+  window.Creator = { init };
 })();
