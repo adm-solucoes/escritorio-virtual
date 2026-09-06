@@ -102,10 +102,14 @@ o item chapado ao lado de um refeito denuncia sozinho.
 ### O que falta
 
 Eram 115 chamadas do helper antigo `p()` (a estimativa de ~95 estava baixa).
-**Ja migrados depois: piso de tijolinho, parede, sofa e estante** — restam
-**102**: banco, armario, balcao, arvore, arbusto, pedra, agua, cerca, janela,
+**Ja migrados depois: piso de tijolinho, parede, sofa, estante, arvore, agua,
+pedra, arbusto, janela, armario e balcao** — restam **84**: banco, cerca,
 quadro, lousa, cavalete, cabide, impressora, TV, relogio, bebedouro, plantas
-grandes e tapetes. Esses continuam na grade de 32 e **destoam**.
+grandes, tapetes e mesa de reuniao. Esses continuam na grade de 32 e **destoam**.
+
+Pra copa de arvore, arbusto e pedra entrou o helper **`blob()`**: elipse em
+degraus na grade fina. `ctx.arc` saia liso e vetorial, que era justamente o que
+fugia da cara de sprite do resto.
 
 Duas licoes da leva de piso/parede/sofa/estante, que valem pras proximas:
 

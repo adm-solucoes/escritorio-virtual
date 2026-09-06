@@ -373,6 +373,19 @@
     }
   }
 
+  // Elipse em degraus, na grade fina. Serve pra copa de arvore, arbusto e pedra:
+  // circulo de verdade (ctx.arc) sai liso e vetorial, que e o que destoava do
+  // resto da arte. Em degraus de `passo` unidades fica com cara de sprite.
+  function blob(ctx, x, y, cx, cy, rw, rh, cor, passo) {
+    const p2 = passo || 6;
+    for (let dy = -rh; dy < rh; dy += p2) {
+      const t = (dy + p2 / 2) / rh;
+      const larg = Math.round((rw * Math.sqrt(Math.max(0, 1 - t * t))) / p2) * p2;
+      if (larg <= 0) continue;
+      q(ctx, x, y, cx - larg, cy + dy, larg * 2, p2, cor);
+    }
+  }
+
   // Contorno arredondado (so a casca), pra dar o traco escuro dos sprites.
   function qContorno(ctx, x, y, ax, ay, aw, ah, raio, cor) {
     for (let i = 0; i < ah; i++) {
@@ -764,25 +777,25 @@
 
     } else if (type === M.ARVORE) {
       // arvore grande: a copa passa do tile (por isso e desenhada por ultimo)
-      const cx = x + meio;
-      const base = y + TILE - 2;
-      ctx.fillStyle = 'rgba(50,90,50,0.20)';
-      ctx.beginPath();
-      ctx.ellipse(cx, base, 17, 6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#8a6242';
-      ctx.fillRect(cx - 4, base - 14, 8, 14);
-      ctx.fillStyle = '#6f4d33';
-      ctx.fillRect(cx - 4, base - 14, 3, 14);
-      ctx.fillStyle = '#3f8a4a';
-      ctx.beginPath(); ctx.arc(cx - 13, base - 22, 13, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx + 13, base - 22, 13, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx, base - 32, 16, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx - 7, base - 14, 12, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx + 7, base - 14, 12, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#57a862';
-      ctx.beginPath(); ctx.arc(cx - 6, base - 34, 10, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx + 8, base - 26, 7, 0, Math.PI * 2); ctx.fill();
+      const CX = 64, BASE = 122;
+      q(ctx, x, y, 24, BASE - 8, 80, 12, 'rgba(46,84,46,0.20)'); // sombra no chao
+      q(ctx, x, y, 34, BASE - 4, 60, 4, 'rgba(46,84,46,0.14)');
+
+      q(ctx, x, y, CX - 14, BASE - 54, 28, 54, '#7a5636'); // tronco
+      q(ctx, x, y, CX - 14, BASE - 54, 8, 54, '#93694230'); // luz na esquerda
+      q(ctx, x, y, CX + 4, BASE - 54, 10, 54, 'rgba(60,40,24,0.45)'); // sombra
+      q(ctx, x, y, CX - 14, BASE - 34, 28, 3, 'rgba(60,40,24,0.35)'); // no da casca
+
+      // copa em tres camadas: contorno escuro, corpo e luz em cima a esquerda
+      blob(ctx, x, y, CX, BASE - 108, 66, 46, '#2c6636', 6);
+      blob(ctx, x, y, CX - 34, BASE - 74, 40, 30, '#2c6636', 6);
+      blob(ctx, x, y, CX + 34, BASE - 74, 40, 30, '#2c6636', 6);
+      blob(ctx, x, y, CX, BASE - 108, 58, 39, '#3f8a4a', 6);
+      blob(ctx, x, y, CX - 30, BASE - 74, 33, 24, '#3f8a4a', 6);
+      blob(ctx, x, y, CX + 30, BASE - 74, 33, 24, '#3f8a4a', 6);
+      blob(ctx, x, y, CX - 18, BASE - 122, 30, 20, '#5cae67', 6);
+      blob(ctx, x, y, CX + 22, BASE - 100, 20, 14, '#5cae67', 6);
+      blob(ctx, x, y, CX - 26, BASE - 96, 14, 10, '#74c47e', 6);
 
     } else if (type === M.QUADRO) {
       ctx.fillStyle = '#a97f52';
@@ -818,28 +831,39 @@
 
     } else if (type === M.ARMARIO) {
       // armario de duas portas, com puxadores e pes
-      p(ctx, x + 2, y + TILE - 3, TILE - 4, 2, 'rgba(45,50,64,0.20)');
-      caixa(ctx, x + 1, y + 2, TILE - 2, TILE - 6, '#6a7286', '#8a94aa', '#4d5464');
-      p(ctx, x + meio - 1, y + 3, 1, TILE - 8, TRACO); // fresta entre as portas
-      p(ctx, x + 3, y + 4, 11, 1, '#7d879d'); // reflexo nas portas
-      p(ctx, x + meio + 2, y + 4, 11, 1, '#7d879d');
-      p(ctx, x + meio - 5, y + meio - 1, 2, 4, '#cfd5e2'); // puxadores
-      p(ctx, x + meio + 4, y + meio - 1, 2, 4, '#cfd5e2');
-      p(ctx, x + 3, y + TILE - 4, 3, 2, TRACO);
-      p(ctx, x + TILE - 6, y + TILE - 4, 3, 2, TRACO);
+      q(ctx, x, y, 8, 116, 112, 8, 'rgba(45,50,64,0.20)'); // sombra
+      qContorno(ctx, x, y, 2, 6, 124, 112, 4, TRACO);
+      qArred(ctx, x, y, 4, 8, 120, 108, 3, '#6a7286');
+      q(ctx, x, y, 6, 10, 116, 4, '#8a94aa'); // luz no topo
+      q(ctx, x, y, 6, 10, 5, 104, '#7d879d'); // lateral iluminada
+      q(ctx, x, y, 117, 10, 5, 104, '#545b6d'); // lateral na sombra
+      q(ctx, x, y, 62, 12, 4, 100, '#464d5e'); // fresta entre as portas
+      // painel rebaixado de cada porta
+      q(ctx, x, y, 14, 22, 42, 76, '#5f6779');
+      q(ctx, x, y, 72, 22, 42, 76, '#5f6779');
+      q(ctx, x, y, 14, 22, 42, 3, '#7d879d');
+      q(ctx, x, y, 72, 22, 42, 3, '#7d879d');
+      q(ctx, x, y, 48, 56, 6, 18, '#cfd5e2'); // puxadores
+      q(ctx, x, y, 74, 56, 6, 18, '#cfd5e2');
+      q(ctx, x, y, 12, 116, 14, 8, TRACO); // pes
+      q(ctx, x, y, 102, 116, 14, 8, TRACO);
 
     } else if (type === M.BALCAO) {
       const b = bordasDoMovel(tiles, r, c, type);
-      p(ctx, x, y + TILE - 4, TILE, 3, 'rgba(45,50,64,0.20)');
-      p(ctx, x, y + 8, TILE, TILE - 12, '#dfe2ea');
-      p(ctx, x, y + 8, TILE, 3, '#f7f9fc'); // tampo
-      p(ctx, x, y + 13, TILE, 1, '#c3c9d6');
-      p(ctx, x, y + TILE - 7, TILE, 3, '#a8aebd'); // rodape
-      for (let i = 4; i < TILE; i += 8) p(ctx, x + i, y + 16, 1, 5, '#c3c9d6'); // ripas
-      if (b.cima) p(ctx, x, y + 8, TILE, 1, TRACO);
-      if (b.baixo) p(ctx, x, y + TILE - 5, TILE, 1, TRACO);
-      if (b.esq) p(ctx, x, y + 8, 1, TILE - 12, TRACO);
-      if (b.dir) p(ctx, x + TILE - 1, y + 8, 1, TILE - 12, TRACO);
+      q(ctx, x, y, 0, 116, 128, 8, 'rgba(45,50,64,0.20)'); // sombra
+      q(ctx, x, y, 0, 32, 128, 84, '#dfe2ea'); // corpo
+      q(ctx, x, y, 0, 26, 128, 12, '#f7f9fc'); // tampo saliente
+      q(ctx, x, y, 0, 38, 128, 3, '#b9c0cd'); // sombra sob o tampo
+      q(ctx, x, y, 0, 100, 128, 12, '#a8aebd'); // rodape
+      q(ctx, x, y, 0, 100, 128, 2, '#ffffff40');
+      for (let i = 8; i < 128; i += 26) { // ripas verticais
+        q(ctx, x, y, i, 48, 3, 46, '#c3c9d6');
+        q(ctx, x, y, i + 3, 48, 2, 46, '#eef1f6');
+      }
+      if (b.cima) q(ctx, x, y, 0, 26, 128, 2, TRACO);
+      if (b.baixo) q(ctx, x, y, 0, 114, 128, 2, TRACO);
+      if (b.esq) q(ctx, x, y, 0, 26, 2, 90, TRACO);
+      if (b.dir) q(ctx, x, y, 126, 26, 2, 90, TRACO);
 
     } else if (type === M.CERCA) {
       ctx.fillStyle = '#c99f70';
@@ -850,66 +874,76 @@
       ctx.fillRect(x + TILE - 9, y + 5, 5, 22);
 
     } else if (type === M.JANELA) {
-      // janelao: mesma parede, com vidro e caixilho branco
-      ctx.fillStyle = '#4a5162';
-      ctx.fillRect(x, y, TILE, TILE);
-      ctx.fillStyle = '#5b6376';
-      ctx.fillRect(x, y, TILE, 6);
-      ctx.fillStyle = '#eef2f5';
-      ctx.fillRect(x + 1, y + 7, TILE - 2, 17);
-      ctx.fillStyle = '#a8dbe2';
-      ctx.fillRect(x + 3, y + 9, TILE - 6, 13);
-      ctx.fillStyle = '#c9ebef';
-      ctx.fillRect(x + 3, y + 9, TILE - 6, 5);
-      ctx.strokeStyle = '#eef2f5';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x + meio, y + 9); ctx.lineTo(x + meio, y + 22);
-      ctx.moveTo(x + 3, y + 15.5); ctx.lineTo(x + TILE - 3, y + 15.5);
-      ctx.stroke();
-      ctx.fillStyle = '#343a48';
-      ctx.fillRect(x, y + TILE - 6, TILE, 6);
+      // janelao: mesma parede, com vidro, caixilho branco e reflexo em diagonal
+      const b = bordasParede(tiles, r, c);
+      q(ctx, x, y, 0, 0, 128, 128, '#4a5162');
+      if (b.cima) {
+        q(ctx, x, y, 0, 0, 128, 24, '#5b6376');
+        q(ctx, x, y, 0, 0, 128, 3, '#6f7889');
+      }
+      q(ctx, x, y, 0, 26, 128, 76, '#eef2f5'); // caixilho
+      q(ctx, x, y, 0, 26, 128, 3, '#ffffff');
+      q(ctx, x, y, 6, 32, 116, 64, '#8fcdd8'); // vidro
+      q(ctx, x, y, 6, 32, 116, 22, '#b3e0e7'); // ceu refletido no alto
+      // reflexo diagonal, em degraus
+      for (let i = 0; i < 14; i++) {
+        q(ctx, x, y, 18 + i * 4, 88 - i * 4, 10, 4, 'rgba(255,255,255,0.30)');
+        q(ctx, x, y, 44 + i * 4, 88 - i * 4, 5, 4, 'rgba(255,255,255,0.20)');
+      }
+      q(ctx, x, y, 60, 32, 6, 64, '#eef2f5'); // montante
+      q(ctx, x, y, 6, 60, 116, 5, '#eef2f5'); // travessa
+      q(ctx, x, y, 6, 92, 116, 4, '#c9d2da'); // sombra do peitoril
+      if (b.baixo) {
+        q(ctx, x, y, 0, 104, 128, 24, '#343a48');
+        q(ctx, x, y, 0, 104, 128, 2, '#59617a');
+      }
 
     } else if (type === M.AGUA) {
       const b = bordasDoMovel(tiles, r, c, type);
-      ctx.fillStyle = '#4d9fd6';
-      ctx.fillRect(x, y, TILE, TILE);
-      ctx.fillStyle = '#69b4e4';
-      for (let i = 0; i < 3; i++) {
-        const ox = x + ((c * 11 + r * 5 + i * 9) % (TILE - 10)) + 4;
-        const oy = y + ((c * 7 + r * 13 + i * 11) % (TILE - 8)) + 4;
-        ctx.fillRect(ox, oy, 7, 2);
+      q(ctx, x, y, 0, 0, 128, 128, '#3f8fc9'); // fundo mais escuro
+      q(ctx, x, y, 0, 0, 128, 64, '#4fa3da'); // agua mais clara no alto
+      // marolas: tracinhos estaveis, dependem so de c/r
+      for (let i = 0; i < 5; i++) {
+        const ox = ((c * 41 + r * 23 + i * 37) % 96) + 8;
+        const oy = ((c * 29 + r * 53 + i * 43) % 104) + 10;
+        q(ctx, x, y, ox, oy, 22, 3, 'rgba(255,255,255,0.28)');
+        q(ctx, x, y, ox + 6, oy + 5, 12, 2, 'rgba(255,255,255,0.16)');
       }
-      // carpinha
+      // carpa: corpo, cabeca clara e cauda
       if ((c + r) % 3 === 0) {
-        ctx.fillStyle = '#f08a3a';
-        ctx.beginPath();
-        ctx.ellipse(x + meio, y + meio, 5, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
+        const px = 40, py = 54;
+        q(ctx, x, y, px, py, 34, 14, '#ef8a34');
+        q(ctx, x, y, px + 4, py - 4, 22, 6, '#f6a75c');
+        q(ctx, x, y, px + 30, py + 2, 12, 4, '#ef8a34');
+        q(ctx, x, y, px + 38, py - 2, 8, 12, '#f6a75c');
+        q(ctx, x, y, px + 8, py + 2, 8, 4, '#ffffff');
+        q(ctx, x, y, px + 2, py + 4, 4, 4, TRACO);
       }
-      contornoParcial(ctx, x, y, TILE, TILE, b, 'rgba(40,90,130,0.5)', 2);
+      // borda da agua so onde o lago termina
+      if (b.cima) q(ctx, x, y, 0, 0, 128, 4, '#2f6f9e');
+      if (b.baixo) q(ctx, x, y, 0, 124, 128, 4, '#2f6f9e');
+      if (b.esq) q(ctx, x, y, 0, 0, 4, 128, '#2f6f9e');
+      if (b.dir) q(ctx, x, y, 124, 0, 4, 128, '#2f6f9e');
 
     } else if (type === M.PEDRA) {
-      ctx.fillStyle = 'rgba(60,70,60,0.2)';
-      ctx.beginPath();
-      ctx.ellipse(x + meio, y + 24, 11, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#9aa0a6';
-      ctx.beginPath();
-      ctx.ellipse(x + meio, y + 18, 12, 9, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#b6bcc2';
-      ctx.beginPath();
-      ctx.ellipse(x + meio - 3, y + 15, 6, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
+      q(ctx, x, y, 20, 96, 88, 12, 'rgba(52,62,52,0.20)'); // sombra no chao
+      blob(ctx, x, y, 64, 62, 50, 40, '#6f767e', 6); // contorno escuro
+      blob(ctx, x, y, 64, 60, 44, 34, '#9aa0a6', 6); // corpo
+      blob(ctx, x, y, 52, 48, 24, 16, '#bcc2c8', 6); // facet iluminada
+      q(ctx, x, y, 74, 62, 22, 4, 'rgba(60,68,76,0.35)'); // trinca
+      q(ctx, x, y, 46, 74, 30, 4, 'rgba(60,68,76,0.25)');
 
     } else if (type === M.ARBUSTO) {
-      ctx.fillStyle = '#3f8a4a';
-      ctx.beginPath(); ctx.arc(x + meio - 6, y + 20, 8, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + meio + 6, y + 20, 8, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + meio, y + 15, 10, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#57a862';
-      ctx.beginPath(); ctx.arc(x + meio - 3, y + 13, 5, 0, Math.PI * 2); ctx.fill();
+      q(ctx, x, y, 22, 104, 84, 10, 'rgba(46,84,46,0.18)');
+      blob(ctx, x, y, 44, 76, 32, 26, '#2c6636', 6);
+      blob(ctx, x, y, 86, 76, 32, 26, '#2c6636', 6);
+      blob(ctx, x, y, 64, 56, 40, 32, '#2c6636', 6);
+      blob(ctx, x, y, 44, 74, 26, 21, '#3f8a4a', 6);
+      blob(ctx, x, y, 86, 74, 26, 21, '#3f8a4a', 6);
+      blob(ctx, x, y, 64, 54, 33, 26, '#3f8a4a', 6);
+      blob(ctx, x, y, 52, 44, 17, 12, '#5cae67', 6);
+      q(ctx, x, y, 70, 62, 8, 6, '#e8577f'); // florzinha
+      q(ctx, x, y, 88, 82, 6, 6, '#f0c65a');
 
     } else if (type === M.BANCO) {
       // banco de ripas com encosto, tipo praca
