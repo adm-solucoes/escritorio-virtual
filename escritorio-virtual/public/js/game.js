@@ -593,8 +593,11 @@
       return;
     }
 
-    const FIM_TAMPO = 60;                  // onde a superficie acaba
-    const FIM_ESPESSURA = FIM_TAMPO + 13;  // fim da borda do tampo
+    // Proporcoes medidas em referencias/10-MESA-closeup-gavetas-e-pe.png, usando
+    // a cadeira como regua (1 cadeira = 1 tile): a faixa da frente ocupa ~26% da
+    // altura da mesa, nao os 15% que eu tinha feito.
+    const FIM_TAMPO = 46;                  // onde a superficie acaba
+    const FIM_LIP = FIM_TAMPO + 9;         // a quina clara do tampo
     const FIM_VAO = 108;                   // dai pra baixo aparece o CHAO
 
     // (0) tampo
@@ -604,43 +607,42 @@
       q(ctx, x, y, 0, topo, 128, 2, MESA_BORDA);
     }
 
-    // (1) espessura do tampo: e a placa vista de canto, bem clara
-    q(ctx, x, y, 0, FIM_TAMPO, 128, 13, '#dedbec');
-    q(ctx, x, y, 0, FIM_TAMPO, 128, 4, '#faf9fe');            // quina iluminada
-    q(ctx, x, y, 0, FIM_ESPESSURA - 3, 128, 3, '#a7a3bd');    // sombra sob a quina
+    // (1) quina do tampo: a lasquinha clara que separa a superficie da frente
+    q(ctx, x, y, 0, FIM_TAMPO, 128, 9, '#dedbec');
+    q(ctx, x, y, 0, FIM_TAMPO, 128, 3, '#faf9fe');
+    q(ctx, x, y, 0, FIM_LIP - 2, 128, 2, '#a7a3bd');
 
-    // (2) vao debaixo da mesa: escuro so ate FIM_VAO, dai o chao aparece.
-    //     E esse degrau (tampo claro -> vao escuro -> chao) que da o 3D.
-    q(ctx, x, y, 0, FIM_ESPESSURA, 128, FIM_VAO - FIM_ESPESSURA, MESA_VAO);
-    q(ctx, x, y, 0, FIM_ESPESSURA, 128, 6, MESA_VAO_ESCURO);  // o ponto mais fundo
-    q(ctx, x, y, 0, FIM_VAO - 3, 128, 3, '#3b4256');          // sombra que cai no chao
+    // (2) frente da mesa: as gavetas correm por TODA a bancada, com divisoria
+    //     nas emendas - e o que a referencia mostra, nao uma gaveteira solta
+    //     numa ponta so. Cada celula desenha suas duas gavetas recuadas das
+    //     bordas, e o recuo vira a divisoria vertical entre uma celula e outra.
+    q(ctx, x, y, 0, FIM_LIP, 128, FIM_VAO - FIM_LIP, MESA_VAO);
+    q(ctx, x, y, 0, FIM_LIP, 128, 5, MESA_VAO_ESCURO);       // sombra sob o tampo
+    q(ctx, x, y, 0, FIM_VAO - 3, 128, 3, '#3b4256');         // sombra que cai no chao
 
-    // (3) gaveteira na ponta esquerda: sobe do chao ate encostar no tampo
-    if (b.esq && gavetas !== false) {
-      const gx = 10, gw = 44, gy = FIM_ESPESSURA, gh = FIM_VAO + 6 - gy;
-      q(ctx, x, y, gx, gy, gw, gh, '#3b4256');                // contorno
-      q(ctx, x, y, gx + 2, gy, gw - 4, gh - 3, '#98a2ba');    // corpo
-      q(ctx, x, y, gx + 2, gy, gw - 4, 3, '#c2cadb');         // luz no topo
-      q(ctx, x, y, gx + gw - 8, gy, 6, gh - 3, '#79839c');    // sombra na lateral
-      for (let i = 0; i < 3; i++) {
-        const dy = gy + 6 + i * 11;
-        q(ctx, x, y, gx + 7, dy, gw - 18, 7, '#ccd2df');      // frente da gaveta
-        q(ctx, x, y, gx + 7, dy, gw - 18, 2, '#e8ebf2');
-        q(ctx, x, y, gx + 14, dy + 4, gw - 32, 2, '#6b748f'); // puxador
+    if (gavetas !== false) {
+      const gy = FIM_LIP + 9;
+      const gh = 16;
+      for (let i = 0; i < 2; i++) {
+        const dy = gy + i * (gh + 5);
+        q(ctx, x, y, 9, dy, 110, gh, '#4a5268');             // contorno da gaveta
+        q(ctx, x, y, 11, dy + 1, 106, gh - 3, '#98a2ba');    // frente
+        q(ctx, x, y, 11, dy + 1, 106, 3, '#bcc4d6');         // luz no topo
+        q(ctx, x, y, 30, dy + 6, 68, 4, '#6b748f');          // puxador
+        q(ctx, x, y, 30, dy + 6, 68, 1, '#aab3c6');
       }
     }
 
-    // (3) pe na ponta direita. Poste largo: fino demais some no zoom normal do
-    //     jogo (2 unidades = meio pixel de tela).
-    if (b.dir && gavetas !== false) {
-      const px0 = 92, pw = 26, alt = FIM_VAO + 4 - FIM_ESPESSURA;
-      q(ctx, x, y, px0, FIM_ESPESSURA, pw, alt, '#3b4256');            // contorno
-      q(ctx, x, y, px0 + 3, FIM_ESPESSURA, pw - 6, alt - 3, '#8b95ad'); // corpo
-      q(ctx, x, y, px0 + 3, FIM_ESPESSURA, 5, alt - 3, '#b0b9cc');     // luz na lateral
-      q(ctx, x, y, px0 + pw - 8, FIM_ESPESSURA, 5, alt - 3, '#6d7691');// sombra
-      // sapata larga apoiada no chao
-      q(ctx, x, y, px0 - 4, FIM_VAO - 4, pw + 8, 8, '#3b4256');
-      q(ctx, x, y, px0 - 2, FIM_VAO - 4, pw + 4, 3, '#79839c');
+    // (3) postes nas pontas da bancada
+    if (b.esq) {
+      q(ctx, x, y, 2, FIM_LIP, 9, FIM_VAO + 4 - FIM_LIP, '#3b4256');
+      q(ctx, x, y, 3, FIM_LIP, 6, FIM_VAO + 2 - FIM_LIP, '#8b95ad');
+      q(ctx, x, y, 3, FIM_LIP, 2, FIM_VAO + 2 - FIM_LIP, '#b0b9cc');
+    }
+    if (b.dir) {
+      q(ctx, x, y, 117, FIM_LIP, 9, FIM_VAO + 4 - FIM_LIP, '#3b4256');
+      q(ctx, x, y, 119, FIM_LIP, 6, FIM_VAO + 2 - FIM_LIP, '#8b95ad');
+      q(ctx, x, y, 119, FIM_LIP, 2, FIM_VAO + 2 - FIM_LIP, '#b0b9cc');
     }
 
     // contorno so onde a bancada termina
@@ -730,7 +732,16 @@
       // gavetas, e se a gente ve a tela ou a traseira dela.
       const b = bordasDoMovel(tiles, r, c, type);
       const direcao = M.DIRECAO_MESA[type];
-      const temPc = M.MESAS_DE_TRABALHO.has(type);
+      // Um posto por mesa, nao um por celula: sem isso uma mesa de 3 tiles vira
+      // tres computadores lado a lado, e a referencia mostra UMA pessoa por
+      // mesa. Conta quantas celulas iguais tem a esquerda e so equipa a do meio
+      // de cada trio - numa bancada longa isso vira um posto a cada 3 tiles.
+      let recuo = 0;
+      while (tiles[r] && tiles[r][c - recuo - 1] === type) recuo++;
+      // ...e so na fileira da FRENTE (`b.baixo` = nao tem mesa embaixo). O
+      // monitor dessa fileira ja avanca pro tile de tras, entao equipar as duas
+      // daria dois computadores empilhados na mesma mesa.
+      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 3 === 1 && b.baixo;
       // gavetas ficam do lado de quem usa: numa mesa virada pra cima elas
       // caem atras da placa e nao aparecem
       tampoDeMesa(ctx, x, y, TILE, b, direcao !== 'down');
