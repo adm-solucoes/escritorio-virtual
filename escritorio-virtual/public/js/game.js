@@ -99,6 +99,29 @@
     }
 
     // Fantasma da celula que vai receber o objeto (decorador aberto).
+    // A "malha": com um item de apoiar na mao, as superficies livres acendem uma
+    // gradinha discreta, mostrando onde da pra pousar a coisa. E o equivalente
+    // do Gather deixar a mesa virar um tabuleiro na hora de decorar.
+    if (Decorador.pintandoEmCima && Decorador.pintandoEmCima()) {
+      const M = OfficeMap;
+      const vista = tamanhoDaVista();
+      const c0 = Math.max(0, Math.floor(camX / TILE));
+      const c1 = Math.min(M.COLS - 1, Math.ceil((camX + vista.w) / TILE));
+      const r0 = Math.max(0, Math.floor(camY / TILE));
+      const r1 = Math.min(M.ROWS - 1, Math.ceil((camY + vista.h) / TILE));
+      ctx.save();
+      ctx.lineWidth = 1;
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          if (!M.SUPERFICIES.has(M.tiles[r][c])) continue;
+          const ocupada = M.objetos[r] && M.objetos[r][c];
+          ctx.strokeStyle = ocupada ? 'rgba(248,180,84,0.55)' : 'rgba(120,220,160,0.55)';
+          ctx.strokeRect(c * TILE + 2.5, r * TILE + 2.5, TILE - 5, TILE - 5);
+        }
+      }
+      ctx.restore();
+    }
+
     if (celulaAlvo && Decorador.estaPintando()) {
       const podeAqui = Decorador.podeColocarEm(celulaAlvo.col, celulaAlvo.row);
       ctx.save();
@@ -539,61 +562,90 @@
   const MESA_FRENTE_LUZ = '#98a2ba';
   const MESA_FRENTE_SOMBRA = '#5f6880';
   const MESA_BORDA = '#a9b0c4';
+  const MESA_VAO = '#5f6880';        // vao debaixo da mesa: da a profundidade
+  const MESA_VAO_ESCURO = '#464e63'; // colado no tampo, o ponto mais fundo
 
   function tampoDeMesa(ctx, x, y, TILE, b, gavetas) {
-    // Tudo em unidades de 1/128 do tile. `b.baixo` false = tem mesa na celula de
-    // baixo, entao esta e uma fileira do *fundo*: so tampo, sem faixa. A faixa
-    // sai uma vez so, na fileira da frente - e o que faz o bloco de 2 fileiras
-    // virar uma mesa grande unica.
+    // A mesa da referencia (referencias/10-MESA-closeup-gavetas-e-pe.png) ocupa
+    // DUAS celulas na vertical, e cada uma faz um papel:
+    //
+    //   fileira de tras   -> so o tampo: e a "malha" onde os itens sao apoiados
+    //   fileira da frente -> tampo + a mesa vista de frente, em tres faixas:
+    //                        (1) a espessura do tampo,
+    //                        (2) o vao escuro debaixo dele,
+    //                        (3) dentro do vao, a GAVETEIRA numa ponta e o PE
+    //                            na outra.
+    //
+    // E a faixa (2) que da a ilusao de 3D: sem ela a mesa fica chapada. E por
+    // isso que gaveteira e pe saem so nas pontas do bloco (b.esq / b.dir): uma
+    // bancada de 4 celulas tem uma gaveteira e um pe, nao quatro de cada.
     const topo = b.cima ? 8 : 0;
-    const alturaFrente = b.baixo ? 64 : 0;
-    const fimTampo = 128 - alturaFrente;
 
-    if (b.baixo) q(ctx, x, y, 0, 122, 128, 6, 'rgba(45,50,64,0.16)'); // sombra no chao
+    if (!b.baixo) {
+      // fileira de tras: tampo liso de ponta a ponta
+      q(ctx, x, y, 0, topo, 128, 128 - topo, MESA_TAMPO);
+      if (b.cima) {
+        q(ctx, x, y, 0, topo, 128, 5, MESA_TAMPO_LUZ);
+        q(ctx, x, y, 0, topo, 128, 2, MESA_BORDA);
+      }
+      if (b.esq) q(ctx, x, y, 0, topo, 2, 128 - topo, MESA_BORDA);
+      if (b.dir) q(ctx, x, y, 126, topo, 2, 128 - topo, MESA_BORDA);
+      return;
+    }
 
-    // tampo, com veio sutil e luz na borda de tras
-    q(ctx, x, y, 0, topo, 128, fimTampo - topo, MESA_TAMPO);
+    const FIM_TAMPO = 60;                  // onde a superficie acaba
+    const FIM_ESPESSURA = FIM_TAMPO + 13;  // fim da borda do tampo
+    const FIM_VAO = 108;                   // dai pra baixo aparece o CHAO
+
+    // (0) tampo
+    q(ctx, x, y, 0, topo, 128, FIM_TAMPO - topo, MESA_TAMPO);
     if (b.cima) {
       q(ctx, x, y, 0, topo, 128, 5, MESA_TAMPO_LUZ);
-      q(ctx, x, y, 0, topo + 5, 128, 2, '#e2dff0');
-    }
-    for (let i = 6; i < 128; i += 26) {
-      q(ctx, x, y, i, topo + 10, 1, fimTampo - topo - 14, 'rgba(255,255,255,0.35)');
+      q(ctx, x, y, 0, topo, 128, 2, MESA_BORDA);
     }
 
-    if (b.baixo) {
-      q(ctx, x, y, 0, fimTampo - 3, 128, 3, MESA_BORDA);          // quina do tampo
-      q(ctx, x, y, 0, fimTampo, 128, alturaFrente - 4, MESA_FRENTE);
-      q(ctx, x, y, 0, fimTampo, 128, 4, MESA_FRENTE_LUZ);         // luz na quina
-      q(ctx, x, y, 0, 120, 128, 4, MESA_FRENTE_SOMBRA);           // sombra no rodape
+    // (1) espessura do tampo: e a placa vista de canto, bem clara
+    q(ctx, x, y, 0, FIM_TAMPO, 128, 13, '#dedbec');
+    q(ctx, x, y, 0, FIM_TAMPO, 128, 4, '#faf9fe');            // quina iluminada
+    q(ctx, x, y, 0, FIM_ESPESSURA - 3, 128, 3, '#a7a3bd');    // sombra sob a quina
 
-      // Gaveta larga numa ponta, armarinho na outra - uma vez por mesa, como na
-      // referencia, e nao um puxador por celula.
-      if (b.esq && gavetas !== false) {
-        qArred(ctx, x, y, 14, fimTampo + 16, 100, 22, 3, '#c8cedd');
-        q(ctx, x, y, 16, fimTampo + 18, 96, 3, '#e4e8f0');
-        q(ctx, x, y, 40, fimTampo + 25, 48, 4, '#7b8399');        // puxador
-        q(ctx, x, y, 40, fimTampo + 25, 48, 1, '#a9b0c4');
+    // (2) vao debaixo da mesa: escuro so ate FIM_VAO, dai o chao aparece.
+    //     E esse degrau (tampo claro -> vao escuro -> chao) que da o 3D.
+    q(ctx, x, y, 0, FIM_ESPESSURA, 128, FIM_VAO - FIM_ESPESSURA, MESA_VAO);
+    q(ctx, x, y, 0, FIM_ESPESSURA, 128, 6, MESA_VAO_ESCURO);  // o ponto mais fundo
+    q(ctx, x, y, 0, FIM_VAO - 3, 128, 3, '#3b4256');          // sombra que cai no chao
+
+    // (3) gaveteira na ponta esquerda: sobe do chao ate encostar no tampo
+    if (b.esq && gavetas !== false) {
+      const gx = 10, gw = 44, gy = FIM_ESPESSURA, gh = FIM_VAO + 6 - gy;
+      q(ctx, x, y, gx, gy, gw, gh, '#3b4256');                // contorno
+      q(ctx, x, y, gx + 2, gy, gw - 4, gh - 3, '#98a2ba');    // corpo
+      q(ctx, x, y, gx + 2, gy, gw - 4, 3, '#c2cadb');         // luz no topo
+      q(ctx, x, y, gx + gw - 8, gy, 6, gh - 3, '#79839c');    // sombra na lateral
+      for (let i = 0; i < 3; i++) {
+        const dy = gy + 6 + i * 11;
+        q(ctx, x, y, gx + 7, dy, gw - 18, 7, '#ccd2df');      // frente da gaveta
+        q(ctx, x, y, gx + 7, dy, gw - 18, 2, '#e8ebf2');
+        q(ctx, x, y, gx + 14, dy + 4, gw - 32, 2, '#6b748f'); // puxador
       }
-      if (b.dir && gavetas !== false) {
-        qArred(ctx, x, y, 86, fimTampo + 12, 30, 30, 3, '#c8cedd');
-        q(ctx, x, y, 88, fimTampo + 14, 26, 3, '#e4e8f0');
-        q(ctx, x, y, 96, fimTampo + 25, 12, 4, '#7b8399');        // puxador quadrado
-        q(ctx, x, y, 96, fimTampo + 25, 12, 1, '#a9b0c4');
-      }
+    }
+
+    // (3) pe na ponta direita. Poste largo: fino demais some no zoom normal do
+    //     jogo (2 unidades = meio pixel de tela).
+    if (b.dir && gavetas !== false) {
+      const px0 = 92, pw = 26, alt = FIM_VAO + 4 - FIM_ESPESSURA;
+      q(ctx, x, y, px0, FIM_ESPESSURA, pw, alt, '#3b4256');            // contorno
+      q(ctx, x, y, px0 + 3, FIM_ESPESSURA, pw - 6, alt - 3, '#8b95ad'); // corpo
+      q(ctx, x, y, px0 + 3, FIM_ESPESSURA, 5, alt - 3, '#b0b9cc');     // luz na lateral
+      q(ctx, x, y, px0 + pw - 8, FIM_ESPESSURA, 5, alt - 3, '#6d7691');// sombra
+      // sapata larga apoiada no chao
+      q(ctx, x, y, px0 - 4, FIM_VAO - 4, pw + 8, 8, '#3b4256');
+      q(ctx, x, y, px0 - 2, FIM_VAO - 4, pw + 4, 3, '#79839c');
     }
 
     // contorno so onde a bancada termina
-    if (b.cima) q(ctx, x, y, 0, topo, 128, 2, MESA_BORDA);
-    if (b.baixo) q(ctx, x, y, 0, 126, 128, 2, MESA_FRENTE_SOMBRA);
-    if (b.esq) {
-      q(ctx, x, y, 0, topo, 2, fimTampo - topo, MESA_BORDA);
-      if (b.baixo) q(ctx, x, y, 0, fimTampo, 2, alturaFrente, MESA_FRENTE_SOMBRA);
-    }
-    if (b.dir) {
-      q(ctx, x, y, 126, topo, 2, fimTampo - topo, MESA_BORDA);
-      if (b.baixo) q(ctx, x, y, 126, fimTampo, 2, alturaFrente, MESA_FRENTE_SOMBRA);
-    }
+    if (b.esq) q(ctx, x, y, 0, topo, 2, 108 - topo, MESA_BORDA);
+    if (b.dir) q(ctx, x, y, 126, topo, 2, 108 - topo, MESA_BORDA);
   }
 
   // Monitor visto por tras: e o que se ve numa mesa virada pra cima da tela

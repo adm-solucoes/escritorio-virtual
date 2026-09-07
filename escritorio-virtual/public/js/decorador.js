@@ -422,7 +422,13 @@
     });
   }
 
+  // true quando o item na mao e de apoiar em cima de movel - e quando faz
+  // sentido mostrar a malha das superficies.
+  function pintandoEmCima() {
+    return estaPintando() && ehObjeto(selecionado) && !!selecionado.o;
+  }
+
   window.Decorador = {
-    init, estaPintando, pintarEm, podeColocarEm, desenharPreviaNoMapa,
+    init, estaPintando, pintarEm, podeColocarEm, desenharPreviaNoMapa, pintandoEmCima,
   };
 })();
