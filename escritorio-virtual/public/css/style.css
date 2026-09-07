@@ -1227,41 +1227,53 @@ button { font-family: inherit; }
 .decor-aba:hover { background: var(--painel-alt); }
 .decor-aba.ativa { background: #e9eaee; }
 
+/* A grade segue o painel do Gather (referencias/42-decorator-mesas.png): so a
+   arte, grande, solta no branco - sem legenda embaixo e sem caixinha em volta.
+   O nome fica no tooltip. Antes eram miniaturas de 40px com o nome debaixo, e
+   o texto ocupava mais espaco que o desenho. */
 .decor-grade {
   flex: 1;
   overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 4px;
   align-content: start;
 }
 .decor-item {
+  position: relative;   /* o selo de girar se pendura no canto */
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 9px 4px;
+  justify-content: center;
+  padding: 14px 6px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
-  color: var(--texto-fraco);
-  font-family: inherit;
-  font-size: 10px;
-  text-align: center;
   cursor: pointer;
 }
 .decor-item:hover { background: var(--painel-alt); }
-.decor-item.ativa { border-color: var(--indigo); background: rgba(79, 70, 229, 0.07); color: var(--texto); }
-/* A miniatura e o que a pessoa olha pra escolher: 40px deixava tudo do tamanho
-   de um icone de barra de tarefas. Com 54 da pra ver o que a coisa e. */
+.decor-item.ativa { border-color: var(--indigo); background: rgba(79, 70, 229, 0.07); }
 .decor-item canvas {
-  width: 54px;
-  height: 54px;
+  width: 64px;
+  height: 64px;
   image-rendering: pixelated;
-  border-radius: 8px;
-  border: 1px solid var(--borda);
-  background: #eceef4;
 }
+/* Selo de girar, no canto de cima a direita da celula - e ele que avisa que a
+   peca tem outras direcoes, sem precisar seleciona-la pra descobrir. */
+.decor-girar {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--borda);
+  border-radius: 50%;
+  background: var(--painel);
+  color: var(--texto-fraco);
+}
+.decor-girar:hover { color: var(--indigo); border-color: var(--indigo); }
 .decor-vazio { grid-column: 1 / -1; margin: 12px 0; color: var(--texto-fraco); font-size: 13px; text-align: center; }
 
 .decor-dica { margin: 0; font-size: 11px; color: var(--texto-fraco); line-height: 1.4; }

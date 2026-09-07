@@ -49,9 +49,14 @@ conferir('nenhum id repetido', new Set(ids).size, ids.length);
 conferir('todo item tem desenho em game.js',
   nomes.filter((n) => !game.includes('obj === O.' + n + ')')), []);
 
-// 5: sem entrada no catalogo ninguem consegue escolher
+// 5: sem entrada no catalogo ninguem consegue escolher. Um item entra de duas
+// formas: como entrada propria (`{ o: O.X }`) ou dentro de um `giros`, que e
+// como as direcoes de um mesmo movel aparecem. Por isso o teste procura o nome
+// seguido de qualquer coisa que nao seja letra - `O.X,` ou `O.X]` - e nao so
+// da virgula: quando o MONITOR_COSTAS virou o ultimo item de um giros ele
+// passou a terminar em `]` e o teste acusou falta dele no catalogo.
 conferir('todo item aparece no catalogo do decorador',
-  nomes.filter((n) => !decorador.includes('O.' + n + ',')), []);
+  nomes.filter((n) => !new RegExp('O\\.' + n + '\\b(?!_)').test(decorador)), []);
 
 // as abas que quem tem mesa ve sem ser da diretoria
 conferir('existem abas marcadas `deMesa`', /deMesa: true/.test(decorador), true);
