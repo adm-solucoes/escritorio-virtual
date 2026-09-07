@@ -186,7 +186,7 @@ function sanitizeAppearance(appearance) {
     bottom: allowedHex(a.bottom, '#6a7ce0'),
     shoes: allowedHex(a.shoes, '#2b2f38'),
     hairColor: allowedHex(a.hairColor, '#2b3038'),
-    hairStyle: allowedEnum(a.hairStyle, ['careca', 'curto', 'raspado', 'espetado', 'cacheado', 'afro', 'dread', 'pixie', 'chanel', 'longo', 'moicano'], 'curto'),
+    hairStyle: allowedEnum(a.hairStyle, ['careca', 'curto', 'raspado', 'espetado', 'cacheado', 'afro', 'dread', 'pixie', 'chanel', 'longo', 'moicano', 'franja'], 'curto'),
     glasses: !!a.glasses,
     glassesColor: allowedHex(a.glassesColor, '#2b3038'),
     // As formas de roupa. A lista tem que bater com a do public/js/character.js
@@ -194,11 +194,13 @@ function sanitizeAppearance(appearance) {
     topStyle: allowedEnum(a.topStyle, ['camiseta', 'vneck', 'polo', 'regata', 'manga', 'social', 'gola'], 'camiseta'),
     jaqueta: allowedEnum(a.jaqueta, ['nenhuma', 'blazer', 'cardigan'], 'nenhuma'),
     jaquetaColor: allowedHex(a.jaquetaColor, '#2b2f38'),
-    bottomStyle: allowedEnum(a.bottomStyle, ['calca', 'social', 'bermuda'], 'calca'),
-    barba: allowedEnum(a.barba, ['nenhuma', 'bigode', 'curta'], 'nenhuma'),
-    chapeu: allowedEnum(a.chapeu, ['nenhum', 'bandana', 'bone', 'coco'], 'nenhum'),
+    bottomStyle: allowedEnum(a.bottomStyle, ['calca', 'social', 'bermuda', 'saia'], 'calca'),
+    barba: allowedEnum(a.barba, ['nenhuma', 'bigode', 'curta', 'chevron', 'cheia'], 'nenhuma'),
+    chapeu: allowedEnum(a.chapeu, ['nenhum', 'bandana', 'bone', 'coco', 'faixa'], 'nenhum'),
     chapeuColor: allowedHex(a.chapeuColor, '#e03a3a'),
-    shoesStyle: allowedEnum(a.shoesStyle, ['tenis', 'sandalia', 'descalco'], 'tenis'),
+    shoesStyle: allowedEnum(a.shoesStyle, ['tenis', 'sandalia', 'bota', 'pantufa', 'descalco'], 'tenis'),
+    pescoco: allowedEnum(a.pescoco, ['nenhum', 'gravata'], 'nenhum'),
+    pescocoColor: allowedHex(a.pescocoColor, '#a03028'),
   };
 }
 

@@ -34,6 +34,10 @@
       campoOpcao: 'jaqueta', opcoes: () => doCatalogo(Character.JAQUETAS),
     },
     {
+      id: 'pescoco', nome: 'Pescoco', campoCor: 'pescocoColor', paleta: ROUPA,
+      campoOpcao: 'pescoco', opcoes: () => doCatalogo(Character.PESCOCOS),
+    },
+    {
       id: 'bottom', nome: 'Calca', campoCor: 'bottom', paleta: ROUPA,
       campoOpcao: 'bottomStyle', opcoes: () => doCatalogo(Character.BOTTOMS),
     },

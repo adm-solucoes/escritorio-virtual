@@ -57,6 +57,14 @@ teste de proposito.
 | `hair_pixie.png` | `hair/pixie/adult/walk.png` | JaidynReiman, Manuel Riecke (MrBeast) | CC-BY-SA 3.0, GPL 3.0 |
 | `hair_chanel.png` | `hair/bob/adult/walk.png` | ElizaWy, bluecarrot16 | CC0 |
 | `pes_sandalia.png` | `feet/sandals/male/walk.png` | Nila122, JaidynReiman, Matthew Krohn (makrohn), Johannes Sjölund (wulax) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0 |
+| `baixo_saia.png` | `legs/skirts/plain/male/walk.png` | bluecarrot16, Pierre Vigier (pvigier), Johannes Sjölund (wulax), Ahmad3366, JaidynReiman | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
+| `barba_chevron.png` | `beards/mustache/chevron/walk.png` | ElizaWy | OGA-BY 3.0 |
+| `barba_cheia.png` | `beards/beard/medium/walk.png` | ElizaWy | OGA-BY 3.0 |
+| `chapeu_faixa.png` | `hat/headband/tied/adult/walk.png` | Nila122 | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
+| `hair_franja.png` | `hair/bangs/adult/walk.png` | JaidynReiman, Manuel Riecke (MrBeast) | CC-BY-SA 3.0, GPL 3.0 |
+| `pes_bota.png` | `feet/boots/basic/male/walk.png` | JaidynReiman, bluecarrot16, Nila122 | OGA-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0 |
+| `pes_pantufa.png` | `feet/slippers/male/walk.png` | bluecarrot16, JaidynReiman, Joe White, Luke Mehl | CC-BY-SA 3.0, GPL 3.0 |
+| `neck_gravata.png` | `neck/tie/necktie/male/walk.png` | JaidynReiman, bluecarrot16, Thane Brimhall (pennomi), laetissima, Makrohn | CC-BY-SA 3.0, GPL 3.0 |
 
 Se este repositorio for publicado publicamente (ex: GitHub publico), mantenha este
 arquivo junto dos PNGs — e a forma de dar credito exigida pelas licencas OGA-BY e

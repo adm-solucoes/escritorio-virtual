@@ -31,10 +31,18 @@
     { id: 'chanel', nome: 'Chanel', arq: 'hair_chanel.png' },
     { id: 'longo', nome: 'Longo', arq: 'hair_longo.png' },
     { id: 'moicano', nome: 'Moicano', arq: 'hair_moicano.png' },
+    { id: 'franja', nome: 'Franja', arq: 'hair_franja.png' },
+  ];
+  // Camada do pescoco - fica por cima da camisa e por baixo da cabeca.
+  const PESCOCOS = [
+    { id: 'nenhum', nome: 'Nada', arq: null },
+    { id: 'gravata', nome: 'Gravata', arq: 'neck_gravata.png' },
   ];
   const SAPATOS = [
     { id: 'tenis', nome: 'Tenis', arq: 'feet.png' },
     { id: 'sandalia', nome: 'Sandalia', arq: 'pes_sandalia.png' },
+    { id: 'bota', nome: 'Bota', arq: 'pes_bota.png' },
+    { id: 'pantufa', nome: 'Pantufa', arq: 'pes_pantufa.png' },
     { id: 'descalco', nome: 'Descalco', arq: null },
   ];
 
@@ -61,17 +69,21 @@
     { id: 'calca', nome: 'Calca', arq: 'legs.png' },
     { id: 'social', nome: 'Calca social', arq: 'baixo_social.png' },
     { id: 'bermuda', nome: 'Bermuda', arq: 'baixo_bermuda.png' },
+    { id: 'saia', nome: 'Saia', arq: 'baixo_saia.png' },
   ];
   const BARBAS = [
     { id: 'nenhuma', nome: 'Sem barba', arq: null },
     { id: 'bigode', nome: 'Bigode', arq: 'barba_bigode.png' },
     { id: 'curta', nome: 'Barba', arq: 'barba_curta.png' },
+    { id: 'chevron', nome: 'Chevron', arq: 'barba_chevron.png' },
+    { id: 'cheia', nome: 'Barba cheia', arq: 'barba_cheia.png' },
   ];
   const CHAPEUS = [
     { id: 'nenhum', nome: 'Sem chapeu', arq: null },
     { id: 'bandana', nome: 'Bandana', arq: 'chapeu_bandana.png' },
     { id: 'bone', nome: 'Bone', arq: 'chapeu_bone.png' },
     { id: 'coco', nome: 'Chapeu coco', arq: 'chapeu_coco.png' },
+    { id: 'faixa', nome: 'Faixa', arq: 'chapeu_faixa.png' },
   ];
 
   const ids = (lista) => lista.map((peca) => peca.id);
@@ -96,6 +108,8 @@
     chapeu: 'nenhum',
     chapeuColor: '#e03a3a',
     shoesStyle: 'tenis',
+    pescoco: 'nenhum',
+    pescocoColor: '#a03028',
   };
 
   // Perfis antigos (salvos no navegador antes de existirem calca/sapato/cor de
@@ -121,6 +135,8 @@
       chapeu: acha(CHAPEUS, ap.chapeu).id,
       chapeuColor: ap.chapeuColor || PADROES.chapeuColor,
       shoesStyle: acha(SAPATOS, ap.shoesStyle).id,
+      pescoco: acha(PESCOCOS, ap.pescoco).id,
+      pescocoColor: ap.pescocoColor || PADROES.pescocoColor,
     };
   }
 
@@ -159,6 +175,8 @@
       chapeu: randomOf(ids(CHAPEUS)),
       chapeuColor: randomOf(ROUPA_COLORS),
       shoesStyle: randomOf(ids(SAPATOS)),
+      pescoco: randomOf(ids(PESCOCOS)),
+      pescocoColor: randomOf(ROUPA_COLORS),
     };
   }
 
@@ -183,7 +201,7 @@
     };
     // uma entrada por forma. A opcao "sem" (careca, descalco, sem jaqueta)
     // nao tem arquivo e nao carrega nada.
-    [].concat(TOPS, JAQUETAS, BOTTOMS, BARBAS, CHAPEUS, CABELOS, SAPATOS).forEach((peca) => {
+    [].concat(TOPS, JAQUETAS, BOTTOMS, BARBAS, CHAPEUS, CABELOS, SAPATOS, PESCOCOS).forEach((peca) => {
       if (peca.arq) nomes[chaveDaPeca(peca)] = peca.arq;
     });
     const entradas = Object.entries(nomes);
@@ -215,7 +233,7 @@
       a.skin, a.shirt, a.bottom, a.shoes, a.hairColor, a.hairStyle,
       a.glasses ? 1 : 0, a.glassesColor,
       a.topStyle, a.jaqueta, a.jaquetaColor, a.bottomStyle, a.barba,
-      a.chapeu, a.chapeuColor, a.shoesStyle,
+      a.chapeu, a.chapeuColor, a.shoesStyle, a.pescoco, a.pescocoColor,
     ].join('|');
   }
 
@@ -240,6 +258,7 @@
     const jaquetaR = recolorir(folhaDe(JAQUETAS, appearance.jaqueta), appearance.jaquetaColor);
     const barbaImg = folhaDe(BARBAS, appearance.barba);
     const chapeuR = recolorir(folhaDe(CHAPEUS, appearance.chapeu), appearance.chapeuColor);
+    const pescocoR = recolorir(folhaDe(PESCOCOS, appearance.pescoco), appearance.pescocoColor);
 
     const out = document.createElement('canvas');
     out.width = SHEET_W;
@@ -254,6 +273,7 @@
     por(pernasR);
     por(pesR);
     por(torsoR);
+    por(pescocoR);   // a gravata cai sobre a camisa, sob a jaqueta
     por(jaquetaR);
     por(cabecaR);
     // barba acompanha a cor do cabelo: ninguem espera escolher as duas
@@ -309,6 +329,7 @@
     HAIR_STYLES,
     CABELOS,
     SAPATOS,
+    PESCOCOS,
     TOPS,
     JAQUETAS,
     BOTTOMS,

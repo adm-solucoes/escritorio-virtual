@@ -45,12 +45,13 @@ const LISTAS = {
   CHAPEUS: 'chapeu',
   CABELOS: 'hairStyle',
   SAPATOS: 'shoesStyle',
+  PESCOCOS: 'pescoco',
 };
 
 const todas = {};
 Object.keys(LISTAS).forEach((nome) => { todas[nome] = catalogo(nome); });
 
-conferir('as sete listas existem no character.js',
+conferir('as oito listas existem no character.js',
   Object.keys(todas).filter((n) => !todas[n]), []);
 
 // ---- cliente x servidor --------------------------------------------------
