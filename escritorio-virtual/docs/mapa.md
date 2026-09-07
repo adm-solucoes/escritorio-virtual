@@ -73,3 +73,20 @@ que esta la - sem a excecao, o pufe saia como cadeira de escritorio.
 
 **Movel de pe unico desenha o tampo ALTO na celula.** Centrado, o tampo cobre o
 proprio pe e a mesa vira um ovo flutuando.
+
+
+## Piso e fonte, medidos na referencia
+
+**O tijolo do corredor era quatro vezes mais fino que o do Gather.** Medindo o
+print `172839` com a cadeira de regua (1 cadeira = 1 tile = ~45px naquele zoom),
+o tijolo dele tem **1 tile de largura por meio de altura**: 2 fiadas por tile e
+junta vertical a cada tile. O nosso era 1/2 x 1/4 - quatro vezes mais tijolo na
+mesma area, e dai a textura miuda e ocupada.
+
+E ele e **chapado**. A nossa versao tinha junta escura, luz na quina de cima e
+sombra na de baixo: com as tres, o tijolo virava azulejo de banheiro biselado.
+Ficou junta quase do tom da base e um fio de luz so.
+
+**A fonte passou de Manrope pra Inter.** Manrope e geometrica e de cara propria;
+a referencia usa uma sans neutra de interface. Vale pro CSS e pros textos
+desenhados no canvas (nome de sala, plaquinha da mesa, balao de contexto).

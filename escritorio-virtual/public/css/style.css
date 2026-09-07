@@ -35,7 +35,7 @@ html, body {
   height: 100%;
   background: var(--fundo);
   color: var(--texto);
-  font-family: 'Manrope', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .tela {
@@ -1403,7 +1403,7 @@ button { font-family: inherit; }
   border-radius: 8px;
   padding: 5px 12px;
   cursor: pointer;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 13px;
 }
 .cal-nav:hover, .cal-hoje-btn:hover { border-color: var(--indigo); }

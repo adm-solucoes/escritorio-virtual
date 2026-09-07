@@ -130,7 +130,7 @@
   // o Gather mostra em cima do movel apontado.
   function dicaContexto(ctx, x, y, texto) {
     ctx.save();
-    ctx.font = '700 9px Manrope, sans-serif';
+    ctx.font = '700 9px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const w = ctx.measureText(texto).width + 16;
@@ -151,7 +151,7 @@
     // ela sai da frente - o contorno da mesa fica, que esse ajuda a mirar.
     const posandoNaMesa = !!(Decorador.pintandoEmCima && Decorador.pintandoEmCima());
     ctx.save();
-    ctx.font = '700 8px Manrope, sans-serif';
+    ctx.font = '700 8px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     mesas.forEach((m) => {
@@ -354,8 +354,8 @@
   // Cada ambiente tem seu proprio chao (duas tonalidades alternadas, em xadrez
   // sutil), no lugar do piso de madeira unico que valia pro escritorio inteiro.
   const CORES_PISO = {
-    tijolo: { base: '#ece0cb', junta: '#c9b696', luz: '#f6efe1', sombra: '#dccdb2' },
-    tijolo_quente: { base: '#e6d3b4', junta: '#c0a37c', luz: '#f2e5cd', sombra: '#d6bf9a' },
+    tijolo: { base: '#ece0cb', junta: '#dccdb1', luz: '#f2e9d8', sombra: '#e4d7c0' },
+    tijolo_quente: { base: '#e6d3b4', junta: '#d3bd9a', luz: '#eeddc2', sombra: '#dcc9a6' },
     cinza: { base: '#d2d6dd', junta: '#adb4c0', luz: '#e4e7ec', sombra: '#c2c7d1' },
     ladrilho: { base: '#e4e7ee', junta: '#b6bece', luz: '#f2f4f8', sombra: '#d3d8e3' },
     carpete_roxo: { base: '#8b7fd0', claro: '#a294de' },
@@ -369,19 +369,30 @@
   // do traco de lineWidth 1 que virava 4 pixels e engrossava o piso todo. Cada
   // tijolo ganha um fio de luz em cima e sombra embaixo, dando relevo.
   function pisoTijolo(ctx, x, y, TILE, c, r, cores) {
-    // A junta tem 2 unidades: com 1 ela vira 1 pixel no canvas 4x e some quando a
-    // tela desenha esse canvas em zoom 2 (metade). Com 2, sobra 1 pixel na tela.
+    // Medido na referencia (172839) com a cadeira de regua - 1 cadeira = 1 tile
+    // = ~45px naquele print: o tijolo tem **1 tile de largura por meio de
+    // altura**, ou seja 2 fiadas por tile e a junta vertical a cada tile.
+    //
+    // A nossa era 1/2 x 1/4 de tile: quatro vezes mais tijolo na mesma area, o
+    // que dava aquela textura miuda e ocupada em vez do ladrilho grande e calmo
+    // do Gather.
+    //
+    // A junta tem 4 unidades (um pixel de arte). Com menos, ela some quando a
+    // tela desenha o canvas 4x em zoom 2.
     q(ctx, x, y, 0, 0, 128, 128, cores.base);
-    for (let i = 0; i < 4; i++) {
-      const fy = i * 32;
-      q(ctx, x, y, 0, fy, 128, 2, cores.junta);
-      q(ctx, x, y, 0, fy + 2, 128, 2, cores.luz);
-      q(ctx, x, y, 0, fy + 29, 128, 3, cores.sombra);
-      // fiada alternada pela linha global, senao a emenda entre tiles aparece
-      const desloc = ((r * 4 + i) % 2 === 0) ? 0 : 32;
-      for (let vx = desloc; vx < 128; vx += 64) {
-        q(ctx, x, y, vx, fy, 2, 32, cores.junta);
-        q(ctx, x, y, vx + 2, fy + 2, 2, 27, cores.luz);
+    for (let i = 0; i < 2; i++) {
+      const fy = i * 64;
+      q(ctx, x, y, 0, fy, 128, 4, cores.junta);
+      // So um fio de luz embaixo da junta. Com luz em cima E sombra embaixo o
+      // tijolo ganhava um bisel de azulejo de banheiro; o da referencia e
+      // chapado, com a junta quase do tom da base.
+      q(ctx, x, y, 0, fy + 4, 128, 4, cores.luz);
+      // Fiada alternada pela LINHA GLOBAL: contando so dentro do tile, a emenda
+      // entre um tile e o vizinho aparecia como uma falha na parede de tijolo.
+      const desloc = ((r * 2 + i) % 2 === 0) ? 0 : 64;
+      for (let vx = desloc; vx < 128 + 64; vx += 128) {
+        if (vx >= 128) continue;
+        q(ctx, x, y, vx, fy, 4, 64, cores.junta);
       }
     }
   }
@@ -467,7 +478,7 @@
     const texto = sala.nome;
 
     ctx.save();
-    ctx.font = '700 10px Manrope, sans-serif';
+    ctx.font = '700 10px Inter, system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     const largura = ctx.measureText(texto).width;
     const padX = 8, ponto = 12, h = 17;
@@ -2730,7 +2741,7 @@
   // (ou fone, quando a pessoa esta numa chamada) e o nome do lado.
   function desenharCracha(ctx, x, y, texto, corStatus, emChamada, isSelf) {
     ctx.save();
-    ctx.font = '700 11px Manrope, sans-serif';
+    ctx.font = '700 11px Inter, system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     const larguraTexto = ctx.measureText(texto).width;
     const padX = 8, icone = 14, h = 19;
