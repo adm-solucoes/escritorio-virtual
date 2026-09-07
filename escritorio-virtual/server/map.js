@@ -57,6 +57,9 @@ const MESA_DIR = 45;
 const MESA_MONITOR_BAIXO = 46;
 const MESA_MONITOR_ESQ = 47;
 const MESA_MONITOR_DIR = 48;
+// Da referencia do lounge (172725) e das salas de huddle (172815).
+const PUFE = 49;         // caminhavel: da pra sentar
+const MESA_REDONDA = 50;
 
 const SOLID_TILES = new Set([
   PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO, ESTANTE,
@@ -65,7 +68,7 @@ const SOLID_TILES = new Set([
   MESA_DUPLA, MESA_NOTEBOOK, PLANTA_GRANDE, VASO_FLORES, CACTO, BEBEDOURO,
   MESA_BAIXO, MESA_ESQ, MESA_DIR,
   MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
-  TV, RELOGIO,
+  TV, RELOGIO, MESA_REDONDA,
 ]);
 
 // Onde o boneco senta ao parar em cima, e pra que lado ele fica virado.
@@ -79,6 +82,7 @@ const DIRECAO_ASSENTO = {
   [CADEIRA_VERMELHA_ESQ]: 'left',
   [CADEIRA_VERMELHA_DIR]: 'right',
   [POLTRONA]: 'up',
+  [PUFE]: 'up',
 };
 const ASSENTOS = new Set(Object.keys(DIRECAO_ASSENTO).map(Number));
 
@@ -106,7 +110,7 @@ const SUPERFICIES = new Set([
   MESA, MESA_MONITOR, MESA_DUPLA, MESA_NOTEBOOK, MESA_REUNIAO, MESA_CENTRO,
   MESA_BAIXO, MESA_ESQ, MESA_DIR,
   MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
-  BALCAO, ESTANTE, ARMARIO,
+  BALCAO, ESTANTE, ARMARIO, MESA_REDONDA,
 ]);
 
 // Camada de cima: coisinhas apoiadas na celula (monitor, caneca, papelada...).
@@ -189,7 +193,7 @@ function buildMap() {
   const linhaV = (c, r0, r1, t) => { for (let r = r0; r <= r1; r++) set(r, c, t); };
 
   // ---------- salas privativas da frente ----------
-  SALAS_FRENTE.forEach(({ c0, c1 }) => {
+  SALAS_FRENTE.forEach(({ c0, c1 }, i) => {
     linhaH(4, c0, c1, PAREDE);
     linhaH(4, c0 + 1, c1 - 1, JANELA);
     linhaH(11, c0, c1, PAREDE);
@@ -201,20 +205,43 @@ function buildMap() {
     set(6, c0 + 3, MESA_MONITOR);
     set(7, c0 + 2, CADEIRA);
     set(7, c0 + 3, CADEIRA);
-    set(5, c1 - 1, PLANTA);
+    // Na referencia (172719) a sala privativa nao e mesa+cadeira num quadrado
+    // vazio: tem quadro na parede, planta de porte e armario. As quatro salas
+    // sao iguais no mapa, entao a variacao vem do `i`: cada uma ganha uma peca
+    // de parede diferente, pra nao parecerem quatro copias.
+    set(5, c0 + 1, [QUADRO, LOUSA, RELOGIO, QUADRO][i % 4]);
+    set(5, c1 - 1, PLANTA_GRANDE);
     set(9, c0 + 1, ESTANTE);
+    set(9, c0 + 2, ESTANTE);
     set(9, c1 - 1, ARMARIO);
+    set(8, c1 - 1, [CACTO, VASO_FLORES, CACTO, VASO_FLORES][i % 4]);
   });
 
   // ---------- patio com lago ----------
   // pedras e arbustos so nas bordas: o anel em volta do lago fica livre
+  // Na referencia (172749) o lago nao e um retangulo azul: e uma poca redonda
+  // **cercada de pedra por todos os lados**, com arbusto em volta e assento
+  // olhando pra ela. O anel de fora fica livre pra dar a volta.
   rect(6, 22, 8, 24, AGUA);
-  [[4, 22], [4, 24], [10, 21], [10, 25], [6, 20], [8, 26]]
+  set(5, 23, AGUA); set(9, 23, AGUA);          // arredonda em cruz
+  // pedra fechando o contorno inteiro do lago
+  // A pedra fecha o contorno da AGUA e mais nada. Fechar o retangulo inteiro
+  // (linha 4 de ponta a ponta) selou o patio por cima - e era por ali que o
+  // jardim de fora se ligava ao resto do mapa. testes/mapa.js pega isso agora.
+  [[4, 23],
+    [5, 22], [5, 24],
+    [6, 21], [6, 25], [7, 21], [7, 25], [8, 21], [8, 25],
+    [9, 22], [9, 24],
+    [10, 23]]
     .forEach(([r, c]) => set(r, c, PEDRA));
-  [[4, 20], [4, 26], [10, 20], [10, 26]]
+  [[4, 20], [4, 26], [10, 20], [10, 26], [6, 19], [8, 27], [5, 27], [9, 19]]
     .forEach(([r, c]) => set(r, c, ARBUSTO));
-  set(7, 20, BANCO);
-  set(7, 26, BANCO);
+  // O anel em volta do lago tem UM tile de largura. Banco e solido: posto ali,
+  // ele parte o caminho e o jardim de fora fica sem ligacao com o resto do mapa.
+  // Poltrona e assento CAMINHAVEL, entao da pra sentar olhando a agua sem
+  // fechar a volta.
+  set(6, 20, POLTRONA); set(8, 20, POLTRONA);
+  set(6, 26, POLTRONA); set(8, 26, POLTRONA);
 
   // ---------- paredes externas ----------
   linhaV(3, 12, 30, PAREDE);
@@ -222,10 +249,21 @@ function buildMap() {
   linhaH(30, 3, 44, PAREDE);
 
   // ---------- corredor ----------
-  [[4, ESTANTE], [5, ESTANTE], [9, CAVALETE], [10, PLANTA],
-    [12, LOUSA], [13, LOUSA], [17, IMPRESSORA], [18, PLANTA],
-    [22, CABIDE], [28, ESTANTE], [29, ESTANTE], [33, IMPRESSORA],
-    [34, PLANTA], [36, LOUSA], [37, LOUSA], [41, ARMARIO], [42, ARMARIO]]
+  // A parede do corredor na referencia (172652) e continua de estante, quadro e
+  // planta - quase nao sobra parede nua. Aqui vai a mesma ideia, alternando
+  // estante / peca de parede / verde pra nao virar um paredao de estante.
+  // As colunas 7, 15, 31 e 39 sao as PORTAS das salas da frente (o vao que o
+    // `set(11, meio, LIVRE)` abre). Movel ali sela a sala: foi o que eu fiz na
+    // primeira tentativa e deixou tres salas inalcancaveis. Ficam livres.
+    [[4, ESTANTE], [5, ESTANTE], [6, QUADRO],
+    [9, CAVALETE], [10, PLANTA], [11, TV],
+    [12, LOUSA], [13, LOUSA], [16, PLANTA_GRANDE],
+    [17, IMPRESSORA], [18, PLANTA], [19, QUADRO], [20, ESTANTE], [21, ESTANTE],
+    [22, CABIDE], [24, RELOGIO], [25, QUADRO], [26, PLANTA_GRANDE],
+    [28, ESTANTE], [29, ESTANTE], [30, QUADRO],
+    [33, IMPRESSORA], [34, PLANTA], [35, TV],
+    [36, LOUSA], [37, LOUSA], [40, PLANTA_GRANDE],
+    [41, ARMARIO], [42, ARMARIO]]
     .forEach(([c, t]) => set(12, c, t));
 
   // ---------- divisorias ----------
@@ -233,14 +271,24 @@ function buildMap() {
   linhaV(33, 17, 29, PAREDE);
 
   // ---------- Lounge ----------
+  // Montado pela referencia (172725): estante cheia no fundo, sofa de um lado,
+  // banco de madeira do outro, mesa redonda no meio e **pufe em cada canto** -
+  // e o pufe que da a cara de lounge, mais que o sofa.
+  linhaH(17, 4, 8, ESTANTE);
   linhaH(20, 6, 8, SOFA_CIMA);
   linhaH(25, 6, 8, SOFA_BAIXO);
   set(22, 7, MESA_CENTRO);
-  set(17, 4, ESTANTE); set(17, 5, ESTANTE);
+  set(21, 5, PUFE); set(21, 9, PUFE);
+  set(24, 5, PUFE); set(24, 9, PUFE);
+  set(22, 5, TAPETE_REDONDO);                    // tapete redondo sob a mesa
+  set(18, 4, PLANTA_GRANDE); set(18, 10, PLANTA_GRANDE);
+  set(26, 4, VASO_FLORES); set(26, 10, PLANTA_GRANDE);
   set(18, 12, PLANTA);
   set(28, 4, PLANTA);
+  set(20, 12, QUADRO); set(24, 12, QUADRO);
   set(27, 11, MESA);
   set(28, 11, CADEIRA);
+  set(29, 8, POLTRONA); set(29, 6, POLTRONA);
 
   // ---------- Time ----------
   // Postos individuais, com vao entre eles. Medindo a referencia
@@ -263,17 +311,33 @@ function buildMap() {
   set(29, 15, PLANTA);
   set(22, 22, MESA_CENTRO);
   set(21, 22, CADEIRA_BAIXO); set(23, 22, CADEIRA);
+  // parede da sala, que estava nua
+  set(17, 16, QUADRO); set(17, 21, ESTANTE); set(17, 22, ESTANTE);
+  set(17, 26, QUADRO); set(17, 30, TV);
+  set(29, 20, PLANTA_GRANDE); set(29, 26, IMPRESSORA); set(29, 31, CACTO);
+  set(22, 15, PLANTA_GRANDE); set(22, 32, PLANTA_GRANDE);
 
   // ---------- Sala de Reuniao ----------
+  // Cadeira VERMELHA em volta da mesa grande: e o que a referencia mostra na
+  // sala de conferencia (172825), e o vermelho e o unico ponto de cor forte no
+  // andar - com cadeira escura a sala sumia no roxo do carpete.
   linhaH(17, 37, 40, LOUSA);
   rect(21, 37, 22, 41, MESA_REUNIAO);
-  linhaH(20, 37, 41, CADEIRA_BAIXO);   // acima da mesa: olham pra baixo
-  linhaH(23, 37, 41, CADEIRA);         // abaixo: olham pra cima
-  set(21, 36, CADEIRA_DIR); set(22, 36, CADEIRA_DIR);   // a esquerda: olham pra direita
-  set(21, 42, CADEIRA_ESQ); set(22, 42, CADEIRA_ESQ);   // a direita: olham pra esquerda
-  set(18, 43, PLANTA);
+  linhaH(20, 37, 41, CADEIRA_VERMELHA_BAIXO);
+  linhaH(23, 37, 41, CADEIRA_VERMELHA);
+  set(21, 36, CADEIRA_VERMELHA_DIR); set(22, 36, CADEIRA_VERMELHA_DIR);
+  set(21, 42, CADEIRA_VERMELHA_ESQ); set(22, 42, CADEIRA_VERMELHA_ESQ);
+  set(17, 42, TV);
+  set(18, 43, PLANTA_GRANDE);
+  // Sala de huddle da referencia (172815): mesa redonda com um assento em cada
+  // lado, num canto separado da mesa grande de conferencia.
+  set(27, 39, MESA_REDONDA);
+  set(26, 39, CADEIRA_BAIXO); set(28, 39, CADEIRA);
+  set(27, 38, CADEIRA_DIR); set(27, 40, CADEIRA_ESQ);
+  set(26, 36, BEBEDOURO); set(26, 43, ARMARIO);
   set(28, 34, PLANTA);
   set(28, 43, ARMARIO);
+  set(28, 37, TAPETE); set(28, 38, TAPETE); set(28, 39, TAPETE);
 
   // ---------- area verde ----------
   [[1, 5], [2, 9], [1, 14], [2, 19], [1, 24], [2, 29], [1, 34], [2, 39], [1, 43],
@@ -416,6 +480,7 @@ module.exports = {
   CADEIRA_VERMELHA_BAIXO, CADEIRA_VERMELHA_ESQ, CADEIRA_VERMELHA_DIR,
   MESA_BAIXO, MESA_ESQ, MESA_DIR,
   MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
+  PUFE, MESA_REDONDA,
   DIRECAO_MESA,
   MESAS_DIRECIONAIS,
   MESAS_DE_TRABALHO,

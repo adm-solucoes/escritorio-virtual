@@ -98,6 +98,8 @@
             giros: [m.CADEIRA_VERMELHA, m.CADEIRA_VERMELHA_DIR, m.CADEIRA_VERMELHA_BAIXO, m.CADEIRA_VERMELHA_ESQ],
           },
           { t: m.POLTRONA, nome: 'Poltrona (senta)' },
+          { t: m.PUFE, nome: 'Pufe (senta)' },
+          { t: m.MESA_REDONDA, nome: 'Mesa redonda' },
           // A direcao da mesa e pro lado que olha quem senta nela - gire ate
           // casar com a cadeira que voce puser do lado. Todas vem vazias:
           // "posto de trabalho" e a que da pra reivindicar e personalizar; a

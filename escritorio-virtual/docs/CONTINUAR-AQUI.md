@@ -254,6 +254,11 @@ posicao livre e **os cinco lugares onde um item novo precisa entrar** (esquecer
 qualquer um falha em silencio). `docs/plano-mesa-pessoal.md` guarda a historia
 das decisoes.
 
+## 7c. O mapa tem documento proprio
+
+`docs/mapa.md` - as tres armadilhas que ja selaram sala aqui (porta de uma
+celula, anel do lago, contorno da agua) e o que `testes/mapa.js` guarda.
+
 ## 8. Checklist rapido antes de dizer "pronto"
 
 - [ ] `node --check` em todo arquivo tocado.

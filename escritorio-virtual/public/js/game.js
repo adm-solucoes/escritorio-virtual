@@ -1333,7 +1333,9 @@
       q(ctx, x, y, 86, 42, 14, 26, '#f0c65a');
       q(ctx, x, y, 22, 68, 82, 3, '#b5ab9b'); // linha de base
 
-    } else if (M.ASSENTOS.has(type) && type !== M.POLTRONA) {
+    } else if (M.ASSENTOS.has(type) && type !== M.POLTRONA && type !== M.PUFE) {
+      // POLTRONA e PUFE tambem sao assento, mas tem desenho proprio - sem estas
+      // duas excecoes eles saiam como cadeira de escritorio.
       const vermelha = type === M.CADEIRA_VERMELHA || type === M.CADEIRA_VERMELHA_BAIXO
         || type === M.CADEIRA_VERMELHA_ESQ || type === M.CADEIRA_VERMELHA_DIR;
       const cores = vermelha
@@ -1456,6 +1458,29 @@
       q(ctx, x, y, 62, 44, 4, 22, '#2c3240'); // ponteiro das horas
       q(ctx, x, y, 64, 62, 22, 4, '#e0705a'); // ponteiro dos minutos
       q(ctx, x, y, 60, 60, 8, 8, '#2c3240'); // eixo
+
+    } else if (type === M.PUFE) {
+      // Pufe do lounge (referencia 172725): saco baixo e redondo, sem pe nem
+      // encosto. O afundado no meio e o que o distingue de uma almofada.
+      const cores = ['#4da3d6', '#a06cd4', '#e0607e', '#3fb08a'];
+      const cor = cores[(c * 3 + r) % cores.length];
+      q(ctx, x, y, 24, 100, 80, 8, 'rgba(45,50,64,0.20)');
+      blob(ctx, x, y, 64, 72, 44, 32, TRACO, 4);
+      blob(ctx, x, y, 64, 70, 40, 28, cor, 4);
+      blob(ctx, x, y, 52, 60, 16, 10, 'rgba(255,255,255,0.28)', 4);  // luz em cima
+      blob(ctx, x, y, 64, 78, 22, 8, 'rgba(0,0,0,0.16)', 4);         // afundado do assento
+
+    } else if (type === M.MESA_REDONDA) {
+      // Mesa redonda das salas de huddle (172815): tampo cinza claro num pe so.
+      // O tampo fica ALTO na celula e o pe aparece embaixo dele. Centrado no
+      // meio, o tampo cobria o proprio pe e a mesa virava um ovo flutuando.
+      q(ctx, x, y, 32, 100, 64, 8, 'rgba(45,50,64,0.20)');
+      q(ctx, x, y, 56, 72, 16, 24, '#8f97a8');                       // pe
+      qArred(ctx, x, y, 44, 92, 40, 8, 3, '#77808f');                // base
+      blob(ctx, x, y, 64, 48, 48, 32, TRACO, 4);
+      blob(ctx, x, y, 64, 46, 44, 28, '#d7dbe6', 4);
+      blob(ctx, x, y, 64, 40, 36, 16, '#eef1f7', 4);                 // luz do tampo
+      blob(ctx, x, y, 64, 58, 40, 8, 'rgba(120,128,143,0.30)', 4);   // quina de baixo
 
     } else if (type === M.TAPETE_REDONDO) {
       // tapete em aneis, em degraus pra ficar pixelado como a referencia
