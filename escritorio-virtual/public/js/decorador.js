@@ -213,47 +213,76 @@
     )));
   }
 
-  // Miniatura: a peca inteira desenhada e encolhida pra caber no quadradinho.
+  // Miniatura. O jeito antigo desenhava a coisa na celula (0,0) de um quadrado
+  // de 64 e torcia pra caber. Nao cabia: a arte de um monitor sobe ate y=-45,
+  // ou seja, pra FORA da celula por cima, e o que aparecia na lista era a tira
+  // de baixo da tela. Por isso os tres monitores viravam a mesma listinha azul.
+  //
+  // Agora a miniatura ENQUADRA: pergunta ao Game a caixa que a arte ocupa de
+  // verdade e encaixa ela no quadrado, centrada e com uma folga. O item e
+  // desenhado num tile 3x maior que o do mapa, senao a arte fina de 128
+  // unidades chega borrada ao ampliar.
+  // A arte dos itens e desenhada numa malha fina fixa (128 unidades = 32px de
+  // mundo), entao NAO adianta pedir um tile maior pra ganhar detalhe: o que
+  // amplia e a escala do contexto, em vizinho-mais-proximo. Que e o certo pra
+  // pixel art de qualquer jeito.
+  const MINI = 132;          // resolucao interna do quadradinho
+
   function desenharItem(canvas, item) {
+    canvas.width = MINI;
+    canvas.height = MINI;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    // fundo liso: o piso quadriculado que ficava atras era ruido puro atras de
+    // uma coisa pequena, e ainda mudava de tom de celula pra celula
+    ctx.fillStyle = '#eceef4';
+    ctx.fillRect(0, 0, MINI, MINI);
+
+    if (ehObjeto(item)) {
+      if (!item.o) { riscoDeBorracha(ctx, MINI); return; }
+      const TILE = M().TILE;
+      enquadrar(ctx, Game.caixaDoItem(item.o), TILE, () => {
+        Game.desenharApoiado(ctx, 0, 0, item.o, TILE);
+      });
+      return;
+    }
+    if (item.t === M().LIVRE) { riscoDeBorracha(ctx, MINI); return; }
+
+    // movel: a peca ocupa celulas inteiras, entao a caixa e a propria peca
     const TILE = M().TILE;
     const w = larguraDe(item);
     const h = alturaDe(item);
-    const escala = 2 / Math.max(w, h);
-
-    canvas.width = TILE * 2;
-    canvas.height = TILE * 2;
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    // centraliza a peca no quadrado da miniatura
-    ctx.translate((TILE * 2 - w * TILE * escala) / 2, (TILE * 2 - h * TILE * escala) / 2);
-    ctx.scale(escala, escala);
-
-    for (let r = 0; r < h; r++) {
-      for (let c = 0; c < w; c++) Game.desenharPiso(ctx, c, r, TILE, 'cinza');
-    }
-
-    if (ehObjeto(item)) {
-      if (item.o) Game.desenharApoiado(ctx, 0, 0, item.o, TILE);
-      else riscoDeBorracha(ctx, TILE);
-      return;
-    }
-    if (item.t === M().LIVRE) {
-      riscoDeBorracha(ctx, TILE);
-      return;
-    }
-
     const grade = gradeFalsa(item.t, w, h);
+    const caixa = { x0: 0, y0: 0, x1: w * 128, y1: h * 128 };
+    enquadrar(ctx, caixa, TILE, () => {
+      ctx.save();
+      ctx.translate(-TILE, -TILE); // a grade falsa tem uma borda de folga
+      for (let r = 1; r <= h; r++) {
+        for (let c = 1; c <= w; c++) Game.desenharObjeto(ctx, c, r, item.t, TILE, grade);
+      }
+      ctx.restore();
+    });
+  }
+
+  // Escala e centraliza `caixa` (em unidades finas de 128 por tile) dentro do
+  // quadradinho, e chama `pintar` com a transformacao ja aplicada.
+  function enquadrar(ctx, caixa, TILE, pintar) {
+    const u = TILE / 128;
+    const cw = Math.max(1, (caixa.x1 - caixa.x0) * u);
+    const ch = Math.max(1, (caixa.y1 - caixa.y0) * u);
+    const escala = (MINI * 0.84) / Math.max(cw, ch);
     ctx.save();
-    ctx.translate(-TILE, -TILE); // a grade falsa tem uma borda de folga
-    for (let r = 1; r <= h; r++) {
-      for (let c = 1; c <= w; c++) Game.desenharObjeto(ctx, c, r, item.t, TILE, grade);
-    }
+    ctx.translate(MINI / 2, MINI / 2);
+    ctx.scale(escala, escala);
+    ctx.translate(-(caixa.x0 * u + cw / 2), -(caixa.y0 * u + ch / 2));
+    pintar();
     ctx.restore();
   }
 
   function riscoDeBorracha(ctx, TILE) {
     ctx.strokeStyle = '#c0392b';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = Math.max(3, TILE / 14);
     ctx.beginPath();
     ctx.moveTo(7, 7); ctx.lineTo(TILE - 7, TILE - 7);
     ctx.moveTo(TILE - 7, 7); ctx.lineTo(7, TILE - 7);

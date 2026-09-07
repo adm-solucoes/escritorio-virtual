@@ -1252,7 +1252,16 @@ button { font-family: inherit; }
 }
 .decor-item:hover { background: var(--painel-alt); }
 .decor-item.ativa { border-color: var(--indigo); background: rgba(79, 70, 229, 0.07); color: var(--texto); }
-.decor-item canvas { width: 40px; height: 40px; image-rendering: pixelated; border-radius: 6px; }
+/* A miniatura e o que a pessoa olha pra escolher: 40px deixava tudo do tamanho
+   de um icone de barra de tarefas. Com 54 da pra ver o que a coisa e. */
+.decor-item canvas {
+  width: 54px;
+  height: 54px;
+  image-rendering: pixelated;
+  border-radius: 8px;
+  border: 1px solid var(--borda);
+  background: #eceef4;
+}
 .decor-vazio { grid-column: 1 / -1; margin: 12px 0; color: var(--texto-fraco); font-size: 13px; text-align: center; }
 
 .decor-dica { margin: 0; font-size: 11px; color: var(--texto-fraco); line-height: 1.4; }

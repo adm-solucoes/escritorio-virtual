@@ -1501,22 +1501,58 @@
   //
   // Medido uma vez por item, na silhueta que acabou de ser desenhada, e
   // guardado: sao 37 itens e a arte nao muda em tempo de execucao.
-  const fundoDaArte = new Map();
+  // A caixa serve pra duas coisas: o `fundo` diz onde nasce a sombra, e a caixa
+  // inteira deixa a miniatura do painel enquadrar o item em vez de cortar a
+  // cabeca dele.
+  const caixaDaArte = new Map();
 
-  function medirFundo(chave, TILE) {
-    if (fundoDaArte.has(chave)) return fundoDaArte.get(chave);
+  // A conversao NAO depende do TILE que se passa por ai: `q` e companhia
+  // desenham a malha fina sempre com U, que e 32px por tile. Passar um TILE
+  // maior move as coisas de celula, mas nao amplia a arte - eu cai nessa
+  // tentando desenhar a miniatura num tile 3x e as caixas sairam 3x menores.
+  function medirCaixa(chave) {
+    if (caixaDaArte.has(chave)) return caixaDaArte.get(chave);
     const lado = bufSilhueta.width;
     const dados = bufSilhueta.getContext('2d').getImageData(0, 0, lado, lado).data;
-    let ultima = -1;
-    for (let py = lado - 1; py >= 0 && ultima < 0; py--) {
+    let x0 = lado, y0 = lado, x1 = -1, y1 = -1;
+    for (let py = 0; py < lado; py++) {
       for (let px = 0; px < lado; px++) {
-        if (dados[(py * lado + px) * 4 + 3] > 12) { ultima = py; break; }
+        if (dados[(py * lado + px) * 4 + 3] > 12) {
+          if (px < x0) x0 = px;
+          if (px > x1) x1 = px;
+          if (py < y0) y0 = py;
+          if (py > y1) y1 = py;
+        }
       }
     }
-    const porUnidade = (TILE / 128) * BUF_ESCALA;
-    const fundo = ultima < 0 ? APOIO : Math.round(ultima / porUnidade) - BUF_OY * 128;
-    fundoDaArte.set(chave, fundo);
-    return fundo;
+    const porUnidade = U * BUF_ESCALA;
+    const emUnidades = (v, folgaTiles) => Math.round(v / porUnidade) - folgaTiles * 128;
+    const caixa = x1 < 0
+      ? { x0: 0, y0: 0, x1: 128, y1: APOIO, fundo: APOIO }
+      : {
+        x0: emUnidades(x0, BUF_OX), x1: emUnidades(x1, BUF_OX),
+        y0: emUnidades(y0, BUF_OY), y1: emUnidades(y1, BUF_OY),
+        fundo: emUnidades(y1, BUF_OY),
+      };
+    caixaDaArte.set(chave, caixa);
+    return caixa;
+  }
+
+  // Pra quem esta fora do desenho do mapa - o painel do decorador. Garante que
+  // a caixa foi medida, desenhando o item uma vez no buffer se ainda nao foi.
+  function caixaDoItem(obj) {
+    if (caixaDaArte.has(obj)) return caixaDaArte.get(obj);
+    const t = OfficeMap.TILE;
+    prepararBuffers(t);
+    const bi = bufItem.getContext('2d');
+    const lado = bufItem.width;
+    bi.setTransform(1, 0, 0, 1, 0, 0);
+    bi.clearRect(0, 0, lado, lado);
+    bi.imageSmoothingEnabled = false;
+    bi.setTransform(BUF_ESCALA, 0, 0, BUF_ESCALA, 0, 0);
+    pintarObjeto(bi, BUF_OX * t, BUF_OY * t, obj, t);
+    tingirSilhueta('#000000');
+    return medirCaixa(obj);
   }
 
   function comVolume(ctx, x, y, TILE, desenhar, chave) {
@@ -1538,7 +1574,7 @@
     tingirSilhueta('#000000');
 
     // a linha onde a coisa encosta na superficie: o fundo da propria arte
-    const fundo = chave === undefined ? APOIO : medirFundo(chave, TILE);
+    const fundo = chave === undefined ? APOIO : medirCaixa(chave).fundo;
     const baseY = y + fundo * u;
 
     ctx.save();
@@ -1561,9 +1597,14 @@
 
     // 2. Espessura: copias escuras descendo pra direita, atras da arte. Sao elas
     // que aparecem como a lateral da coisa.
-    ctx.globalAlpha = 0.13;
-    for (let i = 1; i <= 3; i++) {
-      ctx.drawImage(bufSilhueta, px + i * u, py + i * u, larg, larg);
+    //
+    // Os degraus eram de UMA unidade fina, que a 32px por tile da 0,25px de
+    // mundo: os tres somavam menos de um pixel e a coisa saia chapada. Agora o
+    // degrau e de 2 unidades e sao 5 copias - 10 unidades de lateral, que e o
+    // que se ve numa caneca ou num monitor de verdade.
+    ctx.globalAlpha = 0.11;
+    for (let i = 1; i <= 5; i++) {
+      ctx.drawImage(bufSilhueta, px + i * 2 * u, py + i * 2 * u, larg, larg);
     }
     ctx.restore();
 
@@ -3097,6 +3138,7 @@
     // funcao que desenha no mapa, e redesenhar depois de uma edicao
     desenharObjeto: drawObstacleTile,
     desenharApoiado: drawObjectTile,
+    caixaDoItem,
     desenharPiso: drawFloorTile,
     redesenharMapa: prerenderMap,
     STATUS_COR,
