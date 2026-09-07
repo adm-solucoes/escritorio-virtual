@@ -513,9 +513,30 @@
   // 128x128 por tile - quatro vezes o detalhe que dava pra ter antes.
   const U = 32 / 128; // = 0.25
 
+  // O tamanho de UM pixel da arte, na malha fina.
+  //
+  // Medi as corridas de cor num print do Gather (referencias/11-MESA-...png):
+  // 5, 10, 15, 35, 40, 80 - **todas multiplas de 5**, que e o tamanho de um
+  // pixel dele naquele zoom. Ou seja: a arte dele tem ~32 pixels por tile.
+  // Medindo a nossa do mesmo jeito, a corrida mais comum era **1** - um quinto
+  // de pixel de mundo. Estava tudo desenhado quatro vezes mais fino que a
+  // referencia, e por isso ficava com pixel demais: detalhe miudo, ocupado, sem
+  // o degrau grosso que faz uma coisa parecer sprite.
+  //
+  // Com 128 unidades por tile, 4 unidades = 1 pixel de arte = os 32 por tile
+  // da referencia. Encaixar aqui vale pra tudo de uma vez: qArred, qContorno e
+  // blob desembocam todos em q.
+  const PX = 4;
+  const enc = (v) => Math.round(v / PX) * PX;
+  const encTam = (v) => Math.max(PX, Math.round(v / PX) * PX);
+
   function q(ctx, x, y, ax, ay, aw, ah, cor) {
+    // largura ou altura nao-positiva nao desenha nada. Antes o fillRect ja
+    // engolia isso sozinho; agora que existe um minimo de um pixel, sem esta
+    // guarda um `aw - recuo * 2` negativo do qArred viraria uma lasca visivel.
+    if (aw <= 0 || ah <= 0) return;
     ctx.fillStyle = cor;
-    ctx.fillRect(x + ax * U, y + ay * U, aw * U, ah * U);
+    ctx.fillRect(x + enc(ax) * U, y + enc(ay) * U, encTam(aw) * U, encTam(ah) * U);
   }
 
   // Retangulo com canto arredondado, em unidades finas.
@@ -652,20 +673,22 @@
   }
 
   // Teclado com fileiras de teclas e barra de espaco.
+  // Redesenhado em multiplos de PX depois que a malha virou 32 pixels por tile.
+  // As teclas tinham 4 de largura com passo 6: fora da grade, elas ora caiam no
+  // mesmo pixel da vizinha ora deixavam vao dobrado, e a fileira inteira virava
+  // um borrao. Agora e 4 de tecla, 4 de vao, e a altura fecha certinho em 32:
+  // borda, duas fileiras, barra de espaco, borda.
   function teclado(ctx, x, y, ax, ay, aw) {
-    const ah = 26;
-    qContorno(ctx, x, y, ax, ay, aw, ah, 3, '#7b8699');
-    qArred(ctx, x, y, ax + 1, ay + 1, aw - 2, ah - 2, 3, '#e5eaf2');
-    q(ctx, x, y, ax + 3, ay + 2, aw - 6, 2, '#f9fbfd');       // luz no topo
-    q(ctx, x, y, ax + 3, ay + ah - 4, aw - 6, 2, '#c3cbd8');  // sombra na base
-    for (let fila = 0; fila < 3; fila++) {
-      for (let i = 5; i < aw - 6; i += 6) {
-        q(ctx, x, y, ax + i, ay + 5 + fila * 5, 4, 4, '#b5bfcd');
-        q(ctx, x, y, ax + i, ay + 5 + fila * 5, 4, 1, '#d3dae4');
+    const ah = 32;
+    qContorno(ctx, x, y, ax, ay, aw, ah, 4, '#7b8699');
+    qArred(ctx, x, y, ax + 4, ay + 4, aw - 8, ah - 8, 4, '#e5eaf2');
+    q(ctx, x, y, ax + 4, ay + 4, aw - 8, 4, '#f9fbfd');        // luz no topo
+    for (let fila = 0; fila < 2; fila++) {
+      for (let i = 8; i < aw - 8; i += 8) {
+        q(ctx, x, y, ax + i, ay + 8 + fila * 8, 4, 4, '#b5bfcd');
       }
     }
-    q(ctx, x, y, ax + 12, ay + 20, aw - 24, 4, '#b5bfcd'); // barra de espaco
-    q(ctx, x, y, ax + 12, ay + 20, aw - 24, 1, '#d3dae4');
+    q(ctx, x, y, ax + 16, ay + 24, aw - 32, 4, '#b5bfcd');     // barra de espaco
   }
 
   function mouse(ctx, x, y, ax, ay) {
@@ -1602,9 +1625,9 @@
     // mundo: os tres somavam menos de um pixel e a coisa saia chapada. Agora o
     // degrau e de 2 unidades e sao 5 copias - 10 unidades de lateral, que e o
     // que se ve numa caneca ou num monitor de verdade.
-    ctx.globalAlpha = 0.11;
-    for (let i = 1; i <= 5; i++) {
-      ctx.drawImage(bufSilhueta, px + i * 2 * u, py + i * 2 * u, larg, larg);
+    ctx.globalAlpha = 0.16;
+    for (let i = 1; i <= 2; i++) {
+      ctx.drawImage(bufSilhueta, px + i * PX * u, py + i * PX * u, larg, larg);
     }
     ctx.restore();
 
