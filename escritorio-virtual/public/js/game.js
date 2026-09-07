@@ -3246,6 +3246,7 @@
     desenharApoiado: drawObjectTile,
     caixaDoItem,
     desenharPiso: drawFloorTile,
+    desenharEtiquetaSala,
     redesenharMapa: prerenderMap,
     STATUS_COR,
     STATUS_LABEL,
