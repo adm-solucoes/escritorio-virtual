@@ -302,6 +302,41 @@
         </div>
       </div>
 
+      <!-- Cartao da mesa, no formato do print 13-menu-largar-mesa.png -->
+      <div id="cartao-mesa" class="cartao-mesa oculto">
+        <button id="btn-fechar-cartao-mesa" class="cartao-mesa-fechar" type="button" title="Fechar" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="conta-topo">
+          <div class="cartao-mesa-avatar-caixa">
+            <div id="cartao-mesa-avatar" class="conta-avatar"></div>
+            <span id="cartao-mesa-status" class="cartao-mesa-status"></span>
+          </div>
+          <div class="conta-id">
+            <strong id="cartao-mesa-nome"></strong>
+            <span id="cartao-mesa-sub"></span>
+          </div>
+        </div>
+        <div id="cartao-mesa-acoes" class="conta-acoes">
+          <button id="btn-cartao-editar" class="conta-editar" type="button">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 19.5c0-3.2 3.1-5 7-5s7 1.8 7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Editar perfil
+          </button>
+          <button id="btn-cartao-personalizar" class="conta-mais" type="button" title="Personalizar a mesa" aria-label="Personalizar a mesa">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 20v-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12 13c0-3.3 2.4-6 5.5-6 0 3.3-2.4 6-5.5 6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 15c0-3-2.2-5.5-5-5.5 0 3 2.2 5.5 5 5.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          </button>
+          <button id="btn-cartao-mesa-mais" class="conta-mais" type="button" title="Mais opcoes" aria-label="Mais opcoes">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="5.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="18.5" r="1.6" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div id="cartao-mesa-mais" class="menu-suspenso oculto">
+          <button id="btn-cartao-largar" class="menu-suspenso-item" type="button">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="3.5" y="6.5" width="17" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 13.5v4M18 13.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            Largar minha mesa
+          </button>
+        </div>
+      </div>
+
       <aside id="painel-decorador" class="painel-decorador oculto">
         <div class="decor-topo">
           <h2 id="decor-titulo">Decorador</h2>
@@ -425,6 +460,7 @@
   <script src="js/calendario.js"></script>
   <script src="js/trello.js"></script>
   <script src="js/decorador.js"></script>
+  <script src="js/cartaomesa.js"></script>
   <script src="js/pessoas.js"></script>
   <script src="js/game.js"></script>
   <script src="js/main.js"></script>

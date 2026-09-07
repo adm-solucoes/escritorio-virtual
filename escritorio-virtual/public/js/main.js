@@ -74,6 +74,7 @@
     document.getElementById('menu-conta-mais').classList.add('oculto');
   }
 
+  CartaoMesa.init();
   Auth.init(depoisDoLogin);
   Entrada.init(entrarNoJogo, abrirCriador);
 

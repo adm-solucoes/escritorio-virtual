@@ -271,3 +271,55 @@ resultado: "Largar minha mesa" nunca aparecia, mesmo com mesa. Virou lista.
 | Sem mesa | ok - some, sobra "Sair da conta" |
 | Clicar na mesa | ok - nao abre menu nenhum, so senta e pega |
 | Console | limpo |
+
+
+## 10. O cartao da mesa (o menu, no formato do print)
+
+Terceira tentativa, e a que ficou. O caminho ate aqui:
+
+1. dropdown "Personalizar / Largar" abrindo **na mesa** -> o Caio disse que nao;
+2. mandei o largar pro menu da conta, no trilho -> nao era isso tambem;
+3. **o cartao do print `13-menu-largar-mesa.png`, abrindo ao clicar na mesa.**
+
+O que o print mostra e um cartao de perfil: bolinha com a inicial e a bolinha de
+status, nome, uma linha de contexto, um botao primario largo e **dois botoes de
+icone** - uma plantinha e um "...".
+
+A plantinha e a peca que faltava: no Gather **e ela que decora**. Entao o mapa
+saiu direto:
+
+| No print | Aqui |
+|---|---|
+| bolinha + status | ok - cor da camisa do boneco; o status some se a pessoa esta offline |
+| nome | nome do dono |
+| "Joined on ..." | "Esta e a sua mesa" / "Esta na sede agora" / "Fora da sede agora" |
+| "Edit Profile" | "Editar perfil" |
+| 🌱 | **Personalizar a mesa** - abre o decorador ja na aba "Em cima da mesa" |
+| "..." | "Largar minha mesa" |
+
+Na mesa de outra pessoa o cartao vira so identificacao: a fileira de botoes some
+inteira, porque nao ha nada que voce possa fazer com a mesa dela.
+
+**Clicar na propria mesa nao larga mais.** Com o cartao abrindo no clique, largar
+no clique seria uma armadilha - voce clicaria pra ver a mesa e perderia ela.
+Largar mudou de lugar: e o "..." do cartao.
+
+### Um bug de sobreposicao
+
+O menuzinho do "..." saia **por cima da fileira de botoes** (`bottom: 8px`
+dentro do cartao). Resultado: com ele aberto, clicar na plantinha batia no menu,
+nao no botao - e parecia que a plantinha nao funcionava. Agora ele sai encostado
+**fora** do cartao: pra baixo no cartao da mesa, pra cima no da conta (que vive
+colado no rodape).
+
+### Resultado dos testes (07/09/2026)
+
+| O que | Resultado |
+|---|---|
+| Clicar em mesa livre | ok - pega a mesa, anda ate a cadeira e abre o cartao |
+| Clicar na propria mesa | ok - abre o cartao, sem largar |
+| Cartao no formato do print | ok - avatar, status, nome, primario e os dois icones |
+| Plantinha | ok - abre o decorador na aba "Em cima da mesa" (11 itens) |
+| "..." | ok - "Largar minha mesa", agora sem cobrir os botoes |
+| Mesa de outra pessoa | ok - so identificacao, sem botao nenhum |
+| Console | limpo |

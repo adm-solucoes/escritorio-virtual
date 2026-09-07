@@ -48,6 +48,12 @@
     const tenho = Boolean(minhaMesa());
     ouvintesDaMinhaMesa.forEach((fn) => fn(tenho));
 
+    if (esperandoMesa) {
+      const m = mesaPorCelula.get(esperandoMesa.col + ',' + esperandoMesa.row);
+      if (m) CartaoMesa.abrir(m, esperandoMesa.telaX, esperandoMesa.telaY);
+      esperandoMesa = null;
+    }
+
     // O mapa e pre-renderizado, entao so vale redesenhar quando as coisas em
     // cima das mesas realmente mudaram (reivindicar mesa nao mexe no desenho).
     if (chaveDosItens() !== itensAntes) prerenderMap();
@@ -159,7 +165,7 @@
       const a = areaDaMesa(celulas);
       contornoMesa(ctx, celulas, 'rgba(255,255,255,0.95)', 2);
       const texto = !m ? 'Mesa livre'
-        : (m.donoUid === selfUid ? 'Sua mesa (clique pra largar)' : 'Mesa de ' + m.donoNome);
+        : (m.donoUid === selfUid ? 'Sua mesa' : 'Mesa de ' + m.donoNome);
       dicaContexto(
         ctx,
         ((a.c0 + a.c1 + 1) / 2) * TILE,
@@ -2174,7 +2180,7 @@
     const col = Math.floor(clickX / TILE);
     const row = Math.floor(clickY / TILE);
     if (OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col])) {
-      cliqueNaMesa(col, row);
+      cliqueNaMesa(col, row, e.clientX, e.clientY);
       return;
     }
 
@@ -2207,16 +2213,32 @@
     moverPara(lugar[0] * TILE + TILE / 2, lugar[1] * TILE + TILE / 2);
   }
 
-  // Clicar numa mesa faz o obvio: se esta livre, ela vira sua e voce vai sentar
-  // nela. Clicar na sua de novo continua largando, como antes.
-  function cliqueNaMesa(col, row) {
+  // Clicar numa mesa livre faz as duas coisas de uma vez: ela vira sua e o
+  // boneco vai sentar nela. Em qualquer caso abre o cartao da mesa.
+  //
+  // Clicar de novo NAO larga mais: largar mudou de lugar, foi pro "..." do
+  // cartao. Com o cartao abrindo no clique, largar no clique tambem seria uma
+  // armadilha - voce clicaria pra ver a mesa e perderia ela.
+  function cliqueNaMesa(col, row, telaX, telaY) {
     const ja = mesaPorCelula.get(col + ',' + row);
-    if (ja && ja.donoUid !== selfUid) return; // de outra pessoa: o hover ja diz de quem e
 
-    const celulas = ja ? ja.celulas : OfficeMap.celulasDaMesa(col, row);
+    if (ja) {
+      if (ja.donoUid === selfUid) irParaMesa(ja.celulas);
+      CartaoMesa.abrir(ja, telaX, telaY);
+      return;
+    }
+
+    const celulas = OfficeMap.celulasDaMesa(col, row);
     if (celulas) irParaMesa(celulas);
     Network.reivindicarMesa(col, row);
+    // O cartao so abre quando o servidor confirmar: se a mesa tiver sido pega
+    // por outra pessoa no meio do caminho, ele nao pode prometer o que nao
+    // aconteceu.
+    esperandoMesa = { col, row, telaX, telaY };
   }
+
+  // Preenchido por `cliqueNaMesa`, consumido na proxima lista de mesas.
+  let esperandoMesa = null;
 
   function temLinhaDeVisao(x0, y0, x1, y1) {
     const dist = Math.hypot(x1 - x0, y1 - y0);

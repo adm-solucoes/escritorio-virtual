@@ -235,11 +235,58 @@ button { font-family: inherit; }
 }
 .conta-mais:hover { background: var(--hover); }
 
+/* Cartao da mesa: o mesmo desenho do cartao da conta, mas solto na tela - ele
+   nasce no ponto onde a mesa foi clicada. */
+.cartao-mesa {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  width: 250px;
+  padding-top: 4px;
+  border-radius: 14px;
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  box-shadow: var(--sombra-painel);
+}
+.cartao-mesa-fechar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--texto-fraco);
+  cursor: pointer;
+}
+.cartao-mesa-fechar:hover { background: var(--hover); }
+.cartao-mesa-avatar-caixa { position: relative; flex: none; }
+/* bolinha de status encostada na borda do avatar, como no print */
+.cartao-mesa-status {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--painel);
+  background: #63d9c4;
+}
+.cartao-mesa .conta-topo { padding-right: 34px; }
+
 /* O menuzinho escuro que sai do "..." - e o do print da referencia. */
+/* Sai encostado no cartao, nunca POR CIMA da fileira de botoes - senao ele
+   cobre a plantinha e o proprio "..." e o clique seguinte bate nele. O cartao
+   da conta vive colado no rodape, entao o dele abre pra cima. */
 .menu-suspenso {
   position: absolute;
   right: 10px;
-  bottom: 8px;
+  bottom: auto;
+  top: calc(100% + 6px);
   z-index: 5;
   min-width: 178px;
   padding: 5px;
@@ -263,6 +310,10 @@ button { font-family: inherit; }
   cursor: pointer;
 }
 .menu-suspenso-item:hover { background: rgba(255, 255, 255, 0.10); }
+.menu-conta .menu-suspenso {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
 
 /* ============ Tela de entrada (o "Welcome to..." da referencia) ============ */
 #tela-entrada {
