@@ -16,7 +16,11 @@ const ARQUIVO = path.join(PASTA, 'google.json');
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const SITE_URL = (process.env.SITE_URL || 'http://localhost:3500').replace(/\/$/, '');
+// O Google exige que o redirect URI bata exatamente com o endereco publico.
+// RENDER_EXTERNAL_URL e preenchido sozinho pela hospedagem, entao no Render nao
+// precisa configurar nada; SITE_URL so e necessario com dominio proprio.
+const SITE_URL = (process.env.SITE_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3500')
+  .replace(/\/$/, '');
 const REDIRECT_URI = SITE_URL + '/api/google/callback';
 
 // So leitura: a sede mostra a agenda, nao escreve nela.

@@ -122,6 +122,34 @@ Se preferir subir na mao (sem Blueprint): runtime Node, build `npm ci`, start
 
 > **Nao defina `SEM_LOGIN` em producao.** O codigo ja ignora, mas nao custa.
 
+### Calendario e Trello: precisam de credenciais
+
+As duas abas **nao funcionam so com o deploy**. Elas dependem de chaves que o
+Blueprint pede na hora de criar (ficam como `sync: false`, entao nenhum segredo
+entra no repositorio). Deixar em branco nao quebra nada: a aba abre com um aviso
+de "nao configurado".
+
+| Variavel | Onde pegar |
+|---|---|
+| `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` | Google Cloud > APIs e servicos > Credenciais > **Criar credenciais > ID do cliente OAuth**, tipo "Aplicativo da Web". Sao as mesmas credenciais que o CRM ja usa. |
+| `TRELLO_API_KEY` e `TRELLO_TOKEN` | https://trello.com/power-ups/admin - a chave aparece na pagina e o token sai do link "Token" ao lado dela |
+| `TRELLO_BOARD_ID` | abra o quadro no Trello e acrescente `.json` no fim da URL: o campo `id` do topo do arquivo |
+
+No Google Cloud, em **URIs de redirecionamento autorizados**, cadastre:
+
+```
+https://SEU-ENDERECO.onrender.com/api/google/callback
+```
+
+Sem isso o Google recusa a conexao com `redirect_uri_mismatch`. Nao precisa
+definir `SITE_URL`: o codigo usa o `RENDER_EXTERNAL_URL` que a hospedagem
+preenche sozinha. So faz falta se um dia a sede ganhar dominio proprio.
+
+> **Atencao no plano free:** a conexao com o Google fica guardada em
+> `server/data/google.json`, e sem disco persistente ela **some a cada deploy ou
+> restart** - cada pessoa teria que reconectar a agenda. O Trello nao sofre
+> disso, porque le com o token do servidor e nao guarda nada por pessoa.
+
 ## 3. Disco: a pegadinha do plano free
 
 `server/data/` guarda **contas, senhas e a decoracao do mapa** em JSON no disco.
