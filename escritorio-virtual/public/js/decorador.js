@@ -26,7 +26,7 @@
           { t: m.MESA, nome: 'Mesa 1x1' },
           { t: m.BALCAO, w: 3, h: 1, nome: 'Balcao 3x1' },
           { t: m.MESA_CENTRO, nome: 'Mesa de centro' },
-          { t: m.MESA_MONITOR, nome: 'Mesa pronta (monitor)' },
+          { t: m.MESA_MONITOR, nome: 'Posto de trabalho' },
         ],
       },
       {
@@ -57,15 +57,17 @@
           { t: m.CADEIRA_VERMELHA_DIR, nome: 'Vermelha →' },
           { t: m.POLTRONA, nome: 'Poltrona (senta)' },
           // Mesas por direcao: a seta e pro lado que olha quem senta nela, entao
-          // e so casar com a cadeira que voce puser do lado.
-          { t: m.MESA_MONITOR, nome: 'Mesa c/ PC ↑' },
-          { t: m.MESA_MONITOR_BAIXO, nome: 'Mesa c/ PC ↓' },
-          { t: m.MESA_MONITOR_ESQ, nome: 'Mesa c/ PC ←' },
-          { t: m.MESA_MONITOR_DIR, nome: 'Mesa c/ PC →' },
-          { t: m.MESA, nome: 'Mesa vazia ↑' },
-          { t: m.MESA_BAIXO, nome: 'Mesa vazia ↓' },
-          { t: m.MESA_ESQ, nome: 'Mesa vazia ←' },
-          { t: m.MESA_DIR, nome: 'Mesa vazia →' },
+          // e so casar com a cadeira que voce puser do lado. Todas vem vazias -
+          // "posto de trabalho" e a que da pra reivindicar e personalizar; a
+          // "mesa" comum e so movel.
+          { t: m.MESA_MONITOR, nome: 'Posto ↑ (da pra pegar)' },
+          { t: m.MESA_MONITOR_BAIXO, nome: 'Posto ↓ (da pra pegar)' },
+          { t: m.MESA_MONITOR_ESQ, nome: 'Posto ← (da pra pegar)' },
+          { t: m.MESA_MONITOR_DIR, nome: 'Posto → (da pra pegar)' },
+          { t: m.MESA, nome: 'Mesa ↑' },
+          { t: m.MESA_BAIXO, nome: 'Mesa ↓' },
+          { t: m.MESA_ESQ, nome: 'Mesa ←' },
+          { t: m.MESA_DIR, nome: 'Mesa →' },
           { t: m.MESA_NOTEBOOK, nome: 'Mesa pronta (notebook)' },
           { t: m.IMPRESSORA, nome: 'Impressora' },
           { t: m.LOUSA, nome: 'Lousa' },
@@ -484,7 +486,17 @@
     return estaPintando() && ehObjeto(selecionado) && !!selecionado.o;
   }
 
+  // Atalho do menu da mesa: abre ja na aba certa, com a busca limpa, pra quem
+  // clicou em "Personalizar" nao cair numa aba de parede.
+  function abrirEmCima() {
+    abaAtual = 'emcima';
+    filtro = '';
+    if (buscaEl) buscaEl.value = '';
+    abrir();
+  }
+
   window.Decorador = {
     init, estaPintando, pintarEm, podeColocarEm, desenharPreviaNoMapa, pintandoEmCima,
+    abrirEmCima,
   };
 })();

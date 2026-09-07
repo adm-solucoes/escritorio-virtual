@@ -45,6 +45,7 @@
       (m.itens || []).forEach(([c, r, o]) => itensDeMesa.set(c + ',' + r, o));
     });
     if (avisarMinhaMesa) avisarMinhaMesa(Boolean(minhaMesa()));
+
     // O mapa e pre-renderizado, entao so vale redesenhar quando as coisas em
     // cima das mesas realmente mudaram (reivindicar mesa nao mexe no desenho).
     if (chaveDosItens() !== itensAntes) prerenderMap();
@@ -753,6 +754,9 @@
 
   // Monitor visto por tras: e o que se ve numa mesa virada pra cima da tela
   // (quem usa senta acima e a tela olha pra ele, nao pra nos).
+  // Estes dois nao sao mais usados pela mesa (ela vem vazia agora) - ficam pro
+  // catalogo de itens, onde monitor de perfil e de costas fazem sentido pra quem
+  // senta de lado. Ver docs/plano-mesa-pessoal.md, secao 4.
   function monitorDeCostas(ctx, x, y, ax, ay, aw, ah) {
     qContorno(ctx, x, y, ax, ay, aw, ah, 4, '#4e5a72');
     qArred(ctx, x, y, ax + 1, ay + 1, aw - 2, ah - 2, 4, '#aab3c4');
@@ -842,40 +846,13 @@
       // ...e so na fileira da FRENTE (`b.baixo` = nao tem mesa embaixo). O
       // monitor dessa fileira ja avanca pro tile de tras, entao equipar as duas
       // daria dois computadores empilhados na mesma mesa.
-      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 3 === 1 && b.baixo;
       // gavetas ficam do lado de quem usa: numa mesa virada pra cima elas
       // caem atras da placa e nao aparecem
       tampoDeMesa(ctx, x, y, TILE, b, direcao !== 'down');
 
-      if (temPc && direcao === 'down') {
-        monitorDeCostas(ctx, x, y, 34, 10, 60, 34);
-        caneca(ctx, x, y, 12, 34, '#e0705a');
-
-      } else if (temPc && direcao === 'left') {
-        // quem usa senta a direita: monitor encostado a esquerda, tela pra ca
-        monitorDeLado(ctx, x, y, 14, 8, 40, true);
-        teclado(ctx, x, y, 56, 26, 46);
-        mouse(ctx, x, y, 106, 28);
-
-      } else if (temPc && direcao === 'right') {
-        monitorDeLado(ctx, x, y, 99, 8, 40, false);
-        teclado(ctx, x, y, 26, 26, 46);
-        mouse(ctx, x, y, 6, 28);
-
-      } else if (temPc) {
-        // canonica: quem usa senta embaixo e ve a tela de frente. O monitor
-        // avanca pro tile de cima. Numa bancada de 2 fileiras isso e o certo (o
-        // monitor fica no fundo da placa); ja se o vizinho for outra mesa, o
-        // monitor cobriria a placa dela, entao encolhe pra caber no tile.
-        const acima = tiles[r - 1] && tiles[r - 1][c];
-        const outraMesaAcima = acima !== undefined && acima !== type && M.SUPERFICIES.has(acima);
-        if (outraMesaAcima) monitor(ctx, x, y, 26, 2, 76, 50);
-        else monitor(ctx, x, y, 20, -18, 88, 68);
-        teclado(ctx, x, y, 30, 60, 68);
-        mouse(ctx, x, y, 104, 62);
-      }
-      // Sem monitor, a mesa e so superficie: o que vai em cima entra pela
-      // camada de objetos.
+      // A mesa vem VAZIA de proposito. O computador desenhado dentro do tile
+      // era o mesmo pra todo mundo e nao dava pra tirar - agora quem senta poe o
+      // que quiser pela camada de objetos, que e o que faz a mesa ser dela.
 
     } else if (type === M.MESA_REUNIAO) {
       const b = bordasDoMovel(tiles, r, c, type);
@@ -2195,11 +2172,48 @@
     const col = Math.floor(clickX / TILE);
     const row = Math.floor(clickY / TILE);
     if (OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col])) {
-      Network.reivindicarMesa(col, row);
+      cliqueNaMesa(col, row);
       return;
     }
 
     moverPara(clickX, clickY);
+  }
+
+  // Onde sentar nessa mesa: a cadeira dela, se tiver. Senao, a celula
+  // caminhavel mais perto - melhor encostar na mesa do que nao ir a lugar nenhum.
+  function lugarDaMesa(celulas) {
+    const daMesa = new Set(celulas.map(([c, r]) => c + ',' + r));
+    const vizinhas = [];
+    celulas.forEach(([c, r]) => {
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dc, dr]) => {
+        const nc = c + dc;
+        const nr = r + dr;
+        if (daMesa.has(nc + ',' + nr)) return;
+        if (!OfficeMap.isTileWalkable(nc, nr)) return;
+        vizinhas.push([nc, nr]);
+      });
+    });
+    if (!vizinhas.length) return null;
+    const cadeira = vizinhas.find(([c, r]) => OfficeMap.ASSENTOS.has(OfficeMap.tiles[r][c]));
+    return cadeira || vizinhas[0];
+  }
+
+  function irParaMesa(celulas) {
+    const lugar = lugarDaMesa(celulas);
+    if (!lugar) return;
+    const TILE = OfficeMap.TILE;
+    moverPara(lugar[0] * TILE + TILE / 2, lugar[1] * TILE + TILE / 2);
+  }
+
+  // Clicar numa mesa faz o obvio: se esta livre, ela vira sua e voce vai sentar
+  // nela. Clicar na sua de novo continua largando, como antes.
+  function cliqueNaMesa(col, row) {
+    const ja = mesaPorCelula.get(col + ',' + row);
+    if (ja && ja.donoUid !== selfUid) return; // de outra pessoa: o hover ja diz de quem e
+
+    const celulas = ja ? ja.celulas : OfficeMap.celulasDaMesa(col, row);
+    if (celulas) irParaMesa(celulas);
+    Network.reivindicarMesa(col, row);
   }
 
   function temLinhaDeVisao(x0, y0, x1, y1) {

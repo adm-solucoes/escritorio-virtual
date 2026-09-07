@@ -195,3 +195,45 @@ No navegador:
 | Largar a mesa pelo perfil | ok - os 3 itens sumiram junto |
 | Painel da diretoria | ok - segue com as 8 abas e titulo "Decorador" |
 | Console | limpo |
+
+
+## 8. A mesa vem vazia, e clicar nela ja senta e pega
+
+O Caio pediu pra **tirar os computadores antigos**: o monitor/teclado/mouse eram
+desenhados dentro do tile da mesa, iguais pra todo mundo e impossiveis de tirar.
+Com eles ali, personalizar a mesa era so acrescentar tralha em cima de uma
+tralha que ninguem escolheu.
+
+Agora `MESA_MONITOR` desenha **so a placa**. O tipo continua existindo porque e
+ele que marca "isto e um posto de trabalho" (e o que da pra reivindicar,
+`MESAS_DE_TRABALHO`) - o que sumiu foi a arte embutida. Quem senta poe o que
+quiser pela camada de objetos.
+
+Os nomes do catalogo do decorador foram atras: "Mesa pronta (monitor)" virou
+"Posto de trabalho", e "Mesa c/ PC ↑" virou "Posto ↑ (da pra pegar)" - prometer
+um PC que nao vem mais seria mentira.
+
+`monitorDeCostas` e `monitorDeLado` ficaram sem uso na mesa. Nao foram apagadas:
+sao a arte de monitor de perfil e de costas que o catalogo de itens (secao 4)
+vai usar pra quem senta de lado.
+
+**Clicar numa mesa livre faz as duas coisas de uma vez**: a mesa vira sua e o
+boneco anda ate a cadeira dela. `lugarDaMesa` procura um assento colado no
+movel; sem assento, a celula caminhavel mais perto.
+
+### Resultado dos testes (07/09/2026)
+
+| O que | Resultado |
+|---|---|
+| Mesas do mapa | ok - todas vazias, so a placa |
+| Um clique numa mesa livre | ok - virou "15,18" e o boneco foi sentar em 16,20 |
+| Clicar na propria mesa de novo | ok - larga, como antes |
+| Clicar na mesa de outro | ok - nao faz nada |
+| Console | limpo |
+
+### Pendente
+
+O menu que aparece ao clicar na mesa. Eu tinha feito um dropdown com
+"Personalizar" e "Largar", e o Caio disse que **nao e isso** - tem uma
+referencia com o menu certo. O dropdown foi removido inteiro (nao ficou codigo
+morto); personalizar segue pelo botao de pincel. Falta saber qual print e.
