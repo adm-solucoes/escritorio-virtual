@@ -10,6 +10,8 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+// so pelo segredo que assina o `state` do OAuth (o mesmo das sessoes)
+const usuarios = require('./usuarios');
 
 const PASTA = path.join(__dirname, 'data');
 const ARQUIVO = path.join(PASTA, 'google.json');
@@ -28,10 +30,39 @@ const ESCOPO = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // uid da conta da sede -> { accessToken, refreshToken, expiraEm, email }
 const contas = new Map();
-// state do OAuth -> { uid, criadoEm }, pra impedir que um site qualquer complete
-// a conexao no lugar da pessoa
-const estados = new Map();
+// O `state` do OAuth impede que um site qualquer complete a conexao no lugar da
+// pessoa. Ele e **assinado**, nao guardado: se fosse um Map em memoria, um
+// restart do servidor no meio do fluxo derrubaria a conexao (e em hospedagem
+// sem disco isso acontece a toa). Assinado, ele sobrevive ao restart e continua
+// impossivel de forjar sem o segredo.
 const ESTADO_VALIDADE_MS = 10 * 60 * 1000;
+
+function assinarEstado(dados) {
+  return crypto.createHmac('sha256', usuarios.getSegredoSessao()).update(dados).digest('hex');
+}
+
+function criarEstado(uid) {
+  const corpo = Buffer.from(uid + '.' + Date.now()).toString('base64url');
+  return corpo + '.' + assinarEstado(corpo);
+}
+
+// Devolve o uid, ou null se a assinatura nao bater ou o pedido tiver vencido.
+function lerEstado(state) {
+  if (typeof state !== 'string') return null;
+  const corte = state.lastIndexOf('.');
+  if (corte < 1) return null;
+
+  const corpo = state.slice(0, corte);
+  const assinatura = state.slice(corte + 1);
+  const esperada = assinarEstado(corpo);
+  if (assinatura.length !== esperada.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(assinatura), Buffer.from(esperada))) return null;
+
+  const [uid, criadoEm] = Buffer.from(corpo, 'base64url').toString('utf8').split('.');
+  if (!uid || !criadoEm) return null;
+  if (Date.now() - Number(criadoEm) > ESTADO_VALIDADE_MS) return null;
+  return uid;
+}
 
 function configurado() {
   return Boolean(CLIENT_ID && CLIENT_SECRET);
@@ -77,9 +108,7 @@ function desconectar(uid) {
 // ---------- fluxo de OAuth ----------
 
 function urlDeConsentimento(uid) {
-  const state = crypto.randomBytes(24).toString('hex');
-  estados.set(state, { uid, criadoEm: Date.now() });
-  limparEstadosVelhos();
+  const state = criarEstado(uid);
 
   const p = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -94,20 +123,9 @@ function urlDeConsentimento(uid) {
   return 'https://accounts.google.com/o/oauth2/v2/auth?' + p.toString();
 }
 
-function limparEstadosVelhos() {
-  const agora = Date.now();
-  estados.forEach((v, k) => {
-    if (agora - v.criadoEm > ESTADO_VALIDADE_MS) estados.delete(k);
-  });
-}
-
 async function trocarCodigoPorToken(code, state) {
-  const guardado = estados.get(state);
-  if (!guardado) return { erro: 'Pedido de conexao expirado ou invalido. Tente de novo.' };
-  estados.delete(state);
-  if (Date.now() - guardado.criadoEm > ESTADO_VALIDADE_MS) {
-    return { erro: 'Pedido de conexao expirado. Tente de novo.' };
-  }
+  const uid = lerEstado(state);
+  if (!uid) return { erro: 'Pedido de conexao expirado ou invalido. Tente de novo.' };
 
   const resp = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -128,14 +146,14 @@ async function trocarCodigoPorToken(code, state) {
   }
 
   const email = await buscarEmail(dados.access_token);
-  contas.set(guardado.uid, {
+  contas.set(uid, {
     accessToken: dados.access_token,
     refreshToken: dados.refresh_token,
     expiraEm: Date.now() + (dados.expires_in || 3600) * 1000,
     email,
   });
   salvar();
-  return { ok: true, uid: guardado.uid };
+  return { ok: true, uid };
 }
 
 async function buscarEmail(accessToken) {
