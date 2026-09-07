@@ -597,12 +597,9 @@
     // outra) sao solidos - no meio fica vazio, que e onde entram as pernas de
     // quem senta. Encher a faixa inteira de gaveta, como eu tinha feito, some
     // com o piso e a mesa vira um paredao.
-    // O tampo come mais da celula: com 52 a mesa de 1 fileira virava uma
-    // tirinha. O vao embaixo encolhe na mesma medida - ele so precisa dar pra
-    // ver o piso e encaixar a gaveteira.
-    const FIM_TAMPO = 68;                  // onde a superficie acaba
+    const FIM_TAMPO = 52;                  // onde a superficie acaba
     const FIM_LIP = FIM_TAMPO + 10;        // a quina clara do tampo
-    const CHAO = 108;                      // onde os moveis encostam no piso
+    const CHAO = 104;                      // onde os moveis encostam no piso
 
     // (0) tampo
     q(ctx, x, y, 0, topo, 128, FIM_TAMPO - topo, MESA_TAMPO);
@@ -629,8 +626,8 @@
         q(ctx, x, y, gx + 2, gy, gw - 4, 3, '#bcc4d6');
         q(ctx, x, y, gx + gw - 7, gy, 5, gh + 1, '#79839c');
         for (let i = 0; i < 3; i++) {
-          const dy = gy + 4 + i * 9;
-          q(ctx, x, y, gx + 6, dy, gw - 16, 6, '#ccd2df');
+          const dy = gy + 6 + i * 12;
+          q(ctx, x, y, gx + 6, dy, gw - 16, 8, '#ccd2df');
           q(ctx, x, y, gx + 6, dy, gw - 16, 2, '#e8ebf2');
           q(ctx, x, y, gx + 13, dy + 4, gw - 30, 2, '#6b748f');
         }
