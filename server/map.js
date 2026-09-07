@@ -213,12 +213,21 @@ function buildMap() {
   set(28, 11, CADEIRA);
 
   // ---------- Time ----------
-  [[19, 17], [19, 25], [25, 17], [25, 25]].forEach(([r, c]) => {
-    // Bancada de 2 fileiras: uma placa so, com gente dos dois lados (e o que a
-    // referencia do Gather mostra). Quem da direcao aqui e a cadeira.
-    rect(r, c, r + 1, c + 2, MESA_MONITOR);
-    linhaH(r - 1, c, c + 2, CADEIRA_BAIXO);
-    linhaH(r + 2, c, c + 2, CADEIRA);
+  // Postos individuais, com vao entre eles. Medindo a referencia
+  // (referencias/10-MESA-closeup-gavetas-e-pe.png), UMA pessoa fica numa mesa de
+  // ~4 tiles de largura. A versao anterior punha 6 pessoas numa placa de 3 tiles
+  // - meio tile por pessoa -, o que fazia o conjunto parecer uma mesa gigante de
+  // refeitorio em vez das baias do Gather.
+  [18, 24].forEach((r) => {
+    [15, 20, 25, 30].forEach((c) => {
+      // 2 de largura por 1 de profundidade: a mesa da referencia e bem mais
+      // larga do que funda. Com 2x2 ela virava um quadrado.
+      // 3 blocos de largura por 2 de profundidade (medido pelo Caio na
+      // referencia). As 2 fileiras dao a profundidade; o tampo da fileira da
+      // frente e curto porque a de tras ja entregou uma celula inteira.
+      rect(r, c, r + 1, c + 2, MESA_MONITOR);
+      set(r + 2, c + 1, CADEIRA);
+    });
   });
   set(17, 31, PLANTA);
   set(29, 15, PLANTA);

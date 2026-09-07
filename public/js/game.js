@@ -99,6 +99,32 @@
     }
 
     // Fantasma da celula que vai receber o objeto (decorador aberto).
+    // A "malha": com um item de apoiar na mao, as superficies livres acendem uma
+    // gradinha discreta, mostrando onde da pra pousar a coisa. E o equivalente
+    // do Gather deixar a mesa virar um tabuleiro na hora de decorar.
+    if (Decorador.pintandoEmCima && Decorador.pintandoEmCima()) {
+      const M = OfficeMap;
+      const vista = tamanhoDaVista();
+      const c0 = Math.max(0, Math.floor(camX / TILE));
+      const c1 = Math.min(M.COLS - 1, Math.ceil((camX + vista.w) / TILE));
+      const r0 = Math.max(0, Math.floor(camY / TILE));
+      const r1 = Math.min(M.ROWS - 1, Math.ceil((camY + vista.h) / TILE));
+      ctx.save();
+      ctx.lineWidth = 1;
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          if (!M.SUPERFICIES.has(M.tiles[r][c])) continue;
+          const ocupada = M.objetos[r] && M.objetos[r][c];
+          ctx.strokeStyle = ocupada ? 'rgba(248,180,84,0.55)' : 'rgba(120,220,160,0.55)';
+          // a gradinha cobre so o tampo: na fileira da frente de uma mesa e uma
+          // tirinha, e e exatamente ali que a coisa vai pousar
+          const alto = fimDoTampo(M.tiles, c, r) * U;
+          ctx.strokeRect(c * TILE + 2.5, r * TILE + 2.5, TILE - 5, Math.max(6, alto - 5));
+        }
+      }
+      ctx.restore();
+    }
+
     if (celulaAlvo && Decorador.estaPintando()) {
       const podeAqui = Decorador.podeColocarEm(celulaAlvo.col, celulaAlvo.row);
       ctx.save();
@@ -190,7 +216,7 @@
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const obj = OfficeMap.objetos[r][c];
-        if (obj) drawObjectTile(mctx, c, r, obj, TILE);
+        if (obj) drawObjectTile(mctx, c, r, obj, TILE, tiles);
       }
     }
     OfficeMap.ROOMS.forEach((sala) => desenharEtiquetaSala(mctx, sala, TILE));
@@ -531,69 +557,126 @@
   // celulas vizinhas, pra duas mesas encostadas virarem uma bancada so.
   // Medido na referencia (referencias/...154025.png): a mesa e uma placa lilas
   // clara e a faixa da frente ocupa ~1/4 da altura dela - bem mais grossa do que
-  // eu tinha feito. Nela ficam uma gaveta larga de um lado e um armarinho do
-  // outro, nao um puxador por celula.
+  // eu tinha feito. Nela fica a gaveteira ocupando UM bloco numa ponta e o pe
+  // na outra, nao um puxador por celula.
   const MESA_TAMPO = '#eceaf6';
   const MESA_TAMPO_LUZ = '#f7f6fc';
-  const MESA_FRENTE = '#828da8';
-  const MESA_FRENTE_LUZ = '#98a2ba';
-  const MESA_FRENTE_SOMBRA = '#5f6880';
   const MESA_BORDA = '#a9b0c4';
+  // Cores tiradas a conta-gotas da referencia (ver o mapa de faixas em
+  // tampoDeMesa): a quina do tampo, o risco escuro embaixo dela, e o cinza
+  // dos moveis que ficam no vao (gaveteira e pe).
+  const MESA_QUINA = '#afbdd0';
+  const MESA_RISCO = '#5f6f7c';
+  const MESA_MOVEL = '#8695ad';
+  // O vao NAO e um painel pintado: e o proprio carpete coberto por esta
+  // sombra. Por isso e translucido - o piso ja foi desenhado embaixo.
+  const MESA_SOMBRA_VAO = 'rgba(46,52,74,0.5)';
 
   function tampoDeMesa(ctx, x, y, TILE, b, gavetas) {
-    // Tudo em unidades de 1/128 do tile. `b.baixo` false = tem mesa na celula de
-    // baixo, entao esta e uma fileira do *fundo*: so tampo, sem faixa. A faixa
-    // sai uma vez so, na fileira da frente - e o que faz o bloco de 2 fileiras
-    // virar uma mesa grande unica.
+    // A mesa da referencia (referencias/10-MESA-closeup-gavetas-e-pe.png) ocupa
+    // DUAS celulas na vertical, e cada uma faz um papel:
+    //
+    //   fileira de tras   -> so o tampo: e a "malha" onde os itens sao apoiados
+    //   fileira da frente -> tampo + a mesa vista de frente, em tres faixas:
+    //                        (1) a espessura do tampo,
+    //                        (2) o vao escuro debaixo dele,
+    //                        (3) dentro do vao, a GAVETEIRA numa ponta e o PE
+    //                            na outra.
+    //
+    // E a faixa (2) que da a ilusao de 3D: sem ela a mesa fica chapada. E por
+    // isso que gaveteira e pe saem so nas pontas do bloco (b.esq / b.dir): uma
+    // bancada de 4 celulas tem uma gaveteira e um pe, nao quatro de cada.
     const topo = b.cima ? 8 : 0;
-    const alturaFrente = b.baixo ? 64 : 0;
-    const fimTampo = 128 - alturaFrente;
 
-    if (b.baixo) q(ctx, x, y, 0, 122, 128, 6, 'rgba(45,50,64,0.16)'); // sombra no chao
+    if (!b.baixo) {
+      // fileira de tras: tampo liso de ponta a ponta
+      q(ctx, x, y, 0, topo, 128, 128 - topo, MESA_TAMPO);
+      if (b.cima) {
+        q(ctx, x, y, 0, topo, 128, 5, MESA_TAMPO_LUZ);
+        q(ctx, x, y, 0, topo, 128, 2, MESA_BORDA);
+      }
+      if (b.esq) q(ctx, x, y, 0, topo, 2, 128 - topo, MESA_BORDA);
+      if (b.dir) q(ctx, x, y, 126, topo, 2, 128 - topo, MESA_BORDA);
+      return;
+    }
 
-    // tampo, com veio sutil e luz na borda de tras
-    q(ctx, x, y, 0, topo, 128, fimTampo - topo, MESA_TAMPO);
+    // Debaixo do tampo a gente ve o CHAO. So a gaveteira (numa ponta) e o pe (na
+    // outra) sao solidos - no meio fica vazio, que e onde entram as pernas de
+    // quem senta. Encher a faixa inteira de gaveta, como eu tinha feito, some
+    // com o piso e a mesa vira um paredao.
+    // Profundidade, medida em referencias/11-MESA-cadeira-closeup.png com a
+    // cadeira como regua: a mesa tem **1,6 tile de fundo**, dos quais 1,15 e
+    // tampo e 0,45 e a frente. Isso nao cabe numa celula so - por isso a mesa
+    // usa duas fileiras, e o quanto sobra pro tampo aqui depende de ter ou nao
+    // outra mesa atras.
+    // As faixas abaixo do tampo saiam de uma leitura pixel a pixel da
+    // referencia (11-MESA-cadeira-closeup.png, coluna x=870, que cai no vao
+    // entre a gaveteira e o pe da mesa da direita):
+    //
+    //   #efedf7         tampo
+    //   #afbdd0  15px   a quina do tampo
+    //   #5f6f7c   5px   o risco escuro logo abaixo dela
+    //   #555f86  45px   <- o CHAO, so que na sombra da mesa
+    //   #878dce         carpete no sol
+    //
+    // #555f86 dividido por #878dce da ~0,63: e o mesmo carpete multiplicado.
+    // Nao existe painel fechando a frente da mesa - quem fecha sao a gaveteira
+    // e o pe, e entre eles o piso continua aparecendo.
+    const temMesaAtras = !b.cima;
+    const FIM_TAMPO = temMesaAtras ? 24 : 72;
+    const FIM_QUINA = FIM_TAMPO + 13;      // 15px na referencia
+    const FIM_RISCO = FIM_QUINA + 4;       // 5px na referencia
+    const CHAO = temMesaAtras ? FIM_RISCO + 38 : 110;
+
+    // (0) tampo
+    q(ctx, x, y, 0, topo, 128, FIM_TAMPO - topo, MESA_TAMPO);
     if (b.cima) {
       q(ctx, x, y, 0, topo, 128, 5, MESA_TAMPO_LUZ);
-      q(ctx, x, y, 0, topo + 5, 128, 2, '#e2dff0');
-    }
-    for (let i = 6; i < 128; i += 26) {
-      q(ctx, x, y, i, topo + 10, 1, fimTampo - topo - 14, 'rgba(255,255,255,0.35)');
+      q(ctx, x, y, 0, topo, 128, 2, MESA_BORDA);
     }
 
-    if (b.baixo) {
-      q(ctx, x, y, 0, fimTampo - 3, 128, 3, MESA_BORDA);          // quina do tampo
-      q(ctx, x, y, 0, fimTampo, 128, alturaFrente - 4, MESA_FRENTE);
-      q(ctx, x, y, 0, fimTampo, 128, 4, MESA_FRENTE_LUZ);         // luz na quina
-      q(ctx, x, y, 0, 120, 128, 4, MESA_FRENTE_SOMBRA);           // sombra no rodape
+    // (1) a quina do tampo: a espessura da placa, vista de frente
+    q(ctx, x, y, 0, FIM_TAMPO, 128, FIM_QUINA - FIM_TAMPO, MESA_QUINA);
+    q(ctx, x, y, 0, FIM_QUINA, 128, FIM_RISCO - FIM_QUINA, MESA_RISCO);
 
-      // Gaveta larga numa ponta, armarinho na outra - uma vez por mesa, como na
-      // referencia, e nao um puxador por celula.
-      if (b.esq && gavetas !== false) {
-        qArred(ctx, x, y, 14, fimTampo + 16, 100, 22, 3, '#c8cedd');
-        q(ctx, x, y, 16, fimTampo + 18, 96, 3, '#e4e8f0');
-        q(ctx, x, y, 40, fimTampo + 25, 48, 4, '#7b8399');        // puxador
-        q(ctx, x, y, 40, fimTampo + 25, 48, 1, '#a9b0c4');
+    // (2) o vao: aqui NAO se pinta nada por cima do piso, so se escurece. E
+    //     esse pedaco de carpete na sombra que faz a mesa parecer suspensa.
+    q(ctx, x, y, 0, FIM_RISCO, 128, CHAO - FIM_RISCO, MESA_SOMBRA_VAO);
+
+    if (gavetas !== false) {
+      // (3) dentro do vao ficam os dois unicos volumes solidos: a GAVETEIRA,
+      //     que ocupa um bloco (a ponta esquerda), e o PE, uma coluna
+      //     estreita na outra ponta. O meio da bancada fica vazado.
+      const gy = FIM_RISCO;
+      const gh = CHAO - FIM_RISCO - 4;   // os ultimos 4 sao so sombra no chao
+      if (b.esq) {
+        // A gaveteira nao e uma placa lisa. Ampliando a referencia ela e uma
+        // moldura escura com tres pecas dentro: uma coluna estreita em cada
+        // ponta (as laterais do movel) e, no meio, a face das duas gavetas -
+        // cada uma com um puxador curto e centralizado.
+        const GX = 7, GW = 118;
+        q(ctx, x, y, GX, gy, GW, gh, MESA_RISCO);               // a moldura
+        q(ctx, x, y, GX + 5, gy + 1, 8, gh - 2, MESA_MOVEL);    // lateral esquerda
+        q(ctx, x, y, GX + 108, gy + 1, 7, gh - 2, MESA_MOVEL);  // lateral direita
+
+        const fx = GX + 17, fw = 85;                            // a face das gavetas
+        q(ctx, x, y, fx, gy + 1, fw, gh - 2, MESA_MOVEL);
+        q(ctx, x, y, fx, gy + 4, fw, 5, MESA_RISCO);            // fresta de cima
+        q(ctx, x, y, fx, gy + 18, fw, 3, MESA_RISCO);           // fresta entre as duas
+        q(ctx, x, y, fx, gy + 29, fw, 5, MESA_RISCO);           // rodape
+        const pux = fx + Math.round((fw - 17) / 2);
+        q(ctx, x, y, pux, gy + 9, 17, 4, MESA_RISCO);           // puxador da de cima
+        q(ctx, x, y, pux, gy + 21, 17, 4, MESA_RISCO);          // puxador da de baixo
       }
-      if (b.dir && gavetas !== false) {
-        qArred(ctx, x, y, 86, fimTampo + 12, 30, 30, 3, '#c8cedd');
-        q(ctx, x, y, 88, fimTampo + 14, 26, 3, '#e4e8f0');
-        q(ctx, x, y, 96, fimTampo + 25, 12, 4, '#7b8399');        // puxador quadrado
-        q(ctx, x, y, 96, fimTampo + 25, 12, 1, '#a9b0c4');
+      if (b.dir) {
+        q(ctx, x, y, 101, gy, 14, gh, MESA_MOVEL);
+        q(ctx, x, y, 101, gy + 29, 14, 5, MESA_RISCO);
       }
     }
 
     // contorno so onde a bancada termina
-    if (b.cima) q(ctx, x, y, 0, topo, 128, 2, MESA_BORDA);
-    if (b.baixo) q(ctx, x, y, 0, 126, 128, 2, MESA_FRENTE_SOMBRA);
-    if (b.esq) {
-      q(ctx, x, y, 0, topo, 2, fimTampo - topo, MESA_BORDA);
-      if (b.baixo) q(ctx, x, y, 0, fimTampo, 2, alturaFrente, MESA_FRENTE_SOMBRA);
-    }
-    if (b.dir) {
-      q(ctx, x, y, 126, topo, 2, fimTampo - topo, MESA_BORDA);
-      if (b.baixo) q(ctx, x, y, 126, fimTampo, 2, alturaFrente, MESA_FRENTE_SOMBRA);
-    }
+    if (b.esq) q(ctx, x, y, 0, topo, 2, FIM_QUINA - topo, MESA_BORDA);
+    if (b.dir) q(ctx, x, y, 126, topo, 2, FIM_QUINA - topo, MESA_BORDA);
   }
 
   // Monitor visto por tras: e o que se ve numa mesa virada pra cima da tela
@@ -678,7 +761,16 @@
       // gavetas, e se a gente ve a tela ou a traseira dela.
       const b = bordasDoMovel(tiles, r, c, type);
       const direcao = M.DIRECAO_MESA[type];
-      const temPc = M.MESAS_DE_TRABALHO.has(type);
+      // Um posto por mesa, nao um por celula: sem isso uma mesa de 3 tiles vira
+      // tres computadores lado a lado, e a referencia mostra UMA pessoa por
+      // mesa. Conta quantas celulas iguais tem a esquerda e so equipa a do meio
+      // de cada trio - numa bancada longa isso vira um posto a cada 3 tiles.
+      let recuo = 0;
+      while (tiles[r] && tiles[r][c - recuo - 1] === type) recuo++;
+      // ...e so na fileira da FRENTE (`b.baixo` = nao tem mesa embaixo). O
+      // monitor dessa fileira ja avanca pro tile de tras, entao equipar as duas
+      // daria dois computadores empilhados na mesma mesa.
+      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 3 === 1 && b.baixo;
       // gavetas ficam do lado de quem usa: numa mesa virada pra cima elas
       // caem atras da placa e nao aparecem
       tampoDeMesa(ctx, x, y, TILE, b, direcao !== 'down');
@@ -1216,11 +1308,27 @@
     }
   }
 
+  // Ate onde vai o tampo nesta celula, na malha fina. Numa mesa de duas
+  // fileiras a da frente so tem uma tirinha de tampo em cima - o resto e a
+  // frente do movel e o vao. Quem for apoiado ali precisa subir, senao a caneca
+  // fica boiando na frente da gaveteira. Espelha o que tampoDeMesa desenha.
+  function fimDoTampo(tiles, c, r) {
+    const M = OfficeMap;
+    const t = tiles && tiles[r] && tiles[r][c];
+    const temFrente = M.MESAS_DIRECIONAIS.has(t) || t === M.MESA_DUPLA || t === M.MESA_NOTEBOOK;
+    if (!temFrente) return 128;
+    if (tiles[r + 1] && tiles[r + 1][c] === t) return 128;   // e a fileira de tras
+    return (tiles[r - 1] && tiles[r - 1][c] === t) ? 24 : 72;
+  }
+
   // Camada de cima: o que fica apoiado na celula. Desenhado depois dos moveis,
   // entao um monitor pousa em cima da mesa em vez de virar parte dela.
-  function drawObjectTile(ctx, c, r, obj, TILE) {
+  function drawObjectTile(ctx, c, r, obj, TILE, tiles) {
     const O = OfficeMap.OBJETOS;
-    const x = c * TILE, y = r * TILE;
+    // Os objetos foram desenhados apoiando por volta de y=90. Se o tampo acaba
+    // antes disso, sobe o desenho inteiro ate ele encostar na superficie.
+    const sobe = Math.max(0, 90 - fimDoTampo(tiles, c, r));
+    const x = c * TILE, y = r * TILE - sobe * U;
     const meio = TILE / 2;
 
     // Os monitores sao altos e **passam do tile pra cima**, como na referencia:

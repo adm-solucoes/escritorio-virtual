@@ -109,6 +109,10 @@ function editar(c, r, t) {
 // monitor flutuando no chao depois de apagar a mesa).
 function editarObjeto(c, r, o) {
   if (!posicaoValida(c, r) || !objetoValido(o)) return false;
+  // So se apoia coisa EM CIMA de uma superficie: mesa, balcao, estante,
+  // armario. Nada de caneca no meio do corredor. Tirar (o === 0) vale sempre,
+  // senao um objeto que ficou orfao nunca mais sairia dali.
+  if (o && !map.SUPERFICIES.has(map.tiles[r][c])) return false;
   if (map.objetos[r][c] === o) return false;
 
   map.objetos[r][c] = o;

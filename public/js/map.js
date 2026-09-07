@@ -153,10 +153,10 @@
   // Ilhas de carpete por cima do piso da sala. "contorno" desenha a moldura fina
   // que o Gather usa pra marcar uma area.
   const ZONAS_PISO = [
-    { r0: 18, c0: 16, r1: 21, c1: 20, piso: 'carpete_roxo' },
-    { r0: 18, c0: 24, r1: 21, c1: 28, piso: 'carpete_roxo' },
-    { r0: 24, c0: 16, r1: 27, c1: 20, piso: 'carpete_roxo' },
-    { r0: 24, c0: 24, r1: 27, c1: 28, piso: 'carpete_roxo' },
+    // uma faixa de carpete por fileira de postos (as baias novas sao 4 mesas
+    // individuais lado a lado, nao dois blocos)
+    { r0: 17, c0: 15, r1: 20, c1: 32, piso: 'carpete_roxo' },
+    { r0: 23, c0: 15, r1: 26, c1: 32, piso: 'carpete_roxo' },
     { r0: 19, c0: 5, r1: 26, c1: 11, piso: 'carpete_azul' },
     { r0: 4, c0: 20, r1: 11, c1: 26, piso: 'grama', contorno: '#5fb87a' },
   ];
@@ -230,12 +230,21 @@
     set(28, 11, CADEIRA);
 
     // ---------- Time: baias de trabalho ----------
-    [[19, 17], [19, 25], [25, 17], [25, 25]].forEach(([r, c]) => {
-      // Bancada de 2 fileiras: uma placa so, com gente dos dois lados (e o que
-      // a referencia do Gather mostra). Quem da direcao aqui e a cadeira.
-      rect(r, c, r + 1, c + 2, MESA_MONITOR);
-      linhaH(r - 1, c, c + 2, CADEIRA_BAIXO);
-      linhaH(r + 2, c, c + 2, CADEIRA);
+    // Postos individuais, com vao entre eles. Medindo a referencia
+    // (referencias/10-MESA-closeup-gavetas-e-pe.png), UMA pessoa fica numa mesa
+    // de ~4 tiles de largura. A versao anterior punha 6 pessoas numa placa de 3
+    // tiles - meio tile por pessoa -, o que fazia o conjunto parecer uma mesa
+    // gigante de refeitorio em vez das baias do Gather.
+    [18, 24].forEach((r) => {
+      [15, 20, 25, 30].forEach((c) => {
+        // 2 de largura por 1 de profundidade: a mesa da referencia e bem
+        // mais larga do que funda. Com 2x2 ela virava um quadrado.
+        // 3 blocos de largura por 2 de profundidade (medido pelo Caio na
+        // referencia). As 2 fileiras dao a profundidade; o tampo da fileira da
+        // frente e curto porque a de tras ja entregou uma celula inteira.
+        rect(r, c, r + 1, c + 2, MESA_MONITOR);
+        set(r + 2, c + 1, CADEIRA);
+      });
     });
     set(17, 31, PLANTA);
     set(29, 15, PLANTA);

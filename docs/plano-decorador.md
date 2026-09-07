@@ -219,3 +219,79 @@ Duas correcoes vindo das fotos:
 | Sentar nas 4 cadeiras | `dir` voltou `up`, `down`, `left` e `right`, `sentado: true` nas quatro |
 | Encosto por cima | de costas cobre o corpo; de frente aparece o rosto; de perfil cobre so as costas |
 | Mapa cliente x servidor | 0 tiles diferentes e `DIRECAO_ASSENTO` identico nos dois lados |
+
+
+---
+
+## Anexo — a mesa em tres faixas (07/09)
+
+O Caio descreveu a mesa da referencia assim: *"ocupa 2 blocos, sendo um uma
+gaveteira e o outro os pes, que da ilusao de ser 3D, e em cima tipo uma malha
+que conseguimos personalizar com itens em cima"*. Foi isso que passou a ser
+desenhado, medido em `referencias/10-MESA-closeup-gavetas-e-pe.png`.
+
+A mesa ocupa **duas celulas na vertical**, e cada uma faz um papel:
+
+| Fileira | O que e |
+|---|---|
+| de tras | so o tampo — e a **malha** onde os itens sao apoiados |
+| da frente | o tampo mais a mesa vista de frente, em tres faixas |
+
+As tres faixas da fileira da frente (em unidades de 1/128 do tile):
+
+| Faixa | Unidades | O que e |
+|---|---|---|
+| tampo | 0–60 | a superficie |
+| espessura | 60–73 | a placa vista de canto, bem clara |
+| vao | 73–108 | escuro, e **onde mora o 3D** |
+| chao | 108–128 | o piso aparecendo debaixo da mesa |
+
+**O erro que era facil cometer:** deixar o vao escuro ir ate o fim do tile. Sem
+a faixa de chao embaixo, a mesa fica chapada — o olho nao entende que existe
+espaco vazio sob o tampo. O degrau *tampo claro → vao escuro → chao* e o que
+cria a profundidade.
+
+Dentro do vao, e **so nas pontas do bloco** (`b.esq` / `b.dir`):
+
+- **gaveteira** na ponta esquerda, com tres frentes de gaveta e puxador;
+- **pe** na ponta direita, com sapata larga.
+
+Uma bancada de quatro celulas fica com **uma** gaveteira e **um** pe, nao quatro
+de cada. E o mesmo raciocinio que ja valia pros puxadores.
+
+> **Traco fino some.** Os pes comecaram com 10 unidades de largura (2,5 px no
+> mapa) e sumiam no zoom normal do jogo. Foram pra 26. Vale a regra que ja
+> estava no handoff: detalhe abaixo de ~2 unidades evapora, e no caso de peca
+> estrutural o piso e bem mais alto que isso.
+
+### A malha
+
+Com um item da aba "Em cima da mesa" na mao, toda superficie livre acende um
+contorno **verde** e as ja ocupadas um contorno **ambar**. Sai de
+`Decorador.pintandoEmCima()`, e so aparece nesse modo — fora dele o escritorio
+continua limpo.
+
+### Como conferir sem caçar a camera
+
+A camera segue o boneco e atrapalha inspecionar movel. O jeito rapido e
+desenhar num canvas por cima, com escala propria:
+
+```js
+const M = OfficeMap, TILE = M.TILE, ESC = 5, W = 5, H = 3;
+const cv = document.createElement('canvas');
+cv.width = W*TILE*ESC; cv.height = H*TILE*ESC;
+cv.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;image-rendering:pixelated';
+document.body.appendChild(cv);
+const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.scale(ESC, ESC);
+const g = Array.from({length:H}, () => new Array(W).fill(0));
+for (let r=0;r<2;r++) for (let col=0;col<4;col++) g[r][col] = M.MESA;   // mesa 4x2
+for (let r=0;r<H;r++) for (let col=0;col<W;col++) Game.desenharPiso(c, col, r, TILE, 'carpete_roxo');
+for (let r=0;r<H;r++) for (let col=0;col<W;col++) if (g[r][col]) Game.desenharObjeto(c, col, r, g[r][col], TILE, g);
+Game.desenharApoiado(c, 1, 0, M.OBJETOS.MONITOR_DUPLO, TILE);
+```
+
+Pra apagar depois: `document.querySelectorAll('canvas').forEach(c => { if (c.id !== 'canvas-jogo' && c.id !== 'canvas-preview' && !c.closest('#decor-grade')) c.remove(); })`.
+
+> **Nao tente conferir cor lendo pixel de um canvas 1:1.** O desenho usa a grade
+> fina (`U = 0.25`), que so fecha em pixel inteiro com o contexto escalado em 4x.
+> Sem escalar, o detalhe colapsa e a leitura engana — perdi tempo com isso.

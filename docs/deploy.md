@@ -81,29 +81,18 @@ O `render.yaml` na raiz do projeto ja descreve o servico.
    pasta:
 
    ```bash
-   # 1) tem que rodar na RAIZ do monorepo (onde fica a pasta .git),
-   #    e nao de dentro de escritorio-virtual/.
-   #    No CMD/PowerShell o caminho vai com barra invertida:
-   cd C:\Users\caiol\Downloads\CLAUDE
-   #    (no Git Bash seria  cd /c/Users/caiol/Downloads/CLAUDE)
-
-   # 2) o repo novo ja tem que existir e estar VAZIO no GitHub.
-   #    URL https (nao ssh): esta maquina nao tem chave SSH, e o Git
-   #    Credential Manager abre o login no navegador sozinho.
-   git remote add sede https://github.com/SEU-USUARIO/escritorio-virtual.git
-
-   # 3) manda so a pasta. O `main` do fim e o nome do branch NO GITHUB -
-   #    nao precisa bater com o nome do branch local.
-   git subtree push --prefix=escritorio-virtual sede main
+   npm --prefix escritorio-virtual run espelhar
    ```
 
    Assim o CRM e os outros projetos **nao vao junto**.
 
-   > `fatal: not a git repository` nesse passo quer dizer que o terminal esta
-   > fora da raiz do monorepo - rode o `cd` do passo 1 primeiro.
-   >
-   > `'sede' does not appear to be a git repository` quer dizer que faltou o
-   > `git remote add` do passo 2, ou o endereco esta errado.
+   > **Nao use `git subtree push` aqui.** Era o que estava escrito antes, e foi
+   > por isso que o escritorio ficou 10 commits atrasado no ar sem ninguem
+   > perceber: o repositorio do GitHub nao e uma fatia do historico deste
+   > monorepo, e um **espelho montado a mao** (sem `referencias/`, com uma secao
+   > a mais no README). Os dois historicos nao se encontram, entao o subtree
+   > push e recusado por nao ser fast-forward.
+
 2. No Render: **New > Blueprint**, aponte pro repositorio. Ele le o
    `render.yaml` sozinho.
 3. Confirme as variaveis. `CODIGO_SEDE`, `ADMIN_CODE` e `SESSION_SECRET` estao
@@ -121,6 +110,32 @@ Se preferir subir na mao (sem Blueprint): runtime Node, build `npm ci`, start
 `ADMIN_CODE` definidas por voce.
 
 > **Nao defina `SEM_LOGIN` em producao.** O codigo ja ignora, mas nao custa.
+
+### Atualizar o que esta no ar
+
+Toda vez que quiser levar o que esta no seu PC pro link, e o mesmo comando:
+
+```bash
+npm --prefix escritorio-virtual run espelhar
+```
+
+O `espelhar.js` clona o repositorio do GitHub num diretorio de trabalho, joga a
+pasta atual por cima, commita em cima do que ja estava la e empurra. Como o
+commit novo nasce do commit que ja estava no GitHub, o push e sempre
+fast-forward - e por isso que ele funciona onde o `git subtree push` nao
+funciona.
+
+O que ele **nao** manda: `referencias/` (prints de um produto de terceiro),
+`node_modules/` e `server/data/` (contas e decoracao - sao do servidor, nao do
+repositorio). Arquivo que voce apagou aqui some la tambem. Rodar duas vezes
+seguidas sem mexer em nada nao cria commit vazio: ele avisa que nada mudou.
+
+Ele leva o que esta **no disco**, commitado ou nao - se tiver mudanca solta em
+`escritorio-virtual/`, ele avisa antes de continuar.
+
+Depois do push o Render percebe sozinho e refaz o deploy, o que leva alguns
+minutos. **Atencao:** no plano free isso apaga `server/data/`, entao **todo
+mundo perde a conta e precisa se cadastrar de novo**. Veja a secao 3.
 
 ### Calendario e Trello: precisam de credenciais
 
