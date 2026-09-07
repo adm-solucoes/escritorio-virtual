@@ -189,6 +189,15 @@ function sanitizeAppearance(appearance) {
     hairStyle: allowedEnum(a.hairStyle, ['curto', 'longo', 'moicano', 'careca'], 'curto'),
     glasses: !!a.glasses,
     glassesColor: allowedHex(a.glassesColor, '#2b3038'),
+    // As formas de roupa. A lista tem que bater com a do public/js/character.js
+    // - se divergir, o servidor troca calado a peca da pessoa pelo padrao.
+    topStyle: allowedEnum(a.topStyle, ['camiseta', 'vneck', 'polo', 'regata', 'manga', 'social'], 'camiseta'),
+    jaqueta: allowedEnum(a.jaqueta, ['nenhuma', 'blazer'], 'nenhuma'),
+    jaquetaColor: allowedHex(a.jaquetaColor, '#2b2f38'),
+    bottomStyle: allowedEnum(a.bottomStyle, ['calca', 'social', 'bermuda'], 'calca'),
+    barba: allowedEnum(a.barba, ['nenhuma', 'bigode', 'curta'], 'nenhuma'),
+    chapeu: allowedEnum(a.chapeu, ['nenhum', 'bandana'], 'nenhum'),
+    chapeuColor: allowedHex(a.chapeuColor, '#e03a3a'),
   };
 }
 

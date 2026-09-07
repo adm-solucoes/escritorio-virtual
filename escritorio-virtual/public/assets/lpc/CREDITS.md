@@ -22,6 +22,30 @@ Cada arquivo listado abaixo pode ser usado sob qualquer uma das licencas indicad
 | `hair_moicano.png` | `hair/shorthawk/adult/walk.png` | JaidynReiman, Manuel Riecke (MrBeast) | CC-BY-SA 3.0, GPL 3.0 |
 | `glasses.png` | `facial/glasses/round/adult/walk.png` | bluecarrot16, Thane Brimhall (pennomi), laetissima | CC-BY-SA 3.0, GPL 3.0 |
 
+## Formas de roupa
+
+As pecas abaixo entraram pra o editor de avatar poder trocar a FORMA da roupa, e
+nao so a cor. Vieram do mesmo repositorio LPC, no mesmo formato (576x256, quatro
+direcoes x nove quadros), e sao recoloridas em tempo real igual as outras camadas.
+
+`testes/roupas.js` confere que todo arquivo em uso aparece nesta tabela - creditar
+e condicao das licencas OGA-BY e CC-BY-SA, entao um PNG sem linha aqui quebra o
+teste de proposito.
+
+| Arquivo local | Origem no repositorio LPC | Autores | Licencas disponiveis |
+|---|---|---|---|
+| `top_vneck.png` | `torso/clothes/shortsleeve/tshirt_vneck/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
+| `top_polo.png` | `torso/clothes/shortsleeve/shortsleeve_polo/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
+| `top_regata.png` | `torso/clothes/sleeveless/sleeveless/male/walk/white.png` | bluecarrot16, Matthew Krohn (makrohn), JaidynReiman, Marcel van de Steeg (MadMarcel), Nila122, Johannes Sjölund (wulax), Stephen Challener (Redshrike) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
+| `top_manga.png` | `torso/clothes/longsleeve/longsleeve/male/walk.png` | JaidynReiman, Johannes Sjölund (wulax) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
+| `top_social.png` | `torso/clothes/longsleeve/formal/male/walk.png` | bluecarrot16, Thane Brimhall (pennomi), laetissima, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | CC-BY-SA 3.0, GPL 3.0 |
+| `jaqueta_blazer.png` | `torso/jacket/collared/male/walk/white.png` | bluecarrot16 | CC-BY-SA 3.0, GPL 3.0 |
+| `baixo_social.png` | `legs/formal/male/walk.png` | bluecarrot16, JaidynReiman, ElizaWy, Johannes Sjölund (wulax), Stephen Challener (Redshrike) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
+| `baixo_bermuda.png` | `legs/shorts/shorts/male/walk.png` | JaidynReiman, ElizaWy, bluecarrot16, Johannes Sjölund (wulax), Stephen Challener (Redshrike) | OGA-BY 3.0, GPL 3.0 |
+| `barba_curta.png` | `beards/beard/basic/walk.png` | JaidynReiman, Carlo Enrico Victoria (Nemisys) | CC-BY-SA 3.0, GPL 3.0 |
+| `barba_bigode.png` | `beards/mustache/basic/walk.png` | JaidynReiman, Carlo Enrico Victoria (Nemisys) | CC-BY-SA 3.0, GPL 3.0 |
+| `chapeu_bandana.png` | `hat/cloth/bandana/adult/walk.png` | Matthew Krohn (makrohn), JaidynReiman, Marcel van de Steeg (MadMarcel) | OGA-BY 3.0, CC-BY-SA 3.0 |
+
 Se este repositorio for publicado publicamente (ex: GitHub publico), mantenha este
 arquivo junto dos PNGs — e a forma de dar credito exigida pelas licencas OGA-BY e
 CC-BY-SA. Para os arquivos apenas sob CC-BY-SA 3.0 / GPL 3.0 (sem opcao OGA-BY),
