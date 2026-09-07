@@ -60,6 +60,7 @@
   <div class="quadro"><canvas id="planta"></canvas></div>
 
   <script src="js/map.js"></script>
+  <script src="js/sprites.js"></script>
   <script src="js/game.js"></script>
   <script>
     (function () {
@@ -107,9 +108,12 @@
         document.getElementById('btn-4').classList.toggle('ativo', botao === 4);
       }
 
-      document.getElementById('btn-2').addEventListener('click', function () { trocar(2, 2); });
-      document.getElementById('btn-4').addEventListener('click', function () { trocar(4, 4); });
+      var escalaAtual = 2;
+      document.getElementById('btn-2').addEventListener('click', function () { escalaAtual = 2; trocar(2, 2); });
+      document.getElementById('btn-4').addEventListener('click', function () { escalaAtual = 4; trocar(4, 4); });
       trocar(2, 2);
+      // as folhas do pacote chegam depois do primeiro desenho: redesenha
+      if (window.Sprites) window.Sprites.aoCarregar(function () { trocar(escalaAtual, escalaAtual); });
     })();
   </script>
 </body>

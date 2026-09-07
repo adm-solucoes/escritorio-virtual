@@ -436,6 +436,9 @@
     const meioTile = TILE / 2;
     const cores = CORES_PISO[piso] || CORES_PISO.tijolo;
 
+    // Chao do pacote LPC primeiro; o desenho a mao abaixo e o reserva.
+    if (window.Sprites && Sprites.desenharPiso(ctx, c, r, TILE, piso)) return;
+
     if (piso === 'carpete_roxo') return pisoCarpete(ctx, x, y, TILE, c, r, cores, false);
     if (piso === 'carpete_azul') return pisoCarpete(ctx, x, y, TILE, c, r, cores, true);
 
@@ -920,6 +923,12 @@
     const x = c * TILE, y = r * TILE;
     const M = OfficeMap;
     const meio = TILE / 2;
+
+    // Arte do pacote LPC primeiro; o desenho a mao abaixo e o reserva. Enquanto
+    // a folha nao chegou (ou a peca nao tem sprite) isto devolve false e o mapa
+    // sai desenhado como antes, em vez de sair com buraco.
+    // Creditos: public/assets/lpc-moveis/CREDITS.md
+    if (window.Sprites && Sprites.desenhar(ctx, c, r, type, TILE, tiles || (tiles = M.tiles))) return;
 
     if (type === M.PAREDE) {
       // parede cinza-azulada escura, como as divisorias do Gather.
@@ -3201,6 +3210,9 @@
     canvas = document.getElementById('canvas-jogo');
     ctx = canvas.getContext('2d');
     prerenderMap();
+    // O pre-render roda antes das folhas do pacote chegarem, entao a primeira
+    // passada sai com o desenho a mao. Quando as imagens carregam, refaz.
+    if (window.Sprites) Sprites.aoCarregar(() => prerenderMap());
     setCanvasSize();
     window.addEventListener('resize', setCanvasSize);
 
