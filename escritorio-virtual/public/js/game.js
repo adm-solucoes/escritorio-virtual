@@ -597,12 +597,15 @@
     // outra) sao solidos - no meio fica vazio, que e onde entram as pernas de
     // quem senta. Encher a faixa inteira de gaveta, como eu tinha feito, some
     // com o piso e a mesa vira um paredao.
-    // Profundidade: quanto da celula o tampo ocupa. Com 52 a mesa de uma
-    // fileira ficava fina demais; o vao embaixo encolhe junto, ele so precisa
-    // dar pra ver o piso e encaixar a gaveteira.
-    const FIM_TAMPO = 72;                  // onde a superficie acaba
+    // Profundidade, medida em referencias/11-MESA-cadeira-closeup.png com a
+    // cadeira como regua: a mesa tem **1,6 tile de fundo**, dos quais 1,15 e
+    // tampo e 0,45 e a frente. Isso nao cabe numa celula so - por isso a mesa
+    // usa duas fileiras, e o quanto sobra pro tampo aqui depende de ter ou nao
+    // outra mesa atras.
+    const temMesaAtras = !b.cima;
+    const FIM_TAMPO = temMesaAtras ? 24 : 72;
     const FIM_LIP = FIM_TAMPO + 10;        // a quina clara do tampo
-    const CHAO = 110;                      // onde os moveis encostam no piso
+    const CHAO = temMesaAtras ? 84 : 110;  // onde os moveis encostam no piso
 
     // (0) tampo
     q(ctx, x, y, 0, topo, 128, FIM_TAMPO - topo, MESA_TAMPO);
@@ -741,7 +744,7 @@
       // ...e so na fileira da FRENTE (`b.baixo` = nao tem mesa embaixo). O
       // monitor dessa fileira ja avanca pro tile de tras, entao equipar as duas
       // daria dois computadores empilhados na mesma mesa.
-      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 2 === 0 && b.baixo;
+      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 3 === 1 && b.baixo;
       // gavetas ficam do lado de quem usa: numa mesa virada pra cima elas
       // caem atras da placa e nao aparecem
       tampoDeMesa(ctx, x, y, TILE, b, direcao !== 'down');
