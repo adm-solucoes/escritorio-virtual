@@ -99,6 +99,34 @@ Regras que o resto da arte segue:
 tiles, true)` desenha qualquer item num canvas solto. Da pra montar uma folha de
 contato dos 37 de uma vez.
 
+## 5b. O volume (o "3D")
+
+As coisas nao sao retocadas uma a uma pra parecerem 3D. Cada item e desenhado
+**uma vez num buffer** e a silhueta dele vira tres camadas, em `comVolume()`:
+
+1. **sombra no chao** - a silhueta achatada, deitada na linha da base;
+2. **espessura** - tres copias escuras descendo pra direita, atras da arte, que
+   aparecem como a lateral da coisa;
+3. **luz** - uma copia clara subindo pra esquerda.
+
+A luz vem de cima e da esquerda, como no resto do escritorio.
+
+Dois detalhes que so aparecem quando se mexe nisso:
+
+- **A sombra sai so da faixa de baixo da silhueta.** Usando a silhueta inteira, o
+  monitor virava uma barra cinza do tamanho da tela: o que faz sombra e o que
+  toca a superficie, nao o que esta no ar.
+- **`source-in` guarda a transparencia.** E o que faz a sombrinha fraca que
+  alguns itens ja desenhavam continuar fraca na silhueta, em vez de virar um
+  retangulo solido.
+
+Custo medido: **0,22ms por item**, 1,3ms dos ~159ms de um redesenho do mapa
+(0,8%). O que pesa no redesenho sao os 1536 tiles, e isso e anterior a este
+trabalho. O redesenho so acontece quando a decoracao muda, nao a cada quadro.
+
+Desenhar um item novo **nao exige pensar em sombra nem em relevo** - o
+`comVolume` cuida disso. Desenhe a coisa chapada na caixa de 128.
+
 ## 6. O catalogo hoje (37)
 
 | Aba | Itens |

@@ -463,3 +463,24 @@ Hoje: **41 + 6 = 47 checagens**, todas passando.
 O estado final saiu do plano e virou `docs/mesa-pessoal.md`: quem pode o que, o
 que cada clique faz, posicao livre, os cinco lugares, como desenhar e a lista dos
 37. Este plano continua guardando a **historia** das decisoes.
+
+
+## 14. Cara de 3D, sem redesenhar 37 itens
+
+O pedido foi "cada item 2D com aspecto 3D". Retocar 37 desenhos na mao seria
+lento e ficaria desigual - o decimo item nao teria a mesma luz do primeiro.
+
+Em vez disso, `comVolume()` desenha cada item **uma vez num buffer** e usa a
+silhueta dele pra montar sombra, espessura e luz. Vale pra todos de uma vez, e
+pra todo item que vier depois: quem desenhar o 38o nao precisa pensar em relevo.
+
+Duas coisas so apareceram testando:
+
+- a primeira versao usava a **silhueta inteira** como sombra, e o monitor virou
+  uma barra cinza do tamanho da tela. Sombra vem do que **toca** a superficie,
+  entao passou a sair so da faixa de baixo;
+- a luz usava `lighter` com a silhueta preta - que nao clareia nada. Precisava
+  de uma silhueta branca.
+
+Custo: 0,22ms por item; 1,3ms dos ~159ms de um redesenho de mapa. O peso esta
+nos 1536 tiles, nao aqui.

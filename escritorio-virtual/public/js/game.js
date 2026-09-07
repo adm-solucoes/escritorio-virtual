@@ -1426,11 +1426,120 @@
   // altura foi ela. Sem `livre`, e a camada da casa: cai na celula e sobe ate o
   // tampo quando ele acaba antes.
   const APOIO = 90;
+  // ---- volume: a mesma arte 2D, com cara de coisa que ocupa espaco ----
+  //
+  // Em vez de retocar 37 desenhos na mao, cada item e desenhado uma vez num
+  // buffer e a **silhueta dele** vira as tres coisas que dao volume:
+  //
+  //   1. sombra no chao - a silhueta achatada, deitada na base;
+  //   2. espessura - copias escuras deslocadas pra baixo e pra direita, atras
+  //      da arte, que aparecem como a "lateral" da coisa;
+  //   3. luz de cima - uma copia clara deslocada pra cima e pra esquerda.
+  //
+  // A luz vem sempre de cima e da esquerda, como no resto do escritorio.
+  //
+  // O truque da silhueta e `source-in`: o preenchimento so pinta onde ja tem
+  // pixel, e **mantem a transparencia** do original. Por isso a sombrinha fraca
+  // que alguns itens ja desenhavam continua fraca na silhueta, em vez de virar
+  // um retangulo preto.
+  const BUF_TILES = 2;           // 2x2 tiles: cabe o que passa pra fora da celula
+  const BUF_ESCALA = RENDER_SCALE;
+  let bufItem = null;
+  let bufSilhueta = null;
+
+  function prepararBuffers(TILE) {
+    const lado = BUF_TILES * TILE * BUF_ESCALA;
+    if (bufItem && bufItem.width === lado) return;
+    bufItem = document.createElement('canvas');
+    bufSilhueta = document.createElement('canvas');
+    bufItem.width = bufItem.height = lado;
+    bufSilhueta.width = bufSilhueta.height = lado;
+  }
+
+  // Onde fica a origem da caixa do item dentro do buffer: sobra 1 tile pra cima
+  // (o monitor passa do topo) e meio pros lados.
+  const BUF_OX = 0.5;
+  const BUF_OY = 1;
+
+  // Repinta a silhueta de uma cor so. `source-in` pinta apenas onde ja existe
+  // pixel e **mantem a transparencia** - por isso a sombrinha fraca que alguns
+  // itens ja desenhavam continua fraca, em vez de virar um retangulo solido.
+  function tingirSilhueta(cor) {
+    const bs = bufSilhueta.getContext('2d');
+    const lado = bufSilhueta.width;
+    bs.setTransform(1, 0, 0, 1, 0, 0);
+    bs.clearRect(0, 0, lado, lado);
+    bs.globalCompositeOperation = 'source-over';
+    bs.drawImage(bufItem, 0, 0);
+    bs.globalCompositeOperation = 'source-in';
+    bs.fillStyle = cor;
+    bs.fillRect(0, 0, lado, lado);
+    bs.globalCompositeOperation = 'source-over';
+  }
+
+  function comVolume(ctx, x, y, TILE, desenhar) {
+    prepararBuffers(TILE);
+    const bi = bufItem.getContext('2d');
+    const lado = bufItem.width;
+
+    bi.setTransform(1, 0, 0, 1, 0, 0);
+    bi.clearRect(0, 0, lado, lado);
+    bi.imageSmoothingEnabled = false;
+    bi.setTransform(BUF_ESCALA, 0, 0, BUF_ESCALA, 0, 0);
+    desenhar(bi, BUF_OX * TILE, BUF_OY * TILE);
+
+    const px = x - BUF_OX * TILE;
+    const py = y - BUF_OY * TILE;
+    const larg = BUF_TILES * TILE;
+    const u = TILE / 128;        // uma unidade da grade fina, em pixels de mundo
+    const baseY = y + APOIO * u; // a linha onde a coisa encosta na superficie
+
+    tingirSilhueta('#000000');
+
+    ctx.save();
+
+    // 1. Sombra no chao. So a **faixa de baixo** da silhueta entra: usar a
+    // silhueta inteira transformava um monitor numa barra cinza do tamanho da
+    // tela. O que faz sombra e o que toca a superficie.
+    const faixaTopo = (BUF_OY * 128 + APOIO - 30) * u * BUF_ESCALA;
+    const faixaAlt = 38 * u * BUF_ESCALA;
+    ctx.globalAlpha = 0.17;
+    ctx.drawImage(
+      bufSilhueta,
+      0, faixaTopo, lado, faixaAlt,
+      px + larg * 0.03 + u, baseY - 9 * u, larg * 0.94, 14 * u
+    );
+
+    // 2. Espessura: copias escuras descendo pra direita, atras da arte. Sao elas
+    // que aparecem como a lateral da coisa.
+    ctx.globalAlpha = 0.13;
+    for (let i = 1; i <= 3; i++) {
+      ctx.drawImage(bufSilhueta, px + i * u, py + i * u, larg, larg);
+    }
+    ctx.restore();
+
+    // 3. Luz vindo de cima e da esquerda, como no resto do escritorio.
+    tingirSilhueta('#ffffff');
+    ctx.save();
+    ctx.globalAlpha = 0.20;
+    ctx.drawImage(bufSilhueta, px - u, py - u, larg, larg);
+    ctx.restore();
+
+    // 4. A arte de verdade, por ultimo.
+    ctx.drawImage(bufItem, px, py, larg, larg);
+  }
+
   function drawObjectTile(ctx, c, r, obj, TILE, tiles, livre) {
-    const O = OfficeMap.OBJETOS;
     const sobe = livre ? 0 : Math.max(0, APOIO - fimDoTampo(tiles, c, r));
     const x = (livre ? c - 0.5 : c) * TILE;
     const y = (livre ? r - APOIO / 128 : r) * TILE - sobe * U;
+    comVolume(ctx, x, y, TILE, (bctx, bx, by) => pintarObjeto(bctx, bx, by, obj, TILE));
+  }
+
+  // A arte crua de cada coisa, na caixa de 128 apoiando em APOIO. Quem chama e
+  // o `comVolume`, que cuida da sombra e do relevo.
+  function pintarObjeto(ctx, x, y, obj, TILE) {
+    const O = OfficeMap.OBJETOS;
     const meio = TILE / 2;
 
     // Os monitores sao altos e **passam do tile pra cima**, como na referencia:
