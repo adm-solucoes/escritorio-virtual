@@ -554,8 +554,8 @@
   // celulas vizinhas, pra duas mesas encostadas virarem uma bancada so.
   // Medido na referencia (referencias/...154025.png): a mesa e uma placa lilas
   // clara e a faixa da frente ocupa ~1/4 da altura dela - bem mais grossa do que
-  // eu tinha feito. Nela ficam uma gaveta larga de um lado e um armarinho do
-  // outro, nao um puxador por celula.
+  // eu tinha feito. Nela fica a gaveteira ocupando UM bloco numa ponta e o pe
+  // na outra, nao um puxador por celula.
   const MESA_TAMPO = '#eceaf6';
   const MESA_TAMPO_LUZ = '#f7f6fc';
   const MESA_FRENTE = '#828da8';
@@ -619,32 +619,36 @@
     q(ctx, x, y, 0, FIM_TAMPO, 128, 3, '#faf9fe');
     q(ctx, x, y, 0, FIM_LIP - 2, 128, 2, '#a7a3bd');
 
-    // (2) o vazio: so uma sombra do tampo caindo no chao, sem tapar o piso
-    q(ctx, x, y, 0, FIM_LIP, 128, 7, 'rgba(40,44,58,0.34)');
-    q(ctx, x, y, 0, FIM_LIP + 7, 128, 6, 'rgba(40,44,58,0.16)');
+    // (2) a frente da mesa: uma faixa continua de ponta a ponta, como na
+    //     referencia. Antes eu tinha feito uma caixinha solta pendurada, que
+    //     parecia gabinete de PC. Abaixo dela o chao continua aparecendo.
+    q(ctx, x, y, 0, FIM_LIP, 128, CHAO - FIM_LIP, MESA_FRENTE);
+    q(ctx, x, y, 0, FIM_LIP, 128, 4, MESA_FRENTE_LUZ);        // luz na quina de cima
+    q(ctx, x, y, 0, CHAO - 4, 128, 4, MESA_FRENTE_SOMBRA);    // sombra no rodape
+    q(ctx, x, y, 0, CHAO, 128, 4, 'rgba(40,44,58,0.28)');     // sombra caindo no chao
 
     if (gavetas !== false) {
-      // (3) gaveteira: SO na ponta esquerda da bancada
+      // (3) a GAVETEIRA ocupa UM bloco so - a ponta esquerda da bancada. Na
+      //     outra ponta fica so o PE, uma coluna estreita. E o que a
+      //     referencia mostra: uma bancada de tres celulas tem uma gaveteira
+      //     e um pe, nao um movel embaixo de cada celula.
+      const gy = FIM_LIP + 8;
+      const gh = CHAO - FIM_LIP - 16;
       if (b.esq) {
-        const gx = 6, gw = 42, gy = FIM_LIP, gh = CHAO - gy;
-        q(ctx, x, y, gx, gy, gw, gh + 4, '#3b4256');
-        q(ctx, x, y, gx + 2, gy, gw - 4, gh + 1, '#98a2ba');
-        q(ctx, x, y, gx + 2, gy, gw - 4, 3, '#bcc4d6');
-        q(ctx, x, y, gx + gw - 7, gy, 5, gh + 1, '#79839c');
-        for (let i = 0; i < 3; i++) {
-          const dy = gy + 3 + i * 8;
-          q(ctx, x, y, gx + 6, dy, gw - 16, 6, '#ccd2df');
-          q(ctx, x, y, gx + 6, dy, gw - 16, 2, '#e8ebf2');
-          q(ctx, x, y, gx + 13, dy + 4, gw - 30, 2, '#6b748f');
-        }
+        q(ctx, x, y, 10, gy, 104, gh, '#4a5268');
+        q(ctx, x, y, 12, gy + 2, 100, gh - 4, '#c8cedd');
+        q(ctx, x, y, 12, gy + 2, 100, 3, '#e8ebf2');
+        // duas gavetas empilhadas: o vinco do meio e o puxador de cada uma
+        const meio = gy + Math.round(gh / 2);
+        q(ctx, x, y, 12, meio - 1, 100, 2, '#8d95a9');
+        q(ctx, x, y, 30, gy + Math.round(gh / 4), 64, 3, '#6b748f');
+        q(ctx, x, y, 30, meio + Math.round(gh / 4), 64, 3, '#6b748f');
       }
-      // (3) pe: SO na ponta direita
       if (b.dir) {
-        const px0 = 96, pw = 22;
-        q(ctx, x, y, px0, FIM_LIP, pw, CHAO + 4 - FIM_LIP, '#3b4256');
-        q(ctx, x, y, px0 + 3, FIM_LIP, pw - 6, CHAO + 1 - FIM_LIP, '#8b95ad');
-        q(ctx, x, y, px0 + 3, FIM_LIP, 4, CHAO + 1 - FIM_LIP, '#b0b9cc');
-        q(ctx, x, y, px0 - 3, CHAO - 3, pw + 6, 7, '#3b4256');   // sapata
+        // o pe: uma coluna estreita encostada na ponta direita
+        q(ctx, x, y, 98, gy, 20, gh, '#4a5268');
+        q(ctx, x, y, 100, gy + 2, 16, gh - 4, '#c8cedd');
+        q(ctx, x, y, 100, gy + 2, 16, 3, '#e8ebf2');
       }
     }
 
