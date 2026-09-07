@@ -65,12 +65,27 @@
   let previewIntervalId = null;
 
 
-  // Miniatura da opcao mostrando o boneco com a aparencia atual, so trocando o
-  // item daquela categoria - igual ao Gather, que mostra voce em cada variacao.
-  function desenharMiniatura(canvas, variacao, escala) {
+  // O manequim cinza da referencia (31-avatar-chapeu.png): na grade o boneco
+  // sai todo neutro e SO a peca daquela categoria vem colorida. Mostrar o
+  // avatar inteiro colorido em cada celula, como eu tinha feito, deixava as
+  // opcoes quase identicas - escolher chapeu virava caca as diferencas.
+  const MANEQUIM = {
+    skin: '#b9bcc4', shirt: '#9aa0ad', bottom: '#888d99', shoes: '#787d8a',
+    hairColor: '#9aa0ad', jaquetaColor: '#9aa0ad', chapeuColor: '#9aa0ad',
+    pescocoColor: '#9aa0ad', glassesColor: '#9aa0ad',
+  };
+
+  // Miniatura da opcao. `neutra` = a da grade, com manequim; sem ela e o seu
+  // boneco de verdade, que e o que a lateral de categorias mostra.
+  function desenharMiniatura(canvas, variacao, escala, neutra) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const aparenciaVariante = Object.assign({}, appearance, variacao);
+    const cor = neutra && neutra.campoCor
+      ? { [neutra.campoCor]: appearance[neutra.campoCor] }
+      : null;
+    const aparenciaVariante = neutra
+      ? Object.assign({}, appearance, MANEQUIM, variacao, cor)
+      : Object.assign({}, appearance, variacao);
     Character.draw(ctx, canvas.width / 2, canvas.height - 4, aparenciaVariante, {
       dir: 'down', moving: false, walkTime: 0, scale: escala || 1.05,
     });
@@ -143,7 +158,7 @@
         item.appendChild(rotulo);
       }
 
-      Character.ready.then(() => desenharMiniatura(mini, v.variacao));
+      Character.ready.then(() => desenharMiniatura(mini, v.variacao, undefined, cat));
 
       item.addEventListener('click', () => {
         v.aplicar();
