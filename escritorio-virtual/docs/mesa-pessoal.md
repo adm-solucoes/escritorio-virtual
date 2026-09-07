@@ -116,6 +116,13 @@ Regras que o resto da arte segue:
 - coisas altas (monitor) podem passar do topo da caixa - a camada de cima e
   desenhada depois de tudo.
 
+**A malha e de 4 unidades** (`PX`), que sao os 32 pixels por tile da
+referencia. Desenhe em multiplos de 4: passo menor que isso nao vira detalhe,
+vira borrao - o `q` encaixa tudo na malha, entao quatro passos de 1 caem no
+mesmo pixel e a arte se empilha sobre si mesma. Laco que anda de 1 em 1 e o
+sintoma; foi o que estragou a trama da cadeira, o cone do copo de cafe e a
+grade do calendario.
+
 **Como conferir sem entrar no mapa:** `Game.desenharApoiado(ctx, x, y, id, TILE,
 tiles, true)` desenha qualquer item num canvas solto. Da pra montar uma folha de
 contato dos 37 de uma vez.

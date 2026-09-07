@@ -2,3 +2,6 @@ node_modules/
 npm-debug.log*
 .env
 server/data/
+
+# backups de server/data (hashes de senha, segredo de sessao) - nunca versionar
+server/data-backup-*/

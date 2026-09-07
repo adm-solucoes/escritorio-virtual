@@ -1870,18 +1870,23 @@
       q(ctx, x, y, 66, 26, 3, 12, 'rgba(255,255,255,0.40)');
 
     } else if (obj === O.COPO_CAFE) {
-      q(ctx, x, y, 46, 84, 38, 5, 'rgba(45,50,64,0.20)');
-      // copo de papel: tronco de cone, mais estreito embaixo
-      for (let i = 0; i < 44; i++) {
-        const recuo = Math.round(i * 5 / 44);
-        q(ctx, x, y, 46 + recuo, 42 + i, 40 - recuo * 2, 1, i < 6 ? '#f6f7fb' : '#eceef4');
-      }
-      q(ctx, x, y, 50, 56, 32, 12, '#8a5a3c');                 // cinta de papelao
-      q(ctx, x, y, 50, 56, 32, 3, '#a5744f');
-      qArred(ctx, x, y, 42, 34, 48, 10, 3, '#c9ccd8');         // tampa
-      q(ctx, x, y, 44, 35, 44, 3, '#e6e8ef');
-      q(ctx, x, y, 60, 28, 10, 8, '#b6bac8');                  // bico
-      q(ctx, x, y, 52, 46, 4, 30, 'rgba(255,255,255,0.45)');
+      // Copo de papel: tronco de cone em TRES degraus, um pixel de arte cada.
+      // Antes eram 44 fatias de altura 1 com o recuo andando de 1 em 1 - tudo
+      // abaixo de um pixel, entao a conicidade sumia e as fatias se empilhavam.
+      //
+      // Tudo centrado em x=64 e em multiplos de PX. Sem isso a peca sai torta:
+      // com a sombra em 46 (que o encaixe joga pra 48) e a cinta em 44, as duas
+      // ficavam desalinhadas do corpo e o copo parecia cair pra direita.
+      q(ctx, x, y, 48, 84, 32, 4, 'rgba(45,50,64,0.20)');      // sombra, na base
+      q(ctx, x, y, 40, 40, 48, 12, '#f6f7fb');                 // boca
+      q(ctx, x, y, 44, 52, 40, 16, '#eceef4');
+      q(ctx, x, y, 48, 68, 32, 16, '#e2e5ee');                 // fundo
+      q(ctx, x, y, 48, 56, 32, 12, '#8a5a3c');                 // cinta de papelao
+      q(ctx, x, y, 48, 56, 32, 4, '#a5744f');
+      qArred(ctx, x, y, 36, 32, 56, 8, 4, '#c9ccd8');          // tampa, sobrando a boca
+      q(ctx, x, y, 40, 32, 48, 4, '#e6e8ef');
+      q(ctx, x, y, 60, 24, 8, 8, '#b6bac8');                   // bico
+      q(ctx, x, y, 48, 44, 4, 8, 'rgba(255,255,255,0.45)');    // brilho, so na boca
 
     } else if (obj === O.GARRAFA) {
       q(ctx, x, y, 50, 88, 30, 5, 'rgba(45,50,64,0.20)');
@@ -1989,10 +1994,14 @@
       qContorno(ctx, x, y, 32, 32, 64, 50, 3, '#2b3040');
       qArred(ctx, x, y, 33, 33, 62, 48, 2, '#f6f7fb');
       q(ctx, x, y, 33, 33, 62, 14, '#c25a4a');                 // faixa do mes
-      q(ctx, x, y, 40, 38, 22, 4, '#f6d7d0');
-      for (let l = 0; l < 3; l++) {                            // grade dos dias
-        for (let c2 = 0; c2 < 6; c2++) {
-          q(ctx, x, y, 38 + c2 * 9, 52 + l * 9, 6, 6, (l === 1 && c2 === 3) ? '#4da3d6' : '#d7dbe6');
+      q(ctx, x, y, 40, 36, 24, 4, '#f6d7d0');
+      // Grade dos dias: 8 de celula e 4 de vao, tudo multiplo de PX. Com 6 de
+      // celula e passo 9 - nenhum dos dois na malha - as celulas encostavam
+      // umas nas outras e a grade virava uma barra cinza.
+      for (let l = 0; l < 3; l++) {
+        for (let c2 = 0; c2 < 5; c2++) {
+          q(ctx, x, y, 40 + c2 * 12, 50 + l * 12, 8, 8,
+            (l === 1 && c2 === 2) ? '#4da3d6' : '#d7dbe6');
         }
       }
 
@@ -2166,13 +2175,19 @@
     qContorno(ctx, x, y, ax - 3, ay - 3, aw + 6, ah + 6, 8, escuro);
     qArred(ctx, x, y, ax - 2, ay - 2, aw + 4, ah + 4, 7, base);
     qArred(ctx, x, y, ax, ay, aw, ah, 6, '#343b49');
-    // trama diagonal nos dois sentidos
-    for (let d = -ah; d < aw; d += 9) {
-      for (let j = 3; j < ah - 3; j++) {
+    // Trama diagonal nos dois sentidos, em degraus de UM pixel de arte.
+    //
+    // A versao anterior andava de 1 em 1 desenhando marcas de 2x1. Com a malha
+    // de 4 unidades por pixel, quatro passos seguidos caem no mesmo pixel: em
+    // vez de diagonal saia um borrao, e cada marca era desenhada quatro vezes.
+    // Andando de PX em PX, cada bloco cai num pixel proprio e a diagonal vira a
+    // escada que a referencia desenha.
+    for (let d = -ah; d < aw; d += PX * 3) {
+      for (let j = PX; j < ah - PX; j += PX) {
         const i1 = d + j;
         const i2 = d + (ah - j);
-        if (i1 > 3 && i1 < aw - 3) q(ctx, x, y, ax + i1, ay + j, 2, 1, claro);
-        if (i2 > 3 && i2 < aw - 3) q(ctx, x, y, ax + i2, ay + j, 2, 1, claro);
+        if (i1 > PX && i1 < aw - PX) q(ctx, x, y, ax + i1, ay + j, PX, PX, claro);
+        if (i2 > PX && i2 < aw - PX) q(ctx, x, y, ax + i2, ay + j, PX, PX, claro);
       }
     }
     // volume: luz em cima/esquerda, sombra embaixo/direita
