@@ -33,8 +33,10 @@ function conferir(nome, veio, esperado) {
 function catalogo(lista) {
   const bloco = character.match(new RegExp('const ' + lista + ' = \\[([\\s\\S]*?)\\n  \\];'));
   if (!bloco) return null;
-  return [...bloco[1].matchAll(/\{\s*id:\s*'([^']+)'[^}]*?arq:\s*(?:'([^']+)'|null)/g)]
-    .map((m) => ({ id: m[1], arq: m[2] || null }));
+  // `arqAtras` e a folha que vai atras do corpo (cabelo comprido). Ela conta
+  // como arquivo em uso: precisa existir e precisa estar creditada igual.
+  return [...bloco[1].matchAll(/\{\s*id:\s*'([^']+)'[^}]*?arq:\s*(?:'([^']+)'|null)(?:[^}]*?arqAtras:\s*'([^']+)')?/g)]
+    .map((m) => ({ id: m[1], arq: m[2] || null, arqAtras: m[3] || null }));
 }
 
 const LISTAS = {
@@ -67,7 +69,11 @@ Object.entries(LISTAS).forEach(([lista, campo]) => {
 // ---- os arquivos existem, e estao creditados ------------------------------
 const arquivos = [];
 Object.values(todas).forEach((lista) => {
-  (lista || []).forEach((peca) => { if (peca.arq && !arquivos.includes(peca.arq)) arquivos.push(peca.arq); });
+  (lista || []).forEach((peca) => {
+    [peca.arq, peca.arqAtras].forEach((arq) => {
+      if (arq && !arquivos.includes(arq)) arquivos.push(arq);
+    });
+  });
 });
 
 conferir('todo arquivo de roupa existe em assets/lpc',

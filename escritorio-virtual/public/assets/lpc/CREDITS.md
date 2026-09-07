@@ -65,6 +65,23 @@ teste de proposito.
 | `pes_bota.png` | `feet/boots/basic/male/walk.png` | JaidynReiman, bluecarrot16, Nila122 | OGA-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0 |
 | `pes_pantufa.png` | `feet/slippers/male/walk.png` | bluecarrot16, JaidynReiman, Joe White, Luke Mehl | CC-BY-SA 3.0, GPL 3.0 |
 | `neck_gravata.png` | `neck/tie/necktie/male/walk.png` | JaidynReiman, bluecarrot16, Thane Brimhall (pennomi), laetissima, Makrohn | CC-BY-SA 3.0, GPL 3.0 |
+| `baixo_legging.png` | `legs/leggings/male/walk.png` | bluecarrot16, ElizaWy, JaidynReiman, Mandi Paugh, William.Thompsonj, Johannes Sjölund (wulax), Stephen Challener (Redshrike) | OGA-BY 3.0, GPL 3.0 |
+| `baixo_dobrada.png` | `legs/cuffed/male/walk.png` | JaidynReiman, ElizaWy, Bluecarrot16, Johannes Sjölund (wulax), Stephen Challener (Redshrike) | OGA-BY 3.0, GPL 3.0 |
+| `hair_bagunca.png` | `hair/bedhead/adult/walk.png` | JaidynReiman, Manuel Riecke (MrBeast) | CC-BY-SA 3.0, GPL 3.0 |
+| `hair_topete.png` | `hair/swoop/adult/walk.png` | JaidynReiman, Manuel Riecke (MrBeast) | CC-BY-SA 3.0, GPL 3.0 |
+| `hair_trancinhas.png` | `hair/cornrows/adult/walk.png` | ElizaWy, bluecarrot16 | CC0 |
+| `hair_twists.png` | `hair/twists_fade/adult/walk.png` | bluecarrot16 | CC0 |
+| `hair_chanel_reto.png` | `hair/page/adult/walk.png` | Page, Johannes Sjölund (wulax) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
+| `hair_longo_messy.png` | `hair/long_messy/adult/walk.png` | Mandi Paugh, bluecarrot16 | GPL 2.0, GPL 3.0, CC-BY 3.0 |
+| `hair_cachos.png` | `hair/curly_long/adult/walk.png` | ElizaWy | OGA-BY 3.0 |
+| `hair_ondulado_fg.png` | `hair/wavy/adult/fg/walk.png` | JaidynReiman, Nila122 | OGA-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0 |
+| `hair_ondulado_bg.png` | `hair/wavy/adult/bg/walk.png` | JaidynReiman, Nila122 | OGA-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0 |
+| `hair_tranca_fg.png` | `hair/braid/adult/fg/walk.png` | Nila122, ElizaWy | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0, GPL 2.0 |
+| `hair_tranca_bg.png` | `hair/braid/adult/bg/walk.png` | Nila122, ElizaWy | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0, GPL 2.0 |
+| `hair_rabo_fg.png` | `hair/high_ponytail/adult/fg/walk.png` | JaidynReiman, ElizaWy, bluecarrot16 | OGA-BY 3.0 |
+| `hair_rabo_bg.png` | `hair/high_ponytail/adult/bg/walk.png` | JaidynReiman, ElizaWy, bluecarrot16 | OGA-BY 3.0 |
+| `neck_lenco.png` | `neck/cravat/male/walk.png` | bluecarrot16 | OGA-BY 3.0, GPL 3.0 |
+| `jaqueta_sobretudo.png` | `torso/jacket/frock/male/walk/white.png` | bluecarrot16 | CC-BY-SA 3.0 |
 
 Se este repositorio for publicado publicamente (ex: GitHub publico), mantenha este
 arquivo junto dos PNGs — e a forma de dar credito exigida pelas licencas OGA-BY e

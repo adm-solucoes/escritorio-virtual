@@ -32,11 +32,25 @@
     { id: 'longo', nome: 'Longo', arq: 'hair_longo.png' },
     { id: 'moicano', nome: 'Moicano', arq: 'hair_moicano.png' },
     { id: 'franja', nome: 'Franja', arq: 'hair_franja.png' },
+    { id: 'bagunca', nome: 'Bagunca', arq: 'hair_bagunca.png' },
+    { id: 'topete', nome: 'Topete', arq: 'hair_topete.png' },
+    { id: 'trancinhas', nome: 'Trancinhas', arq: 'hair_trancinhas.png' },
+    { id: 'twists', nome: 'Twists', arq: 'hair_twists.png' },
+    { id: 'chanel_reto', nome: 'Chanel reto', arq: 'hair_chanel_reto.png' },
+    { id: 'longo_messy', nome: 'Longo solto', arq: 'hair_longo_messy.png' },
+    { id: 'cachos', nome: 'Cachos', arq: 'hair_cachos.png' },
+    // Estes tem DUAS folhas: `arqAtras` vai atras do corpo (o volume que cai
+    // nas costas) e `arq` na frente. E assim que o LPC monta cabelo comprido -
+    // sem isso, so dava pra usar os penteados que cabem todos na frente.
+    { id: 'ondulado', nome: 'Ondulado', arq: 'hair_ondulado_fg.png', arqAtras: 'hair_ondulado_bg.png' },
+    { id: 'tranca', nome: 'Tranca', arq: 'hair_tranca_fg.png', arqAtras: 'hair_tranca_bg.png' },
+    { id: 'rabo', nome: 'Rabo de cavalo', arq: 'hair_rabo_fg.png', arqAtras: 'hair_rabo_bg.png' },
   ];
   // Camada do pescoco - fica por cima da camisa e por baixo da cabeca.
   const PESCOCOS = [
     { id: 'nenhum', nome: 'Nada', arq: null },
     { id: 'gravata', nome: 'Gravata', arq: 'neck_gravata.png' },
+    { id: 'lenco', nome: 'Lenco', arq: 'neck_lenco.png' },
   ];
   const SAPATOS = [
     { id: 'tenis', nome: 'Tenis', arq: 'feet.png' },
@@ -64,12 +78,15 @@
     { id: 'nenhuma', nome: 'Sem jaqueta', arq: null },
     { id: 'blazer', nome: 'Blazer', arq: 'jaqueta_blazer.png' },
     { id: 'cardigan', nome: 'Cardigan', arq: 'jaqueta_cardigan.png' },
+    { id: 'sobretudo', nome: 'Sobretudo', arq: 'jaqueta_sobretudo.png' },
   ];
   const BOTTOMS = [
     { id: 'calca', nome: 'Calca', arq: 'legs.png' },
     { id: 'social', nome: 'Calca social', arq: 'baixo_social.png' },
     { id: 'bermuda', nome: 'Bermuda', arq: 'baixo_bermuda.png' },
     { id: 'saia', nome: 'Saia', arq: 'baixo_saia.png' },
+    { id: 'legging', nome: 'Legging', arq: 'baixo_legging.png' },
+    { id: 'dobrada', nome: 'Calca dobrada', arq: 'baixo_dobrada.png' },
   ];
   const BARBAS = [
     { id: 'nenhuma', nome: 'Sem barba', arq: null },
@@ -203,6 +220,7 @@
     // nao tem arquivo e nao carrega nada.
     [].concat(TOPS, JAQUETAS, BOTTOMS, BARBAS, CHAPEUS, CABELOS, SAPATOS, PESCOCOS).forEach((peca) => {
       if (peca.arq) nomes[chaveDaPeca(peca)] = peca.arq;
+      if (peca.arqAtras) nomes['peca_' + peca.arqAtras.replace('.png', '')] = peca.arqAtras;
     });
     const entradas = Object.entries(nomes);
     const carregadas = await Promise.all(entradas.map(([, arq]) => carregarImagem(ASSET_BASE + arq)));
@@ -260,6 +278,11 @@
     const chapeuR = recolorir(folhaDe(CHAPEUS, appearance.chapeu), appearance.chapeuColor);
     const pescocoR = recolorir(folhaDe(PESCOCOS, appearance.pescoco), appearance.pescocoColor);
 
+    const cabelo = acha(CABELOS, appearance.hairStyle);
+    const cabeloAtrasR = cabelo.arqAtras
+      ? recolorir(imagens['peca_' + cabelo.arqAtras.replace('.png', '')], appearance.hairColor)
+      : null;
+
     const out = document.createElement('canvas');
     out.width = SHEET_W;
     out.height = SHEET_H;
@@ -269,6 +292,7 @@
     // A ordem e a de vestir: corpo, calca, sapato, camisa, jaqueta por cima da
     // camisa, cabeca, barba, oculos, cabelo, e o chapeu por ultimo de todos.
     const por = (img) => { if (img) ctx.drawImage(img, 0, 0); };
+    por(cabeloAtrasR);   // o cabelo que cai nas costas fica ATRAS do corpo
     por(corpoR);
     por(pernasR);
     por(pesR);
