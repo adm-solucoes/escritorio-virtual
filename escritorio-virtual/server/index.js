@@ -343,6 +343,22 @@ io.on('connection', (socket) => {
     io.emit('mesas-atualizadas', mesasStore.paraEnvio());
   });
 
+  // Mover e tirar apontam a coisa pelo id, nao por "a mais perto do clique":
+  // com duas canecas encostadas, chute nao serve.
+  socket.on('mesa-item-mover', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data || typeof data.id !== 'string') return;
+    if (!mesasStore.moverItem(data.id, Number(data.x), Number(data.y), player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+  });
+
+  socket.on('mesa-item-tirar', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data || typeof data.id !== 'string') return;
+    if (!mesasStore.tirarItem(data.id, player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+  });
+
   // Decorar o escritorio: so a diretoria. A checagem que vale e essa aqui - o
   // botao escondido no cliente e so conforto. Ver docs/plano-decorador.md.
   socket.on('mapa-editar', (data) => {

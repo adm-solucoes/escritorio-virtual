@@ -235,6 +235,44 @@ button { font-family: inherit; }
 }
 .conta-mais:hover { background: var(--hover); }
 
+/* Barrinha escura que sai em cima da coisa selecionada, como a barra de objeto
+   selecionado do Gather (referencias/9x-ui-gather-111539.png). */
+.barra-item {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 62;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #2b3040;
+  box-shadow: 0 8px 22px rgba(20, 22, 30, 0.34);
+}
+.barra-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #eef0f6;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.barra-item-btn:hover { background: rgba(255, 255, 255, 0.10); }
+.barra-item-btn.perigo { color: #ff9a90; }
+.barra-item-btn.perigo:hover { background: rgba(255, 120, 108, 0.16); }
+.barra-item-risco {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
 /* Cartao da mesa: o mesmo desenho do cartao da conta, mas solto na tela - ele
    nasce no ponto onde a mesa foi clicada. */
 .cartao-mesa {

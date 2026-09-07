@@ -41,7 +41,7 @@
           { o: O.LUMINARIA, nome: 'Luminaria' },
           { o: O.PLANTINHA, nome: 'Plantinha' },
           { o: O.LIVROS, nome: 'Livros' },
-          { o: O.NENHUM, nome: 'Tirar o que esta em cima' },
+          { o: O.NENHUM, nome: 'Tirar da decoracao da casa', soAdmin: true },
         ],
       },
       {
@@ -263,10 +263,12 @@
     if (termo) {
       return categorias()
         .flatMap((c) => c.itens)
-        .filter((i) => i.nome.toLowerCase().includes(termo));
+        .filter((i) => (souAdmin || !i.soAdmin) && i.nome.toLowerCase().includes(termo));
     }
     const cat = categorias().find((c) => c.id === abaAtual);
-    return cat ? cat.itens : [];
+    // Itens marcados `soAdmin` (a borracha da casa) nao aparecem pra quem so
+    // decora a propria mesa - ali quem tira e o "Excluir" da coisa selecionada.
+    return cat ? cat.itens.filter((i) => souAdmin || !i.soAdmin) : [];
   }
 
   function renderAbas() {
@@ -360,8 +362,10 @@
       // regra que o servidor aplica nos dois eventos.
       //
       // Na propria mesa nao ha "ja tem isso aqui": a coisa pousa onde voce
-      // clicar, e podem conviver varias na mesma celula.
-      if (ehMinhaMesa(col, row)) return true;
+      // clicar, e podem conviver varias na mesma celula. A borracha nao vale
+      // aqui - pra tirar da SUA mesa voce clica na coisa e usa "Excluir", que
+      // acerta qual e em vez de chutar a mais proxima.
+      if (ehMinhaMesa(col, row)) return Boolean(selecionado.o);
       if (!souAdmin) return false;
       return m.objetos[row][col] !== selecionado.o;
     }

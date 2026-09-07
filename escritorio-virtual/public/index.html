@@ -302,6 +302,19 @@
         </div>
       </div>
 
+      <!-- Barrinha da coisa selecionada em cima da mesa -->
+      <div id="barra-item" class="barra-item oculto">
+        <button id="btn-item-mover" class="barra-item-btn" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3m3-3l3 3M12 21l-3-3m3 3l3-3M3 12l3-3m-3 3l3 3M21 12l-3-3m3 3l-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Mover
+        </button>
+        <span class="barra-item-risco"></span>
+        <button id="btn-item-excluir" class="barra-item-btn perigo" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Excluir
+        </button>
+      </div>
+
       <!-- Cartao da mesa, no formato do print 13-menu-largar-mesa.png -->
       <div id="cartao-mesa" class="cartao-mesa oculto">
         <button id="btn-fechar-cartao-mesa" class="cartao-mesa-fechar" type="button" title="Fechar" aria-label="Fechar">
@@ -461,6 +474,7 @@
   <script src="js/trello.js"></script>
   <script src="js/decorador.js"></script>
   <script src="js/cartaomesa.js"></script>
+  <script src="js/itemmesa.js"></script>
   <script src="js/pessoas.js"></script>
   <script src="js/game.js"></script>
   <script src="js/main.js"></script>

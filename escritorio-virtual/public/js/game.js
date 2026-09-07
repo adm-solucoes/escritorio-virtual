@@ -183,6 +183,26 @@
       );
     }
 
+    // Coisa selecionada em cima da mesa: um anel em volta, e a propria coisa
+    // seguindo o cursor enquanto esta sendo movida.
+    const selecao = ItemMesa.selecaoAtual();
+    if (selecao) {
+      const cx = selecao.x * TILE;
+      const cy = selecao.y * TILE - TILE * 0.22;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(99,217,196,0.95)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.roundRect(cx - TILE * 0.44, cy - TILE * 0.46, TILE * 0.88, TILE * 0.92, 6);
+      ctx.stroke();
+      ctx.restore();
+      if (ItemMesa.estaMovendo()) {
+        drawObjectTile(ctx, selecao.x, selecao.y, selecao.o, TILE, OfficeMap.tiles, true);
+      }
+      ItemMesa.posicionar();
+    }
+
     // Fantasma da celula que vai receber o objeto (decorador aberto).
     // A "malha": com um item de apoiar na mao, as superficies livres acendem uma
     // gradinha discreta, mostrando onde da pra pousar a coisa. E o equivalente
@@ -313,7 +333,11 @@
     // O que o dono pos na propria mesa vem por cima da decoracao da casa, e nao
     // anda pela grade: cada coisa tem a posicao que a pessoa escolheu. Ordenado
     // por y pra quem esta mais na frente tapar quem esta atras.
+    const emMovimento = ItemMesa.estaMovendo() ? ItemMesa.selecaoAtual() : null;
     itensDeMesa.slice().sort((a, b) => a.y - b.y).forEach((it) => {
+      // A que esta sendo arrastada sai daqui: ela e desenhada ao vivo, seguindo
+      // o cursor, senao ficaria congelada no lugar antigo ate soltar.
+      if (emMovimento && it.id === emMovimento.id) return;
       drawObjectTile(mctx, it.x, it.y, it.o, TILE, tiles, true);
     });
     OfficeMap.ROOMS.forEach((sala) => desenharEtiquetaSala(mctx, sala, TILE));
@@ -1721,6 +1745,17 @@
     ctx.imageSmoothingEnabled = false;
   }
 
+  // Onde, na tela, cai um ponto do mundo (em tiles com fracao). E o que deixa a
+  // barrinha da coisa selecionada acompanhar a camera.
+  function pontoNaTela(tx, ty) {
+    if (!canvas) return null;
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: r.left + (tx * OfficeMap.TILE - camX) * ZOOM,
+      y: r.top + (ty * OfficeMap.TILE - camY) * ZOOM,
+    };
+  }
+
   function tamanhoDaVista() {
     return {
       w: canvas.clientWidth / ZOOM,
@@ -2263,10 +2298,31 @@
     const TILE = OfficeMap.TILE;
     const col = Math.floor(clickX / TILE);
     const row = Math.floor(clickY / TILE);
+    const tileX = clickX / TILE;
+    const tileY = clickY / TILE;
+
+    // Soltando uma coisa que estava sendo movida - vale mesmo fora da mesa,
+    // porque o servidor e quem recusa cair na mesa de outro.
+    if (ItemMesa.estaMovendo()) {
+      ItemMesa.soltarEm(tileX, tileY);
+      return;
+    }
+
     if (OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col])) {
+      // Clicou EM CIMA de uma coisa da sua mesa? Entao a intencao e mexer nela,
+      // nao abrir o cartao da mesa.
+      if (celulaEhMinha(col, row)) {
+        const item = itemPertoDe(tileX, tileY);
+        if (item) {
+          ItemMesa.selecionar(item);
+          return;
+        }
+      }
+      ItemMesa.fechar();
       cliqueNaMesa(col, row, e.clientX, e.clientY);
       return;
     }
+    ItemMesa.fechar();
 
     moverPara(clickX, clickY);
   }
@@ -2378,6 +2434,13 @@
         return;
       }
       celulaAlvo = null;
+
+      if (ItemMesa.estaMovendo()) {
+        ItemMesa.arrastarPara(x / TILE, y / TILE);
+        mesaHover = null;
+        canvas.style.cursor = 'grabbing';
+        return;
+      }
 
       const ehMesa = Boolean(OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col]));
       mesaHover = ehMesa ? { col, row } : null;
@@ -2519,6 +2582,7 @@
     minhaMesa,
     focarNaMesa,
     soltarFoco,
+    pontoNaTela,
     celulaEhMinha,
     itemPertoDe,
     // usados pelo decorador: desenhar as miniaturas do catalogo com a mesma

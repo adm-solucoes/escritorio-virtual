@@ -93,6 +93,15 @@
     if (socket && socket.connected) socket.emit('mesa-item', { x, y, o });
   }
 
+  // Mover e tirar apontam pelo id da coisa, nao pela posicao.
+  function moverItemDaMesa(id, x, y) {
+    if (socket && socket.connected) socket.emit('mesa-item-mover', { id, x, y });
+  }
+
+  function tirarItemDaMesa(id) {
+    if (socket && socket.connected) socket.emit('mesa-item-tirar', { id });
+  }
+
   function pedirAgenda() {
     if (socket && socket.connected) socket.emit('agenda-pedir');
   }
@@ -111,7 +120,8 @@
 
   window.Network = {
     connect, on, sendMove, sendStatus, sendReaction, sendRtcSignal, sendChatMessage,
-    pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, editarMapa, editarObjetoMapa,
+    pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, moverItemDaMesa, tirarItemDaMesa,
+    editarMapa, editarObjetoMapa,
     pedirAgenda, pedirTrello,
   };
 })();

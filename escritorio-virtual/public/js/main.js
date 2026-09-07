@@ -75,6 +75,7 @@
   }
 
   CartaoMesa.init();
+  ItemMesa.init();
   Auth.init(depoisDoLogin);
   Entrada.init(entrarNoJogo, abrirCriador);
 

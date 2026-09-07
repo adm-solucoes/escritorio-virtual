@@ -67,7 +67,8 @@ const itensDa = (chave) => mesas.paraEnvio().find((m) => m.chave === chave).iten
 conferir('Ana poe caneca na propria mesa', mesas.porItem(15.3, 18.4, CANECA, ANA), true);
 conferir('  e outra na MESMA celula, noutro ponto', mesas.porItem(15.8, 18.7, CANECA, ANA), true);
 conferir('  as duas ficam (nao e uma por celula)', itensDa('15,18').length, 2);
-conferir('  e guardam a posicao com fracao', itensDa('15,18')[0], { o: CANECA, x: 15.3, y: 18.4 });
+const primeiro = itensDa('15,18')[0];
+conferir('  e guardam a posicao com fracao', [primeiro.o, primeiro.x, primeiro.y], [CANECA, 15.3, 18.4]);
 conferir('Ana poe livros noutra celula da mesma mesa', mesas.porItem(17.2, 19.1, LIVROS, ANA), true);
 
 conferir('Bruno NAO poe nada na mesa da Ana', mesas.porItem(16.5, 18.5, CANECA, BRUNO), false);
@@ -79,10 +80,20 @@ const map = require(path.join(RAIZ, 'server', 'map.js'));
 conferir('item acima do OBJETO_MAX (' + map.OBJETO_MAX + ') e recusado',
   mesas.porItem(16.5, 19.5, map.OBJETO_MAX + 1, ANA), false);
 
-// borracha: tira o mais perto do clique, e so se passar perto
-conferir('borracha longe de tudo nao tira nada', mesas.porItem(17.9, 18.05, 0, ANA), false);
-conferir('borracha perto tira a coisa mais proxima', mesas.porItem(15.85, 18.75, 0, ANA), true);
+// tirar e mover apontam pelo ID, nao por "o mais perto" - com duas canecas
+// encostadas, chute nao serve
+conferir('objeto 0 nao serve mais de borracha', mesas.porItem(15.85, 18.75, 0, ANA), false);
+const alvoId = itensDa('15,18')[1].id;
+conferir('cada coisa tem id proprio', typeof alvoId === 'string' && alvoId.length > 3, true);
+conferir('mover leva a coisa certa pro ponto novo', mesas.moverItem(alvoId, 16.9, 19.2, ANA), true);
+conferir('  e ela foi mesmo', itensDa('15,18').find((i) => i.id === alvoId).x, 16.9);
+conferir('  a outra nao saiu do lugar', itensDa('15,18')[0].x, 15.3);
+conferir('Bruno nao move coisa da mesa da Ana', mesas.moverItem(alvoId, 16, 19, BRUNO), false);
+conferir('nao da pra mover pra fora da mesa', mesas.moverItem(alvoId, 21.5, 18.5, ANA), false);
+conferir('Bruno nao tira coisa da mesa da Ana', mesas.tirarItem(alvoId, BRUNO), false);
+conferir('tirar pelo id funciona', mesas.tirarItem(alvoId, ANA), true);
 conferir('  e tirou a certa (sobrou a de 15.3)', itensDa('15,18')[0].x, 15.3);
+conferir('tirar id que nao existe nao faz nada', mesas.tirarItem('naoexiste', ANA), false);
 
 // teto por mesa
 let postos = 0;

@@ -384,3 +384,47 @@ No navegador:
 | Borracha | ok - tirou a mais proxima, deixou a outra |
 | Cadeira | ok - encostada na mesa |
 | Console | limpo |
+
+
+## 12. Clicar na coisa: mover ou excluir
+
+A borracha ("Tirar o que esta em cima") era um chute: ela apagava **a coisa mais
+perto do clique**. Com duas canecas encostadas voce nunca sabia qual ia sair - e
+pra mudar algo de lugar so restava apagar e por de novo.
+
+**Cada coisa em cima da mesa passou a ter id proprio.** Clicar nela seleciona
+(anel tracejado) e abre uma barrinha escura com **Mover** e **Excluir**, no
+estilo da barra de objeto selecionado do Gather
+(`referencias/9x-ui-gather-111539.png`).
+
+- **Mover** solta a coisa no cursor; o clique seguinte a deixa ali. So um evento
+  vai pro servidor, no fim - nao um por pixel percorrido.
+- **Excluir** tira aquela, apontada pelo id. `Delete`/`Backspace` fazem o mesmo,
+  e `Esc` desfaz a selecao.
+
+Duas coisas que o id resolveu de graca no servidor: **mover so vale dentro da
+mesma mesa** (arrastar pra mesa do vizinho seria decorar a mesa dele) e **tirar
+so vale nas suas** - as duas testadas.
+
+O mapa e pre-renderizado, entao a coisa arrastada sai do pre-render e passa a ser
+desenhada ao vivo enquanto segue o cursor; sem isso ela ficaria estampada no
+lugar antigo ate soltar.
+
+A borracha continua existindo **so pra diretoria**, e so pra decoracao da casa -
+ela nao aparece mais pra quem esta decorando a propria mesa.
+
+### Resultado dos testes (07/09/2026)
+
+`npm run teste`: **41 de 41**. As novas cobrem id proprio, mover a coisa certa
+(a outra fica onde estava), mover pra fora da mesa (recusado), mover/tirar coisa
+de outra pessoa (recusado) e id inexistente.
+
+No navegador:
+
+| O que | Resultado |
+|---|---|
+| Clicar na coisa | ok - seleciona e abre a barrinha em cima dela |
+| Mover | ok - de `16.07,18.90` pra `17.47,19.11`, onde eu cliquei |
+| Excluir | ok - sai so ela, a barrinha fecha |
+| Item antigo (sem id) | ok - ganhou id na leitura, nada se perdeu |
+| Console | limpo |

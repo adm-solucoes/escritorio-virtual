@@ -26,8 +26,7 @@ let donos = new Map();
 // posicao precisa ser mais fina que o tile.
 let itens = new Map();
 
-const ITENS_MAX = 14;        // uma mesa cheia, sem virar bagunca
-const RAIO_PRA_TIRAR = 0.55; // em tiles: o quao perto o clique tem que passar
+const ITENS_MAX = 14; // uma mesa cheia, sem virar bagunca
 
 function chave(col, row) {
   return col + ',' + row;
@@ -82,45 +81,67 @@ function largarDe(uid) {
   return true;
 }
 
-// Poe (ou tira, com `objeto` 0) uma coisa em cima da PROPRIA mesa, na posicao
-// exata em que a pessoa clicou. E o que deixa personalizar sem ser da diretoria:
-// a checagem que vale e esta - o ponto tem que cair numa mesa que e sua.
-function porItem(x, y, objeto, uid) {
-  if (!uid || !Number.isFinite(x) || !Number.isFinite(y)) return false;
-  if (!Number.isInteger(objeto) || objeto < 0 || objeto > map.OBJETO_MAX) return false;
+// Cada coisa em cima da mesa tem um id proprio. Antes a borracha achava "a mais
+// perto do clique", o que e um chute: duas canecas encostadas e voce nunca sabia
+// qual ia sair. Com id, o cliente aponta exatamente qual.
+function novoId() {
+  return Math.random().toString(36).slice(2, 10);
+}
 
+// Devolve a lista de itens da mesa que contem esse ponto, se ela for do `uid`.
+// Todas as operacoes passam por aqui - e a checagem que faz a mesa ser sua.
+function listaMinhaEm(x, y, uid) {
+  if (!uid || !Number.isFinite(x) || !Number.isFinite(y)) return null;
   const celulas = blocoEm(Math.floor(x), Math.floor(y));
-  if (!celulas) return false;
-
+  if (!celulas) return null;
   const k = chaveDoBloco(celulas);
-  if (donos.get(k) !== uid) return false; // so na sua mesa
+  if (donos.get(k) !== uid) return null;
+  return { k, lista: itens.get(k) || [] };
+}
 
-  const lista = itens.get(k) || [];
+function guardar(k, lista) {
+  if (lista.length) itens.set(k, lista);
+  else itens.delete(k);
+  salvar();
+}
 
-  if (!objeto) {
-    // Borracha: tira o que estiver mais perto do clique. Sem isso, uma coisa
-    // colocada meio torta nunca mais sairia dali.
-    let perto = -1;
-    let melhor = RAIO_PRA_TIRAR;
-    lista.forEach((it, i) => {
-      const d = Math.hypot(it.x - x, it.y - y);
-      if (d < melhor) { melhor = d; perto = i; }
-    });
-    if (perto < 0) return false;
-    lista.splice(perto, 1);
-    if (lista.length) itens.set(k, lista);
-    else itens.delete(k);
-    salvar();
+// duas casas: o cliente manda float do mouse, e sem cortar o arquivo encheria
+// de 15.400000000000002
+const arred = (v) => Math.round(v * 100) / 100;
+
+function porItem(x, y, objeto, uid) {
+  if (!Number.isInteger(objeto) || objeto < 1 || objeto > map.OBJETO_MAX) return false;
+  const alvo = listaMinhaEm(x, y, uid);
+  if (!alvo || alvo.lista.length >= ITENS_MAX) return false;
+
+  alvo.lista.push({ id: novoId(), o: objeto, x: arred(x), y: arred(y) });
+  guardar(alvo.k, alvo.lista);
+  return true;
+}
+
+// Mover e tirar trabalham por id, e so dentro da MESMA mesa: arrastar uma
+// caneca pra mesa do vizinho seria decorar a mesa dele.
+function moverItem(id, x, y, uid) {
+  const alvo = listaMinhaEm(x, y, uid);
+  if (!alvo) return false;
+  const it = alvo.lista.find((i) => i.id === id);
+  if (!it) return false;
+  it.x = arred(x);
+  it.y = arred(y);
+  guardar(alvo.k, alvo.lista);
+  return true;
+}
+
+function tirarItem(id, uid) {
+  for (const [k, lista] of itens) {
+    if (donos.get(k) !== uid) continue;
+    const i = lista.findIndex((it) => it.id === id);
+    if (i < 0) continue;
+    lista.splice(i, 1);
+    guardar(k, lista);
     return true;
   }
-
-  if (lista.length >= ITENS_MAX) return false;
-  // Guarda com 2 casas: o cliente manda float do mouse, e sem cortar o arquivo
-  // encheria de 15.400000000000002.
-  lista.push({ o: objeto, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 });
-  itens.set(k, lista);
-  salvar();
-  return true;
+  return false;
 }
 
 // O que o cliente precisa pra desenhar: as celulas (pro contorno cobrir a mesa
@@ -154,13 +175,14 @@ function normalizarItens(bruto) {
   if (Array.isArray(bruto)) {
     return bruto
       .filter((it) => it && Number.isFinite(it.x) && Number.isFinite(it.y) && Number.isInteger(it.o))
+      .map((it) => ({ id: it.id || novoId(), o: it.o, x: it.x, y: it.y }))
       .slice(0, ITENS_MAX);
   }
   if (!bruto || typeof bruto !== 'object') return [];
   return Object.keys(bruto).map((cel) => {
     const p = cel.split(',');
     // no formato antigo a coisa ficava no meio da celula
-    return { o: bruto[cel], x: Number(p[0]) + 0.5, y: Number(p[1]) + 0.5 };
+    return { id: novoId(), o: bruto[cel], x: Number(p[0]) + 0.5, y: Number(p[1]) + 0.5 };
   }).filter((it) => Number.isInteger(it.o) && Number.isFinite(it.x)).slice(0, ITENS_MAX);
 }
 
@@ -192,4 +214,4 @@ function carregar() {
 
 carregar();
 
-module.exports = { blocoEm, alternar, largarDe, porItem, mesaDaPessoa, paraEnvio };
+module.exports = { blocoEm, alternar, largarDe, porItem, moverItem, tirarItem, mesaDaPessoa, paraEnvio };
