@@ -970,16 +970,18 @@
       const b = bordasDoMovel(tiles, r, c, type);
       // sem emenda entre tiles vizinhos: so a fileira de baixo ganha sombra/borda
       const altura = b.baixo ? 116 : 128;
-      if (b.baixo) q(ctx, x, y, 4, 116, 120, 8, 'rgba(120,90,50,0.20)');
-      q(ctx, x, y, 0, 0, 128, altura, '#e6cba4'); // tampo
+      if (b.baixo) q(ctx, x, y, 4, 116, 120, 8, 'rgba(45,50,64,0.20)');
+      // BRANCA, nao de madeira: a mesa de conferencia da referencia (172825) e
+      // as das salas de reuniao (172704) sao claras.
+      q(ctx, x, y, 0, 0, 128, altura, '#e8eaf1'); // tampo
       q(ctx, x, y, 0, 0, 128, altura, 'rgba(0,0,0,0)');
       // veio da madeira, so na horizontal, pra nao virar xadrez
       for (let i = 12; i < altura - 8; i += 26) {
-        q(ctx, x, y, 6, i, 116, 2, 'rgba(176,138,90,0.28)');
+        q(ctx, x, y, 6, i, 116, 2, 'rgba(150,158,175,0.16)');
       }
-      if (b.cima) q(ctx, x, y, 0, 0, 128, 8, '#f3e0c4');
-      if (b.baixo) q(ctx, x, y, 0, altura - 10, 128, 6, '#d3b287');
-      const contorno = 'rgba(150,110,65,0.65)';
+      if (b.cima) q(ctx, x, y, 0, 0, 128, 8, '#f7f8fc');
+      if (b.baixo) q(ctx, x, y, 0, altura - 10, 128, 6, '#c9cedb');
+      const contorno = 'rgba(130,138,156,0.60)';
       if (b.cima) q(ctx, x, y, 0, 0, 128, 3, contorno);
       if (b.baixo) q(ctx, x, y, 0, altura - 3, 128, 3, contorno);
       if (b.esq) q(ctx, x, y, 0, 0, 3, altura, contorno);
@@ -1014,6 +1016,18 @@
       // almofadas do encosto, uma por tile, com vinco entre elas
       qArred(ctx, x, y, 8, encY + 8, 112, 30, 6, paleta.encosto);
       q(ctx, x, y, 12, encY + 10, 104, 2, 'rgba(255,255,255,0.18)');
+
+      // Braco nas PONTAS da fileira. Sem eles o sofa lia como um balcao
+      // estofado: e o braco que fecha a peca e diz onde ela comeca e acaba.
+      // Um sofa de 3 tiles tem braco no primeiro e no ultimo, e nada no meio.
+      if (b.esq) {
+        qArred(ctx, x, y, 0, encostoEmCima ? corpoY + 40 : corpoY, 22, 68, 6, paleta.escuro);
+        q(ctx, x, y, 4, (encostoEmCima ? corpoY + 40 : corpoY) + 6, 14, 4, paleta.claro);
+      }
+      if (b.dir) {
+        qArred(ctx, x, y, 106, encostoEmCima ? corpoY + 40 : corpoY, 22, 68, 6, paleta.escuro);
+        q(ctx, x, y, 110, (encostoEmCima ? corpoY + 40 : corpoY) + 6, 14, 4, paleta.claro);
+      }
 
       // uma almofada de assento por tile: o vao cai na emenda entre os tiles,
       // que e o que faz parecer sofa e nao uma frente de gavetas
@@ -1054,13 +1068,14 @@
       if (b.dir) { q(ctx, x, y, 122, 0, 6, 128, debrum); q(ctx, x, y, 117, 0, 3, 128, 'rgba(255,255,255,0.20)'); }
 
     } else if (type === M.MESA_CENTRO) {
-      q(ctx, x, y, 28, 100, 72, 10, 'rgba(120,100,70,0.18)'); // sombra
-      q(ctx, x, y, 58, 76, 12, 28, '#a97c52'); // pe central
-      q(ctx, x, y, 44, 100, 40, 8, '#8a6242'); // base do pe
-      blob(ctx, x, y, 64, 56, 48, 46, '#a97c52', 4); // contorno do tampo
-      blob(ctx, x, y, 64, 54, 44, 42, '#dcb98f', 4); // tampo
-      blob(ctx, x, y, 52, 42, 20, 16, '#f0dcc0', 4); // luz
-      q(ctx, x, y, 26, 62, 76, 3, 'rgba(150,110,65,0.25)'); // veio
+      // O tampo fica ALTO e menor, pra o pe aparecer embaixo dele: centrado e
+      // grande, ele cobria o proprio pe e a mesa virava um disco no chao.
+      q(ctx, x, y, 28, 104, 72, 8, 'rgba(120,100,70,0.20)'); // sombra
+      q(ctx, x, y, 56, 72, 16, 32, '#8a6242'); // pe central
+      qArred(ctx, x, y, 40, 96, 48, 12, 4, '#7d5327'); // base do pe
+      blob(ctx, x, y, 64, 48, 48, 36, '#7d5327', 4); // borda grossa do tampo
+      blob(ctx, x, y, 64, 46, 42, 30, '#c99565', 4); // tampo
+      blob(ctx, x, y, 56, 38, 20, 12, '#e0b98a', 4);
 
     } else if (type === M.ESTANTE) {
       const LIVROS = ['#e05a5a', '#5a86d0', '#e0a25a', '#5ab07a', '#a76fd0', '#4ec0c0'];
@@ -1293,13 +1308,15 @@
     } else if (type === M.BANCO) {
       // banco de ripas com encosto, tipo praca
       q(ctx, x, y, 12, 106, 104, 8, 'rgba(45,50,64,0.20)');
-      caixa(ctx, x, y, 8, 20, 112, 30, '#41639e', '#6f8fc8', '#2f4a79'); // encosto
-      q(ctx, x, y, 14, 30, 100, 3, '#2f4a79'); // fresta do encosto
-      caixa(ctx, x, y, 8, 48, 112, 42, '#5a86d0', '#8bafe8', '#41639e'); // assento
-      q(ctx, x, y, 14, 62, 100, 3, '#41639e'); // ripas
-      q(ctx, x, y, 14, 65, 100, 2, '#7ba3e0');
-      q(ctx, x, y, 14, 76, 100, 3, '#41639e');
-      q(ctx, x, y, 14, 79, 100, 2, '#7ba3e0');
+      // MADEIRA, nao azul: os bancos da referencia sao de ripa de madeira, tanto
+      // no lounge (172725) quanto em volta do lago (172749).
+      caixa(ctx, x, y, 8, 20, 112, 30, '#a5743f', '#c99565', '#7d5327'); // encosto
+      q(ctx, x, y, 14, 30, 100, 3, '#7d5327'); // fresta do encosto
+      caixa(ctx, x, y, 8, 48, 112, 42, '#bd8a52', '#dcae76', '#96683a'); // assento
+      q(ctx, x, y, 14, 62, 100, 3, '#96683a'); // ripas
+      q(ctx, x, y, 14, 65, 100, 2, '#d2a171');
+      q(ctx, x, y, 14, 76, 100, 3, '#96683a');
+      q(ctx, x, y, 14, 79, 100, 2, '#d2a171');
       q(ctx, x, y, 16, 88, 12, 22, TRACO); // pes
       q(ctx, x, y, 100, 88, 12, 22, TRACO);
 
@@ -1352,7 +1369,10 @@
       const cores = vermelha
         ? ['#8f3b30', '#c0574a', '#5e211a']
         : ['#4a5162', '#6b7488', '#2b3040'];
-      cadeiraDeEscritorio(ctx, x, y, TILE, cores[0], cores[1], cores[2], M.DIRECAO_ASSENTO[type]);
+      // A vermelha da referencia (172825) e POLTRONA, nao cadeira de escritorio
+      // pintada de vermelho: e o que aparece em volta da mesa de conferencia.
+      const desenhar = vermelha ? poltronaEstofada : cadeiraDeEscritorio;
+      desenhar(ctx, x, y, TILE, cores[0], cores[1], cores[2], M.DIRECAO_ASSENTO[type]);
 
     // ---- variacoes do catalogo do decorador ----
 
@@ -1421,16 +1441,9 @@
       caixa(ctx, x, y, 38, 82, 52, 34, '#c98358', '#e6ab84', '#9c6340');
 
     } else if (type === M.POLTRONA) {
-      // poltrona estofada com costura e bracos (da pra sentar)
-      q(ctx, x, y, 18, 108, 92, 8, 'rgba(45,50,64,0.20)');
-      caixa(ctx, x, y, 12, 12, 104, 96, '#9c6b4f', '#c48a68', '#7a5039', 6);
-      qArred(ctx, x, y, 30, 38, 68, 52, 6, '#b98263'); // assento
-      q(ctx, x, y, 34, 40, 60, 3, '#cf9878');
-      q(ctx, x, y, 62, 44, 3, 40, '#8a5c43'); // costura do meio
-      qArred(ctx, x, y, 14, 44, 20, 50, 5, '#8a5c43'); // bracos
-      qArred(ctx, x, y, 94, 44, 20, 50, 5, '#8a5c43');
-      q(ctx, x, y, 17, 46, 14, 3, '#a87a5c');
-      q(ctx, x, y, 97, 46, 14, 3, '#a87a5c');
+      // Mesma arte da cadeira vermelha, noutra cor: e a poltrona verde-agua das
+      // salas de huddle da referencia (172815).
+      poltronaEstofada(ctx, x, y, TILE, '#4fa8b8', '#7fd0dd', '#2f7d8c', 'up');
 
     } else if (type === M.BEBEDOURO) {
       q(ctx, x, y, 30, 108, 68, 8, 'rgba(45,50,64,0.20)');
@@ -1525,11 +1538,13 @@
       // encosto. O afundado no meio e o que o distingue de uma almofada.
       const cores = ['#4da3d6', '#a06cd4', '#e0607e', '#3fb08a'];
       const cor = cores[(c * 3 + r) % cores.length];
-      q(ctx, x, y, 24, 100, 80, 8, 'rgba(45,50,64,0.20)');
-      blob(ctx, x, y, 64, 72, 44, 32, TRACO, 4);
-      blob(ctx, x, y, 64, 70, 40, 28, cor, 4);
-      blob(ctx, x, y, 52, 60, 16, 10, 'rgba(255,255,255,0.28)', 4);  // luz em cima
-      blob(ctx, x, y, 64, 78, 22, 8, 'rgba(0,0,0,0.16)', 4);         // afundado do assento
+      // Grande: na referencia o pufe ocupa quase o tile inteiro, do tamanho de
+      // uma poltrona. Pequeno, ele lia como almofada largada no chao.
+      q(ctx, x, y, 16, 108, 96, 8, 'rgba(45,50,64,0.20)');
+      blob(ctx, x, y, 64, 64, 60, 48, TRACO, 4);
+      blob(ctx, x, y, 64, 62, 56, 44, cor, 4);
+      blob(ctx, x, y, 46, 44, 24, 14, 'rgba(255,255,255,0.28)', 4);  // luz em cima
+      blob(ctx, x, y, 64, 74, 32, 12, 'rgba(0,0,0,0.16)', 4);        // afundado do assento
 
     } else if (type === M.MESA_REDONDA) {
       // Mesa redonda das salas de huddle (172815): tampo cinza claro num pe so.
@@ -2300,6 +2315,54 @@
   // Cadeira de escritorio nas quatro direcoes. `direcao` e pra que lado a pessoa
   // que senta fica virada: 'up' mostra o encosto de costas (como na referencia),
   // 'down' mostra o assento de frente, 'left'/'right' de perfil.
+  // Poltrona estofada, vista de cima. Na referencia (172815, 172825, 172704) a
+  // poltrona nao e uma cadeira de escritorio de outra cor: e um bloco macio com
+  // ENCOSTO alto e um braco de cada lado, sem pe de estrela e sem rodinha.
+  //
+  // `direcao` = pra onde olha quem senta. O encosto fica do lado oposto, que e
+  // o que a gente ve de fora.
+  function poltronaEstofada(ctx, x, y, TILE, base, claro, escuro, direcao) {
+    const d = direcao || 'up';
+    q(ctx, x, y, 16, 112, 96, 8, 'rgba(45,50,64,0.20)');   // sombra no chao
+
+    function bloco(ax, ay, aw, ah, cor, luz) {
+      qContorno(ctx, x, y, ax, ay, aw, ah, 8, '#20242e');
+      qArred(ctx, x, y, ax + 4, ay + 4, aw - 8, ah - 8, 6, cor);
+      if (luz) q(ctx, x, y, ax + 8, ay + 8, aw - 16, 4, luz);
+    }
+
+    if (d === 'left' || d === 'right') {
+      const paraEsq = d === 'left';
+      // encosto no lado oposto a quem senta
+      bloco(paraEsq ? 84 : 12, 16, 32, 96, escuro, claro);
+      bloco(paraEsq ? 16 : 36, 24, 76, 80, base, claro);   // assento
+      q(ctx, x, y, paraEsq ? 20 : 40, 40, 68, 4, escuro);  // vinco
+      // bracos: em cima e embaixo, que e como aparecem de perfil
+      qArred(ctx, x, y, paraEsq ? 20 : 40, 16, 64, 16, 5, escuro);
+      qArred(ctx, x, y, paraEsq ? 20 : 40, 96, 64, 16, 5, escuro);
+      return;
+    }
+
+    const encostoEmCima = d === 'up';
+    // Virada pra cima a gente ve o ENCOSTO por inteiro; virada pra baixo ve o
+    // assento, com uma fatia de encosto atras.
+    if (encostoEmCima) {
+      qArred(ctx, x, y, 20, 84, 88, 24, 6, escuro);        // fatia do assento
+      bloco(16, 12, 96, 80, base, claro);                  // encosto
+      q(ctx, x, y, 28, 28, 72, 4, claro);
+      q(ctx, x, y, 60, 32, 4, 48, escuro);                 // costura do meio
+    } else {
+      bloco(20, 8, 88, 40, escuro, claro);                 // encosto atras
+      bloco(16, 40, 96, 68, base, claro);                  // assento
+      q(ctx, x, y, 60, 56, 4, 44, escuro);
+    }
+    // bracos, um de cada lado
+    qArred(ctx, x, y, 8, 40, 20, 64, 6, escuro);
+    qArred(ctx, x, y, 100, 40, 20, 64, 6, escuro);
+    q(ctx, x, y, 12, 46, 12, 4, claro);
+    q(ctx, x, y, 104, 46, 12, 4, claro);
+  }
+
   function cadeiraDeEscritorio(ctx, x, y, TILE, base, claro, escuro, direcao) {
     // Sobe dentro da celula pra ENCOSTAR na mesa, invadindo a faixa da frente -
     // e o que a referencia mostra (`referencias/README.md`: "ela e mais alta que

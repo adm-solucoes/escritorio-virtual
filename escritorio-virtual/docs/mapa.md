@@ -90,3 +90,28 @@ Ficou junta quase do tom da base e um fio de luz so.
 **A fonte passou de Manrope pra Inter.** Manrope e geometrica e de cara propria;
 a referencia usa uma sans neutra de interface. Vale pro CSS e pros textos
 desenhados no canvas (nome de sala, plaquinha da mesa, balao de contexto).
+
+
+## Comparacao peca a peca com a referencia
+
+Feita olhando cada movel ao lado do print correspondente. Sete estavam
+diferentes de um jeito que da pra apontar:
+
+| Peca | Estava | Referencia | Print |
+|---|---|---|---|
+| Sofa | sem braco - lia como balcao estofado | braco fechando cada ponta | 172725 |
+| Banco | azul | ripa de MADEIRA | 172725, 172749 |
+| Poltrona | bloco marrom chapado | encosto alto e um braco de cada lado | 172815 |
+| Pufe | pequeno, cara de almofada | ocupa quase o tile, do porte de uma poltrona | 172725 |
+| Cadeira vermelha | cadeira de escritorio pintada de vermelho | **poltrona** vermelha, sem pe de estrela | 172825 |
+| Mesa de centro | disco chapado no chao | borda grossa e pe aparecendo | 172725 |
+| Mesa de reuniao | madeira | branca | 172825, 172704 |
+
+Cadeira de escritorio, estante e armario ja batiam.
+
+**Poltrona virou uma arte so** (`poltronaEstofada`), com direcao, servindo pra
+`POLTRONA` e pra familia `CADEIRA_VERMELHA`. Sao a mesma peca em cores
+diferentes - manter duas artes seria manter dois lugares pra errar.
+
+**Movel de pe unico desenha o tampo alto na celula** (mesa de centro e mesa
+redonda). Centrado, o tampo cobre o proprio pe e a peca vira um disco no chao.
