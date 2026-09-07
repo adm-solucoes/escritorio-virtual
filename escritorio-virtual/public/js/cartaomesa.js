@@ -10,11 +10,15 @@
   let caixa, avatarEl, statusEl, nomeEl, desdeEl, acoesEl, maisEl, btnMais, btnPersonalizar;
   let aberta = null;
 
-  function fechar() {
+  // `manterFoco` = fecha o cartao mas continua perto da mesa. E o caso de abrir
+  // o decorador pela plantinha: seria absurdo afastar bem na hora de escolher
+  // onde pousar as coisas. Quem solta o foco ali e o decorador, ao fechar.
+  function fechar(manterFoco) {
     if (!caixa) return;
     caixa.classList.add('oculto');
     maisEl.classList.add('oculto');
     aberta = null;
+    if (!manterFoco) Game.soltarFoco();
   }
 
   // Encosta no ponto clicado sem vazar pra fora da janela.
@@ -46,6 +50,8 @@
     acoesEl.classList.toggle('oculto', !minha);
     maisEl.classList.add('oculto');
     posicionar(x, y);
+    // Chega perto: e daqui que a pessoa vai escolher onde pousar cada coisa.
+    Game.focarNaMesa(mesa.celulas);
   }
 
   function donoConectado(uid) {
@@ -66,10 +72,10 @@
     btnMais = document.getElementById('btn-cartao-mesa-mais');
     btnPersonalizar = document.getElementById('btn-cartao-personalizar');
 
-    document.getElementById('btn-fechar-cartao-mesa').addEventListener('click', fechar);
+    document.getElementById('btn-fechar-cartao-mesa').addEventListener('click', () => fechar());
 
     btnPersonalizar.addEventListener('click', () => {
-      fechar();
+      fechar(true);
       Decorador.abrirEmCima();
     });
 

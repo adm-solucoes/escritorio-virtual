@@ -26,9 +26,10 @@
   // `mesaPorCelula` responde "que mesa e essa daqui" pro clique e pro hover.
   let mesas = new Map();       // chave da mesa -> { chave, celulas, donoUid, donoNome }
   let mesaPorCelula = new Map(); // "col,row" -> a mesma mesa
-  // "col,row" -> objeto. Camada separada da decoracao da diretoria
-  // (OfficeMap.objetos): estas sao as coisas que o dono pos na propria mesa.
-  let itensDeMesa = new Map();
+  // Lista de { o, x, y } com x/y em tiles COM FRACAO. Camada separada da
+  // decoracao da diretoria (OfficeMap.objetos): sao as coisas que o dono pos na
+  // propria mesa, e ele escolhe o lugar exato de cada uma.
+  let itensDeMesa = [];
   let mesaHover = null;        // a mesa sob o cursor
   let celulaAlvo = null;       // { col, row } sob o cursor enquanto decora
 
@@ -40,10 +41,10 @@
     mesas = new Map((lista || []).map((m) => [m.chave, m]));
     mesaPorCelula = new Map();
     const itensAntes = chaveDosItens();
-    itensDeMesa = new Map();
+    itensDeMesa = [];
     mesas.forEach((m) => {
       (m.celulas || []).forEach(([c, r]) => mesaPorCelula.set(c + ',' + r, m));
-      (m.itens || []).forEach(([c, r, o]) => itensDeMesa.set(c + ',' + r, o));
+      (m.itens || []).forEach((it) => itensDeMesa.push(it));
     });
     const tenho = Boolean(minhaMesa());
     ouvintesDaMinhaMesa.forEach((fn) => fn(tenho));
@@ -60,7 +61,7 @@
   }
 
   function chaveDosItens() {
-    return Array.from(itensDeMesa.entries()).sort().join('|');
+    return itensDeMesa.map((it) => it.o + '@' + it.x + ',' + it.y).sort().join('|');
   }
 
   // Uma celula e da minha mesa? (o painel so deixa pousar coisa nelas)
@@ -69,8 +70,16 @@
     return Boolean(m && m.donoUid && m.donoUid === selfUid);
   }
 
-  function itemEm(col, row) {
-    return itensDeMesa.get(col + ',' + row) || 0;
+  // Tem alguma coisa perto desse ponto? (o que a borracha vai tirar)
+  const RAIO_ITEM = 0.55;
+  function itemPertoDe(x, y) {
+    let achado = null;
+    let melhor = RAIO_ITEM;
+    itensDeMesa.forEach((it) => {
+      const d = Math.hypot(it.x - x, it.y - y);
+      if (d < melhor) { melhor = d; achado = it; }
+    });
+    return achado;
   }
 
   function minhaMesa() {
@@ -194,7 +203,9 @@
           // diretoria so mexe na propria mesa, entao acender o escritorio
           // inteiro seria mentira.
           if (!Decorador.podeColocarEm(c, r)) continue;
-          const ocupada = itemEm(c, r) || (M.objetos[r] && M.objetos[r][c]);
+          // Na sua mesa a coisa pousa onde voce clicar, entao nao existe
+          // "celula ocupada": a malha so mostra que ali da pra pousar.
+          const ocupada = celulaEhMinha(c, r) ? false : (M.objetos[r] && M.objetos[r][c]);
           ctx.strokeStyle = ocupada ? 'rgba(248,180,84,0.55)' : 'rgba(120,220,160,0.55)';
           // a gradinha cobre so o tampo: na fileira da frente de uma mesa e uma
           // tirinha, e e exatamente ali que a coisa vai pousar
@@ -209,7 +220,7 @@
       const podeAqui = Decorador.podeColocarEm(celulaAlvo.col, celulaAlvo.row);
       ctx.save();
       ctx.globalAlpha = 0.75;
-      Decorador.desenharPreviaNoMapa(ctx, celulaAlvo.col, celulaAlvo.row, TILE);
+      Decorador.desenharPreviaNoMapa(ctx, celulaAlvo.col, celulaAlvo.row, TILE, celulaAlvo.x, celulaAlvo.y);
       ctx.globalAlpha = 1;
       contornoMesa(
         ctx, celulaAlvo.col, celulaAlvo.row,
@@ -295,11 +306,16 @@
     // camada de cima por ultimo: o que esta apoiado fica visivel sobre o movel
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        // o que o dono pos na propria mesa vem por cima da decoracao da casa
-        const obj = itensDeMesa.get(c + ',' + r) || OfficeMap.objetos[r][c];
+        const obj = OfficeMap.objetos[r][c];
         if (obj) drawObjectTile(mctx, c, r, obj, TILE, tiles);
       }
     }
+    // O que o dono pos na propria mesa vem por cima da decoracao da casa, e nao
+    // anda pela grade: cada coisa tem a posicao que a pessoa escolheu. Ordenado
+    // por y pra quem esta mais na frente tapar quem esta atras.
+    itensDeMesa.slice().sort((a, b) => a.y - b.y).forEach((it) => {
+      drawObjectTile(mctx, it.x, it.y, it.o, TILE, tiles, true);
+    });
     OfficeMap.ROOMS.forEach((sala) => desenharEtiquetaSala(mctx, sala, TILE));
   }
 
@@ -1380,12 +1396,17 @@
 
   // Camada de cima: o que fica apoiado na celula. Desenhado depois dos moveis,
   // entao um monitor pousa em cima da mesa em vez de virar parte dela.
-  function drawObjectTile(ctx, c, r, obj, TILE, tiles) {
+  // A arte de cada coisa mora numa caixa de 128 unidades, apoiando por volta de
+  // y=90. `livre` = a posicao veio do clique da pessoa (item de mesa): a caixa
+  // e centrada nesse ponto e nao ha correcao de altura, porque quem escolheu a
+  // altura foi ela. Sem `livre`, e a camada da casa: cai na celula e sobe ate o
+  // tampo quando ele acaba antes.
+  const APOIO = 90;
+  function drawObjectTile(ctx, c, r, obj, TILE, tiles, livre) {
     const O = OfficeMap.OBJETOS;
-    // Os objetos foram desenhados apoiando por volta de y=90. Se o tampo acaba
-    // antes disso, sobe o desenho inteiro ate ele encostar na superficie.
-    const sobe = Math.max(0, 90 - fimDoTampo(tiles, c, r));
-    const x = c * TILE, y = r * TILE - sobe * U;
+    const sobe = livre ? 0 : Math.max(0, APOIO - fimDoTampo(tiles, c, r));
+    const x = (livre ? c - 0.5 : c) * TILE;
+    const y = (livre ? r - APOIO / 128 : r) * TILE - sobe * U;
     const meio = TILE / 2;
 
     // Os monitores sao altos e **passam do tile pra cima**, como na referencia:
@@ -1552,9 +1573,11 @@
   // que senta fica virada: 'up' mostra o encosto de costas (como na referencia),
   // 'down' mostra o assento de frente, 'left'/'right' de perfil.
   function cadeiraDeEscritorio(ctx, x, y, TILE, base, claro, escuro, direcao) {
-    // Sobe um pouco dentro da celula: na referencia a cadeira encosta na mesa,
-    // invadindo a borda da frente dela, em vez de ficar solta embaixo.
-    y -= 5;
+    // Sobe dentro da celula pra ENCOSTAR na mesa, invadindo a faixa da frente -
+    // e o que a referencia mostra (`referencias/README.md`: "ela e mais alta que
+    // 1 tile e encosta na mesa"). Com o recuo antigo de 5px sobrava um vao e a
+    // cadeira parecia estacionada longe.
+    y -= 48 * U; // ~3/8 de tile
     baseDaCadeira(ctx, x, y);
 
     // Apoio de braco com a barra laranja da referencia.
@@ -1638,11 +1661,54 @@
   let ZOOM = 2;
   const ZOOM_MIN = 1.25;
   const ZOOM_MAX = 3.5;
+  const ZOOM_MESA = 3.25; // de perto o bastante pra escolher onde pousar a coisa
   let camX = 0;
   let camY = 0;
 
+  // O zoom e a camera nao pulam pro valor novo: perseguem um alvo, um pouco a
+  // cada quadro. E isso que faz "chegar na mesa" parecer uma aproximacao em vez
+  // de um corte.
+  let zoomAlvo = 2;
+  let zoomDoUsuario = 2;   // o que a pessoa escolheu no +/-, pra voltar depois
+  let focoCamera = null;   // ponto do mundo pra centralizar; null = segue a pessoa
+
   function ajustarZoom(passo) {
-    ZOOM = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((ZOOM + passo) * 100) / 100));
+    zoomAlvo = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((zoomAlvo + passo) * 100) / 100));
+    zoomDoUsuario = zoomAlvo;
+  }
+
+  // Chega perto de uma mesa e centraliza nela.
+  function focarNaMesa(celulas) {
+    if (!celulas || !celulas.length) return;
+    const TILE = OfficeMap.TILE;
+    let c0 = Infinity, r0 = Infinity, c1 = -Infinity, r1 = -Infinity;
+    celulas.forEach(([c, r]) => {
+      if (c < c0) c0 = c;
+      if (r < r0) r0 = r;
+      if (c > c1) c1 = c;
+      if (r > r1) r1 = r;
+    });
+    focoCamera = {
+      x: ((c0 + c1 + 1) / 2) * TILE,
+      y: ((r0 + r1 + 1) / 2) * TILE,
+    };
+    zoomAlvo = Math.max(zoomDoUsuario, ZOOM_MESA);
+  }
+
+  function soltarFoco() {
+    focoCamera = null;
+    zoomAlvo = zoomDoUsuario;
+  }
+
+  // Aproximacao exponencial, independente da taxa de quadros: num monitor de
+  // 144Hz o movimento e o mesmo que num de 60Hz.
+  function perseguir(atual, alvo, dt, velocidade) {
+    const t = 1 - Math.pow(0.001, dt * velocidade);
+    return atual + (alvo - atual) * t;
+  }
+
+  function animarCamera(dt) {
+    ZOOM = Math.abs(zoomAlvo - ZOOM) < 0.002 ? zoomAlvo : perseguir(ZOOM, zoomAlvo, dt, 1.1);
   }
 
   function setCanvasSize() {
@@ -1662,19 +1728,34 @@
     };
   }
 
-  function atualizarCamera() {
+  function atualizarCamera(dt) {
     const self = players.get(selfId);
     if (!self) return;
     const vista = tamanhoDaVista();
     const worldW = OfficeMap.COLS * OfficeMap.TILE;
     const worldH = OfficeMap.ROWS * OfficeMap.TILE;
-    // centraliza na pessoa, mas sem passar da borda do mapa
-    camX = worldW <= vista.w
+    // centraliza na pessoa - ou na mesa, quando o cartao dela esta aberto -,
+    // mas sem passar da borda do mapa
+    const alvoX = focoCamera ? focoCamera.x : self.displayX;
+    const alvoY = focoCamera ? focoCamera.y : self.displayY;
+    const destinoX = worldW <= vista.w
       ? (worldW - vista.w) / 2
-      : Math.max(0, Math.min(worldW - vista.w, self.displayX - vista.w / 2));
-    camY = worldH <= vista.h
+      : Math.max(0, Math.min(worldW - vista.w, alvoX - vista.w / 2));
+    const destinoY = worldH <= vista.h
       ? (worldH - vista.h) / 2
-      : Math.max(0, Math.min(worldH - vista.h, self.displayY - vista.h / 2));
+      : Math.max(0, Math.min(worldH - vista.h, alvoY - vista.h / 2));
+
+    // O primeiro quadro (dt indefinido) assenta a camera no lugar, senao ela
+    // entraria deslizando da esquina do mapa.
+    if (!dt) {
+      camX = destinoX;
+      camY = destinoY;
+      return;
+    }
+    // Rapido o bastante pra andar nao parecer arrastado, lento o bastante pra
+    // aproximacao da mesa nao virar um corte.
+    camX = perseguir(camX, destinoX, dt, 2.2);
+    camY = perseguir(camY, destinoY, dt, 2.2);
   }
 
   function tryMove(px, py, dx, dy) {
@@ -1756,7 +1837,8 @@
     interpolarRemotos(dt);
     Calls.updateProximity(players);
     atualizarBadgeSala();
-    render(now);
+    animarCamera(dt);
+    render(now, dt);
   }
 
   function atualizarJogadorLocal(dt) {
@@ -2018,8 +2100,8 @@
     });
   }
 
-  function render(now) {
-    atualizarCamera();
+  function render(now, dt) {
+    atualizarCamera(dt);
     const dpr = window.devicePixelRatio || 1;
     const vista = tamanhoDaVista();
     ctx.setTransform(ZOOM * dpr, 0, 0, ZOOM * dpr, -camX * ZOOM * dpr, -camY * ZOOM * dpr);
@@ -2166,7 +2248,9 @@
 
     // Com o decorador aberto e um item na mao, o clique coloca em vez de andar.
     if (Decorador.estaPintando()) {
-      Decorador.pintarEm(Math.floor(clickX / OfficeMap.TILE), Math.floor(clickY / OfficeMap.TILE));
+      const tx = clickX / OfficeMap.TILE;
+      const ty = clickY / OfficeMap.TILE;
+      Decorador.pintarEm(Math.floor(tx), Math.floor(ty), tx, ty);
       return;
     }
 
@@ -2284,11 +2368,13 @@
       const row = Math.floor(y / TILE);
 
       if (Decorador.estaPintando()) {
-        celulaAlvo = { col, row };
+        celulaAlvo = { col, row, x: x / TILE, y: y / TILE };
         mesaHover = null;
         canvas.style.cursor = 'crosshair';
-        // arrastar com o botao pressionado pinta uma sequencia
-        if (e.buttons === 1) Decorador.pintarEm(col, row);
+        // Arrastar com o botao pressionado pinta uma sequencia - mas isso e pra
+        // mobilia da casa. Numa mesa livre o arrasto despejaria uma trilha de
+        // canecas, entao ali so vale o clique.
+        if (e.buttons === 1 && !celulaEhMinha(col, row)) Decorador.pintarEm(col, row, x / TILE, y / TILE);
         return;
       }
       celulaAlvo = null;
@@ -2431,8 +2517,10 @@
     getSelfUid: () => selfUid,
     aoMudarMinhaMesa,
     minhaMesa,
+    focarNaMesa,
+    soltarFoco,
     celulaEhMinha,
-    itemEm,
+    itemPertoDe,
     // usados pelo decorador: desenhar as miniaturas do catalogo com a mesma
     // funcao que desenha no mapa, e redesenhar depois de uma edicao
     desenharObjeto: drawObstacleTile,

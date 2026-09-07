@@ -87,9 +87,10 @@
     if (socket && socket.connected) socket.emit('mesa-largar');
   }
 
-  // Poe/tira coisa em cima da PROPRIA mesa (o servidor recusa nas outras).
-  function itemNaMinhaMesa(col, row, o) {
-    if (socket && socket.connected) socket.emit('mesa-item', { col, row, o });
+  // Poe/tira coisa em cima da PROPRIA mesa, na posicao exata do clique (x e y
+  // sao tiles com fracao). O servidor recusa nas mesas dos outros.
+  function itemNaMinhaMesa(x, y, o) {
+    if (socket && socket.connected) socket.emit('mesa-item', { x, y, o });
   }
 
   function pedirAgenda() {

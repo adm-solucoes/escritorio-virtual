@@ -337,11 +337,9 @@ io.on('connection', (socket) => {
   socket.on('mesa-item', (data) => {
     const player = players.get(socket.id);
     if (!player || !data) return;
-    const col = Number(data.col);
-    const row = Number(data.row);
-    const o = Number(data.o);
-    if (!Number.isInteger(col) || !Number.isInteger(row)) return;
-    if (!mesasStore.porItem(col, row, o, player.uid)) return;
+    // x e y vem COM FRACAO: a pessoa poe onde quiser em cima da mesa, nao no
+    // centro da celula.
+    if (!mesasStore.porItem(Number(data.x), Number(data.y), Number(data.o), player.uid)) return;
     io.emit('mesas-atualizadas', mesasStore.paraEnvio());
   });
 

@@ -17,10 +17,17 @@ const ARQUIVO = path.join(__dirname, 'data', 'mesas.json');
 
 // chave canonica da mesa -> uid da conta dona
 let donos = new Map();
-// chave canonica da mesa -> { "c,r": objeto }. Fica separado da decoracao da
+// chave canonica da mesa -> [{ o, x, y }]. Fica separado da decoracao da
 // diretoria (mapa-editado.js) de proposito: o que voce poe na SUA mesa e seu, e
 // vai embora junto quando voce larga a mesa.
+//
+// `x` e `y` sao coordenadas de tile COM FRACAO (15.4, 18.6). Nao e uma coisa
+// por celula: na referencia a pessoa poe onde quiser em cima da mesa, entao a
+// posicao precisa ser mais fina que o tile.
 let itens = new Map();
+
+const ITENS_MAX = 14;        // uma mesa cheia, sem virar bagunca
+const RAIO_PRA_TIRAR = 0.55; // em tiles: o quao perto o clique tem que passar
 
 function chave(col, row) {
   return col + ',' + row;
@@ -75,26 +82,43 @@ function largarDe(uid) {
   return true;
 }
 
-// Poe (ou tira, com `objeto` 0) uma coisa em cima da PROPRIA mesa. E o que
-// deixa personalizar sem ser da diretoria: a checagem que vale e esta - a
-// celula tem que ser de uma mesa que e sua.
-function porItem(col, row, objeto, uid) {
-  const celulas = blocoEm(col, row);
-  if (!celulas || !uid) return false;
+// Poe (ou tira, com `objeto` 0) uma coisa em cima da PROPRIA mesa, na posicao
+// exata em que a pessoa clicou. E o que deixa personalizar sem ser da diretoria:
+// a checagem que vale e esta - o ponto tem que cair numa mesa que e sua.
+function porItem(x, y, objeto, uid) {
+  if (!uid || !Number.isFinite(x) || !Number.isFinite(y)) return false;
   if (!Number.isInteger(objeto) || objeto < 0 || objeto > map.OBJETO_MAX) return false;
+
+  const celulas = blocoEm(Math.floor(x), Math.floor(y));
+  if (!celulas) return false;
 
   const k = chaveDoBloco(celulas);
   if (donos.get(k) !== uid) return false; // so na sua mesa
 
-  const daMesa = itens.get(k) || {};
-  const chaveCelula = chave(col, row);
-  if ((daMesa[chaveCelula] || 0) === objeto) return false;
+  const lista = itens.get(k) || [];
 
-  if (objeto) daMesa[chaveCelula] = objeto;
-  else delete daMesa[chaveCelula];
+  if (!objeto) {
+    // Borracha: tira o que estiver mais perto do clique. Sem isso, uma coisa
+    // colocada meio torta nunca mais sairia dali.
+    let perto = -1;
+    let melhor = RAIO_PRA_TIRAR;
+    lista.forEach((it, i) => {
+      const d = Math.hypot(it.x - x, it.y - y);
+      if (d < melhor) { melhor = d; perto = i; }
+    });
+    if (perto < 0) return false;
+    lista.splice(perto, 1);
+    if (lista.length) itens.set(k, lista);
+    else itens.delete(k);
+    salvar();
+    return true;
+  }
 
-  if (Object.keys(daMesa).length) itens.set(k, daMesa);
-  else itens.delete(k);
+  if (lista.length >= ITENS_MAX) return false;
+  // Guarda com 2 casas: o cliente manda float do mouse, e sem cortar o arquivo
+  // encheria de 15.400000000000002.
+  lista.push({ o: objeto, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 });
+  itens.set(k, lista);
   salvar();
   return true;
 }
@@ -113,28 +137,38 @@ function paraEnvio() {
       continue;
     }
     const conta = usuarios.porId(uid);
-    const daMesa = itens.get(k) || {};
     lista.push({
       chave: k,
       celulas,
       donoUid: uid,
       donoNome: conta ? conta.nome : '',
-      // [[col, row, objeto], ...] - formato curto, e uma lista que vai em toda
-      // atualizacao de mesa
-      itens: Object.keys(daMesa).map((cel) => {
-        const p = cel.split(',');
-        return [Number(p[0]), Number(p[1]), daMesa[cel]];
-      }),
+      itens: (itens.get(k) || []).slice(),
     });
   }
   return lista;
+}
+
+// Aceita o formato antigo ({"c,r": objeto}, uma coisa por celula) e o converte
+// pro novo. Sem isso, quem ja tinha decorado a mesa perderia tudo.
+function normalizarItens(bruto) {
+  if (Array.isArray(bruto)) {
+    return bruto
+      .filter((it) => it && Number.isFinite(it.x) && Number.isFinite(it.y) && Number.isInteger(it.o))
+      .slice(0, ITENS_MAX);
+  }
+  if (!bruto || typeof bruto !== 'object') return [];
+  return Object.keys(bruto).map((cel) => {
+    const p = cel.split(',');
+    // no formato antigo a coisa ficava no meio da celula
+    return { o: bruto[cel], x: Number(p[0]) + 0.5, y: Number(p[1]) + 0.5 };
+  }).filter((it) => Number.isInteger(it.o) && Number.isFinite(it.x)).slice(0, ITENS_MAX);
 }
 
 function salvar() {
   try {
     fs.mkdirSync(path.dirname(ARQUIVO), { recursive: true });
     const dados = Array.from(donos.entries())
-      .map(([k, uid]) => ({ chave: k, uid, itens: itens.get(k) || {} }));
+      .map(([k, uid]) => ({ chave: k, uid, itens: itens.get(k) || [] }));
     fs.writeFileSync(ARQUIVO, JSON.stringify({ mesas: dados }, null, 2));
   } catch (e) {
     console.error('Nao consegui salvar as mesas:', e.message);
@@ -147,7 +181,8 @@ function carregar() {
     (dados.mesas || []).forEach((m) => {
       if (typeof m.chave !== 'string' || typeof m.uid !== 'string') return;
       donos.set(m.chave, m.uid);
-      if (m.itens && typeof m.itens === 'object') itens.set(m.chave, m.itens);
+      const lidos = normalizarItens(m.itens);
+      if (lidos.length) itens.set(m.chave, lidos);
     });
   } catch (e) {
     donos = new Map(); // primeira vez, ou arquivo corrompido: comeca vazio

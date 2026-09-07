@@ -220,11 +220,18 @@
 
   // Previa translucida sob o cursor. Escreve na grade so pelo tempo do desenho:
   // assim a peca ja aparece emendada com os vizinhos, igual ao resultado.
-  function desenharPreviaNoMapa(ctx, col, row, TILE) {
+  function desenharPreviaNoMapa(ctx, col, row, TILE, x, y) {
     if (!selecionado) return;
 
     if (ehObjeto(selecionado)) {
-      if (selecionado.o) Game.desenharApoiado(ctx, col, row, selecionado.o, TILE, M().tiles);
+      if (!selecionado.o) return;
+      // Na sua mesa a previa segue o cursor de verdade (posicao livre); na
+      // camada da casa ela encaixa na celula.
+      if (ehMinhaMesa(col, row) && x !== undefined) {
+        Game.desenharApoiado(ctx, x, y, selecionado.o, TILE, M().tiles, true);
+      } else {
+        Game.desenharApoiado(ctx, col, row, selecionado.o, TILE, M().tiles);
+      }
       return;
     }
     if (selecionado.t === M().LIVRE) return; // borracha nao mostra nada
@@ -351,7 +358,10 @@
       if (selecionado.o && !m.SUPERFICIES.has(m.tiles[row][col])) return false;
       // Na sua mesa vale pra qualquer um; fora dela, so a diretoria. E a mesma
       // regra que o servidor aplica nos dois eventos.
-      if (ehMinhaMesa(col, row)) return Game.itemEm(col, row) !== selecionado.o;
+      //
+      // Na propria mesa nao ha "ja tem isso aqui": a coisa pousa onde voce
+      // clicar, e podem conviver varias na mesma celula.
+      if (ehMinhaMesa(col, row)) return true;
       if (!souAdmin) return false;
       return m.objetos[row][col] !== selecionado.o;
     }
@@ -362,15 +372,18 @@
     )) && celulasDa(col, row).some(([c, r]) => m.tiles[r][c] !== selecionado.t);
   }
 
-  function pintarEm(col, row) {
+  function pintarEm(col, row, x, y) {
     if (!estaPintando() || !podeColocarEm(col, row)) return;
     const m = M();
     refazer.length = 0;
 
     if (ehObjeto(selecionado)) {
       if (ehMinhaMesa(col, row)) {
-        feitos.push({ obj: true, minha: true, c: col, r: row, de: Game.itemEm(col, row), para: selecionado.o });
-        Network.itemNaMinhaMesa(col, row, selecionado.o);
+        // Posicao livre: o desfazer guarda o ponto, nao a celula.
+        const px = x === undefined ? col + 0.5 : x;
+        const py = y === undefined ? row + 0.5 : y;
+        feitos.push({ obj: true, minha: true, x: px, y: py, para: selecionado.o });
+        Network.itemNaMinhaMesa(px, py, selecionado.o);
         return;
       }
       feitos.push({ obj: true, c: col, r: row, de: m.objetos[row][col], para: selecionado.o });
@@ -390,10 +403,14 @@
 
   function aplicar(passo, voltando) {
     if (passo.obj) {
-      const valor = voltando ? passo.de : passo.para;
-      // o passo lembra de que camada veio: a sua mesa ou a decoracao da casa
-      if (passo.minha) Network.itemNaMinhaMesa(passo.c, passo.r, valor);
-      else Network.editarObjetoMapa(passo.c, passo.r, valor);
+      // O passo lembra de que camada veio: a sua mesa ou a decoracao da casa.
+      // Na mesa, desfazer e tirar de volta o que foi posto naquele ponto; nao
+      // existe "valor anterior", porque varias coisas convivem no mesmo lugar.
+      if (passo.minha) {
+        Network.itemNaMinhaMesa(passo.x, passo.y, voltando ? 0 : passo.para);
+        return;
+      }
+      Network.editarObjetoMapa(passo.c, passo.r, voltando ? passo.de : passo.para);
       return;
     }
     passo.celulas.forEach((cel) => {
@@ -430,6 +447,9 @@
     selecionado = null;
     painel.classList.add('oculto');
     document.getElementById('btn-decorar').classList.remove('ativo');
+    // Se o painel foi aberto pela plantinha do cartao, a camera ficou colada na
+    // mesa. Fechar aqui e o fim daquele passeio.
+    Game.soltarFoco();
   }
 
   function init(ehAdmin) {

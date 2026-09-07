@@ -323,3 +323,64 @@ colado no rodape).
 | "..." | ok - "Largar minha mesa", agora sem cobrir os botoes |
 | Mesa de outra pessoa | ok - so identificacao, sem botao nenhum |
 | Console | limpo |
+
+
+## 11. Zoom na mesa, coisas onde voce quiser, cadeira encostada
+
+Tres pedidos de uma vez. A ordem importou: **colocacao livre antes dos itens
+novos**, senao os itens teriam que ser migrados de formato depois.
+
+### Zoom
+
+A camera nao pula mais pro valor novo: persegue um alvo, um pouco por quadro
+(`perseguir()`, aproximacao exponencial - o movimento e o mesmo em 60Hz e em
+144Hz). Abrir o cartao da mesa aproxima pra `ZOOM_MESA` e centraliza no movel;
+fechar volta pro zoom que a pessoa tinha escolhido no +/-.
+
+Abrir o decorador pela plantinha **mantem** o zoom: seria absurdo afastar bem na
+hora de escolher onde pousar as coisas. Quem solta o foco ali e o decorador, ao
+fechar.
+
+### Colocacao livre
+
+Era **uma coisa por celula** (`objetos[r][c]`). Na referencia a pessoa poe onde
+quiser em cima da mesa, entao a posicao precisava ser mais fina que o tile.
+
+Os itens de mesa viraram uma lista `[{ o, x, y }]` por mesa, com `x`/`y` em
+tiles **com fracao** (15.3, 18.4). O servidor valida que o ponto cai numa mesa
+que e sua; o cliente desenha ordenando por `y`, pra quem esta na frente tapar
+quem esta atras.
+
+- **Borracha:** tira a coisa mais perto do clique (raio de ~0.55 tile). Sem
+  isso, algo posto meio torto nunca mais sairia dali.
+- **Teto de 14 por mesa**, pra nao virar bagunca.
+- **Arrastar nao pinta** na propria mesa - despejaria uma trilha de canecas. Ali
+  so vale o clique; na mobilia da casa o arrasto continua valendo.
+- O arquivo antigo (`{"c,r": objeto}`) e **convertido na leitura**, no centro da
+  celula: quem ja tinha decorado nao perde nada.
+
+### Cadeira
+
+O recuo era de 5px e sobrava um vao - a cadeira parecia estacionada longe da
+mesa. Passou pra ~3/8 de tile, encostando na faixa da frente, que e o que o
+`referencias/README.md` ja descrevia ("ela e mais alta que 1 tile e encosta na
+mesa").
+
+### Resultado dos testes (07/09/2026)
+
+`npm run teste`: **33 de 33**. As novas cobrem duas canecas na mesma celula em
+pontos diferentes, a posicao guardada com fracao, a borracha pegando a mais
+proxima (e nao fazendo nada quando esta longe) e o teto por mesa.
+
+No navegador:
+
+| O que | Resultado |
+|---|---|
+| Abrir o cartao | ok - a camera desliza e para centrada na mesa |
+| Fechar | ok - volta pro zoom anterior |
+| Plantinha | ok - continua perto enquanto decora |
+| Duas canecas na mesma celula | ok - `16.07,18.90` e `16.66,19.44`, onde eu cliquei |
+| Malha verde | ok - so acende a sua mesa |
+| Borracha | ok - tirou a mais proxima, deixou a outra |
+| Cadeira | ok - encostada na mesa |
+| Console | limpo |
