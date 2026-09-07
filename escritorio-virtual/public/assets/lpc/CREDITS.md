@@ -1,4 +1,4 @@
-# Creditos dos sprites (LPC - Liberated Pixel Cup)
+| `top_regata.png` | `torso/clothes/sleeveless/sleeveless2/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 || `top_social.png` | `torso/clothes/longsleeve/longsleeve2_buttoned/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 || `top_manga.png` | `torso/clothes/longsleeve/longsleeve2/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |# Creditos dos sprites (LPC - Liberated Pixel Cup)
 
 Os sprites do boneco usados neste projeto (`public/assets/lpc/*.png`) vem do banco de
 assets aberto **LPC (Liberated Pixel Cup)**, obtidos via o repositorio

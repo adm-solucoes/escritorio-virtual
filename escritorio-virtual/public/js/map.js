@@ -175,7 +175,7 @@
     { id: 'diretoria', nome: 'Diretoria', r0: 4, c0: 3, r1: 11, c1: 11, piso: 'carpete_roxo', cor: '#7a5cd0', labelR: 5, labelC: 4 },
     { id: 'financeiro', nome: 'Financeiro', r0: 4, c0: 12, r1: 11, c1: 19, piso: 'carpete_roxo', cor: '#3f7fc4', labelR: 5, labelC: 12 },
     { id: 'patio', nome: 'Patio', r0: 4, c0: 20, r1: 11, c1: 26, piso: 'grama', cor: '#3f9e57', labelR: 4, labelC: 20 },
-    { id: 'projetos', nome: 'Projetos', r0: 4, c0: 27, r1: 35, c1: 35, piso: 'carpete_roxo', cor: '#c25a3f', labelR: 5, labelC: 28 },
+    { id: 'projetos', nome: 'Projetos', r0: 4, c0: 27, r1: 11, c1: 35, piso: 'carpete_roxo', cor: '#c25a3f', labelR: 5, labelC: 28 },
     { id: 'marketing', nome: 'Marketing', r0: 4, c0: 36, r1: 11, c1: 44, piso: 'carpete_roxo', cor: '#d98324', labelR: 5, labelC: 36 },
     { id: 'corredor', nome: 'Corredor', r0: 12, c0: 3, r1: 15, c1: 44, piso: 'tijolo', cor: '#8b98a8', labelR: 14, labelC: 4 },
     { id: 'lounge', nome: 'Lounge', r0: 16, c0: 3, r1: 29, c1: 13, piso: 'tijolo', cor: '#1f9c8a', labelR: 17, labelC: 4 },
@@ -217,9 +217,11 @@
       linhaV(c1, 4, 11, PAREDE);
       set(11, Math.floor((c0 + c1) / 2), LIVRE); // porta pro corredor
 
-      set(6, c0 + 2, MESA_MONITOR);
-      set(6, c0 + 3, MESA_MONITOR);
-      set(7, c0 + 2, CADEIRA);
+      // A mesa da sala privativa e a MESMA do resto do andar: 3 de largura por
+      // 2 de fundo, com uma cadeira. Antes era 2x1 com duas cadeiras - eram os
+      // quatro unicos postos fora do padrao, e 2x1 e a mesinha estreita que a
+      // gente ja tinha decidido que nao e mesa.
+      rect(5, c0 + 2, 6, c0 + 4, MESA_MONITOR);
       set(7, c0 + 3, CADEIRA);
       // Na referencia (172719) a sala privativa nao e mesa+cadeira num quadrado
       // vazio: tem quadro na parede, planta de porte e armario. As quatro salas
