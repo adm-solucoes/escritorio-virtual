@@ -154,42 +154,115 @@ button { font-family: inherit; }
   left: 58px;
   bottom: 12px;
   z-index: 40;
-  width: 200px;
+  /* larga o bastante pro "Entrou em 07/09/2026" caber numa linha so */
+  width: 236px;
   padding: 6px;
   border-radius: 12px;
   background: var(--painel);
   border: 1px solid var(--borda);
   box-shadow: var(--sombra-painel);
 }
-.menu-conta-topo {
+.conta-topo {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 10px 12px;
+}
+/* Bolinha com a inicial, como no cartao de perfil da referencia. */
+.conta-avatar {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  background: var(--roxo);
+}
+.conta-id {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px 10px;
-  border-bottom: 1px solid var(--borda);
-  margin-bottom: 4px;
+  gap: 1px;
+  min-width: 0;
 }
-.menu-conta-topo strong { font-size: 13px; }
-.menu-conta-topo span {
+.conta-id strong {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conta-id span {
   font-size: 11px;
   color: var(--texto-fraco);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.menu-conta-item {
-  width: 100%;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 8px;
+.conta-acoes {
+  display: flex;
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+.conta-editar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--roxo);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.conta-editar:hover { filter: brightness(1.08); }
+.conta-mais {
+  flex: none;
+  width: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--borda);
+  border-radius: 9px;
   background: transparent;
   color: var(--texto);
-  font-family: inherit;
+  cursor: pointer;
+}
+.conta-mais:hover { background: var(--hover); }
+
+/* O menuzinho escuro que sai do "..." - e o do print da referencia. */
+.menu-suspenso {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 5;
+  min-width: 178px;
+  padding: 5px;
+  border-radius: 10px;
+  background: #2b3040;
+  box-shadow: 0 10px 26px rgba(20, 22, 30, 0.34);
+}
+.menu-suspenso-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #eef0f6;
+  font: inherit;
   font-size: 13px;
   text-align: left;
   cursor: pointer;
 }
-.menu-conta-item:hover { background: var(--painel-alt); }
-.menu-conta-item.perigo { color: #b42318; }
+.menu-suspenso-item:hover { background: rgba(255, 255, 255, 0.10); }
 
 /* ============ Tela de entrada (o "Welcome to..." da referencia) ============ */
 #tela-entrada {

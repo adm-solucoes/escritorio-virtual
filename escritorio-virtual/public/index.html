@@ -193,13 +193,32 @@
           <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
         <div id="menu-conta" class="menu-conta oculto">
-          <div class="menu-conta-topo">
-            <strong id="menu-conta-nome"></strong>
-            <span id="menu-conta-email"></span>
+          <div class="conta-topo">
+            <div id="conta-avatar" class="conta-avatar"></div>
+            <div class="conta-id">
+              <strong id="menu-conta-nome"></strong>
+              <span id="menu-conta-desde"></span>
+            </div>
           </div>
-          <button id="btn-trocar-avatar" class="menu-conta-item" type="button">Trocar avatar</button>
-          <button id="btn-largar-mesa" class="menu-conta-item oculto" type="button">Largar minha mesa</button>
-          <button id="btn-sair" class="menu-conta-item perigo" type="button">Sair da conta</button>
+          <div class="conta-acoes">
+            <button id="btn-trocar-avatar" class="conta-editar" type="button">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 19.5c0-3.2 3.1-5 7-5s7 1.8 7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              Editar perfil
+            </button>
+            <button id="btn-conta-mais" class="conta-mais" type="button" title="Mais opcoes" aria-label="Mais opcoes">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="5.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="18.5" r="1.6" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div id="menu-conta-mais" class="menu-suspenso oculto">
+            <button id="btn-largar-mesa" class="menu-suspenso-item oculto" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="3.5" y="6.5" width="17" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 13.5v4M18 13.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              Largar minha mesa
+            </button>
+            <button id="btn-sair" class="menu-suspenso-item" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M14 4.5H6.5v15H14M12 12h8m0 0l-3-3m3 3l-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Sair da conta
+            </button>
+          </div>
         </div>
       </nav>
 

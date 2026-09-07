@@ -32,8 +32,9 @@
   let mesaHover = null;        // a mesa sob o cursor
   let celulaAlvo = null;       // { col, row } sob o cursor enquanto decora
 
-  // Quem quer saber se eu tenho mesa (o botao de largar, no menu da conta).
-  let avisarMinhaMesa = null;
+  // Quem quer saber se eu tenho mesa. E uma LISTA: o menu da conta e o
+  // decorador escutam os dois, e com um slot so o segundo apagava o primeiro.
+  const ouvintesDaMinhaMesa = [];
 
   function aplicarMesas(lista) {
     mesas = new Map((lista || []).map((m) => [m.chave, m]));
@@ -44,7 +45,8 @@
       (m.celulas || []).forEach(([c, r]) => mesaPorCelula.set(c + ',' + r, m));
       (m.itens || []).forEach(([c, r, o]) => itensDeMesa.set(c + ',' + r, o));
     });
-    if (avisarMinhaMesa) avisarMinhaMesa(Boolean(minhaMesa()));
+    const tenho = Boolean(minhaMesa());
+    ouvintesDaMinhaMesa.forEach((fn) => fn(tenho));
 
     // O mapa e pre-renderizado, entao so vale redesenhar quando as coisas em
     // cima das mesas realmente mudaram (reivindicar mesa nao mexe no desenho).
@@ -71,7 +73,7 @@
   }
 
   function aoMudarMinhaMesa(fn) {
-    avisarMinhaMesa = fn;
+    ouvintesDaMinhaMesa.push(fn);
     fn(Boolean(minhaMesa()));
   }
 

@@ -103,6 +103,7 @@ function publico(usuario) {
     email: usuario.email,
     isAdmin: !!usuario.isAdmin,
     appearance: usuario.appearance || null,
+    criadoEm: usuario.criadoEm || null,
   };
 }
 

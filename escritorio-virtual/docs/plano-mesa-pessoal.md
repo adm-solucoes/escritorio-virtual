@@ -231,9 +231,43 @@ movel; sem assento, a celula caminhavel mais perto.
 | Clicar na mesa de outro | ok - nao faz nada |
 | Console | limpo |
 
-### Pendente
+## 9. O menu e o do cartao de perfil, nao um na mesa
 
-O menu que aparece ao clicar na mesa. Eu tinha feito um dropdown com
-"Personalizar" e "Largar", e o Caio disse que **nao e isso** - tem uma
-referencia com o menu certo. O dropdown foi removido inteiro (nao ficou codigo
-morto); personalizar segue pelo botao de pincel. Falta saber qual print e.
+Eu tinha feito um dropdown abrindo **na mesa**, com "Personalizar" e "Largar". O
+Caio disse que nao era isso e apontou a referencia: `13-menu-largar-mesa.png`.
+
+Nela o menu **nao fica na mesa**: fica no **cartao do proprio perfil**, atras de
+um botao "⋮". O cartao tem bolinha com a inicial, nome, "Joined on <data>", um
+botao primario "Edit Profile", e e o "⋮" que abre o menuzinho **escuro** com
+"Unclaim my desk".
+
+Faz sentido: a mesa e uma coisa da sua conta, nao um movel que voce configura.
+O dropdown na mesa foi removido inteiro - nada de codigo desligado no meio do
+caminho.
+
+O cartao da conta foi refeito nesse formato:
+
+| Referencia | Aqui |
+|---|---|
+| bolinha com inicial | ok - usa a cor da camisa do boneco |
+| "Joined on 6/09/2026" | "Entrou em 07/09/2026" (`criadoEm` passou a sair no `/api/eu`) |
+| "Edit Profile" primario | "Editar perfil" |
+| "⋮" -> menu escuro | "⋮" -> menu escuro com "Largar minha mesa" e "Sair da conta" |
+
+### Um bug que so aparecia com os dois juntos
+
+`aoMudarMinhaMesa` guardava **um** ouvinte (`avisarMinhaMesa = fn`). O menu da
+conta registrava o dele, o decorador registrava depois e apagava o primeiro -
+resultado: "Largar minha mesa" nunca aparecia, mesmo com mesa. Virou lista.
+
+### Resultado dos testes (07/09/2026)
+
+| O que | Resultado |
+|---|---|
+| Cartao no formato do print | ok - avatar, nome, "Entrou em", botao e "⋮" |
+| Data numa linha so | ok (o cartao foi de 200px pra 236px) |
+| "⋮" abre o menu escuro | ok |
+| "Largar minha mesa" com mesa | ok - aparece |
+| Sem mesa | ok - some, sobra "Sair da conta" |
+| Clicar na mesa | ok - nao abre menu nenhum, so senta e pega |
+| Console | limpo |
