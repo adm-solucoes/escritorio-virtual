@@ -45,6 +45,18 @@ teste de proposito.
 | `barba_curta.png` | `beards/beard/basic/walk.png` | JaidynReiman, Carlo Enrico Victoria (Nemisys) | CC-BY-SA 3.0, GPL 3.0 |
 | `barba_bigode.png` | `beards/mustache/basic/walk.png` | JaidynReiman, Carlo Enrico Victoria (Nemisys) | CC-BY-SA 3.0, GPL 3.0 |
 | `chapeu_bandana.png` | `hat/cloth/bandana/adult/walk.png` | Matthew Krohn (makrohn), JaidynReiman, Marcel van de Steeg (MadMarcel) | OGA-BY 3.0, CC-BY-SA 3.0 |
+| `top_gola.png` | `torso/clothes/shortsleeve/tshirt_scoop/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
+| `jaqueta_cardigan.png` | `torso/clothes/longsleeve/longsleeve2_cardigan/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
+| `chapeu_bone.png` | `hat/cloth/leather_cap/adult/walk.png` | Johannes Sjölund (wulax), Matthew Krohn (Makrohn), JaidynReiman | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
+| `chapeu_coco.png` | `hat/formal/bowler/adult/walk.png` | bluecarrot16 | CC-BY-SA 3.0, GPL 3.0 |
+| `hair_raspado.png` | `hair/buzzcut/adult/walk.png` | ElizaWy | OGA-BY 3.0 |
+| `hair_espetado.png` | `hair/spiked/adult/walk.png` | kcilds/Rocetti/Eredah | CC-BY 4.0 |
+| `hair_cacheado.png` | `hair/curly_short/adult/walk.png` | ElizaWy | OGA-BY 3.0 |
+| `hair_afro.png` | `hair/afro/adult/walk.png` | bluecarrot16 | CC0 |
+| `hair_dread.png` | `hair/dreadlocks_short/adult/walk.png` | ElizaWy, bluecarrot16 | CC0 |
+| `hair_pixie.png` | `hair/pixie/adult/walk.png` | JaidynReiman, Manuel Riecke (MrBeast) | CC-BY-SA 3.0, GPL 3.0 |
+| `hair_chanel.png` | `hair/bob/adult/walk.png` | ElizaWy, bluecarrot16 | CC0 |
+| `pes_sandalia.png` | `feet/sandals/male/walk.png` | Nila122, JaidynReiman, Matthew Krohn (makrohn), Johannes Sjölund (wulax) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0 |
 
 Se este repositorio for publicado publicamente (ex: GitHub publico), mantenha este
 arquivo junto dos PNGs — e a forma de dar credito exigida pelas licencas OGA-BY e
