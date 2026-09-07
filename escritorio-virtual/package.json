@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node -e \"process.env.SEM_LOGIN='1'; require('./server/index.js')\"",
-    "publicar": "node server/publicar.js"
+    "publicar": "node server/publicar.js",
+    "espelhar": "node espelhar.js"
   },
   "engines": {
     "node": ">=18"
