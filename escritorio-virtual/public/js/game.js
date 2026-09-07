@@ -597,9 +597,12 @@
     // outra) sao solidos - no meio fica vazio, que e onde entram as pernas de
     // quem senta. Encher a faixa inteira de gaveta, como eu tinha feito, some
     // com o piso e a mesa vira um paredao.
-    const FIM_TAMPO = 52;                  // onde a superficie acaba
+    // Profundidade: quanto da celula o tampo ocupa. Com 52 a mesa de uma
+    // fileira ficava fina demais; o vao embaixo encolhe junto, ele so precisa
+    // dar pra ver o piso e encaixar a gaveteira.
+    const FIM_TAMPO = 72;                  // onde a superficie acaba
     const FIM_LIP = FIM_TAMPO + 10;        // a quina clara do tampo
-    const CHAO = 104;                      // onde os moveis encostam no piso
+    const CHAO = 110;                      // onde os moveis encostam no piso
 
     // (0) tampo
     q(ctx, x, y, 0, topo, 128, FIM_TAMPO - topo, MESA_TAMPO);
@@ -626,8 +629,8 @@
         q(ctx, x, y, gx + 2, gy, gw - 4, 3, '#bcc4d6');
         q(ctx, x, y, gx + gw - 7, gy, 5, gh + 1, '#79839c');
         for (let i = 0; i < 3; i++) {
-          const dy = gy + 6 + i * 12;
-          q(ctx, x, y, gx + 6, dy, gw - 16, 8, '#ccd2df');
+          const dy = gy + 3 + i * 8;
+          q(ctx, x, y, gx + 6, dy, gw - 16, 6, '#ccd2df');
           q(ctx, x, y, gx + 6, dy, gw - 16, 2, '#e8ebf2');
           q(ctx, x, y, gx + 13, dy + 4, gw - 30, 2, '#6b748f');
         }
@@ -738,7 +741,7 @@
       // ...e so na fileira da FRENTE (`b.baixo` = nao tem mesa embaixo). O
       // monitor dessa fileira ja avanca pro tile de tras, entao equipar as duas
       // daria dois computadores empilhados na mesma mesa.
-      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 3 === 1 && b.baixo;
+      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 2 === 0 && b.baixo;
       // gavetas ficam do lado de quem usa: numa mesa virada pra cima elas
       // caem atras da placa e nao aparecem
       tampoDeMesa(ctx, x, y, TILE, b, direcao !== 'down');
