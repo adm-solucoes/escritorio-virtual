@@ -81,12 +81,29 @@ O `render.yaml` na raiz do projeto ja descreve o servico.
    pasta:
 
    ```bash
-   # na raiz do monorepo, com o repo novo ja criado e vazio no GitHub
-   git remote add sede git@github.com:SEU-USUARIO/escritorio-virtual.git
+   # 1) tem que rodar na RAIZ do monorepo (onde fica a pasta .git),
+   #    e nao de dentro de escritorio-virtual/.
+   #    No CMD/PowerShell o caminho vai com barra invertida:
+   cd C:\Users\caiol\Downloads\CLAUDE
+   #    (no Git Bash seria  cd /c/Users/caiol/Downloads/CLAUDE)
+
+   # 2) o repo novo ja tem que existir e estar VAZIO no GitHub.
+   #    URL https (nao ssh): esta maquina nao tem chave SSH, e o Git
+   #    Credential Manager abre o login no navegador sozinho.
+   git remote add sede https://github.com/SEU-USUARIO/escritorio-virtual.git
+
+   # 3) manda so a pasta. O `main` do fim e o nome do branch NO GITHUB -
+   #    nao precisa bater com o nome do branch local.
    git subtree push --prefix=escritorio-virtual sede main
    ```
 
    Assim o CRM e os outros projetos **nao vao junto**.
+
+   > `fatal: not a git repository` nesse passo quer dizer que o terminal esta
+   > fora da raiz do monorepo - rode o `cd` do passo 1 primeiro.
+   >
+   > `'sede' does not appear to be a git repository` quer dizer que faltou o
+   > `git remote add` do passo 2, ou o endereco esta errado.
 2. No Render: **New > Blueprint**, aponte pro repositorio. Ele le o
    `render.yaml` sozinho.
 3. Confirme as variaveis. `CODIGO_SEDE`, `ADMIN_CODE` e `SESSION_SECRET` estao
