@@ -958,6 +958,9 @@
       if (b.dir) q(ctx, x, y, 125, 0, 3, altura, contorno);
 
     } else if (type === M.SOFA_CIMA || type === M.SOFA_BAIXO) {
+      // SOFA_CIMA e SOFA_BAIXO sao o MESMO sofa virado, nao duas metades: um
+      // tem o encosto em cima, o outro embaixo. Por isso as bordas olham o
+      // mesmo tipo - dois sofas de costas um pro outro nao devem se emendar.
       const b = bordasDoMovel(tiles, r, c, type);
       const encostoEmCima = type === M.SOFA_CIMA;
       // recepcao usa sofa azul (como o Lobby do Gather); o lounge, marrom
@@ -968,9 +971,13 @@
 
       const corpoY = 8; // topo do sofa na grade fina
       const corpoH = 108;
-      q(ctx, x, y, 4, 120, 120, 6, 'rgba(45,50,64,0.18)'); // sombra no chao
+      // Onde o sofa continua na celula vizinha, o corpo vai ate a borda do
+      // tile: senao sobrava uma faixa de chao no meio do proprio sofa.
+      const preencheY = b.cima ? corpoY : 0;
+      const preencheAte = b.baixo ? corpoY + corpoH : 128;
+      if (b.baixo) q(ctx, x, y, 4, 120, 120, 6, 'rgba(45,50,64,0.18)'); // sombra no chao
 
-      q(ctx, x, y, 0, corpoY, 128, corpoH, paleta.base);
+      q(ctx, x, y, 0, preencheY, 128, preencheAte - preencheY, paleta.base);
 
       // encosto: faixa bem mais escura que o assento, senao o sofa vira balcao
       const encY = encostoEmCima ? corpoY : corpoY + corpoH - 46;
@@ -1797,18 +1804,28 @@
       q(ctx, x, y, 14, 84, 100, 3, 'rgba(124,92,212,0.55)');   // brilho embaixo
 
     } else if (obj === O.HEADSET) {
-      q(ctx, x, y, 40, 88, 48, 5, 'rgba(45,50,64,0.18)');
-      q(ctx, x, y, 60, 46, 8, 42, '#8f97a8');                  // suporte
-      qArred(ctx, x, y, 46, 84, 36, 8, 3, '#68718a');
-      // arco
-      for (let i = 0; i <= 44; i += 2) {
-        const t = (i - 22) / 22;
-        q(ctx, x, y, 42 + i, 22 + Math.round(t * t * 14), 3, 6, '#2b3040');
-      }
-      [36, 84].forEach((ax) => {                               // conchas
-        qContorno(ctx, x, y, ax, 32, 20, 30, 6, '#181c24');
-        qArred(ctx, x, y, ax + 1, 33, 18, 28, 5, '#4a5162');
-        qArred(ctx, x, y, ax + 4, 38, 12, 18, 4, '#e8934a');
+      // Refeito inteiro na grade de 4. O arco era uma parabola montada com 23
+      // lasquinhas de 3 por 6 - abaixo de um pixel cada uma - e com a malha
+      // nova elas se empilhavam no mesmo lugar e viravam um borrao. Agora sao
+      // sete blocos em degrau, que e como a referencia desenha curva: escada,
+      // nao curva de verdade. As conchas tambem cresceram: 20x30 com contorno
+      // de 6 nao sobrava miolo nenhum depois de encaixar.
+      q(ctx, x, y, 40, 88, 48, 4, 'rgba(45,50,64,0.18)');      // sombra
+      qArred(ctx, x, y, 44, 80, 40, 8, 4, '#68718a');          // base do suporte
+      q(ctx, x, y, 48, 80, 32, 4, '#8f97a8');
+      q(ctx, x, y, 60, 28, 8, 56, '#8f97a8');                  // haste
+      q(ctx, x, y, 60, 28, 4, 56, '#a7b1c2');
+
+      [[36, 32, 8, 20], [40, 28, 8, 8], [48, 24, 8, 8], [56, 20, 16, 8],
+       [72, 24, 8, 8], [80, 28, 8, 8], [84, 32, 8, 20]].forEach(([bx, by, bw, bh]) => {
+        q(ctx, x, y, bx, by, bw, bh, '#2b3040');               // arco
+        q(ctx, x, y, bx, by, bw, 4, '#4a5162');                // luz em cima
+      });
+
+      [32, 80].forEach((cx) => {                               // conchas
+        q(ctx, x, y, cx, 48, 16, 24, '#181c24');
+        q(ctx, x, y, cx + 4, 52, 8, 16, '#e8934a');            // espuma
+        q(ctx, x, y, cx + 4, 52, 8, 4, '#f0b45a');
       });
 
     } else if (obj === O.WEBCAM) {

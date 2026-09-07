@@ -129,9 +129,11 @@
       },
       {
         id: 'estar', nome: 'Estar', icone: '🛋️', itens: [
-          { t: m.SOFA_CIMA, w: 2, h: 1, nome: 'Sofa 2x1 (encosto)' },
-          { t: m.SOFA_CIMA, nome: 'Sofa (encosto)' },
-          { t: m.SOFA_BAIXO, nome: 'Sofa (assento)' },
+          // Um sofa so, que gira. Os dois tiles sao o mesmo sofa de frente ou
+          // de costas - eram duas entradas na lista pra dizer isso, do mesmo
+          // jeito que a cadeira tinha quatro.
+          { t: m.SOFA_CIMA, giros: [m.SOFA_CIMA, m.SOFA_BAIXO], nome: 'Sofa' },
+          { t: m.SOFA_CIMA, w: 2, h: 1, giros: [m.SOFA_CIMA, m.SOFA_BAIXO], nome: 'Sofa grande' },
           { t: m.BANCO, nome: 'Banco' },
           { t: m.ESTANTE, nome: 'Estante' },
           { t: m.ARMARIO, nome: 'Armario' },
@@ -271,7 +273,9 @@
       ctx.save();
       ctx.translate(-TILE, -TILE); // a grade falsa tem uma borda de folga
       for (let r = 1; r <= h; r++) {
-        for (let c = 1; c <= w; c++) Game.desenharObjeto(ctx, c, r, id, TILE, grade);
+        for (let c = 1; c <= w; c++) {
+          Game.desenharObjeto(ctx, c, r, id, TILE, grade);
+        }
       }
       ctx.restore();
     });
@@ -321,20 +325,23 @@
 
     const tiles = M().tiles;
     const antes = [];
-    celulasDa(col, row).forEach(([c, r]) => {
+    celulasDa(col, row).forEach(([c, r, t]) => {
       if (!tiles[r] || tiles[r][c] === undefined) return;
-      antes.push([c, r, tiles[r][c]]);
-      tiles[r][c] = idAtual(selecionado);
+      antes.push([c, r, tiles[r][c], t]);
+      tiles[r][c] = t;
     });
-    antes.forEach(([c, r]) => Game.desenharObjeto(ctx, c, r, idAtual(selecionado), TILE, tiles));
+    antes.forEach(([c, r, , t]) => Game.desenharObjeto(ctx, c, r, t, TILE, tiles));
     antes.forEach(([c, r, valor]) => { tiles[r][c] = valor; });
   }
 
   // Celulas que a peca ocupa a partir do canto sob o cursor.
+  // [coluna, linha, tile] de cada celula que a peca ocupa.
   function celulasDa(col, row) {
     const lista = [];
     for (let dr = 0; dr < alturaDe(selecionado); dr++) {
-      for (let dc = 0; dc < larguraDe(selecionado); dc++) lista.push([col + dc, row + dr]);
+      for (let dc = 0; dc < larguraDe(selecionado); dc++) {
+        lista.push([col + dc, row + dr, idAtual(selecionado)]);
+      }
     }
     return lista;
   }
@@ -489,10 +496,10 @@
       return m.objetos[row][col] !== idAtual(selecionado);
     }
     // peca grande: todas as celulas tem que caber e estar livres de gente
-    return celulasDa(col, row).every(([c, r]) => (
+    return celulasDa(col, row).every(([c, r, t]) => (
       m.tiles[r] && m.tiles[r][c] !== undefined
-      && (idAtual(selecionado) === m.LIVRE || !temGenteEm(c, r))
-    )) && celulasDa(col, row).some(([c, r]) => m.tiles[r][c] !== idAtual(selecionado));
+      && (t === m.LIVRE || !temGenteEm(c, r))
+    )) && celulasDa(col, row).some(([c, r, t]) => m.tiles[r][c] !== t);
   }
 
   function pintarEm(col, row, x, y) {
@@ -516,10 +523,10 @@
 
     // Uma peca grande vira um passo so no desfazer.
     const passo = { celulas: [] };
-    celulasDa(col, row).forEach(([c, r]) => {
-      if (m.tiles[r][c] === idAtual(selecionado)) return;
-      passo.celulas.push({ c, r, de: m.tiles[r][c], para: idAtual(selecionado) });
-      Network.editarMapa(c, r, idAtual(selecionado));
+    celulasDa(col, row).forEach(([c, r, t]) => {
+      if (m.tiles[r][c] === t) return;
+      passo.celulas.push({ c, r, de: m.tiles[r][c], para: t });
+      Network.editarMapa(c, r, t);
     });
     if (passo.celulas.length) feitos.push(passo);
   }
