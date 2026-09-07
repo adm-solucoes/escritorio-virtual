@@ -860,19 +860,30 @@
 
   // Monitor de perfil, pras mesas viradas pros lados. `paraDireita` = a tela
   // olha pra direita (ou seja, quem usa senta a direita da mesa).
+  // Monitor VIRADO, nao de perfil. Antes isto tinha 15 unidades de largura -
+  // menos de quatro pixels - e saia uma lamina: nao dava pra ver que era
+  // monitor. Agora aparece a lateral escura de um lado e o painel com a tela
+  // do outro, que e como a referencia resolve um movel virado: ela nao desenha
+  // a espessura de verdade, poe as duas faces lado a lado.
   function monitorDeLado(ctx, x, y, ax, ay, ah, paraDireita) {
-    const aw = 15;
-    qContorno(ctx, x, y, ax, ay, aw, ah, 3, '#4e5a72');
-    qArred(ctx, x, y, ax + 1, ay + 1, aw - 2, ah - 2, 3, '#c3cad8');
-    q(ctx, x, y, ax + 2, ay + 3, aw - 4, 2, '#eef1f7');          // luz no topo
-    // a lasquinha de tela que aparece do lado pra onde ela olha
-    const telaX = paraDireita ? ax + aw - 5 : ax + 1;
-    q(ctx, x, y, telaX, ay + 3, 4, ah - 7, '#2f8fc4');
-    q(ctx, x, y, telaX, ay + 3, 4, Math.round((ah - 7) * 0.45), '#4fb3dd');
-    const meio = ax + Math.round(aw / 2);
-    q(ctx, x, y, meio - 3, ay + ah - 2, 6, 10, '#a7b1c2');       // pescoco
-    qArred(ctx, x, y, meio - 12, ay + ah + 8, 24, 6, 2, '#8e99ad'); // base
-    q(ctx, x, y, meio - 10, ay + ah + 8, 20, 2, '#bcc4d1');
+    const lateral = 12;
+    const painel = 28;
+    const aw = lateral + painel;
+    const lx = paraDireita ? ax : ax + painel;      // a lateral que aparece
+    const px = paraDireita ? ax + lateral : ax;     // a face com a tela
+
+    q(ctx, x, y, lx, ay, lateral, ah, '#5f6a80');
+    q(ctx, x, y, lx, ay, lateral, 4, '#7b8699');    // luz no topo da lateral
+
+    qContorno(ctx, x, y, px, ay, painel, ah, 4, '#4e5a72');
+    qArred(ctx, x, y, px + 4, ay + 4, painel - 8, ah - 8, 4, '#dee4ee');
+    q(ctx, x, y, px + 8, ay + 8, painel - 16, ah - 24, '#2f8fc4');
+    q(ctx, x, y, px + 8, ay + 8, painel - 16, Math.round((ah - 24) / 8) * 4, '#4fb3dd');
+
+    const meio = ax + Math.round(aw / 8) * 4;
+    q(ctx, x, y, meio - 4, ay + ah, 8, 12, '#a7b1c2');              // pescoco
+    qArred(ctx, x, y, meio - 16, ay + ah + 12, 32, 8, 4, '#8e99ad'); // base
+    q(ctx, x, y, meio - 12, ay + ah + 12, 24, 4, '#bcc4d1');
   }
 
   function bordasDoMovel(tiles, r, c, tipo) {
@@ -1762,7 +1773,7 @@
       mouse(ctx, x, y, 108, 60);
 
     } else if (obj === O.MONITOR_LADO) {
-      monitorDeLado(ctx, x, y, 50, -8, 74, true);
+      monitorDeLado(ctx, x, y, 44, -8, 72, true);
 
     } else if (obj === O.MONITOR_COSTAS) {
       monitorDeCostas(ctx, x, y, 20, -6, 88, 58);
