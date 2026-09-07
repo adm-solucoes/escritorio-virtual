@@ -558,12 +558,16 @@
   // na outra, nao um puxador por celula.
   const MESA_TAMPO = '#eceaf6';
   const MESA_TAMPO_LUZ = '#f7f6fc';
-  const MESA_FRENTE = '#828da8';
-  const MESA_FRENTE_LUZ = '#98a2ba';
-  const MESA_FRENTE_SOMBRA = '#5f6880';
   const MESA_BORDA = '#a9b0c4';
-  const MESA_VAO = '#5f6880';        // vao debaixo da mesa: da a profundidade
-  const MESA_VAO_ESCURO = '#464e63'; // colado no tampo, o ponto mais fundo
+  // Cores tiradas a conta-gotas da referencia (ver o mapa de faixas em
+  // tampoDeMesa): a quina do tampo, o risco escuro embaixo dela, e o cinza
+  // dos moveis que ficam no vao (gaveteira e pe).
+  const MESA_QUINA = '#afbdd0';
+  const MESA_RISCO = '#5f6f7c';
+  const MESA_MOVEL = '#8695ad';
+  // O vao NAO e um painel pintado: e o proprio carpete coberto por esta
+  // sombra. Por isso e translucido - o piso ja foi desenhado embaixo.
+  const MESA_SOMBRA_VAO = 'rgba(46,52,74,0.5)';
 
   function tampoDeMesa(ctx, x, y, TILE, b, gavetas) {
     // A mesa da referencia (referencias/10-MESA-closeup-gavetas-e-pe.png) ocupa
@@ -602,10 +606,24 @@
     // tampo e 0,45 e a frente. Isso nao cabe numa celula so - por isso a mesa
     // usa duas fileiras, e o quanto sobra pro tampo aqui depende de ter ou nao
     // outra mesa atras.
+    // As faixas abaixo do tampo saiam de uma leitura pixel a pixel da
+    // referencia (11-MESA-cadeira-closeup.png, coluna x=870, que cai no vao
+    // entre a gaveteira e o pe da mesa da direita):
+    //
+    //   #efedf7         tampo
+    //   #afbdd0  15px   a quina do tampo
+    //   #5f6f7c   5px   o risco escuro logo abaixo dela
+    //   #555f86  45px   <- o CHAO, so que na sombra da mesa
+    //   #878dce         carpete no sol
+    //
+    // #555f86 dividido por #878dce da ~0,63: e o mesmo carpete multiplicado.
+    // Nao existe painel fechando a frente da mesa - quem fecha sao a gaveteira
+    // e o pe, e entre eles o piso continua aparecendo.
     const temMesaAtras = !b.cima;
     const FIM_TAMPO = temMesaAtras ? 24 : 72;
-    const FIM_LIP = FIM_TAMPO + 10;        // a quina clara do tampo
-    const CHAO = temMesaAtras ? 84 : 110;  // onde os moveis encostam no piso
+    const FIM_QUINA = FIM_TAMPO + 13;      // 15px na referencia
+    const FIM_RISCO = FIM_QUINA + 4;       // 5px na referencia
+    const CHAO = temMesaAtras ? FIM_RISCO + 38 : 110;
 
     // (0) tampo
     q(ctx, x, y, 0, topo, 128, FIM_TAMPO - topo, MESA_TAMPO);
@@ -614,47 +632,38 @@
       q(ctx, x, y, 0, topo, 128, 2, MESA_BORDA);
     }
 
-    // (1) quina do tampo: a lasquinha clara que separa a superficie da frente
-    q(ctx, x, y, 0, FIM_TAMPO, 128, 10, '#dedbec');
-    q(ctx, x, y, 0, FIM_TAMPO, 128, 3, '#faf9fe');
-    q(ctx, x, y, 0, FIM_LIP - 2, 128, 2, '#a7a3bd');
+    // (1) a quina do tampo: a espessura da placa, vista de frente
+    q(ctx, x, y, 0, FIM_TAMPO, 128, FIM_QUINA - FIM_TAMPO, MESA_QUINA);
+    q(ctx, x, y, 0, FIM_QUINA, 128, FIM_RISCO - FIM_QUINA, MESA_RISCO);
 
-    // (2) a frente da mesa: uma faixa continua de ponta a ponta, como na
-    //     referencia. Antes eu tinha feito uma caixinha solta pendurada, que
-    //     parecia gabinete de PC. Abaixo dela o chao continua aparecendo.
-    q(ctx, x, y, 0, FIM_LIP, 128, CHAO - FIM_LIP, MESA_FRENTE);
-    q(ctx, x, y, 0, FIM_LIP, 128, 4, MESA_FRENTE_LUZ);        // luz na quina de cima
-    q(ctx, x, y, 0, CHAO - 4, 128, 4, MESA_FRENTE_SOMBRA);    // sombra no rodape
-    q(ctx, x, y, 0, CHAO, 128, 4, 'rgba(40,44,58,0.28)');     // sombra caindo no chao
+    // (2) o vao: aqui NAO se pinta nada por cima do piso, so se escurece. E
+    //     esse pedaco de carpete na sombra que faz a mesa parecer suspensa.
+    q(ctx, x, y, 0, FIM_RISCO, 128, CHAO - FIM_RISCO, MESA_SOMBRA_VAO);
 
     if (gavetas !== false) {
-      // (3) a GAVETEIRA ocupa UM bloco so - a ponta esquerda da bancada. Na
-      //     outra ponta fica so o PE, uma coluna estreita. E o que a
-      //     referencia mostra: uma bancada de tres celulas tem uma gaveteira
-      //     e um pe, nao um movel embaixo de cada celula.
-      const gy = FIM_LIP + 8;
-      const gh = CHAO - FIM_LIP - 16;
+      // (3) dentro do vao ficam os dois unicos volumes solidos: a GAVETEIRA,
+      //     que ocupa um bloco (a ponta esquerda), e o PE, uma coluna
+      //     estreita na outra ponta. O meio da bancada fica vazado.
+      const gy = FIM_RISCO;
+      const gh = CHAO - FIM_RISCO - 4;   // os ultimos 4 sao so sombra no chao
       if (b.esq) {
-        q(ctx, x, y, 10, gy, 104, gh, '#4a5268');
-        q(ctx, x, y, 12, gy + 2, 100, gh - 4, '#c8cedd');
-        q(ctx, x, y, 12, gy + 2, 100, 3, '#e8ebf2');
-        // duas gavetas empilhadas: o vinco do meio e o puxador de cada uma
-        const meio = gy + Math.round(gh / 2);
-        q(ctx, x, y, 12, meio - 1, 100, 2, '#8d95a9');
-        q(ctx, x, y, 30, gy + Math.round(gh / 4), 64, 3, '#6b748f');
-        q(ctx, x, y, 30, meio + Math.round(gh / 4), 64, 3, '#6b748f');
+        // as faixas da gaveteira, medidas na referencia: corpo, vinco, corpo,
+        // vinco, corpo, e o rodape escuro embaixo.
+        q(ctx, x, y, 12, gy, 116, gh, MESA_MOVEL);
+        q(ctx, x, y, 12, gy + 4, 116, 4, MESA_RISCO);
+        q(ctx, x, y, 12, gy + 17, 116, 4, MESA_RISCO);
+        q(ctx, x, y, 12, gy + gh - 4, 116, 4, MESA_RISCO);
+        q(ctx, x, y, 12, gy, 2, gh, MESA_RISCO);
       }
       if (b.dir) {
-        // o pe: uma coluna estreita encostada na ponta direita
-        q(ctx, x, y, 98, gy, 20, gh, '#4a5268');
-        q(ctx, x, y, 100, gy + 2, 16, gh - 4, '#c8cedd');
-        q(ctx, x, y, 100, gy + 2, 16, 3, '#e8ebf2');
+        q(ctx, x, y, 101, gy, 14, gh, MESA_MOVEL);
+        q(ctx, x, y, 101, gy + gh - 4, 14, 4, MESA_RISCO);
       }
     }
 
     // contorno so onde a bancada termina
-    if (b.esq) q(ctx, x, y, 0, topo, 2, 108 - topo, MESA_BORDA);
-    if (b.dir) q(ctx, x, y, 126, topo, 2, 108 - topo, MESA_BORDA);
+    if (b.esq) q(ctx, x, y, 0, topo, 2, FIM_QUINA - topo, MESA_BORDA);
+    if (b.dir) q(ctx, x, y, 126, topo, 2, FIM_QUINA - topo, MESA_BORDA);
   }
 
   // Monitor visto por tras: e o que se ve numa mesa virada pra cima da tela
