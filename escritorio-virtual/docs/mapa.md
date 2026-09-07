@@ -44,12 +44,28 @@ Por sala, o que a referencia mostra e o que foi aplicado:
 | Huddle (172815) | **mesa redonda** com um assento por lado | idem, num canto da sala de reuniao |
 | Lago (172749) | poca **cercada de pedra**, com assento olhando pra ela | idem, com poltrona nos quatro lados |
 
-## Tiles novos desta passada
+## Tiles novos
 
 | Tile | Por que |
 |---|---|
 | `PUFE` (49) | o pufe e o que da cara de lounge, mais que o sofa. Assento caminhavel; a cor varia pela posicao |
 | `MESA_REDONDA` (50) | as duas salas de huddle da referencia usam mesa redonda, nao retangular |
+| `GELADEIRA` (51) | a copa da referencia (172742) tem geladeira de porta de vidro; as latas coloridas sao o que a identifica de longe |
+| `AQUARIO` (52) | esta na sala de huddle (172815) |
+| `LUMINARIA_PE` (53) | idem - a de globos, que da a luz quente do canto |
+
+O **balcao** (`BALCAO`) ja existia sem uso e serve pros dois: e o balcao da
+recepcao e a bancada da copa.
+
+## Lobby e copa: o que nao coube
+
+A referencia tem um **lobby** (172839) e uma **copa** (172742) como comodos
+proprios. Aqui nao cabem: o corredor tem 4 linhas de altura. Viraram duas ilhas
+dentro dele - o movel ocupa a linha 13 e sobram as linhas 14 e 15 pra passar.
+
+E ai mora a armadilha de novo: a linha 13 nas colunas 7, 15, 31 e 39 e a saida
+das portas. Movel ali deixa quem sai da sala num bolso de duas celulas. Foi o
+que aconteceu com a geladeira na primeira tentativa, e `testes/mapa.js` pegou.
 
 **Assento com desenho proprio precisa sair do ramo generico.** `POLTRONA` e
 `PUFE` estao em `ASSENTOS`, e o ramo que desenha cadeira de escritorio pega tudo

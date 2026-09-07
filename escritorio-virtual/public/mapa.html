@@ -29,7 +29,10 @@
       background: #fff;
       line-height: 0;
     }
-    canvas { display: block; image-rendering: pixelated; max-width: 100%; height: auto; }
+    /* 2x cabe na tela; 4x fica em tamanho real e o quadro rola. Sem esta
+       distincao o `max-width` encolhia o 4x de volta e o botao nao fazia nada. */
+    canvas { display: block; image-rendering: pixelated; }
+    canvas.cabe { max-width: 100%; height: auto; }
     .botoes { display: flex; gap: 8px; }
     button {
       padding: 8px 14px;
@@ -99,6 +102,7 @@
 
       function trocar(escala, botao) {
         desenhar(escala);
+        cv.classList.toggle('cabe', escala === 2);
         document.getElementById('btn-2').classList.toggle('ativo', botao === 2);
         document.getElementById('btn-4').classList.toggle('ativo', botao === 4);
       }

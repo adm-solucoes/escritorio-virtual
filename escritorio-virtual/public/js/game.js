@@ -1459,6 +1459,56 @@
       q(ctx, x, y, 64, 62, 22, 4, '#e0705a'); // ponteiro dos minutos
       q(ctx, x, y, 60, 60, 8, 8, '#2c3240'); // eixo
 
+    } else if (type === M.GELADEIRA) {
+      // Geladeira de porta de vidro da copa (referencia 172742): as latas
+      // coloridas atras do vidro sao o que a identifica de longe.
+      q(ctx, x, y, 12, 116, 104, 8, 'rgba(45,50,64,0.20)');
+      qContorno(ctx, x, y, 12, 8, 104, 112, 4, '#20242e');
+      qArred(ctx, x, y, 13, 9, 102, 110, 3, '#c3c9d6');            // carcaca
+      qArred(ctx, x, y, 20, 16, 88, 84, 2, '#7fc4dd');             // vidro
+      q(ctx, x, y, 20, 16, 88, 20, '#a5dcef');                     // reflexo em cima
+      // prateleiras com latas
+      [24, 48, 72].forEach((py) => {
+        q(ctx, x, y, 20, py + 16, 88, 4, '#dfe6ee');
+        ['#e0607e', '#4da3d6', '#f0a83c', '#3fb08a'].forEach((cor, k) => {
+          q(ctx, x, y, 26 + k * 20, py, 12, 16, cor);
+          q(ctx, x, y, 26 + k * 20, py, 4, 16, 'rgba(255,255,255,0.35)');
+        });
+      });
+      q(ctx, x, y, 24, 20, 8, 76, 'rgba(255,255,255,0.30)');       // brilho do vidro
+      q(ctx, x, y, 100, 48, 8, 28, '#8f97a8');                     // puxador
+      q(ctx, x, y, 20, 104, 88, 12, '#a8aebd');                    // rodape
+
+    } else if (type === M.AQUARIO) {
+      // Aquario da sala de huddle (172815): agua clara, peixinho e cascalho.
+      q(ctx, x, y, 12, 116, 104, 8, 'rgba(45,50,64,0.20)');
+      qArred(ctx, x, y, 16, 88, 96, 28, 3, '#5b6376');             // movel de baixo
+      q(ctx, x, y, 20, 92, 88, 4, '#7b8496');
+      qContorno(ctx, x, y, 16, 24, 96, 64, 3, '#20242e');
+      qArred(ctx, x, y, 17, 25, 94, 62, 2, '#3fa8c4');             // agua
+      q(ctx, x, y, 17, 25, 94, 16, '#6fc9dd');                     // luz da superficie
+      q(ctx, x, y, 20, 76, 88, 12, '#c9a86a');                     // cascalho
+      [[40, 60], [72, 66], [56, 70]].forEach(([px, py]) => {
+        q(ctx, x, y, px, py - 16, 8, 20, '#3f8a4a');               // plantinha
+      });
+      q(ctx, x, y, 48, 44, 16, 8, '#f0a83c');                      // peixe
+      q(ctx, x, y, 44, 46, 6, 4, '#f0a83c');
+      q(ctx, x, y, 76, 56, 12, 6, '#e0607e');
+      q(ctx, x, y, 24, 32, 8, 44, 'rgba(255,255,255,0.28)');       // reflexo no vidro
+
+    } else if (type === M.LUMINARIA_PE) {
+      // Luminaria de globos (172815): haste fina com bolas de luz espalhadas.
+      q(ctx, x, y, 40, 112, 48, 8, 'rgba(45,50,64,0.20)');
+      qArred(ctx, x, y, 44, 104, 40, 10, 3, '#5b6376');            // base
+      q(ctx, x, y, 60, 36, 8, 68, '#8f97a8');                      // haste
+      q(ctx, x, y, 60, 36, 3, 68, '#b6bcc8');
+      // bracos e globos
+      [[28, 40], [96, 48], [40, 20], [88, 24], [64, 12]].forEach(([gx, gy]) => {
+        q(ctx, x, y, Math.min(gx, 64), gy + 8, Math.abs(64 - gx) + 4, 4, '#8f97a8');
+        blob(ctx, x, y, gx, gy, 12, 12, '#f0d99a', 4);
+        blob(ctx, x, y, gx, gy, 8, 8, '#fff6d8', 4);
+      });
+
     } else if (type === M.PUFE) {
       // Pufe do lounge (referencia 172725): saco baixo e redondo, sem pe nem
       // encosto. O afundado no meio e o que o distingue de uma almofada.

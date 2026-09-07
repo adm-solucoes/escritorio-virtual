@@ -60,6 +60,10 @@ const MESA_MONITOR_DIR = 48;
 // Da referencia do lounge (172725) e das salas de huddle (172815).
 const PUFE = 49;         // caminhavel: da pra sentar
 const MESA_REDONDA = 50;
+// Da copa (172742) e da sala de huddle (172815).
+const GELADEIRA = 51;
+const AQUARIO = 52;
+const LUMINARIA_PE = 53;
 
 const SOLID_TILES = new Set([
   PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO, ESTANTE,
@@ -68,7 +72,7 @@ const SOLID_TILES = new Set([
   MESA_DUPLA, MESA_NOTEBOOK, PLANTA_GRANDE, VASO_FLORES, CACTO, BEBEDOURO,
   MESA_BAIXO, MESA_ESQ, MESA_DIR,
   MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
-  TV, RELOGIO, MESA_REDONDA,
+  TV, RELOGIO, MESA_REDONDA, GELADEIRA, AQUARIO, LUMINARIA_PE,
 ]);
 
 // Onde o boneco senta ao parar em cima, e pra que lado ele fica virado.
@@ -266,6 +270,21 @@ function buildMap() {
     [41, ARMARIO], [42, ARMARIO]]
     .forEach(([c, t]) => set(12, c, t));
 
+  // ---------- recepcao e copa, no corredor ----------
+  // A referencia tem um LOBBY com balcao de recepcao (172839) e uma COPA com
+  // cafeteira e geladeira (172742). Aqui elas nao cabem como sala - o corredor
+  // tem 4 linhas -, entao viram duas ilhas dentro dele: o balcao ocupa a linha
+  // 13 e sobram as linhas 14 e 15 pra passar.
+  linhaH(13, 18, 20, BALCAO);                    // balcao da recepcao
+  set(13, 17, PLANTA_GRANDE); set(13, 21, PLANTA_GRANDE);
+  set(14, 19, CADEIRA_BAIXO);                    // quem atende, virado pro balcao
+
+  // As colunas 7, 15, 31 e 39 sao as portas das salas da frente. Movel na linha
+  // 13 nelas fecha a saida: quem sai da porta cai num bolso de duas celulas. A
+  // copa fica das colunas 9 a 11, longe das quatro.
+  linhaH(13, 9, 10, BALCAO);                     // bancada da copa
+  set(13, 11, GELADEIRA);
+
   // ---------- divisorias ----------
   linhaV(14, 17, 29, PAREDE);
   linhaV(33, 17, 29, PAREDE);
@@ -331,6 +350,7 @@ function buildMap() {
   set(18, 43, PLANTA_GRANDE);
   // Sala de huddle da referencia (172815): mesa redonda com um assento em cada
   // lado, num canto separado da mesa grande de conferencia.
+  set(26, 42, AQUARIO); set(28, 41, LUMINARIA_PE);
   set(27, 39, MESA_REDONDA);
   set(26, 39, CADEIRA_BAIXO); set(28, 39, CADEIRA);
   set(27, 38, CADEIRA_DIR); set(27, 40, CADEIRA_ESQ);
@@ -480,7 +500,7 @@ module.exports = {
   CADEIRA_VERMELHA_BAIXO, CADEIRA_VERMELHA_ESQ, CADEIRA_VERMELHA_DIR,
   MESA_BAIXO, MESA_ESQ, MESA_DIR,
   MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
-  PUFE, MESA_REDONDA,
+  PUFE, MESA_REDONDA, GELADEIRA, AQUARIO, LUMINARIA_PE,
   DIRECAO_MESA,
   MESAS_DIRECIONAIS,
   MESAS_DE_TRABALHO,
