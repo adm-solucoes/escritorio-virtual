@@ -123,8 +123,38 @@ const OBJETOS = {
   LUMINARIA: 8,
   PLANTINHA: 9,
   LIVROS: 10,
+  MONITOR_ULTRAWIDE: 11,
+  TORRE_PC: 12,
+  SETUP_GAMER: 13,
+  MONITOR_LADO: 14,
+  MONITOR_COSTAS: 15,
+  TABLET: 16,
+  CAIXAS_SOM: 17,
+  TECLADO_GAMER: 18,
+  HEADSET: 19,
+  WEBCAM: 20,
+  COPO_CAFE: 21,
+  GARRAFA: 22,
+  DONUT: 23,
+  TIGELA: 24,
+  POTE_BISCOITO: 25,
+  CAFETEIRA: 26,
+  PORTA_LAPIS: 27,
+  CADERNO: 28,
+  CALENDARIO: 29,
+  POST_ITS: 30,
+  CACTINHO: 31,
+  PORTA_RETRATO: 32,
+  TROFEU: 33,
+  BONECO: 34,
+  FLORES: 35,
+  BOLA: 36,
+  VELA: 37,
 };
-const OBJETO_MAX = 10;
+// O maior id valido. **Todo item novo precisa entrar aqui**: o servidor
+// descarta calado o que passa disso, e o item some sem deixar pista.
+// testes/mesas.js tem uma trava justamente pra isso.
+const OBJETO_MAX = 37;
 
 const SALAS_FRENTE = [
   { c0: 3, c1: 11 },

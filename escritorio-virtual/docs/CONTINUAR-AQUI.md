@@ -247,6 +247,13 @@ nao segura nada derruba junto o que estava em cima.
 
 ---
 
+## 7b. A mesa pessoal tem documento proprio
+
+`docs/mesa-pessoal.md` - estado final: quem pode o que, como o clique se comporta,
+posicao livre e **os cinco lugares onde um item novo precisa entrar** (esquecer
+qualquer um falha em silencio). `docs/plano-mesa-pessoal.md` guarda a historia
+das decisoes.
+
 ## 8. Checklist rapido antes de dizer "pronto"
 
 - [ ] `node --check` em todo arquivo tocado.

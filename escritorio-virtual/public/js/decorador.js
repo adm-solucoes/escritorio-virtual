@@ -29,24 +29,66 @@
           { t: m.MESA_MONITOR, nome: 'Posto de trabalho' },
         ],
       },
+      // ---- o que vai EM CIMA da mesa ----
+      // `deMesa: true` = aba que quem tem mesa ve mesmo sem ser da diretoria.
+      // Sao quatro pra caber sem virar uma lista de 37 sem fim.
       {
-        id: 'emcima', nome: 'Em cima da mesa', icone: '🖥️', itens: [
+        id: 'emcima', nome: 'Computador', icone: '🖥️', deMesa: true, itens: [
           { o: O.MONITOR, nome: 'Monitor' },
           { o: O.MONITOR_DUPLO, nome: 'Dois monitores' },
+          { o: O.MONITOR_ULTRAWIDE, nome: 'Monitor ultrawide' },
+          { o: O.TORRE_PC, nome: 'PC com gabinete' },
+          { o: O.SETUP_GAMER, nome: 'Setup gamer' },
           { o: O.NOTEBOOK, nome: 'Notebook' },
+          { o: O.TABLET, nome: 'Tablet e caneta' },
+          { o: O.MONITOR_LADO, nome: 'Monitor de perfil' },
+          { o: O.MONITOR_COSTAS, nome: 'Monitor de costas' },
           { o: O.TECLADO, nome: 'Teclado e mouse' },
-          { o: O.CANECA, nome: 'Caneca' },
-          { o: O.PAPELADA, nome: 'Papelada' },
-          { o: O.TELEFONE, nome: 'Telefone' },
-          { o: O.LUMINARIA, nome: 'Luminaria' },
-          { o: O.PLANTINHA, nome: 'Plantinha' },
-          { o: O.LIVROS, nome: 'Livros' },
+          { o: O.TECLADO_GAMER, nome: 'Teclado colorido' },
+          { o: O.HEADSET, nome: 'Headset no suporte' },
+          { o: O.CAIXAS_SOM, nome: 'Caixas de som' },
+          { o: O.WEBCAM, nome: 'Webcam' },
           { o: O.NENHUM, nome: 'Tirar da decoracao da casa', soAdmin: true },
         ],
       },
       {
+        id: 'mesa-cafe', nome: 'Cafe e comida', icone: '☕', deMesa: true, itens: [
+          { o: O.CANECA, nome: 'Caneca' },
+          { o: O.COPO_CAFE, nome: 'Copo de cafe' },
+          { o: O.CAFETEIRA, nome: 'Cafeteira' },
+          { o: O.GARRAFA, nome: 'Garrafa de agua' },
+          { o: O.DONUT, nome: 'Donut no pratinho' },
+          { o: O.TIGELA, nome: 'Tigela de salada' },
+          { o: O.POTE_BISCOITO, nome: 'Pote de biscoito' },
+        ],
+      },
+      {
+        id: 'mesa-papel', nome: 'Papelada', icone: '📒', deMesa: true, itens: [
+          { o: O.PAPELADA, nome: 'Papelada' },
+          { o: O.LIVROS, nome: 'Livros' },
+          { o: O.CADERNO, nome: 'Caderno' },
+          { o: O.PORTA_LAPIS, nome: 'Porta-lapis' },
+          { o: O.CALENDARIO, nome: 'Calendario de mesa' },
+          { o: O.POST_ITS, nome: 'Post-its' },
+          { o: O.TELEFONE, nome: 'Telefone' },
+        ],
+      },
+      {
+        id: 'mesa-pessoal', nome: 'Coisas suas', icone: '🏆', deMesa: true, itens: [
+          { o: O.PLANTINHA, nome: 'Plantinha' },
+          { o: O.CACTINHO, nome: 'Cactinho' },
+          { o: O.FLORES, nome: 'Flores' },
+          { o: O.PORTA_RETRATO, nome: 'Porta-retrato' },
+          { o: O.TROFEU, nome: 'Trofeu' },
+          { o: O.BONECO, nome: 'Bonequinho' },
+          { o: O.BOLA, nome: 'Bola' },
+          { o: O.VELA, nome: 'Vela' },
+          { o: O.LUMINARIA, nome: 'Luminaria' },
+        ],
+      },
+      {
         // Uma cadeira por direcao: a pessoa senta virada pro lado que ela aponta.
-        id: 'trabalho', nome: 'Cadeiras', icone: '🪑', itens: [
+        id: 'trabalho', nome: 'Cadeiras e mesas', icone: '🪑', itens: [
           { t: m.CADEIRA, nome: 'Cadeira ↑ (de costas)' },
           { t: m.CADEIRA_BAIXO, nome: 'Cadeira ↓ (de frente)' },
           { t: m.CADEIRA_ESQ, nome: 'Cadeira ← (perfil)' },
@@ -140,7 +182,7 @@
   let CATEGORIAS = null;
   function categorias() {
     if (!CATEGORIAS) CATEGORIAS = construirCategorias();
-    if (soAbaDaMesa()) return CATEGORIAS.filter((c) => c.id === 'emcima');
+    if (soAbaDaMesa()) return CATEGORIAS.filter((c) => c.deMesa);
     return CATEGORIAS;
   }
 

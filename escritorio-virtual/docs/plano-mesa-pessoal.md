@@ -428,3 +428,38 @@ No navegador:
 | Excluir | ok - sai so ela, a barrinha fecha |
 | Item antigo (sem id) | ok - ganhou id na leitura, nada se perdeu |
 | Console | limpo |
+
+
+## 13. O catalogo: 37 coisas
+
+Eram 10. Foram pra **37**, seguindo as abas do decorador do Gather nos prints:
+eletronicos (`4x-decorator-153719`, `153526`), comida e bebida (`153801`),
+decoracao de sala (`153731`) e as plantas de `153746`.
+
+| Aba | Itens |
+|---|---|
+| Computador | 14 |
+| Cafe e comida | 7 |
+| Papelada | 7 |
+| Coisas suas | 9 |
+
+As quatro sao marcadas `deMesa: true` - e o que faz quem tem mesa ver todas sem
+ser da diretoria. Antes era so a aba "Em cima da mesa"; com 37 itens numa lista
+so nao daria pra achar nada.
+
+`monitorDeCostas` e `monitorDeLado`, que tinham ficado sem uso quando a mesa
+esvaziou, viraram itens - sao exatamente o que serve pra quem senta de lado.
+
+### O teste que existe por causa da armadilha
+
+`testes/itens.js` checa **os cinco lugares** onde um item novo precisa entrar.
+Ele existe porque esquecer qualquer um falha em silencio, e o pior deles - o
+`OBJETO_MAX` - faz o servidor descartar o id sem escrever nada em lugar nenhum.
+
+Hoje: **41 + 6 = 47 checagens**, todas passando.
+
+### Documentacao
+
+O estado final saiu do plano e virou `docs/mesa-pessoal.md`: quem pode o que, o
+que cada clique faz, posicao livre, os cinco lugares, como desenhar e a lista dos
+37. Este plano continua guardando a **historia** das decisoes.

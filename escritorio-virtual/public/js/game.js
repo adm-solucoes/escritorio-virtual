@@ -1465,6 +1465,100 @@
       teclado(ctx, x, y, 20, 52, 78);
       mouse(ctx, x, y, 106, 56);
 
+    } else if (obj === O.MONITOR_ULTRAWIDE) {
+      monitor(ctx, x, y, -14, -22, 156, 62);
+
+    } else if (obj === O.TORRE_PC) {
+      // gabinete de pe ao lado do monitor, como no print dos eletronicos
+      monitor(ctx, x, y, 30, -28, 76, 62);
+      qContorno(ctx, x, y, -6, 22, 32, 66, 3, '#20242e');
+      qArred(ctx, x, y, -5, 23, 30, 64, 3, '#4a5162');
+      q(ctx, x, y, -2, 26, 24, 3, '#6b7488');                  // luz no topo
+      for (let i = 30; i < 76; i += 8) q(ctx, x, y, 0, i, 20, 3, '#39404f'); // grade
+      q(ctx, x, y, 2, 78, 6, 6, '#63d9c4');                    // ledzinho ligado
+      q(ctx, x, y, 12, 78, 8, 3, '#8f97a8');
+
+    } else if (obj === O.SETUP_GAMER) {
+      monitor(ctx, x, y, 12, -26, 104, 66, { tela: '#7c5cd4', telaEscura: '#4b34a0' });
+      // teclado com as teclas coloridas
+      qContorno(ctx, x, y, 24, 56, 80, 26, 3, '#181c24');
+      qArred(ctx, x, y, 25, 57, 78, 24, 3, '#2b3040');
+      const cores = ['#e0607e', '#f0a83c', '#63d9c4', '#4da3d6', '#a58ede'];
+      for (let fila = 0; fila < 3; fila++) {
+        for (let i = 0; i < 12; i++) {
+          q(ctx, x, y, 29 + i * 6, 61 + fila * 6, 4, 4, cores[(i + fila) % cores.length]);
+        }
+      }
+      mouse(ctx, x, y, 108, 60);
+
+    } else if (obj === O.MONITOR_LADO) {
+      monitorDeLado(ctx, x, y, 52, 6, 58, true);
+
+    } else if (obj === O.MONITOR_COSTAS) {
+      monitorDeCostas(ctx, x, y, 28, 6, 72, 46);
+
+    } else if (obj === O.TABLET) {
+      q(ctx, x, y, 32, 86, 64, 5, 'rgba(45,50,64,0.18)');
+      qContorno(ctx, x, y, 30, 34, 68, 54, 4, '#20242e');      // corpo, meio deitado
+      qArred(ctx, x, y, 31, 35, 66, 52, 4, '#39404f');
+      qArred(ctx, x, y, 35, 39, 58, 44, 2, '#2f7fb5');         // tela
+      qArred(ctx, x, y, 35, 39, 58, 20, 2, '#4198cf');
+      q(ctx, x, y, 40, 45, 30, 4, '#bfe6fa');
+      q(ctx, x, y, 40, 55, 20, 3, '#bfe6fa');
+      q(ctx, x, y, 35, 39, 3, 44, 'rgba(255,255,255,0.28)');   // brilho
+      qArred(ctx, x, y, 100, 40, 8, 44, 3, '#8f97a8');         // caneta
+      q(ctx, x, y, 101, 42, 3, 38, '#c3cad8');
+      q(ctx, x, y, 100, 80, 8, 6, '#2c3240');
+
+    } else if (obj === O.CAIXAS_SOM) {
+      [22, 84].forEach((ax) => {
+        q(ctx, x, y, ax, 86, 24, 5, 'rgba(45,50,64,0.18)');
+        qContorno(ctx, x, y, ax, 34, 24, 54, 3, '#20242e');
+        qArred(ctx, x, y, ax + 1, 35, 22, 52, 3, '#4a5162');
+        q(ctx, x, y, ax + 3, 37, 18, 3, '#6b7488');
+        blob(ctx, x, y, ax + 12, 52, 8, 8, '#2b3040', 3);      // alto-falante grande
+        blob(ctx, x, y, ax + 12, 52, 4, 4, '#68718a', 2);
+        blob(ctx, x, y, ax + 12, 74, 5, 5, '#2b3040', 3);      // tweeter
+      });
+
+    } else if (obj === O.TECLADO_GAMER) {
+      qContorno(ctx, x, y, 14, 52, 100, 30, 3, '#181c24');
+      qArred(ctx, x, y, 15, 53, 98, 28, 3, '#2b3040');
+      q(ctx, x, y, 18, 55, 92, 2, '#4a5162');
+      const paleta = ['#e0607e', '#f0a83c', '#63d9c4', '#4da3d6', '#a58ede'];
+      for (let fila = 0; fila < 3; fila++) {
+        for (let i = 0; i < 15; i++) {
+          q(ctx, x, y, 19 + i * 6, 58 + fila * 6, 4, 4, paleta[(i + fila * 2) % paleta.length]);
+        }
+      }
+      q(ctx, x, y, 14, 84, 100, 3, 'rgba(124,92,212,0.55)');   // brilho embaixo
+
+    } else if (obj === O.HEADSET) {
+      q(ctx, x, y, 40, 88, 48, 5, 'rgba(45,50,64,0.18)');
+      q(ctx, x, y, 60, 46, 8, 42, '#8f97a8');                  // suporte
+      qArred(ctx, x, y, 46, 84, 36, 8, 3, '#68718a');
+      // arco
+      for (let i = 0; i <= 44; i += 2) {
+        const t = (i - 22) / 22;
+        q(ctx, x, y, 42 + i, 22 + Math.round(t * t * 14), 3, 6, '#2b3040');
+      }
+      [36, 84].forEach((ax) => {                               // conchas
+        qContorno(ctx, x, y, ax, 32, 20, 30, 6, '#181c24');
+        qArred(ctx, x, y, ax + 1, 33, 18, 28, 5, '#4a5162');
+        qArred(ctx, x, y, ax + 4, 38, 12, 18, 4, '#e8934a');
+      });
+
+    } else if (obj === O.WEBCAM) {
+      q(ctx, x, y, 46, 84, 36, 5, 'rgba(45,50,64,0.18)');
+      qArred(ctx, x, y, 44, 74, 40, 10, 3, '#4a5162');         // base
+      q(ctx, x, y, 60, 60, 8, 16, '#68718a');                  // pescoco
+      qContorno(ctx, x, y, 40, 32, 48, 32, 8, '#181c24');
+      qArred(ctx, x, y, 41, 33, 46, 30, 7, '#39404f');
+      blob(ctx, x, y, 64, 48, 12, 12, '#20242e', 3);           // lente
+      blob(ctx, x, y, 64, 48, 8, 8, '#2f7fb5', 3);
+      blob(ctx, x, y, 61, 45, 3, 3, '#bfe6fa', 2);             // brilho
+      q(ctx, x, y, 78, 38, 5, 5, '#e0607e');                   // led gravando
+
     } else if (obj === O.CANECA) {
       q(ctx, x, y, 48, 82, 34, 6, 'rgba(45,50,64,0.20)');      // sombra
       qContorno(ctx, x, y, 44, 44, 36, 42, 5, '#7a2c1f');      // corpo
@@ -1477,6 +1571,80 @@
       qArred(ctx, x, y, 50, 45, 24, 4, 2, '#7a3a24');
       q(ctx, x, y, 56, 30, 3, 10, 'rgba(255,255,255,0.55)');   // vapor
       q(ctx, x, y, 66, 26, 3, 12, 'rgba(255,255,255,0.40)');
+
+    } else if (obj === O.COPO_CAFE) {
+      q(ctx, x, y, 46, 84, 38, 5, 'rgba(45,50,64,0.20)');
+      // copo de papel: tronco de cone, mais estreito embaixo
+      for (let i = 0; i < 44; i++) {
+        const recuo = Math.round(i * 5 / 44);
+        q(ctx, x, y, 46 + recuo, 42 + i, 40 - recuo * 2, 1, i < 6 ? '#f6f7fb' : '#eceef4');
+      }
+      q(ctx, x, y, 50, 56, 32, 12, '#8a5a3c');                 // cinta de papelao
+      q(ctx, x, y, 50, 56, 32, 3, '#a5744f');
+      qArred(ctx, x, y, 42, 34, 48, 10, 3, '#c9ccd8');         // tampa
+      q(ctx, x, y, 44, 35, 44, 3, '#e6e8ef');
+      q(ctx, x, y, 60, 28, 10, 8, '#b6bac8');                  // bico
+      q(ctx, x, y, 52, 46, 4, 30, 'rgba(255,255,255,0.45)');
+
+    } else if (obj === O.GARRAFA) {
+      q(ctx, x, y, 50, 88, 30, 5, 'rgba(45,50,64,0.20)');
+      qContorno(ctx, x, y, 48, 34, 34, 54, 5, '#1f5c4a');      // corpo
+      qArred(ctx, x, y, 49, 35, 32, 52, 4, '#3f9e7c');
+      q(ctx, x, y, 52, 40, 6, 42, '#63d9a8');                  // brilho
+      q(ctx, x, y, 74, 40, 4, 42, '#2b7a5f');
+      qArred(ctx, x, y, 54, 52, 22, 16, 2, '#f2f6f4');         // rotulo
+      q(ctx, x, y, 57, 57, 16, 3, '#3f9e7c');
+      q(ctx, x, y, 58, 24, 14, 12, '#2b7a5f');                 // gargalo
+      qArred(ctx, x, y, 55, 16, 20, 10, 3, '#4a5162');         // tampa
+
+    } else if (obj === O.DONUT) {
+      q(ctx, x, y, 40, 82, 50, 5, 'rgba(45,50,64,0.18)');
+      blob(ctx, x, y, 64, 74, 34, 12, '#f2f4f8', 4);           // pratinho
+      blob(ctx, x, y, 64, 62, 28, 22, '#b5762f', 4);           // massa
+      blob(ctx, x, y, 64, 58, 26, 20, '#e8a04a', 4);
+      blob(ctx, x, y, 64, 56, 24, 17, '#e8657f', 4);           // cobertura rosa
+      blob(ctx, x, y, 64, 58, 8, 6, '#b5762f', 3);             // buraco
+      [[50, 48, '#63d9c4'], [76, 50, '#f0e05a'], [58, 64, '#4da3d6'], [72, 62, '#f6f7fb']]
+        .forEach(([gx, gy, cor]) => q(ctx, x, y, gx, gy, 5, 3, cor)); // granulado
+
+    } else if (obj === O.TIGELA) {
+      q(ctx, x, y, 38, 84, 52, 5, 'rgba(45,50,64,0.18)');
+      blob(ctx, x, y, 64, 58, 30, 14, '#7bc47f', 4);           // salada dentro
+      blob(ctx, x, y, 54, 54, 10, 8, '#e0607e', 3);
+      blob(ctx, x, y, 76, 56, 9, 7, '#f0a83c', 3);
+      // tigela: meia elipse
+      for (let i = 0; i < 26; i++) {
+        const larg = Math.round(30 * Math.sqrt(Math.max(0, 1 - (i / 26) * (i / 26))));
+        q(ctx, x, y, 64 - larg, 60 + i, larg * 2, 1, i < 3 ? '#f2f4f8' : '#dfe3ec');
+      }
+      q(ctx, x, y, 34, 58, 60, 4, '#c3c9d6');                  // borda
+
+    } else if (obj === O.POTE_BISCOITO) {
+      q(ctx, x, y, 42, 86, 44, 5, 'rgba(45,50,64,0.18)');
+      qContorno(ctx, x, y, 40, 40, 48, 46, 5, '#8a5a3c');
+      qArred(ctx, x, y, 41, 41, 46, 44, 4, 'rgba(220,232,240,0.55)'); // vidro
+      [[52, 58], [68, 56], [58, 70], [74, 70]].forEach(([bx, by]) => {
+        blob(ctx, x, y, bx, by, 9, 8, '#c08a4e', 3);           // biscoitos
+        q(ctx, x, y, bx - 3, by - 2, 3, 3, '#6b4426');
+        q(ctx, x, y, bx + 2, by + 2, 3, 3, '#6b4426');
+      });
+      q(ctx, x, y, 44, 44, 6, 38, 'rgba(255,255,255,0.35)');   // reflexo
+      qArred(ctx, x, y, 36, 28, 56, 14, 4, '#e0607e');         // tampa
+      q(ctx, x, y, 40, 30, 48, 3, '#f2917d');
+
+    } else if (obj === O.CAFETEIRA) {
+      q(ctx, x, y, 36, 88, 56, 5, 'rgba(45,50,64,0.20)');
+      qContorno(ctx, x, y, 34, 20, 60, 68, 4, '#20242e');
+      qArred(ctx, x, y, 35, 21, 58, 66, 3, '#4a5162');
+      q(ctx, x, y, 38, 24, 52, 3, '#6b7488');
+      qArred(ctx, x, y, 42, 30, 44, 20, 2, '#2b3040');         // painel
+      q(ctx, x, y, 46, 36, 14, 4, '#63d9c4');
+      q(ctx, x, y, 64, 36, 6, 4, '#e0607e');
+      q(ctx, x, y, 58, 52, 12, 8, '#39404f');                  // bico
+      qContorno(ctx, x, y, 46, 60, 36, 24, 3, '#20242e');      // jarra
+      qArred(ctx, x, y, 47, 61, 34, 22, 2, 'rgba(220,232,240,0.5)');
+      qArred(ctx, x, y, 49, 70, 30, 12, 2, '#5b2417');         // cafe
+      q(ctx, x, y, 50, 64, 4, 16, 'rgba(255,255,255,0.4)');
 
     } else if (obj === O.PAPELADA) {
       q(ctx, x, y, 30, 82, 66, 5, 'rgba(45,50,64,0.16)');
@@ -1491,6 +1659,141 @@
       qArred(ctx, x, y, 88, 30, 8, 40, 3, '#e0705a');          // caneta em cima
       q(ctx, x, y, 89, 32, 3, 34, '#f2917d');
       q(ctx, x, y, 88, 66, 8, 6, '#2c3240');
+
+    } else if (obj === O.PORTA_LAPIS) {
+      q(ctx, x, y, 46, 88, 38, 5, 'rgba(45,50,64,0.20)');
+      // lapis e canetas espetados, desenhados ANTES do copo pra ele tapar a base
+      [['#e0607e', 50, 28], ['#4da3d6', 60, 22], ['#f0a83c', 70, 30], ['#63d9c4', 78, 26]]
+        .forEach(([cor, lx, ly]) => {
+          q(ctx, x, y, lx, ly, 7, 46, cor);
+          q(ctx, x, y, lx, ly, 2, 46, 'rgba(255,255,255,0.35)');
+          q(ctx, x, y, lx, ly, 7, 6, '#2c3240');               // ponta
+        });
+      qContorno(ctx, x, y, 44, 54, 42, 34, 4, '#2b3040');      // copo
+      qArred(ctx, x, y, 45, 55, 40, 32, 3, '#68718a');
+      q(ctx, x, y, 48, 58, 6, 26, '#8f97a8');
+      q(ctx, x, y, 76, 58, 5, 26, '#4a5162');
+
+    } else if (obj === O.CADERNO) {
+      q(ctx, x, y, 30, 84, 68, 5, 'rgba(45,50,64,0.18)');
+      qContorno(ctx, x, y, 28, 44, 72, 42, 3, '#2b3040');      // capa
+      qArred(ctx, x, y, 29, 45, 70, 40, 2, '#c25a4a');
+      q(ctx, x, y, 32, 48, 64, 3, '#dd7a63');
+      qArred(ctx, x, y, 40, 54, 50, 24, 2, '#f2f4f8');         // etiqueta
+      q(ctx, x, y, 45, 60, 32, 3, '#aeb6c6');
+      q(ctx, x, y, 45, 67, 22, 3, '#c3c9d6');
+      for (let i = 46; i < 86; i += 8) q(ctx, x, y, 26, i, 8, 4, '#8f97a8'); // espiral
+      qArred(ctx, x, y, 92, 38, 8, 44, 3, '#f0a83c');          // caneta em cima
+      q(ctx, x, y, 93, 40, 3, 38, '#f6c780');
+
+    } else if (obj === O.CALENDARIO) {
+      q(ctx, x, y, 32, 86, 64, 5, 'rgba(45,50,64,0.18)');
+      q(ctx, x, y, 40, 78, 48, 8, '#8f97a8');                  // cavalete
+      qContorno(ctx, x, y, 32, 32, 64, 50, 3, '#2b3040');
+      qArred(ctx, x, y, 33, 33, 62, 48, 2, '#f6f7fb');
+      q(ctx, x, y, 33, 33, 62, 14, '#c25a4a');                 // faixa do mes
+      q(ctx, x, y, 40, 38, 22, 4, '#f6d7d0');
+      for (let l = 0; l < 3; l++) {                            // grade dos dias
+        for (let c2 = 0; c2 < 6; c2++) {
+          q(ctx, x, y, 38 + c2 * 9, 52 + l * 9, 6, 6, (l === 1 && c2 === 3) ? '#4da3d6' : '#d7dbe6');
+        }
+      }
+
+    } else if (obj === O.POST_ITS) {
+      q(ctx, x, y, 34, 84, 60, 5, 'rgba(45,50,64,0.16)');
+      // tres bloquinhos meio tortos, como ficam de verdade
+      [['#f0e05a', 36, 46, -1], ['#7bd6a8', 58, 42, 1], ['#f2917d', 46, 60, 0]]
+        .forEach(([cor, px, py, giro]) => {
+          qContorno(ctx, x, y, px + giro, py, 40, 34, 2, 'rgba(45,50,64,0.22)');
+          qArred(ctx, x, y, px + giro, py, 40, 34, 2, cor);
+          q(ctx, x, y, px + giro + 5, py + 8, 26, 3, 'rgba(45,50,64,0.28)');
+          q(ctx, x, y, px + giro + 5, py + 16, 18, 3, 'rgba(45,50,64,0.20)');
+        });
+
+    } else if (obj === O.CACTINHO) {
+      q(ctx, x, y, 44, 88, 40, 5, 'rgba(45,50,64,0.20)');
+      qContorno(ctx, x, y, 56, 30, 18, 44, 5, '#2f6b3a');
+      qArred(ctx, x, y, 57, 31, 16, 42, 4, '#4f9e5c');         // corpo
+      q(ctx, x, y, 59, 34, 5, 36, '#6bbd78');
+      qContorno(ctx, x, y, 42, 44, 14, 22, 5, '#2f6b3a');      // bracinho
+      qArred(ctx, x, y, 43, 45, 12, 20, 4, '#4f9e5c');
+      for (let i = 36; i < 70; i += 8) q(ctx, x, y, 64, i, 2, 4, '#2f6b3a');
+      blob(ctx, x, y, 65, 28, 7, 6, '#e8657f', 3);             // florzinha
+      caixa(ctx, x, y, 44, 66, 40, 22, '#c98358', '#e6ab84', '#9c6340');
+
+    } else if (obj === O.PORTA_RETRATO) {
+      q(ctx, x, y, 34, 86, 60, 5, 'rgba(45,50,64,0.18)');
+      q(ctx, x, y, 56, 76, 16, 10, '#8f97a8');                 // pezinho
+      qContorno(ctx, x, y, 32, 30, 64, 50, 3, '#8a5a3c');      // moldura
+      qArred(ctx, x, y, 33, 31, 62, 48, 2, '#b1784f');
+      qArred(ctx, x, y, 39, 37, 50, 36, 2, '#8fd0ec');         // ceu da foto
+      q(ctx, x, y, 39, 58, 50, 15, '#7bc47f');                 // grama
+      blob(ctx, x, y, 56, 54, 7, 9, '#f1c27d', 3);             // duas pessoinhas
+      blob(ctx, x, y, 72, 54, 7, 9, '#f1c27d', 3);
+      q(ctx, x, y, 52, 58, 9, 12, '#e0607e');
+      q(ctx, x, y, 68, 58, 9, 12, '#4da3d6');
+      blob(ctx, x, y, 80, 43, 6, 6, '#f0e05a', 3);             // sol
+
+    } else if (obj === O.TROFEU) {
+      q(ctx, x, y, 44, 88, 40, 5, 'rgba(45,50,64,0.20)');
+      qArred(ctx, x, y, 42, 76, 44, 12, 3, '#5b4a2f');         // base
+      q(ctx, x, y, 45, 78, 38, 3, '#7d6742');
+      q(ctx, x, y, 58, 62, 12, 16, '#c9a227');                 // haste
+      for (let i = 0; i < 26; i++) {                           // taca
+        const larg = Math.round(22 * Math.sqrt(Math.max(0, 1 - (i / 26) * (i / 26))));
+        q(ctx, x, y, 64 - larg, 36 + i, larg * 2, 1, '#e8c34a');
+      }
+      q(ctx, x, y, 44, 32, 40, 6, '#f2d97a');                  // borda
+      q(ctx, x, y, 50, 38, 5, 20, 'rgba(255,255,255,0.45)');
+      [36, 86].forEach((ax) => qContorno(ctx, x, y, ax, 40, 10, 20, 4, '#c9a227')); // alcas
+      q(ctx, x, y, 56, 80, 16, 4, '#f2d97a');
+
+    } else if (obj === O.BONECO) {
+      q(ctx, x, y, 46, 88, 36, 5, 'rgba(45,50,64,0.20)');
+      qArred(ctx, x, y, 44, 82, 40, 8, 3, '#4a5162');          // pedestal
+      q(ctx, x, y, 56, 62, 6, 20, '#3d5a9e');                  // pernas
+      q(ctx, x, y, 66, 62, 6, 20, '#3d5a9e');
+      qArred(ctx, x, y, 52, 40, 24, 26, 4, '#e0607e');         // tronco
+      q(ctx, x, y, 62, 44, 5, 18, '#f6d7d0');
+      q(ctx, x, y, 44, 42, 9, 20, '#e0607e');                  // bracos
+      q(ctx, x, y, 75, 36, 9, 20, '#e0607e');
+      blob(ctx, x, y, 64, 30, 12, 12, '#f1c27d', 3);           // cabeca
+      q(ctx, x, y, 55, 22, 18, 7, '#2b3040');                  // cabelo
+      q(ctx, x, y, 59, 30, 3, 3, '#2b3040');
+      q(ctx, x, y, 67, 30, 3, 3, '#2b3040');
+
+    } else if (obj === O.FLORES) {
+      q(ctx, x, y, 44, 88, 40, 5, 'rgba(45,50,64,0.20)');
+      [[52, 40], [64, 30], [76, 40], [58, 50], [70, 50]].forEach(([fx, fy], i) => {
+        q(ctx, x, y, fx + 2, fy + 6, 4, 24, '#3f8a4a');        // caule
+        const cor = ['#e8657f', '#f0e05a', '#c77fe0', '#f2917d', '#8fd0ec'][i];
+        blob(ctx, x, y, fx + 4, fy, 11, 10, cor, 3);
+        blob(ctx, x, y, fx + 4, fy, 4, 4, '#fff3c4', 2);
+      });
+      qContorno(ctx, x, y, 48, 62, 32, 26, 4, '#2b6b8a');      // vaso
+      qArred(ctx, x, y, 49, 63, 30, 24, 3, '#4da3d6');
+      q(ctx, x, y, 52, 66, 6, 18, '#8fd0ec');
+
+    } else if (obj === O.BOLA) {
+      q(ctx, x, y, 44, 84, 40, 5, 'rgba(45,50,64,0.20)');
+      blob(ctx, x, y, 64, 64, 24, 24, '#2c3240', 4);
+      blob(ctx, x, y, 64, 64, 21, 21, '#f6f7fb', 4);
+      blob(ctx, x, y, 64, 60, 8, 7, '#2c3240', 3);             // gomos
+      blob(ctx, x, y, 50, 70, 6, 5, '#2c3240', 3);
+      blob(ctx, x, y, 78, 70, 6, 5, '#2c3240', 3);
+      blob(ctx, x, y, 64, 78, 6, 4, '#2c3240', 3);
+      q(ctx, x, y, 52, 52, 6, 5, 'rgba(255,255,255,0.6)');     // brilho
+
+    } else if (obj === O.VELA) {
+      q(ctx, x, y, 50, 88, 30, 5, 'rgba(45,50,64,0.20)');
+      qArred(ctx, x, y, 48, 78, 34, 10, 3, '#8f97a8');         // pires
+      qContorno(ctx, x, y, 54, 44, 22, 36, 3, '#b8a58a');      // vela
+      qArred(ctx, x, y, 55, 45, 20, 34, 2, '#f2ead8');
+      q(ctx, x, y, 58, 48, 5, 28, '#fff9ec');
+      q(ctx, x, y, 71, 48, 3, 28, '#ded1b6');
+      q(ctx, x, y, 63, 38, 3, 8, '#4a4034');                   // pavio
+      blob(ctx, x, y, 64, 32, 7, 10, '#f0a83c', 3);            // chama
+      blob(ctx, x, y, 64, 31, 4, 6, '#ffe9a8', 2);
 
     } else if (obj === O.TELEFONE) {
       q(ctx, x, y, 28, 84, 68, 5, 'rgba(45,50,64,0.18)');
