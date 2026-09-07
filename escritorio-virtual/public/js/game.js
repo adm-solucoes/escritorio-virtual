@@ -116,7 +116,10 @@
           if (!M.SUPERFICIES.has(M.tiles[r][c])) continue;
           const ocupada = M.objetos[r] && M.objetos[r][c];
           ctx.strokeStyle = ocupada ? 'rgba(248,180,84,0.55)' : 'rgba(120,220,160,0.55)';
-          ctx.strokeRect(c * TILE + 2.5, r * TILE + 2.5, TILE - 5, TILE - 5);
+          // a gradinha cobre so o tampo: na fileira da frente de uma mesa e uma
+          // tirinha, e e exatamente ali que a coisa vai pousar
+          const alto = fimDoTampo(M.tiles, c, r) * U;
+          ctx.strokeRect(c * TILE + 2.5, r * TILE + 2.5, TILE - 5, Math.max(6, alto - 5));
         }
       }
       ctx.restore();
@@ -213,7 +216,7 @@
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const obj = OfficeMap.objetos[r][c];
-        if (obj) drawObjectTile(mctx, c, r, obj, TILE);
+        if (obj) drawObjectTile(mctx, c, r, obj, TILE, tiles);
       }
     }
     OfficeMap.ROOMS.forEach((sala) => desenharEtiquetaSala(mctx, sala, TILE));
@@ -647,17 +650,27 @@
       const gy = FIM_RISCO;
       const gh = CHAO - FIM_RISCO - 4;   // os ultimos 4 sao so sombra no chao
       if (b.esq) {
-        // as faixas da gaveteira, medidas na referencia: corpo, vinco, corpo,
-        // vinco, corpo, e o rodape escuro embaixo.
-        q(ctx, x, y, 12, gy, 116, gh, MESA_MOVEL);
-        q(ctx, x, y, 12, gy + 4, 116, 4, MESA_RISCO);
-        q(ctx, x, y, 12, gy + 17, 116, 4, MESA_RISCO);
-        q(ctx, x, y, 12, gy + gh - 4, 116, 4, MESA_RISCO);
-        q(ctx, x, y, 12, gy, 2, gh, MESA_RISCO);
+        // A gaveteira nao e uma placa lisa. Ampliando a referencia ela e uma
+        // moldura escura com tres pecas dentro: uma coluna estreita em cada
+        // ponta (as laterais do movel) e, no meio, a face das duas gavetas -
+        // cada uma com um puxador curto e centralizado.
+        const GX = 7, GW = 118;
+        q(ctx, x, y, GX, gy, GW, gh, MESA_RISCO);               // a moldura
+        q(ctx, x, y, GX + 5, gy + 1, 8, gh - 2, MESA_MOVEL);    // lateral esquerda
+        q(ctx, x, y, GX + 108, gy + 1, 7, gh - 2, MESA_MOVEL);  // lateral direita
+
+        const fx = GX + 17, fw = 85;                            // a face das gavetas
+        q(ctx, x, y, fx, gy + 1, fw, gh - 2, MESA_MOVEL);
+        q(ctx, x, y, fx, gy + 4, fw, 5, MESA_RISCO);            // fresta de cima
+        q(ctx, x, y, fx, gy + 18, fw, 3, MESA_RISCO);           // fresta entre as duas
+        q(ctx, x, y, fx, gy + 29, fw, 5, MESA_RISCO);           // rodape
+        const pux = fx + Math.round((fw - 17) / 2);
+        q(ctx, x, y, pux, gy + 9, 17, 4, MESA_RISCO);           // puxador da de cima
+        q(ctx, x, y, pux, gy + 21, 17, 4, MESA_RISCO);          // puxador da de baixo
       }
       if (b.dir) {
         q(ctx, x, y, 101, gy, 14, gh, MESA_MOVEL);
-        q(ctx, x, y, 101, gy + gh - 4, 14, 4, MESA_RISCO);
+        q(ctx, x, y, 101, gy + 29, 14, 5, MESA_RISCO);
       }
     }
 
@@ -1295,11 +1308,27 @@
     }
   }
 
+  // Ate onde vai o tampo nesta celula, na malha fina. Numa mesa de duas
+  // fileiras a da frente so tem uma tirinha de tampo em cima - o resto e a
+  // frente do movel e o vao. Quem for apoiado ali precisa subir, senao a caneca
+  // fica boiando na frente da gaveteira. Espelha o que tampoDeMesa desenha.
+  function fimDoTampo(tiles, c, r) {
+    const M = OfficeMap;
+    const t = tiles && tiles[r] && tiles[r][c];
+    const temFrente = M.MESAS_DIRECIONAIS.has(t) || t === M.MESA_DUPLA || t === M.MESA_NOTEBOOK;
+    if (!temFrente) return 128;
+    if (tiles[r + 1] && tiles[r + 1][c] === t) return 128;   // e a fileira de tras
+    return (tiles[r - 1] && tiles[r - 1][c] === t) ? 24 : 72;
+  }
+
   // Camada de cima: o que fica apoiado na celula. Desenhado depois dos moveis,
   // entao um monitor pousa em cima da mesa em vez de virar parte dela.
-  function drawObjectTile(ctx, c, r, obj, TILE) {
+  function drawObjectTile(ctx, c, r, obj, TILE, tiles) {
     const O = OfficeMap.OBJETOS;
-    const x = c * TILE, y = r * TILE;
+    // Os objetos foram desenhados apoiando por volta de y=90. Se o tampo acaba
+    // antes disso, sobe o desenho inteiro ate ele encostar na superficie.
+    const sobe = Math.max(0, 90 - fimDoTampo(tiles, c, r));
+    const x = c * TILE, y = r * TILE - sobe * U;
     const meio = TILE / 2;
 
     // Os monitores sao altos e **passam do tile pra cima**, como na referencia:

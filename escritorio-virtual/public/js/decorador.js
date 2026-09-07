@@ -204,7 +204,7 @@
     if (!selecionado) return;
 
     if (ehObjeto(selecionado)) {
-      if (selecionado.o) Game.desenharApoiado(ctx, col, row, selecionado.o, TILE);
+      if (selecionado.o) Game.desenharApoiado(ctx, col, row, selecionado.o, TILE, M().tiles);
       return;
     }
     if (selecionado.t === M().LIVRE) return; // borracha nao mostra nada
@@ -296,9 +296,14 @@
     renderAbas();
     renderGrade();
     const dica = document.getElementById('decor-dica');
-    dica.textContent = selecionado
-      ? 'Clique no mapa pra colocar "' + selecionado.nome + '". Esc pra soltar.'
-      : 'Escolha um objeto e clique no escritorio.';
+    // Com um item de apoiar na mao a dica muda: e o unico caso em que existe
+    // um lugar certo pra clicar (a malha verde), e nao adianta descobrir isso
+    // no erro.
+    dica.textContent = !selecionado
+      ? 'Escolha um objeto e clique no escritorio.'
+      : ehObjeto(selecionado)
+        ? 'Coloque "' + selecionado.nome + '" em cima de uma mesa - a malha verde mostra onde da.'
+        : 'Clique no mapa pra colocar "' + selecionado.nome + '". Esc pra soltar.';
   }
 
   // ---------- edicao ----------
@@ -319,9 +324,12 @@
   function podeColocarEm(col, row) {
     const m = M();
     if (ehObjeto(selecionado)) {
-      // apoiar em cima nao depende de gente: e so a superficie existir
-      return !!m.objetos[row] && m.objetos[row][col] !== undefined
-        && m.objetos[row][col] !== selecionado.o;
+      // Apoiar em cima nao depende de gente - depende de ter em que apoiar.
+      // A regra e a mesma do servidor: so vale em SUPERFICIES, que sao
+      // exatamente as celulas que a malha verde acende.
+      if (!m.objetos[row] || m.objetos[row][col] === undefined) return false;
+      if (selecionado.o && !m.SUPERFICIES.has(m.tiles[row][col])) return false;
+      return m.objetos[row][col] !== selecionado.o;
     }
     // peca grande: todas as celulas tem que caber e estar livres de gente
     return celulasDa(col, row).every(([c, r]) => (
