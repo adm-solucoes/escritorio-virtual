@@ -348,7 +348,11 @@
       if (emMovimento && it.id === emMovimento.id) return;
       drawObjectTile(mctx, it.x, it.y, it.o, TILE, tiles, true);
     });
-    OfficeMap.ROOMS.forEach((sala) => desenharEtiquetaSala(mctx, sala, TILE));
+    // A etiqueta da sala NAO entra aqui. Assada no canvas do mapa, ela e
+    // rasterizada em RENDER_SCALE e depois reduzida na hora de desenhar - com o
+    // alisamento desligado, o texto sai serrilhado. Na referencia o nome da sala
+    // e texto de interface, nitido. Agora ela e desenhada na camada viva, onde o
+    // proprio rasterizador da fonte cuida do tamanho final.
   }
 
   // Cada ambiente tem seu proprio chao (duas tonalidades alternadas, em xadrez
@@ -2910,6 +2914,12 @@
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(camX, camY, vista.w, vista.h);
     ctx.drawImage(mapCanvas, 0, 0, OfficeMap.COLS * OfficeMap.TILE, OfficeMap.ROWS * OfficeMap.TILE);
+
+    // Nome das salas, por cima do mapa e em resolucao de tela.
+    OfficeMap.ROOMS.forEach((sala) => {
+      if (sala.id === 'jardim') return;
+      desenharEtiquetaSala(ctx, sala, OfficeMap.TILE);
+    });
 
     const self = players.get(selfId);
     if (self && self.destinoFinal) {

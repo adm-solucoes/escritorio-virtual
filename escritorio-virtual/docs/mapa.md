@@ -91,6 +91,16 @@ Ficou junta quase do tom da base e um fio de luz so.
 a referencia usa uma sans neutra de interface. Vale pro CSS e pros textos
 desenhados no canvas (nome de sala, plaquinha da mesa, balao de contexto).
 
+**E o nome da sala saiu do pre-render.** Trocar a familia nao bastava: a
+etiqueta era assada no canvas do mapa em `RENDER_SCALE` e depois reduzida na
+hora de desenhar. Com o alisamento desligado - que e o que mantem a arte
+pixelada - o texto vinha serrilhado, e nenhuma fonte ia salvar isso. Na
+referencia o nome da sala e texto de INTERFACE, nitido. Agora ele e desenhado na
+camada viva, onde o rasterizador da fonte trabalha no tamanho final da tela.
+
+> A regra geral: arte vai pro pre-render, texto vai pra camada viva. A plaquinha
+> da mesa e o balao de contexto ja estavam certos.
+
 
 ## Comparacao peca a peca com a referencia
 
