@@ -26,6 +26,9 @@
   // `mesaPorCelula` responde "que mesa e essa daqui" pro clique e pro hover.
   let mesas = new Map();       // chave da mesa -> { chave, celulas, donoUid, donoNome }
   let mesaPorCelula = new Map(); // "col,row" -> a mesma mesa
+  // "col,row" -> objeto. Camada separada da decoracao da diretoria
+  // (OfficeMap.objetos): estas sao as coisas que o dono pos na propria mesa.
+  let itensDeMesa = new Map();
   let mesaHover = null;        // a mesa sob o cursor
   let celulaAlvo = null;       // { col, row } sob o cursor enquanto decora
 
@@ -35,10 +38,30 @@
   function aplicarMesas(lista) {
     mesas = new Map((lista || []).map((m) => [m.chave, m]));
     mesaPorCelula = new Map();
+    const itensAntes = chaveDosItens();
+    itensDeMesa = new Map();
     mesas.forEach((m) => {
       (m.celulas || []).forEach(([c, r]) => mesaPorCelula.set(c + ',' + r, m));
+      (m.itens || []).forEach(([c, r, o]) => itensDeMesa.set(c + ',' + r, o));
     });
     if (avisarMinhaMesa) avisarMinhaMesa(Boolean(minhaMesa()));
+    // O mapa e pre-renderizado, entao so vale redesenhar quando as coisas em
+    // cima das mesas realmente mudaram (reivindicar mesa nao mexe no desenho).
+    if (chaveDosItens() !== itensAntes) prerenderMap();
+  }
+
+  function chaveDosItens() {
+    return Array.from(itensDeMesa.entries()).sort().join('|');
+  }
+
+  // Uma celula e da minha mesa? (o painel so deixa pousar coisa nelas)
+  function celulaEhMinha(col, row) {
+    const m = mesaPorCelula.get(col + ',' + row);
+    return Boolean(m && m.donoUid && m.donoUid === selfUid);
+  }
+
+  function itemEm(col, row) {
+    return itensDeMesa.get(col + ',' + row) || 0;
   }
 
   function minhaMesa() {
@@ -158,7 +181,11 @@
       for (let r = r0; r <= r1; r++) {
         for (let c = c0; c <= c1; c++) {
           if (!M.SUPERFICIES.has(M.tiles[r][c])) continue;
-          const ocupada = M.objetos[r] && M.objetos[r][c];
+          // A malha so acende onde da pra pousar de verdade: quem nao e da
+          // diretoria so mexe na propria mesa, entao acender o escritorio
+          // inteiro seria mentira.
+          if (!Decorador.podeColocarEm(c, r)) continue;
+          const ocupada = itemEm(c, r) || (M.objetos[r] && M.objetos[r][c]);
           ctx.strokeStyle = ocupada ? 'rgba(248,180,84,0.55)' : 'rgba(120,220,160,0.55)';
           // a gradinha cobre so o tampo: na fileira da frente de uma mesa e uma
           // tirinha, e e exatamente ali que a coisa vai pousar
@@ -259,7 +286,8 @@
     // camada de cima por ultimo: o que esta apoiado fica visivel sobre o movel
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        const obj = OfficeMap.objetos[r][c];
+        // o que o dono pos na propria mesa vem por cima da decoracao da casa
+        const obj = itensDeMesa.get(c + ',' + r) || OfficeMap.objetos[r][c];
         if (obj) drawObjectTile(mctx, c, r, obj, TILE, tiles);
       }
     }
@@ -2365,6 +2393,8 @@
     getSelfUid: () => selfUid,
     aoMudarMinhaMesa,
     minhaMesa,
+    celulaEhMinha,
+    itemEm,
     // usados pelo decorador: desenhar as miniaturas do catalogo com a mesma
     // funcao que desenha no mapa, e redesenhar depois de uma edicao
     desenharObjeto: drawObstacleTile,

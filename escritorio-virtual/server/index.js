@@ -331,6 +331,20 @@ io.on('connection', (socket) => {
     io.emit('mesas-atualizadas', mesasStore.paraEnvio());
   });
 
+  // Personalizar a PROPRIA mesa. Nao exige diretoria de proposito: e o
+  // `mesa-item` que faz a mesa ser sua de verdade. Quem decide se pode e o
+  // server/mesas.js - a celula tem que ser de uma mesa reivindicada por voce.
+  socket.on('mesa-item', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data) return;
+    const col = Number(data.col);
+    const row = Number(data.row);
+    const o = Number(data.o);
+    if (!Number.isInteger(col) || !Number.isInteger(row)) return;
+    if (!mesasStore.porItem(col, row, o, player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+  });
+
   // Decorar o escritorio: so a diretoria. A checagem que vale e essa aqui - o
   // botao escondido no cliente e so conforto. Ver docs/plano-decorador.md.
   socket.on('mapa-editar', (data) => {

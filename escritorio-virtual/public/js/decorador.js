@@ -122,14 +122,32 @@
   }
 
   // Montado uma vez so: o item selecionado e comparado por identidade.
+  // Quem nao e da diretoria so ve a aba "Em cima da mesa": o resto e mobilia da
+  // casa, que ele nao mexe.
+  function soAbaDaMesa() {
+    return !souAdmin;
+  }
+
+  // De que camada e essa celula. Decide pela CELULA, nao pelo cargo: a
+  // diretoria tambem tem mesa, e o que ela poe na propria mesa e dela, nao
+  // decoracao da casa. Fora da sua mesa, so a diretoria mexe.
+  function ehMinhaMesa(col, row) {
+    return Game.celulaEhMinha(col, row);
+  }
+
   let CATEGORIAS = null;
   function categorias() {
     if (!CATEGORIAS) CATEGORIAS = construirCategorias();
+    if (soAbaDaMesa()) return CATEGORIAS.filter((c) => c.id === 'emcima');
     return CATEGORIAS;
   }
 
   let painel, gradeEl, buscaEl, abasEl;
   let souAdmin = false;
+  // Sem ser da diretoria, o painel ainda abre pra quem tem mesa - so que
+  // mostrando a aba "Em cima da mesa" e deixando pousar coisa **so na sua
+  // mesa**. E o que faz a personalizacao ser da pessoa e nao da casa.
+  let tenhoMesa = false;
   let aberto = false;
   let selecionado = null; // { t, nome }
   let filtro = '';
@@ -329,6 +347,10 @@
       // exatamente as celulas que a malha verde acende.
       if (!m.objetos[row] || m.objetos[row][col] === undefined) return false;
       if (selecionado.o && !m.SUPERFICIES.has(m.tiles[row][col])) return false;
+      // Na sua mesa vale pra qualquer um; fora dela, so a diretoria. E a mesma
+      // regra que o servidor aplica nos dois eventos.
+      if (ehMinhaMesa(col, row)) return Game.itemEm(col, row) !== selecionado.o;
+      if (!souAdmin) return false;
       return m.objetos[row][col] !== selecionado.o;
     }
     // peca grande: todas as celulas tem que caber e estar livres de gente
@@ -344,6 +366,11 @@
     refazer.length = 0;
 
     if (ehObjeto(selecionado)) {
+      if (ehMinhaMesa(col, row)) {
+        feitos.push({ obj: true, minha: true, c: col, r: row, de: Game.itemEm(col, row), para: selecionado.o });
+        Network.itemNaMinhaMesa(col, row, selecionado.o);
+        return;
+      }
       feitos.push({ obj: true, c: col, r: row, de: m.objetos[row][col], para: selecionado.o });
       Network.editarObjetoMapa(col, row, selecionado.o);
       return;
@@ -361,7 +388,10 @@
 
   function aplicar(passo, voltando) {
     if (passo.obj) {
-      Network.editarObjetoMapa(passo.c, passo.r, voltando ? passo.de : passo.para);
+      const valor = voltando ? passo.de : passo.para;
+      // o passo lembra de que camada veio: a sua mesa ou a decoracao da casa
+      if (passo.minha) Network.itemNaMinhaMesa(passo.c, passo.r, valor);
+      else Network.editarObjetoMapa(passo.c, passo.r, valor);
       return;
     }
     passo.celulas.forEach((cel) => {
@@ -386,7 +416,7 @@
   // ---------- abrir/fechar ----------
 
   function abrir() {
-    if (!souAdmin) return;
+    if (!souAdmin && !tenhoMesa) return;
     aberto = true;
     painel.classList.remove('oculto');
     document.getElementById('btn-decorar').classList.add('ativo');
@@ -408,9 +438,27 @@
     abasEl = document.getElementById('decor-abas');
 
     const botao = document.getElementById('btn-decorar');
-    // Quem nao e da diretoria nem ve o botao (o servidor recusa de qualquer jeito).
-    botao.classList.toggle('oculto', !souAdmin);
-    if (!souAdmin) return;
+    const titulo = document.getElementById('decor-titulo');
+
+    // A diretoria decora a casa toda; quem tem mesa decora a propria. Quem nao
+    // e nem uma coisa nem outra nao ve o botao (o servidor recusa de qualquer
+    // jeito - o botao escondido e so conforto).
+    function atualizarBotao() {
+      const podeAbrir = souAdmin || tenhoMesa;
+      botao.classList.toggle('oculto', !podeAbrir);
+      botao.title = souAdmin ? 'Decorar o escritorio' : 'Personalizar a minha mesa';
+      if (titulo) titulo.textContent = souAdmin ? 'Decorador' : 'Minha mesa';
+      // Perdeu a mesa com o painel aberto: fecha, senao ficaria um painel que
+      // nao deixa fazer nada.
+      if (!podeAbrir && aberto) fechar();
+      if (aberto) render();
+    }
+
+    Game.aoMudarMinhaMesa((tem) => {
+      tenhoMesa = tem;
+      atualizarBotao();
+    });
+    atualizarBotao();
 
     botao.addEventListener('click', () => (aberto ? fechar() : abrir()));
     document.getElementById('btn-fechar-decorador').addEventListener('click', fechar);

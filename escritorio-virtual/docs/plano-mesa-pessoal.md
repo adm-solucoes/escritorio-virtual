@@ -89,7 +89,7 @@ O Caio pediu pra inverter: primeiro a posse da mesa, pra ele ja testar
 personalizando de verdade, e os itens depois.
 
 1. **Mesa da conta + a mesa inteira** - feito, secao 6.
-2. Painel de personalizar a propria mesa (o dono coloca item sem ser diretoria).
+2. **Painel de personalizar a propria mesa** - feito, secao 7.
 3. Catalogo dos 18 itens novos.
 
 ## 6. Etapa 1: a mesa e da conta e vem inteira
@@ -134,3 +134,64 @@ No navegador:
 
 > `server/data/mesas.json` e mais um arquivo que o plano free do Render apaga a
 > cada deploy, junto com as contas. Ver `docs/deploy.md`, secao 3.
+
+
+## 7. Etapa 2: o dono decora a propria mesa
+
+### Duas camadas, nao uma
+
+O que voce poe na SUA mesa fica em `server/mesas.js`, junto da mesa - **nao**
+no `mapa-editado.js`, que e a decoracao da casa. Duas razoes:
+
+- **suas coisas saem com voce.** Largou a mesa, a caneca vai junto. Se fosse na
+  camada da casa, o proximo dono herdaria a tralha do anterior;
+- **um nao apaga o outro.** O desfazer do decorador mexe so na camada da casa.
+
+No desenho as duas viram uma so: o `prerenderMap` desenha a camada da casa e,
+por cima, o que o dono pos.
+
+### Quem pode e decidido pela CELULA, nao pelo cargo
+
+Primeira versao era por cargo ("nao e diretoria -> so a propria mesa"), e ela
+tinha um furo: **a diretoria tambem tem mesa**, e do jeito que estava tudo que
+um diretor pusesse na propria mesa virava decoracao da casa - ficaria pra tras
+quando ele trocasse de lugar.
+
+A regra que ficou vale pros dois lados:
+
+| Onde voce clica | Vai pra | Quem pode |
+|---|---|---|
+| celula da **sua** mesa | camada da mesa (`mesa-item`) | qualquer um |
+| qualquer outra superficie | camada da casa (`mapa-objeto`) | so diretoria |
+
+O painel e o mesmo decorador: quem nao e da diretoria ve so a aba "Em cima da
+mesa" e o titulo vira "Minha mesa". A malha verde das superficies passou a
+acender **so onde da pra pousar de verdade** - antes acendia o escritorio
+inteiro, o que pra um membro comum seria mentira.
+
+### Resultado dos testes (07/09/2026)
+
+`npm run teste`: **30 de 30 passaram**. As novas:
+
+| O que | Resultado |
+|---|---|
+| Dono poe item na propria mesa | ok - em qualquer celula dela |
+| Outra pessoa poe na sua mesa | ok - recusado |
+| Voce poe na mesa de outro | ok - recusado |
+| Item no chao | ok - recusado |
+| **Item acima do `OBJETO_MAX`** | **ok - recusado** (a armadilha dos itens novos) |
+| Por o mesmo item de novo | ok - nao mexe em nada |
+| Tirar item (`o = 0`) | ok |
+| Largar a mesa | ok - leva as coisas junto |
+| Trocar de mesa | ok - a antiga volta vazia |
+
+No navegador:
+
+| O que | Resultado |
+|---|---|
+| Caneca, plantinha e livros na propria mesa | ok - aparecem no movel |
+| Pelo painel, clicando no mapa | ok - e caiu na camada da MESA, nao na da casa |
+| Admin decorando mesa alheia | ok - caiu na camada da CASA, as duas nao se misturam |
+| Largar a mesa pelo perfil | ok - os 3 itens sumiram junto |
+| Painel da diretoria | ok - segue com as 8 abas e titulo "Decorador" |
+| Console | limpo |

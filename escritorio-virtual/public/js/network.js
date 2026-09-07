@@ -87,6 +87,11 @@
     if (socket && socket.connected) socket.emit('mesa-largar');
   }
 
+  // Poe/tira coisa em cima da PROPRIA mesa (o servidor recusa nas outras).
+  function itemNaMinhaMesa(col, row, o) {
+    if (socket && socket.connected) socket.emit('mesa-item', { col, row, o });
+  }
+
   function pedirAgenda() {
     if (socket && socket.connected) socket.emit('agenda-pedir');
   }
@@ -105,7 +110,7 @@
 
   window.Network = {
     connect, on, sendMove, sendStatus, sendReaction, sendRtcSignal, sendChatMessage,
-    pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, editarMapa, editarObjetoMapa,
+    pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, editarMapa, editarObjetoMapa,
     pedirAgenda, pedirTrello,
   };
 })();
