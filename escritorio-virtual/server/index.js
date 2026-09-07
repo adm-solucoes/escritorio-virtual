@@ -387,6 +387,11 @@ io.on('connection', (socket) => {
     const r = Number(data.r);
     const o = Number(data.o);
     if (!mapaEditado.posicaoValida(c, r) || !mapaEditado.objetoValido(o)) return;
+    // Em cima de MESA quem manda e o dono dela, pelo `mesa-item`. Deixar a
+    // diretoria pintar aqui criava uma armadilha: parecia igual, mas encaixava
+    // no centro da celula e nao dava pra mover nem excluir clicando.
+    // Tirar (o === 0) continua valendo, pra limpar o que ficou de antes.
+    if (o && map.MESAS_DE_TRABALHO.has(map.tiles[r][c])) return;
     if (!mapaEditado.editarObjeto(c, r, o)) return;
     io.emit('mapa-objeto-atualizado', { c, r, o });
   });

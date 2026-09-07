@@ -92,6 +92,10 @@ function novoId() {
 // Todas as operacoes passam por aqui - e a checagem que faz a mesa ser sua.
 function listaMinhaEm(x, y, uid) {
   if (!uid || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+  // Tem que cair no TAMPO. A metade de baixo da fileira da frente e a face
+  // vertical do movel: pousar ali faria a coisa flutuar na frente da gaveteira,
+  // parecendo largada no chao.
+  if (!map.noTampo(x, y)) return null;
   const celulas = blocoEm(Math.floor(x), Math.floor(y));
   if (!celulas) return null;
   const k = chaveDoBloco(celulas);

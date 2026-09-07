@@ -484,3 +484,53 @@ Duas coisas so apareceram testando:
 
 Custo: 0,22ms por item; 1,3ms dos ~159ms de um redesenho de mapa. O peso esta
 nos 1536 tiles, nao aqui.
+
+
+## 15. Tres reclamacoes, quatro causas
+
+O Caio testou e trouxe tres coisas. Investigando, os "cantos" e o "nao consigo
+excluir" tinham **duas causas cada**.
+
+### "Nao consigo colocar em todos os cantos"
+
+Varri a regra do servidor ponto a ponto (probe de 0.2 tile) e ela **ja aceitava a
+mesa inteira**. O problema era outro, e duplo:
+
+1. **A coisa era pendurada pela BASE.** A arte sobe ~0.7 tile a partir da ancora,
+   entao clicar perto da borda de tras desenhava a coisa **fora** da mesa. Passou
+   a ser pendurada pelo meio visual (`ANCORA = 60`).
+2. **A diretoria pintava a camada da CASA em cima de mesa.** Achei 7 objetos
+   assim no `mapa.json` - encaixados no centro da celula, sem poder mover nem
+   excluir, e visualmente identicos aos da mesa. Era essa a sensacao de "nao
+   consigo colocar onde eu quero". Mesa agora so aceita `mesa-item`, do dono.
+
+De quebra, `fimDoTampo` **discordava do desenho**: dizia 24 unidades de tampo na
+fileira da frente enquanto `tampaDeMesa` desenhava 64. A malha verde mostrava uma
+tirinha e a mesa parecia ter muito menos espaco do que tem. Virou `tampoAte` no
+`map.js`, espelhado com o servidor.
+
+### "Nao consigo excluir os itens"
+
+1. **O toque era um circulo em volta da ancora.** Como a arte sobe a partir dela,
+   clicar na tela do monitor caia fora. Agora o teste e no pixel do desenho.
+2. **A selecao so era testada se a celula clicada fosse mesa.** O alto do monitor
+   cai na celula de cima, que nao e mesa - entao clicar ali nao selecionava nada.
+   A selecao passou pra antes desse gate.
+
+### "Os monitores sao pequenos"
+
+Eram menores que os livros. A referencia diz "~1 tile cada, subindo meio tile
+acima da mesa". Todos os sete cresceram: o MONITOR foi de 108x80 pra 128x96.
+
+### Resultado dos testes (07/09/2026)
+
+| O que | Resultado |
+|---|---|
+| Area que aceita item | ok - o tampo inteiro, ponta a ponta (probe de 0.2 tile) |
+| Fora do tampo | ok - recusado, e a malha nao acende |
+| Quatro cantos do tampo | ok - as quatro coisas na mesa, nenhuma no chao |
+| Clicar no alto da tela do monitor | ok - seleciona (antes nao) |
+| Clicar no vazio abaixo dele | ok - nao seleciona mais (antes selecionava) |
+| Excluir | ok - some, sobram as outras, barrinha fecha |
+| Monitores | ok - maiores que os livros agora |
+| `npm run teste` | 47 de 47 |

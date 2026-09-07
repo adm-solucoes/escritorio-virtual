@@ -58,7 +58,28 @@ As coisas **nao ficam presas na celula**. Cada uma guarda `{ id, o, x, y }`, com
 `x`/`y` em tiles **com fracao** (`16.07, 18.90`). Voce poe onde clicar, e podem
 conviver varias na mesma celula.
 
+**Onde da pra pousar:** o TAMPO da mesa, de ponta a ponta. A metade de baixo da
+fileira da frente e a face vertical do movel - pousar ali faria a coisa flutuar
+na frente da gaveteira. `map.noTampo(x, y)` e a regra, e vale nos dois lados: a
+malha verde acende exatamente o que o servidor aceita.
+
+**A coisa e pendurada pelo MEIO da arte**, nao pela base (`ANCORA = 60`, nao
+`APOIO = 90`). Pendurando pela base, a arte subia ~0.7 tile a partir do clique e
+os cantos de tras da mesa ficavam inutilizaveis - voce clicava na mesa e a coisa
+aparecia acima dela.
+
+**Mesa nao aceita decoracao da casa.** Em cima de mesa so entra pelo `mesa-item`,
+do dono. A diretoria pintando ali criava uma armadilha: parecia igual, mas
+encaixava no centro da celula e nao dava pra mover nem excluir clicando.
+
 - Sao desenhadas ordenadas por `y`, pra quem esta na frente tapar quem esta atras.
+- **Selecionar e no pixel, nao num raio.** `acertaNoDesenho` redesenha o item num
+  buffer e olha se tem tinta no ponto. Um circulo em volta da ancora errava dos
+  dois lados: perdia o alto da tela de um monitor (onde a pessoa clica) e pegava
+  o vazio embaixo dele.
+- A selecao e testada **antes** de olhar que tile foi clicado. Um monitor sobe
+  quase um tile acima da ancora, entao o alto dele cai na celula de cima, que nao
+  e mesa - amarrado ao tile, clicar ali nao selecionava nada.
 - **Teto de 14 por mesa** (`ITENS_MAX` em `server/mesas.js`).
 - **Arrastar nao pinta** na propria mesa - despejaria uma trilha de canecas. Ali
   so vale o clique; na mobilia da casa o arrasto continua valendo.

@@ -319,6 +319,32 @@ function celulasDaMesa(col, row) {
   return celulas;
 }
 
+// Ate onde vai o TAMPO nesta celula, em unidades finas (0-128). Abaixo disso e
+// a face vertical do movel, nao superficie: pousar ali faria a coisa flutuar na
+// frente da gaveteira.
+//
+// Espelha exatamente o que `tampoDeMesa` desenha: numa mesa com face, o tampo
+// acaba em 64 e os 64 de baixo sao a face; a fileira de TRAS de uma bancada de
+// duas nao tem face nenhuma, entao vale a celula inteira.
+function tampoAte(col, row) {
+  if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return 0;
+  const t = tiles[row][col];
+  const temFace = MESAS_DIRECIONAIS.has(t) || t === MESA_DUPLA || t === MESA_NOTEBOOK;
+  if (!temFace) return SUPERFICIES.has(t) ? 128 : 0;
+  // tem mesa igual embaixo: esta e a fileira de tras, o tampo vai ate o fim
+  if (tiles[row + 1] && tiles[row + 1][col] === t) return 128;
+  return 64;
+}
+
+// O ponto (em tiles com fracao) cai no tampo de uma mesa?
+function noTampo(x, y) {
+  const col = Math.floor(x);
+  const row = Math.floor(y);
+  const limite = tampoAte(col, row);
+  if (!limite) return false;
+  return (y - row) * 128 <= limite;
+}
+
 function isWalkableTile(col, row) {
   if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return false;
   return !SOLID_TILES.has(tiles[row][col]);
@@ -377,6 +403,8 @@ module.exports = {
   OBJETO_MAX,
   isWalkable,
   celulasDaMesa,
+  tampoAte,
+  noTampo,
   getSpawnPoint,
   LIVRE, PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO,
   ESTANTE, PLANTA, ARVORE, QUADRO, LOUSA, ARMARIO, BALCAO, CERCA, CADEIRA,

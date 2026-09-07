@@ -22,7 +22,9 @@
     const margem = 8;
     // acima da coisa, pra nao tapar o que voce esta olhando
     barra.style.left = Math.min(Math.max(margem, p.x - r.width / 2), window.innerWidth - r.width - margem) + 'px';
-    barra.style.top = Math.max(margem, p.y - r.height - 26) + 'px';
+    // acima da coisa: a ancora e o meio visual dela, entao sobe meio tile de
+    // arte mais a altura da barra
+    barra.style.top = Math.max(margem, p.y - r.height - 34) + 'px';
   }
 
   function selecionar(item) {

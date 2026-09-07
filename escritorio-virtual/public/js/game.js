@@ -70,14 +70,15 @@
     return Boolean(m && m.donoUid && m.donoUid === selfUid);
   }
 
-  // Tem alguma coisa perto desse ponto? (o que a borracha vai tirar)
-  const RAIO_ITEM = 0.55;
+  // Qual coisa esta debaixo desse ponto. Testa o desenho de verdade e prefere a
+  // que esta MAIS NA FRENTE (maior y), que e a que a pessoa esta vendo por cima
+  // quando duas se sobrepoem.
   function itemPertoDe(x, y) {
+    const TILE = OfficeMap.TILE;
     let achado = null;
-    let melhor = RAIO_ITEM;
     itensDeMesa.forEach((it) => {
-      const d = Math.hypot(it.x - x, it.y - y);
-      if (d < melhor) { melhor = d; achado = it; }
+      if (!acertaNoDesenho(it, x, y, TILE)) return;
+      if (!achado || it.y > achado.y) achado = it;
     });
     return achado;
   }
@@ -187,8 +188,9 @@
     // seguindo o cursor enquanto esta sendo movida.
     const selecao = ItemMesa.selecaoAtual();
     if (selecao) {
+      // a ancora e o meio visual da arte, entao o anel fica centrado nela
       const cx = selecao.x * TILE;
-      const cy = selecao.y * TILE - TILE * 0.22;
+      const cy = selecao.y * TILE;
       ctx.save();
       ctx.strokeStyle = 'rgba(99,217,196,0.95)';
       ctx.lineWidth = 2;
@@ -237,7 +239,7 @@
     }
 
     if (celulaAlvo && Decorador.estaPintando()) {
-      const podeAqui = Decorador.podeColocarEm(celulaAlvo.col, celulaAlvo.row);
+      const podeAqui = Decorador.podeColocarEm(celulaAlvo.col, celulaAlvo.row, celulaAlvo.x, celulaAlvo.y);
       ctx.save();
       ctx.globalAlpha = 0.75;
       Decorador.desenharPreviaNoMapa(ctx, celulaAlvo.col, celulaAlvo.row, TILE, celulaAlvo.x, celulaAlvo.y);
@@ -1409,13 +1411,16 @@
   // fileiras a da frente so tem uma tirinha de tampo em cima - o resto e a
   // frente do movel e o vao. Quem for apoiado ali precisa subir, senao a caneca
   // fica boiando na frente da gaveteira. Espelha o que tampoDeMesa desenha.
+  // Mora no map.js agora, que e o arquivo espelhado com o servidor - os dois
+  // precisam concordar sobre onde acaba o tampo, senao o cliente deixa pousar
+  // num lugar que o servidor recusa (ou pior: o contrario).
+  //
+  // A versao antiga daqui dizia 24 na fileira da frente enquanto `tampoDeMesa`
+  // desenhava 64 de tampo. Resultado: a malha verde mostrava uma tirinha e a
+  // mesa parecia ter muito menos espaco do que tem.
   function fimDoTampo(tiles, c, r) {
-    const M = OfficeMap;
-    const t = tiles && tiles[r] && tiles[r][c];
-    const temFrente = M.MESAS_DIRECIONAIS.has(t) || t === M.MESA_DUPLA || t === M.MESA_NOTEBOOK;
-    if (!temFrente) return 128;
-    if (tiles[r + 1] && tiles[r + 1][c] === t) return 128;   // e a fileira de tras
-    return (tiles[r - 1] && tiles[r - 1][c] === t) ? 24 : 72;
+    const limite = OfficeMap.tampoAte(c, r);
+    return limite || 128;
   }
 
   // Camada de cima: o que fica apoiado na celula. Desenhado depois dos moveis,
@@ -1529,11 +1534,52 @@
     ctx.drawImage(bufItem, px, py, larg, larg);
   }
 
+  // Onde, na caixa de 128, fica o "meio visual" da arte. E por aqui que a coisa
+  // e pendurada no ponto que a pessoa clicou.
+  //
+  // Antes ela era pendurada pela BASE (`APOIO`, 90), o que era fisicamente certo
+  // e na pratica ruim: a arte sobe ~0.7 tile a partir da ancora, entao clicar
+  // perto da borda de tras da mesa desenhava a coisa fora dela, e os cantos de
+  // cima ficavam inutilizaveis. Pendurando pelo meio, o que voce ve nasce onde
+  // voce clicou - em qualquer canto.
+  const ANCORA = 60;
+
   function drawObjectTile(ctx, c, r, obj, TILE, tiles, livre) {
     const sobe = livre ? 0 : Math.max(0, APOIO - fimDoTampo(tiles, c, r));
     const x = (livre ? c - 0.5 : c) * TILE;
-    const y = (livre ? r - APOIO / 128 : r) * TILE - sobe * U;
+    const y = (livre ? r - ANCORA / 128 : r) * TILE - sobe * U;
     comVolume(ctx, x, y, TILE, (bctx, bx, by) => pintarObjeto(bctx, bx, by, obj, TILE));
+  }
+
+  // ---- acertar numa coisa: pelo desenho, nao por um circulo ----
+  //
+  // O teste antigo era um circulo em volta da ancora. Como a arte sobe a partir
+  // dela, clicar na TELA de um monitor caia fora do circulo: a coisa nao
+  // selecionava e, por tabela, nao dava pra excluir. Agora o teste e no pixel:
+  // desenha o item num buffer e olha se ali tem tinta.
+  let bufToque = null;
+  function acertaNoDesenho(it, x, y, TILE) {
+    const lado = 128; // um tile em unidades finas, na resolucao do teste
+    if (!bufToque) {
+      bufToque = document.createElement('canvas');
+      bufToque.width = bufToque.height = lado * 2;
+    }
+    // posicao do clique dentro da caixa do item, em unidades finas
+    const bx = (x - (it.x - 0.5)) * 128 + lado * 0.5;
+    const by = (y - (it.y - ANCORA / 128)) * 128 + lado * 0.5;
+    if (bx < 0 || by < 0 || bx >= lado * 2 || by >= lado * 2) return false;
+
+    const bc = bufToque.getContext('2d', { willReadFrequently: true });
+    bc.setTransform(1, 0, 0, 1, 0, 0);
+    bc.clearRect(0, 0, lado * 2, lado * 2);
+    bc.imageSmoothingEnabled = false;
+    // desenha na escala do TILE mas medindo em unidades finas
+    const escala = lado / TILE;
+    bc.setTransform(escala, 0, 0, escala, 0, 0);
+    pintarObjeto(bc, (lado * 0.5) / escala, (lado * 0.5) / escala, it.o, TILE);
+
+    const alfa = bc.getImageData(Math.floor(bx), Math.floor(by), 1, 1).data[3];
+    return alfa > 24; // ignora o fiapo de sombra que alguns itens desenham
   }
 
   // A arte crua de cada coisa, na caixa de 128 apoiando em APOIO. Quem chama e
@@ -1546,12 +1592,12 @@
     // o pe apoia no tampo e a tela sobe por cima da mesa. Da certo porque a
     // camada de cima e desenhada depois de tudo.
     if (obj === O.MONITOR) {
-      monitor(ctx, x, y, 10, -36, 108, 80);
+      monitor(ctx, x, y, 0, -44, 128, 96);
 
     } else if (obj === O.MONITOR_DUPLO) {
       // os dois em "V", como na foto: o de fora de cada lado cai um pouco
-      monitor(ctx, x, y, -8, -32, 74, 70, { tela: '#4fb3dd' }, -1);
-      monitor(ctx, x, y, 62, -32, 74, 70, { tela: '#4aaad4' }, 1);
+      monitor(ctx, x, y, -18, -40, 88, 84, { tela: '#4fb3dd' }, -1);
+      monitor(ctx, x, y, 58, -40, 88, 84, { tela: '#4aaad4' }, 1);
 
     } else if (obj === O.NOTEBOOK) {
       // tampa levantada com dobradica, base com teclado e trackpad
@@ -1575,11 +1621,11 @@
       mouse(ctx, x, y, 106, 56);
 
     } else if (obj === O.MONITOR_ULTRAWIDE) {
-      monitor(ctx, x, y, -14, -22, 156, 62);
+      monitor(ctx, x, y, -22, -32, 172, 76);
 
     } else if (obj === O.TORRE_PC) {
       // gabinete de pe ao lado do monitor, como no print dos eletronicos
-      monitor(ctx, x, y, 30, -28, 76, 62);
+      monitor(ctx, x, y, 26, -40, 92, 76);
       qContorno(ctx, x, y, -6, 22, 32, 66, 3, '#20242e');
       qArred(ctx, x, y, -5, 23, 30, 64, 3, '#4a5162');
       q(ctx, x, y, -2, 26, 24, 3, '#6b7488');                  // luz no topo
@@ -1588,7 +1634,7 @@
       q(ctx, x, y, 12, 78, 8, 3, '#8f97a8');
 
     } else if (obj === O.SETUP_GAMER) {
-      monitor(ctx, x, y, 12, -26, 104, 66, { tela: '#7c5cd4', telaEscura: '#4b34a0' });
+      monitor(ctx, x, y, 4, -38, 120, 80, { tela: '#7c5cd4', telaEscura: '#4b34a0' });
       // teclado com as teclas coloridas
       qContorno(ctx, x, y, 24, 56, 80, 26, 3, '#181c24');
       qArred(ctx, x, y, 25, 57, 78, 24, 3, '#2b3040');
@@ -1601,10 +1647,10 @@
       mouse(ctx, x, y, 108, 60);
 
     } else if (obj === O.MONITOR_LADO) {
-      monitorDeLado(ctx, x, y, 52, 6, 58, true);
+      monitorDeLado(ctx, x, y, 50, -8, 74, true);
 
     } else if (obj === O.MONITOR_COSTAS) {
-      monitorDeCostas(ctx, x, y, 28, 6, 72, 46);
+      monitorDeCostas(ctx, x, y, 20, -6, 88, 58);
 
     } else if (obj === O.TABLET) {
       q(ctx, x, y, 32, 86, 64, 5, 'rgba(45,50,64,0.18)');
@@ -2720,16 +2766,19 @@
       return;
     }
 
+    // Clicou EM CIMA de uma coisa da sua mesa? Entao a intencao e mexer nela.
+    //
+    // Isto vem ANTES de olhar que tile foi clicado, de proposito: um monitor
+    // sobe quase um tile acima da ancora, entao o alto da tela dele cai na
+    // celula de CIMA, que nao e mesa. Amarrado ao tile, clicar ali nao
+    // selecionava nada - e era por isso que nao dava pra excluir o monitor.
+    const coisa = itemPertoDe(tileX, tileY);
+    if (coisa && celulaEhMinha(Math.floor(coisa.x), Math.floor(coisa.y))) {
+      ItemMesa.selecionar(coisa);
+      return;
+    }
+
     if (OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col])) {
-      // Clicou EM CIMA de uma coisa da sua mesa? Entao a intencao e mexer nela,
-      // nao abrir o cartao da mesa.
-      if (celulaEhMinha(col, row)) {
-        const item = itemPertoDe(tileX, tileY);
-        if (item) {
-          ItemMesa.selecionar(item);
-          return;
-        }
-      }
       ItemMesa.fechar();
       cliqueNaMesa(col, row, e.clientX, e.clientY);
       return;

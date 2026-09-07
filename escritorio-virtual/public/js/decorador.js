@@ -392,7 +392,7 @@
     return ocupado;
   }
 
-  function podeColocarEm(col, row) {
+  function podeColocarEm(col, row, x, y) {
     const m = M();
     if (ehObjeto(selecionado)) {
       // Apoiar em cima nao depende de gente - depende de ter em que apoiar.
@@ -407,7 +407,15 @@
       // clicar, e podem conviver varias na mesma celula. A borracha nao vale
       // aqui - pra tirar da SUA mesa voce clica na coisa e usa "Excluir", que
       // acerta qual e em vez de chutar a mais proxima.
-      if (ehMinhaMesa(col, row)) return Boolean(selecionado.o);
+      // A malha verde ja desenha so o tampo; aqui a regra bate com ela e com a
+      // do servidor, pra nao existir ponto que acende e recusa em silencio.
+      if (ehMinhaMesa(col, row)) {
+        if (!selecionado.o) return false;
+        return x === undefined || M().noTampo(x, y);
+      }
+      // Mesa dos outros e fora do alcance de todo mundo, inclusive da diretoria:
+      // quem poe coisa em cima de uma mesa e quem senta nela.
+      if (m.MESAS_DE_TRABALHO.has(m.tiles[row][col])) return false;
       if (!souAdmin) return false;
       return m.objetos[row][col] !== selecionado.o;
     }
@@ -419,7 +427,7 @@
   }
 
   function pintarEm(col, row, x, y) {
-    if (!estaPintando() || !podeColocarEm(col, row)) return;
+    if (!estaPintando() || !podeColocarEm(col, row, x, y)) return;
     const m = M();
     refazer.length = 0;
 
