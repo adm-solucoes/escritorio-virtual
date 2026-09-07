@@ -146,6 +146,10 @@
   // Plaquinha com o nome de quem reivindicou cada mesa.
   function desenharMesas(ctx) {
     const TILE = OfficeMap.TILE;
+    // A plaquinha do dono fica apoiada na fileira da FRENTE do movel, que e
+    // justamente onde entram teclado e mouse. Com uma coisa na mao pra pousar
+    // ela sai da frente - o contorno da mesa fica, que esse ajuda a mirar.
+    const posandoNaMesa = !!(Decorador.pintandoEmCima && Decorador.pintandoEmCima());
     ctx.save();
     ctx.font = '700 8px Manrope, sans-serif';
     ctx.textAlign = 'center';
@@ -155,14 +159,16 @@
       // centrada na largura do movel e apoiada na fileira da frente
       const x = ((a.c0 + a.c1 + 1) / 2) * TILE;
       const y = a.r1 * TILE + TILE - 7;
-      const texto = (m.donoNome || '').split(' ')[0] || '?';
-      const w = ctx.measureText(texto).width + 10;
-      ctx.fillStyle = m.donoUid === selfUid ? 'rgba(124,92,212,0.95)' : 'rgba(45,50,62,0.85)';
-      ctx.beginPath();
-      ctx.roundRect(x - w / 2, y - 6, w, 12, 6);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(texto, x, y + 0.5);
+      if (!posandoNaMesa) {
+        const texto = (m.donoNome || '').split(' ')[0] || '?';
+        const w = ctx.measureText(texto).width + 10;
+        ctx.fillStyle = m.donoUid === selfUid ? 'rgba(124,92,212,0.95)' : 'rgba(45,50,62,0.85)';
+        ctx.beginPath();
+        ctx.roundRect(x - w / 2, y - 6, w, 12, 6);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(texto, x, y + 0.5);
+      }
 
       if (m.donoUid === selfUid) contornoMesa(ctx, m.celulas, 'rgba(99,217,196,0.95)', 2);
     });
@@ -2755,12 +2761,20 @@
 
     desenharMesas(ctx);
 
+    // Com uma coisa na mao pra pousar na mesa, os bonecos viram fantasma e as
+    // placas de nome somem. A placa e o pior estorvo: ela fica flutuando bem em
+    // cima do tampo - exatamente onde a pessoa esta mirando - e some com o que
+    // ja tem posto ali. O boneco sentado e o encosto da cadeira tapam a fileira
+    // da frente pelo mesmo motivo.
+    const posandoNaMesa = !!(Decorador.pintandoEmCima && Decorador.pintandoEmCima());
+
     const lista = Array.from(players.values()).sort((a, b) => a.displayY - b.displayY);
     lista.forEach((p) => {
       // Sentado: desce uns pixels pra encaixar no assento e nao subir em cima da
       // mesa que esta na celula de tras. Tambem para a animacao de caminhada.
       const py = p.displayY + (p.sentado ? 2 : 0);
 
+      if (posandoNaMesa) { ctx.save(); ctx.globalAlpha = 0.3; }
       desenharAnelStatus(ctx, p.displayX, p.displayY, p.status);
 
       Character.draw(ctx, p.displayX, py, p.appearance, {
@@ -2772,6 +2786,7 @@
       // Sentado: o encosto volta por cima do corpo, senao o boneco fica "em pe
       // em cima" da cadeira em vez de sentado nela.
       if (p.sentado) desenharEncostoPorCima(ctx, p.displayX, p.displayY);
+      if (posandoNaMesa) { ctx.restore(); return; }   // sem placa, sem bolha, sem reacao
 
       const labelY = py - 44;
       const nomeExibido = (p.isAdmin ? '👑 ' : '') + p.name;
