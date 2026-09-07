@@ -21,23 +21,65 @@
   const STATUS_LABEL = { livre: 'Livre', focado: 'Focado', reuniao: 'Em reuniao' };
   const STATUS_COR = { livre: '#63d9c4', focado: '#ffb454', reuniao: '#e0607e' };
 
-  let mesas = new Map(); // "col,row" -> { chave, donoId, donoNome }
-  let mesaHover = null; // { col, row } da mesa sob o cursor
-  let celulaAlvo = null; // { col, row } sob o cursor enquanto decora
+  // Uma mesa e um movel inteiro, com varias celulas - por isso as duas colecoes:
+  // `mesas` guarda uma entrada por MESA (pra placa sair uma vez so) e
+  // `mesaPorCelula` responde "que mesa e essa daqui" pro clique e pro hover.
+  let mesas = new Map();       // chave da mesa -> { chave, celulas, donoUid, donoNome }
+  let mesaPorCelula = new Map(); // "col,row" -> a mesma mesa
+  let mesaHover = null;        // a mesa sob o cursor
+  let celulaAlvo = null;       // { col, row } sob o cursor enquanto decora
+
+  // Quem quer saber se eu tenho mesa (o botao de largar, no menu da conta).
+  let avisarMinhaMesa = null;
 
   function aplicarMesas(lista) {
     mesas = new Map((lista || []).map((m) => [m.chave, m]));
+    mesaPorCelula = new Map();
+    mesas.forEach((m) => {
+      (m.celulas || []).forEach(([c, r]) => mesaPorCelula.set(c + ',' + r, m));
+    });
+    if (avisarMinhaMesa) avisarMinhaMesa(Boolean(minhaMesa()));
+  }
+
+  function minhaMesa() {
+    for (const m of mesas.values()) if (m.donoUid && m.donoUid === selfUid) return m;
+    return null;
+  }
+
+  function aoMudarMinhaMesa(fn) {
+    avisarMinhaMesa = fn;
+    fn(Boolean(minhaMesa()));
+  }
+
+  // Retangulo que cobre o movel todo, pra plaquinha e contorno tratarem a mesa
+  // como uma peca so.
+  function areaDaMesa(celulas) {
+    let c0 = Infinity, r0 = Infinity, c1 = -Infinity, r1 = -Infinity;
+    celulas.forEach(([c, r]) => {
+      if (c < c0) c0 = c;
+      if (r < r0) r0 = r;
+      if (c > c1) c1 = c;
+      if (r > r1) r1 = r;
+    });
+    return { c0, r0, c1, r1 };
   }
 
   // Contorno da mesa, como no Gather: branco quando voce passa o mouse, teal na
   // mesa que e sua.
-  function contornoMesa(ctx, col, row, cor, largura) {
+  function contornoMesa(ctx, celulas, cor, largura) {
     const TILE = OfficeMap.TILE;
+    const a = areaDaMesa(celulas);
     ctx.save();
     ctx.strokeStyle = cor;
     ctx.lineWidth = largura;
     ctx.beginPath();
-    ctx.roundRect(col * TILE + 1, row * TILE + 1, TILE - 2, TILE - 2, 4);
+    ctx.roundRect(
+      a.c0 * TILE + 1,
+      a.r0 * TILE + 1,
+      (a.c1 - a.c0 + 1) * TILE - 2,
+      (a.r1 - a.r0 + 1) * TILE - 2,
+      4
+    );
     ctx.stroke();
     ctx.restore();
   }
@@ -67,33 +109,35 @@
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     mesas.forEach((m) => {
-      const partes = m.chave.split(',');
-      const col = Number(partes[0]);
-      const row = Number(partes[1]);
-      const x = col * TILE + TILE / 2;
-      const y = row * TILE + TILE - 7;
+      const a = areaDaMesa(m.celulas || []);
+      // centrada na largura do movel e apoiada na fileira da frente
+      const x = ((a.c0 + a.c1 + 1) / 2) * TILE;
+      const y = a.r1 * TILE + TILE - 7;
       const texto = (m.donoNome || '').split(' ')[0] || '?';
       const w = ctx.measureText(texto).width + 10;
-      ctx.fillStyle = m.donoId === selfId ? 'rgba(124,92,212,0.95)' : 'rgba(45,50,62,0.85)';
+      ctx.fillStyle = m.donoUid === selfUid ? 'rgba(124,92,212,0.95)' : 'rgba(45,50,62,0.85)';
       ctx.beginPath();
       ctx.roundRect(x - w / 2, y - 6, w, 12, 6);
       ctx.fill();
       ctx.fillStyle = '#ffffff';
       ctx.fillText(texto, x, y + 0.5);
 
-      if (m.donoId === selfId) contornoMesa(ctx, col, row, 'rgba(99,217,196,0.95)', 2);
+      if (m.donoUid === selfUid) contornoMesa(ctx, m.celulas, 'rgba(99,217,196,0.95)', 2);
     });
     ctx.restore();
 
     if (mesaHover) {
-      const m = mesas.get(mesaHover.col + ',' + mesaHover.row);
-      contornoMesa(ctx, mesaHover.col, mesaHover.row, 'rgba(255,255,255,0.95)', 2);
+      const m = mesaPorCelula.get(mesaHover.col + ',' + mesaHover.row);
+      // acende o movel todo, nao so a celula sob o cursor
+      const celulas = m ? m.celulas : OfficeMap.celulasDaMesa(mesaHover.col, mesaHover.row);
+      const a = areaDaMesa(celulas);
+      contornoMesa(ctx, celulas, 'rgba(255,255,255,0.95)', 2);
       const texto = !m ? 'Mesa livre'
-        : (m.donoId === selfId ? 'Sua mesa (clique pra largar)' : 'Mesa de ' + m.donoNome);
+        : (m.donoUid === selfUid ? 'Sua mesa (clique pra largar)' : 'Mesa de ' + m.donoNome);
       dicaContexto(
         ctx,
-        mesaHover.col * TILE + TILE / 2,
-        mesaHover.row * TILE + TILE + 12,
+        ((a.c0 + a.c1 + 1) / 2) * TILE,
+        a.r1 * TILE + TILE + 12,
         texto
       );
     }
@@ -2319,6 +2363,8 @@
     getPlayers: () => players,
     getSelfId: () => selfId,
     getSelfUid: () => selfUid,
+    aoMudarMinhaMesa,
+    minhaMesa,
     // usados pelo decorador: desenhar as miniaturas do catalogo com a mesma
     // funcao que desenha no mapa, e redesenhar depois de uma edicao
     desenharObjeto: drawObstacleTile,

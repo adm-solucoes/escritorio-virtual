@@ -10,6 +10,7 @@ const auth = require('./auth');
 const google = require('./google');
 const agenda = require('./agenda');
 const trello = require('./trello');
+const mesasStore = require('./mesas');
 
 const PORT = process.env.PORT || 3500;
 
@@ -151,14 +152,6 @@ function avisoDeSistema(texto) {
   io.emit('chat-mensagem', mensagem);
 }
 
-// Mesas reivindicadas: "col,row" -> socket.id. Uma mesa por pessoa; some quando
-// a pessoa sai (tudo em memoria, igual ao resto do estado).
-const mesas = new Map();
-
-function chaveMesa(col, row) {
-  return col + ',' + row;
-}
-
 // Tem alguem em pe nessa celula? (usado pra nao deixar decorar em cima de gente)
 function alguemNoTile(col, row) {
   for (const p of players.values()) {
@@ -167,22 +160,6 @@ function alguemNoTile(col, row) {
   return false;
 }
 
-function ehTileDeMesa(col, row) {
-  if (row < 0 || row >= map.ROWS || col < 0 || col >= map.COLS) return false;
-  return map.tiles[row][col] === map.MESA_MONITOR;
-}
-
-function mesaDoJogador(id) {
-  for (const [chave, dono] of mesas) if (dono === id) return chave;
-  return null;
-}
-
-function mesasParaEnvio() {
-  return Array.from(mesas.entries()).map(([chave, dono]) => {
-    const jogador = players.get(dono);
-    return { chave, donoId: dono, donoNome: jogador ? jogador.name : '' };
-  });
-}
 
 const MAX_NAME_LEN = 18;
 const STATUS_VALIDOS = ['livre', 'focado', 'reuniao'];
@@ -266,7 +243,7 @@ io.on('connection', (socket) => {
       conversaPadrao: idCanal('geral'),
       mensagens: mensagensDe(idCanal('geral')),
       dms: dmsDoUid(player.uid),
-      mesas: mesasParaEnvio(),
+      mesas: mesasStore.paraEnvio(),
       mudancasMapa: mapaEditado.paraEnvio(),
       objetosMapa: mapaEditado.objetosParaEnvio(),
     });
@@ -340,22 +317,18 @@ io.on('connection', (socket) => {
     const col = Number(data.col);
     const row = Number(data.row);
     if (!Number.isInteger(col) || !Number.isInteger(row)) return;
-    if (!ehTileDeMesa(col, row)) return;
 
-    const chave = chaveMesa(col, row);
-    const donoAtual = mesas.get(chave);
-    if (donoAtual && donoAtual !== socket.id) return; // mesa de outra pessoa
+    // O dono e a CONTA. Clicar em qualquer celula pega o movel inteiro; clicar
+    // de novo larga. Quem decide as duas coisas e o server/mesas.js.
+    if (!mesasStore.alternar(col, row, player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+  });
 
-    const anterior = mesaDoJogador(socket.id);
-    if (anterior) mesas.delete(anterior);
-
-    if (donoAtual === socket.id) {
-      // clicou na propria mesa: larga
-      io.emit('mesas-atualizadas', mesasParaEnvio());
-      return;
-    }
-    mesas.set(chave, socket.id);
-    io.emit('mesas-atualizadas', mesasParaEnvio());
+  // Largar pelo cartao do perfil, como o "Unclaim my desk" da referencia.
+  socket.on('mesa-largar', () => {
+    const player = players.get(socket.id);
+    if (!player || !mesasStore.largarDe(player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
   });
 
   // Decorar o escritorio: so a diretoria. A checagem que vale e essa aqui - o
@@ -462,11 +435,8 @@ io.on('connection', (socket) => {
       const saiu = players.get(socket.id);
       players.delete(socket.id);
       avisoDeSistema(saiu.name + ' saiu da sede');
-      const mesa = mesaDoJogador(socket.id);
-      if (mesa) {
-        mesas.delete(mesa);
-        io.emit('mesas-atualizadas', mesasParaEnvio());
-      }
+      // A mesa NAO e largada aqui: ela e da conta, nao da sessao. Quem quiser
+      // sair dela clica nela de novo ou usa o botao no proprio perfil.
       io.emit('player-left', { id: socket.id });
     }
   });

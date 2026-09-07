@@ -256,6 +256,39 @@ function buildMap() {
 
 const tiles = buildMap();
 
+// Todas as celulas do mesmo movel de mesa, a partir de qualquer uma delas.
+// E o que faz "pegar a mesa" pegar a mesa inteira em vez de um bloco: uma mesa
+// da sala Time tem 6 celulas (3 de largura por 2 de fundo).
+//
+// A ordem e estavel (de cima pra baixo, da esquerda pra direita), entao a
+// primeira celula serve de chave da mesa: clicar em qualquer canto cai sempre
+// na mesma chave. Le `tiles`, que o decorador altera em tempo de execucao.
+function celulasDaMesa(col, row) {
+  const ehMesa = (c, r) => (
+    Number.isInteger(c) && Number.isInteger(r)
+    && r >= 0 && r < ROWS && c >= 0 && c < COLS
+    && MESAS_DE_TRABALHO.has(tiles[r][c])
+  );
+  if (!ehMesa(col, row)) return null;
+
+  const vistos = new Set([col + ',' + row]);
+  const fila = [[col, row]];
+  const celulas = [];
+  while (fila.length) {
+    const [c, r] = fila.shift();
+    celulas.push([c, r]);
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dc, dr]) => {
+      const nc = c + dc;
+      const nr = r + dr;
+      if (vistos.has(nc + ',' + nr) || !ehMesa(nc, nr)) return;
+      vistos.add(nc + ',' + nr);
+      fila.push([nc, nr]);
+    });
+  }
+  celulas.sort((a, b) => (a[1] - b[1]) || (a[0] - b[0]));
+  return celulas;
+}
+
 function isWalkableTile(col, row) {
   if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return false;
   return !SOLID_TILES.has(tiles[row][col]);
@@ -313,6 +346,7 @@ module.exports = {
   OBJETOS,
   OBJETO_MAX,
   isWalkable,
+  celulasDaMesa,
   getSpawnPoint,
   LIVRE, PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO,
   ESTANTE, PLANTA, ARVORE, QUADRO, LOUSA, ARMARIO, BALCAO, CERCA, CADEIRA,

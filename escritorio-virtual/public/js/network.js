@@ -81,6 +81,12 @@
     if (socket && socket.connected) socket.emit('mesa-reivindicar', { col, row });
   }
 
+  // Largar sem precisar achar a mesa no mapa - e o "Unclaim my desk" da
+  // referencia, que fica no proprio perfil.
+  function largarMesa() {
+    if (socket && socket.connected) socket.emit('mesa-largar');
+  }
+
   function pedirAgenda() {
     if (socket && socket.connected) socket.emit('agenda-pedir');
   }
@@ -99,7 +105,7 @@
 
   window.Network = {
     connect, on, sendMove, sendStatus, sendReaction, sendRtcSignal, sendChatMessage,
-    pedirHistorico, reagirMensagem, reivindicarMesa, editarMapa, editarObjetoMapa,
+    pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, editarMapa, editarObjetoMapa,
     pedirAgenda, pedirTrello,
   };
 })();

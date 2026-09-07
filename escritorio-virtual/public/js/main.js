@@ -79,6 +79,15 @@
     abrirCriador();
   });
 
+  // So faz sentido oferecer "largar" pra quem tem mesa, entao o item aparece e
+  // some junto com a mesa. `Game` avisa a cada atualizacao da lista.
+  const btnLargarMesa = document.getElementById('btn-largar-mesa');
+  btnLargarMesa.addEventListener('click', () => {
+    fecharMenu();
+    Network.largarMesa();
+  });
+  Game.aoMudarMinhaMesa((tem) => btnLargarMesa.classList.toggle('oculto', !tem));
+
   document.getElementById('btn-sair').addEventListener('click', async () => {
     fecharMenu();
     try { await Auth.sair(); } catch (e) { /* segue pro login do mesmo jeito */ }
