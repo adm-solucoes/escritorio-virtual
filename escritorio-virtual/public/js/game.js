@@ -593,12 +593,13 @@
       return;
     }
 
-    // Proporcoes medidas em referencias/10-MESA-closeup-gavetas-e-pe.png, usando
-    // a cadeira como regua (1 cadeira = 1 tile): a faixa da frente ocupa ~26% da
-    // altura da mesa, nao os 15% que eu tinha feito.
-    const FIM_TAMPO = 46;                  // onde a superficie acaba
-    const FIM_LIP = FIM_TAMPO + 9;         // a quina clara do tampo
-    const FIM_VAO = 108;                   // dai pra baixo aparece o CHAO
+    // Debaixo do tampo a gente ve o CHAO. So a gaveteira (numa ponta) e o pe (na
+    // outra) sao solidos - no meio fica vazio, que e onde entram as pernas de
+    // quem senta. Encher a faixa inteira de gaveta, como eu tinha feito, some
+    // com o piso e a mesa vira um paredao.
+    const FIM_TAMPO = 52;                  // onde a superficie acaba
+    const FIM_LIP = FIM_TAMPO + 10;        // a quina clara do tampo
+    const CHAO = 104;                      // onde os moveis encostam no piso
 
     // (0) tampo
     q(ctx, x, y, 0, topo, 128, FIM_TAMPO - topo, MESA_TAMPO);
@@ -608,41 +609,37 @@
     }
 
     // (1) quina do tampo: a lasquinha clara que separa a superficie da frente
-    q(ctx, x, y, 0, FIM_TAMPO, 128, 9, '#dedbec');
+    q(ctx, x, y, 0, FIM_TAMPO, 128, 10, '#dedbec');
     q(ctx, x, y, 0, FIM_TAMPO, 128, 3, '#faf9fe');
     q(ctx, x, y, 0, FIM_LIP - 2, 128, 2, '#a7a3bd');
 
-    // (2) frente da mesa: as gavetas correm por TODA a bancada, com divisoria
-    //     nas emendas - e o que a referencia mostra, nao uma gaveteira solta
-    //     numa ponta so. Cada celula desenha suas duas gavetas recuadas das
-    //     bordas, e o recuo vira a divisoria vertical entre uma celula e outra.
-    q(ctx, x, y, 0, FIM_LIP, 128, FIM_VAO - FIM_LIP, MESA_VAO);
-    q(ctx, x, y, 0, FIM_LIP, 128, 5, MESA_VAO_ESCURO);       // sombra sob o tampo
-    q(ctx, x, y, 0, FIM_VAO - 3, 128, 3, '#3b4256');         // sombra que cai no chao
+    // (2) o vazio: so uma sombra do tampo caindo no chao, sem tapar o piso
+    q(ctx, x, y, 0, FIM_LIP, 128, 7, 'rgba(40,44,58,0.34)');
+    q(ctx, x, y, 0, FIM_LIP + 7, 128, 6, 'rgba(40,44,58,0.16)');
 
     if (gavetas !== false) {
-      const gy = FIM_LIP + 9;
-      const gh = 16;
-      for (let i = 0; i < 2; i++) {
-        const dy = gy + i * (gh + 5);
-        q(ctx, x, y, 9, dy, 110, gh, '#4a5268');             // contorno da gaveta
-        q(ctx, x, y, 11, dy + 1, 106, gh - 3, '#98a2ba');    // frente
-        q(ctx, x, y, 11, dy + 1, 106, 3, '#bcc4d6');         // luz no topo
-        q(ctx, x, y, 30, dy + 6, 68, 4, '#6b748f');          // puxador
-        q(ctx, x, y, 30, dy + 6, 68, 1, '#aab3c6');
+      // (3) gaveteira: SO na ponta esquerda da bancada
+      if (b.esq) {
+        const gx = 6, gw = 42, gy = FIM_LIP, gh = CHAO - gy;
+        q(ctx, x, y, gx, gy, gw, gh + 4, '#3b4256');
+        q(ctx, x, y, gx + 2, gy, gw - 4, gh + 1, '#98a2ba');
+        q(ctx, x, y, gx + 2, gy, gw - 4, 3, '#bcc4d6');
+        q(ctx, x, y, gx + gw - 7, gy, 5, gh + 1, '#79839c');
+        for (let i = 0; i < 3; i++) {
+          const dy = gy + 6 + i * 12;
+          q(ctx, x, y, gx + 6, dy, gw - 16, 8, '#ccd2df');
+          q(ctx, x, y, gx + 6, dy, gw - 16, 2, '#e8ebf2');
+          q(ctx, x, y, gx + 13, dy + 4, gw - 30, 2, '#6b748f');
+        }
       }
-    }
-
-    // (3) postes nas pontas da bancada
-    if (b.esq) {
-      q(ctx, x, y, 2, FIM_LIP, 9, FIM_VAO + 4 - FIM_LIP, '#3b4256');
-      q(ctx, x, y, 3, FIM_LIP, 6, FIM_VAO + 2 - FIM_LIP, '#8b95ad');
-      q(ctx, x, y, 3, FIM_LIP, 2, FIM_VAO + 2 - FIM_LIP, '#b0b9cc');
-    }
-    if (b.dir) {
-      q(ctx, x, y, 117, FIM_LIP, 9, FIM_VAO + 4 - FIM_LIP, '#3b4256');
-      q(ctx, x, y, 119, FIM_LIP, 6, FIM_VAO + 2 - FIM_LIP, '#8b95ad');
-      q(ctx, x, y, 119, FIM_LIP, 2, FIM_VAO + 2 - FIM_LIP, '#b0b9cc');
+      // (3) pe: SO na ponta direita
+      if (b.dir) {
+        const px0 = 96, pw = 22;
+        q(ctx, x, y, px0, FIM_LIP, pw, CHAO + 4 - FIM_LIP, '#3b4256');
+        q(ctx, x, y, px0 + 3, FIM_LIP, pw - 6, CHAO + 1 - FIM_LIP, '#8b95ad');
+        q(ctx, x, y, px0 + 3, FIM_LIP, 4, CHAO + 1 - FIM_LIP, '#b0b9cc');
+        q(ctx, x, y, px0 - 3, CHAO - 3, pw + 6, 7, '#3b4256');   // sapata
+      }
     }
 
     // contorno so onde a bancada termina
@@ -741,7 +738,7 @@
       // ...e so na fileira da FRENTE (`b.baixo` = nao tem mesa embaixo). O
       // monitor dessa fileira ja avanca pro tile de tras, entao equipar as duas
       // daria dois computadores empilhados na mesma mesa.
-      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 3 === 1 && b.baixo;
+      const temPc = M.MESAS_DE_TRABALHO.has(type) && recuo % 2 === 0 && b.baixo;
       // gavetas ficam do lado de quem usa: numa mesa virada pra cima elas
       // caem atras da placa e nao aparecem
       tampoDeMesa(ctx, x, y, TILE, b, direcao !== 'down');

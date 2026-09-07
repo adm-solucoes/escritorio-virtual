@@ -236,9 +236,11 @@
     // tiles - meio tile por pessoa -, o que fazia o conjunto parecer uma mesa
     // gigante de refeitorio em vez das baias do Gather.
     [18, 24].forEach((r) => {
-      [15, 20, 25, 30].forEach((c) => {
-        rect(r, c, r + 1, c + 2, MESA_MONITOR);  // mesa 3x2
-        set(r + 2, c + 1, CADEIRA);              // uma cadeira, centrada
+      [15, 19, 23, 27, 31].forEach((c) => {
+        // 2 de largura por 1 de profundidade: a mesa da referencia e bem
+        // mais larga do que funda. Com 2x2 ela virava um quadrado.
+        rect(r, c, r, c + 1, MESA_MONITOR);
+        set(r + 1, c, CADEIRA);
       });
     });
     set(17, 31, PLANTA);
