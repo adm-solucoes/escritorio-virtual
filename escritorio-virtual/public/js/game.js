@@ -630,14 +630,25 @@
       q(ctx, x, y, ax + i, oy + bordaTela + (i - bordaTela), 1, 5, 'rgba(255,255,255,0.16)');
     }
 
-    // pescoco e base
+    // Pescoco e base. As duas medidas SEGUEM a largura da tela: um pe fixo de
+    // 38 debaixo de um ultrawide de 172 dava 22% - a tela parecia equilibrada
+    // num palito. E a base tinha 6 unidades de altura, quase um risco, sem
+    // espessura nenhuma pra dizer que aquilo apoia em alguma coisa.
     const meio = Math.round(aw / 2);
     const baseY = ay + queda(meio) + ah;
-    q(ctx, x, y, ax + meio - 4, baseY - 2, 8, 11, '#a7b1c2');
-    q(ctx, x, y, ax + meio - 4, baseY - 2, 2, 11, '#ccd3de');
-    q(ctx, x, y, ax + meio + 2, baseY - 2, 2, 11, '#8793a6');
-    qArred(ctx, x, y, ax + meio - 19, baseY + 9, 38, 6, 2, '#8e99ad');
-    q(ctx, x, y, ax + meio - 17, baseY + 9, 34, 2, '#bcc4d1');
+    const pesc = Math.max(10, Math.round(aw * 0.09));
+    const bw = Math.max(46, Math.round(aw * 0.40));
+    const px0 = ax + meio - Math.round(pesc / 2);
+    const bx0 = ax + meio - Math.round(bw / 2);
+
+    q(ctx, x, y, px0, baseY - 2, pesc, 13, '#a7b1c2');            // pescoco
+    q(ctx, x, y, px0, baseY - 2, 2, 13, '#ccd3de');               // luz na quina
+    q(ctx, x, y, px0 + pesc - 2, baseY - 2, 2, 13, '#8793a6');    // sombra do outro lado
+
+    // a base em duas faixas: o tampo dela e a frente, que e o que da espessura
+    qArred(ctx, x, y, bx0, baseY + 9, bw, 9, 3, '#9aa5b8');
+    q(ctx, x, y, bx0 + 3, baseY + 9, bw - 6, 3, '#c3cad6');
+    qArred(ctx, x, y, bx0, baseY + 16, bw, 5, 2, '#6f7a8f');
   }
 
   // Teclado com fileiras de teclas e barra de espaco.
@@ -1482,7 +1493,33 @@
     bs.globalCompositeOperation = 'source-over';
   }
 
-  function comVolume(ctx, x, y, TILE, desenhar) {
+  // Onde a arte de cada item termina, na malha fina. A sombra de contato tem
+  // que sair DAI. A janela fixa que havia antes (60 a 98) partia do principio
+  // de que toda arte encosta por volta de y=90; o monitor ultrawide acaba em
+  // 61, entao a janela caia inteira no vazio e ele saia **sem sombra nenhuma** -
+  // era isso que dava a sensacao de tela flutuando sobre a mesa.
+  //
+  // Medido uma vez por item, na silhueta que acabou de ser desenhada, e
+  // guardado: sao 37 itens e a arte nao muda em tempo de execucao.
+  const fundoDaArte = new Map();
+
+  function medirFundo(chave, TILE) {
+    if (fundoDaArte.has(chave)) return fundoDaArte.get(chave);
+    const lado = bufSilhueta.width;
+    const dados = bufSilhueta.getContext('2d').getImageData(0, 0, lado, lado).data;
+    let ultima = -1;
+    for (let py = lado - 1; py >= 0 && ultima < 0; py--) {
+      for (let px = 0; px < lado; px++) {
+        if (dados[(py * lado + px) * 4 + 3] > 12) { ultima = py; break; }
+      }
+    }
+    const porUnidade = (TILE / 128) * BUF_ESCALA;
+    const fundo = ultima < 0 ? APOIO : Math.round(ultima / porUnidade) - BUF_OY * 128;
+    fundoDaArte.set(chave, fundo);
+    return fundo;
+  }
+
+  function comVolume(ctx, x, y, TILE, desenhar, chave) {
     prepararBuffers(TILE);
     const bi = bufItem.getContext('2d');
     const lado = bufItem.width;
@@ -1497,17 +1534,24 @@
     const py = y - BUF_OY * TILE;
     const larg = BUF_TILES * TILE;
     const u = TILE / 128;        // uma unidade da grade fina, em pixels de mundo
-    const baseY = y + APOIO * u; // a linha onde a coisa encosta na superficie
 
     tingirSilhueta('#000000');
+
+    // a linha onde a coisa encosta na superficie: o fundo da propria arte
+    const fundo = chave === undefined ? APOIO : medirFundo(chave, TILE);
+    const baseY = y + fundo * u;
 
     ctx.save();
 
     // 1. Sombra no chao. So a **faixa de baixo** da silhueta entra: usar a
     // silhueta inteira transformava um monitor numa barra cinza do tamanho da
     // tela. O que faz sombra e o que toca a superficie.
-    const faixaTopo = (BUF_OY * 128 + APOIO - 30) * u * BUF_ESCALA;
-    const faixaAlt = 38 * u * BUF_ESCALA;
+    // A faixa e FINA de proposito. Com 34 unidades ela ainda pegava a barriga
+    // do painel do monitor, e a sombra saia da largura da TELA em vez da largura
+    // do pe - uma tira cinza comprida passando longe da base. O que encosta na
+    // mesa sao os ultimos dedos da arte.
+    const faixaTopo = (BUF_OY * 128 + fundo - 16) * u * BUF_ESCALA;
+    const faixaAlt = 20 * u * BUF_ESCALA;
     ctx.globalAlpha = 0.17;
     ctx.drawImage(
       bufSilhueta,
@@ -1548,7 +1592,7 @@
     const sobe = livre ? 0 : Math.max(0, APOIO - fimDoTampo(tiles, c, r));
     const x = (livre ? c - 0.5 : c) * TILE;
     const y = (livre ? r - ANCORA / 128 : r) * TILE - sobe * U;
-    comVolume(ctx, x, y, TILE, (bctx, bx, by) => pintarObjeto(bctx, bx, by, obj, TILE));
+    comVolume(ctx, x, y, TILE, (bctx, bx, by) => pintarObjeto(bctx, bx, by, obj, TILE), obj);
   }
 
   // ---- acertar numa coisa: pelo desenho, nao por um circulo ----
@@ -1951,20 +1995,23 @@
       blob(ctx, x, y, 64, 31, 4, 6, '#ffe9a8', 2);
 
     } else if (obj === O.TELEFONE) {
-      q(ctx, x, y, 28, 84, 68, 5, 'rgba(45,50,64,0.18)');
-      qContorno(ctx, x, y, 24, 48, 76, 40, 4, '#1d222c');      // base
-      qArred(ctx, x, y, 25, 49, 74, 38, 4, '#4a5162');
-      q(ctx, x, y, 27, 50, 70, 2, '#68718a');
+      // Estava com 80 de largura e 59 de altura: a MESMA pegada de um teclado
+      // inteiro (104 x 37) e quase metade da largura do ultrawide. Telefone de
+      // mesa e mais ou menos meio teclado - 56 de largura.
+      q(ctx, x, y, 40, 86, 48, 5, 'rgba(45,50,64,0.18)');
+      qContorno(ctx, x, y, 36, 58, 56, 30, 3, '#1d222c');      // base
+      qArred(ctx, x, y, 37, 59, 54, 28, 3, '#4a5162');
+      q(ctx, x, y, 39, 60, 50, 2, '#68718a');
       for (let i = 0; i < 3; i++) {                            // teclado
         for (let j = 0; j < 3; j++) {
-          q(ctx, x, y, 32 + i * 9, 60 + j * 8, 6, 5, '#98a2b4');
+          q(ctx, x, y, 41 + i * 7, 68 + j * 6, 5, 4, '#98a2b4');
         }
       }
-      qArred(ctx, x, y, 62, 58, 30, 22, 3, '#39404f');         // visor
-      q(ctx, x, y, 65, 61, 24, 3, '#7ad39a');
-      qContorno(ctx, x, y, 24, 34, 76, 16, 6, '#1d222c');      // fone no gancho
-      qArred(ctx, x, y, 25, 35, 74, 14, 5, '#5f6a80');
-      q(ctx, x, y, 28, 36, 68, 2, '#8f97a8');
+      qArred(ctx, x, y, 64, 67, 22, 15, 2, '#39404f');         // visor
+      q(ctx, x, y, 66, 69, 18, 3, '#7ad39a');
+      qContorno(ctx, x, y, 36, 46, 56, 13, 4, '#1d222c');      // fone no gancho
+      qArred(ctx, x, y, 37, 47, 54, 11, 4, '#5f6a80');
+      q(ctx, x, y, 39, 48, 50, 2, '#8f97a8');
 
     } else if (obj === O.LUMINARIA) {
       q(ctx, x, y, 44, 92, 42, 5, 'rgba(45,50,64,0.20)');
