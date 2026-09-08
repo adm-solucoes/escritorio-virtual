@@ -535,6 +535,49 @@
   // O mapa e pre-renderizado em RENDER_SCALE = 4, entao 1/4 de unidade de tile e
   // exatamente 1 pixel de verdade. A arte dos moveis e desenhada nessa grade de
   // 128x128 por tile - quatro vezes o detalhe que dava pra ter antes.
+  // ---- a paleta do pacote, para a arte a mao nao destoar da comprada ----
+  //
+  // O escritorio mistura duas fontes de arte: os moveis vem do pacote LPC
+  // Revised e os itens de computador sao desenhados aqui (o acervo aberto
+  // simplesmente nao tem monitor, teclado nem mouse em vista de cima - procurei
+  // em nove pacotes). Lado a lado na mesma mesa a diferenca saltava: o pacote e
+  // quente e discreto, o nosso saia frio e saturado.
+  //
+  // Nao e problema de desenho, e de PALETA. O LPC publica a dele - as 128 cores
+  // de `assets/lpc-moveis/_paleta-lpc.png` - entao toda cor solida que a gente
+  // pinta e trocada pela mais proxima dela. As formas continuam nossas; o
+  // colorido passa a ser o mesmo.
+  //
+  // `rgba(...)` passa direto: sombra e brilho sao camadas por cima, nao cor de
+  // material, e encaixar isso na paleta so sujaria.
+  const PALETA_LPC = '#000000,#0f1218,#ffffff,#fdf5cc,#f4d7a0,#1b192b,#1a1213,#ebede9,#faece7,#8b7949,#edc5a8,#eecc8c,#2a1722,#e0f2f3,#d9f1d8,#e4a47c,#f8bc76,#ccaaa6,#d38b59,#ad844f,#e09c4c,#ff8a00,#ae7771,#fdd082,#c7cfcc,#e3e7d3,#f9d5ba,#ae6b3f,#a2794b,#cf6f30,#e56010,#d2d8ef,#bde6e5,#af8a35,#a8b3b8,#c4b59f,#7f4c31,#946b44,#b54936,#bf4000,#c7341b,#ffad97,#988fba,#a4b0dc,#a4dddb,#d0da91,#adcca6,#b5ee2d,#f4e48d,#836332,#818e97,#867e7f,#958080,#cc8665,#644133,#6b3c2e,#75502d,#95381c,#a42600,#ef747e,#7c6ea6,#838ad1,#8abec9,#73bed3,#6cdce7,#a8ca58,#c7c65a,#86b278,#9ecf23,#f6e768,#f3c35f,#6a7587,#40361d,#4b4b60,#726b7e,#6f6464,#99423c,#442725,#603429,#61482c,#7b2008,#aa3a6a,#bd5169,#655789,#636fc7,#4f899d,#4f8fba,#3aafc2,#75a743,#a1a03d,#5f874d,#7cb82f,#f0e059,#d19428,#2b2511,#343043,#484152,#6a1d16,#792a53,#4c3b64,#3b428e,#3a5a72,#3c5e8b,#2a8598,#468232,#677831,#456238,#5c9a2a,#dbbd00,#a16018,#29253a,#5e2043,#2e1f1c,#3e111a,#481945,#2c2452,#253a5e,#18506f,#25562e,#314829,#517610,#bca51c,#794117,#172038,#0d283e,#19332d,#3e6115,#978c02'.split(',').map((h) => [
+    parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16), h,
+  ]);
+
+  const cacheCor = new Map();
+
+  function naPaleta(cor) {
+    if (typeof cor !== 'string' || cor.charCodeAt(0) !== 35) return cor;  // rgba(), nomes
+    const achado = cacheCor.get(cor);
+    if (achado) return achado;
+    const r = parseInt(cor.slice(1, 3), 16);
+    const g = parseInt(cor.slice(3, 5), 16);
+    const b = parseInt(cor.slice(5, 7), 16);
+    let melhor = cor;
+    let menor = Infinity;
+    for (let i = 0; i < PALETA_LPC.length; i++) {
+      const p = PALETA_LPC[i];
+      // distancia com peso: o olho separa verde melhor que azul, entao comparar
+      // R, G e B com o mesmo peso troca cor por cor visivelmente diferente.
+      const rm = (r + p[0]) / 2;
+      const d = (2 + rm / 256) * (r - p[0]) * (r - p[0])
+        + 4 * (g - p[1]) * (g - p[1])
+        + (2 + (255 - rm) / 256) * (b - p[2]) * (b - p[2]);
+      if (d < menor) { menor = d; melhor = p[3]; }
+    }
+    cacheCor.set(cor, melhor);
+    return melhor;
+  }
   const U = 32 / 128; // = 0.25
 
   // O tamanho de UM pixel da arte, na malha fina.
@@ -559,7 +602,7 @@
     // engolia isso sozinho; agora que existe um minimo de um pixel, sem esta
     // guarda um `aw - recuo * 2` negativo do qArred viraria uma lasca visivel.
     if (aw <= 0 || ah <= 0) return;
-    ctx.fillStyle = cor;
+    ctx.fillStyle = naPaleta(cor);
     ctx.fillRect(x + enc(ax) * U, y + enc(ay) * U, encTam(aw) * U, encTam(ah) * U);
   }
 
