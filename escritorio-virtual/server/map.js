@@ -284,7 +284,7 @@ function buildMap() {
   set(18, 42, MESA_REDONDA);
   set(17, 42, CADEIRA_BAIXO); set(19, 42, POLTRONA);
   set(18, 41, CADEIRA_DIR); set(18, 43, CADEIRA_ESQ);
-  set(21, 44, TV);
+  set(21, 43, TV); set(21, 44, TV);
 
   // ---------- 9. baias de trabalho: duas ilhas de carpete ----------
   // Mesa de 3 de largura por UMA de profundidade, cadeira na linha de baixo -
@@ -339,6 +339,7 @@ function buildMap() {
   linhaH(24, 15, 17, BALCAO);
   set(23, 16, CADEIRA_BAIXO);                  // quem atende, virado pro balcao
   set(23, 12, PLANTA_GRANDE); set(23, 19, CABIDE);
+  rect(25, 14, 27, 16, TAPETE);                // o tapete de losangos do lobby
   set(27, 13, POLTRONA); set(27, 17, POLTRONA);
   set(26, 19, PLANTA_GRANDE);
 
@@ -354,11 +355,13 @@ function buildMap() {
   set(23, 21, PLANTA_GRANDE); set(23, 29, PLANTA_GRANDE);
 
   // ---------- 14. a parede sul, tambem coberta ----------
-  [[4, PLANTA_GRANDE], [6, TV], [8, QUADRO], [9, QUADRO], [10, QUADRO],
+  // A TV do pacote e larga: vai em par de celulas, senao a arte corta no meio.
+  [[4, PLANTA_GRANDE], [6, TV], [7, TV], [8, QUADRO], [9, QUADRO], [10, QUADRO],
     [12, CABIDE], [14, ESTANTE], [15, ESTANTE], [17, LOUSA], [19, PLANTA],
     [21, ARMARIO], [22, ARMARIO], [24, IMPRESSORA], [26, BEBEDOURO],
-    [28, PLANTA_GRANDE], [30, TV], [32, ESTANTE], [33, ESTANTE], [35, QUADRO],
-    [37, RELOGIO], [39, PLANTA], [41, ARMARIO], [42, ARMARIO], [44, CACTO]]
+    [28, PLANTA_GRANDE], [30, TV], [31, TV], [32, ESTANTE], [33, ESTANTE],
+    [35, QUADRO], [37, RELOGIO], [39, PLANTA], [41, ARMARIO], [42, ARMARIO],
+    [44, CACTO]]
     .forEach(([c, t]) => set(28, c, t));
 
   // ---------- 15. o verde em volta do predio ----------

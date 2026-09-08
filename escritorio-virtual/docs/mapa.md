@@ -4,27 +4,50 @@ O mapa vive em **duas copias** (`public/js/map.js` e `server/map.js`), mantidas
 iguais na mao - nao ha bundler. `npm run teste` compara as duas; se divergirem,
 quebra.
 
+## A planta
+
+O andar segue a planta da referencia, levantada tile a tile em
+[planta-referencia.md](planta-referencia.md). O desenho geral e:
+
+- **Faixa norte (linhas 3-7):** quatro pods de 5x5 - Diretoria, Financeiro,
+  Projetos, Marketing - com o patio do lago entre o segundo e o terceiro. Cada
+  pod tem janelao de 3, uma planta no canto, mesa 3x1 e cadeira. So isso.
+- **Colunas laterais (linhas 9-21):** duas salas fechadas de cada lado. Copa e
+  Sala de Reuniao a oeste; Treinamento e Huddle a leste.
+- **Salao (linha 8 pra baixo):** tijolinho creme de ponta a ponta. As areas de
+  trabalho **nao sao salas**: sao ilhas de carpete soltas dentro dele, sem
+  parede e sem porta. Duas baias de 11x6, com tres mesas por fileira.
+- **Faixa sul (linhas 23-28):** lounge, recepcao e a mesa de conferencia, essa
+  tambem solta no salao.
+
+Duas medidas que valem em tudo, porque sao da referencia:
+
+- **Mesa e 3x1 e a cadeira fica na linha de baixo.** Nao 3x2. A profundidade a
+  mais e o que fazia a baia parecer mesa de refeitorio.
+- **Reuniao tem duas escalas.** Huddle = mesa redonda de 1 tile com um assento
+  por lado. Conferencia = mesa 3x2 com dez poltronas vermelhas.
+
 ## Como decorar sem quebrar
 
 Tres armadilhas ja aconteceram aqui, e as tres eram invisiveis: o servidor sobe,
 o mapa desenha bonito, e so quem tenta andar descobre.
 
-1. **As portas das salas da frente sao um vao de UMA celula.** O
-   `set(11, meio, LIVRE)` abre a porta; a coluna dela nas colunas 7, 15, 31 e 39.
-   Movel na linha 12 nessas colunas **sela a sala**. Aconteceu: tres salas
-   ficaram inalcancaveis.
-2. **O anel em volta do lago tem UM tile de largura.** Peca solida ali parte a
-   volta - e como o jardim de fora so se liga ao resto pelo patio, o mapa inteiro
-   fora do predio ficou sem acesso. Poltrona e pufe sao assento **caminhavel** e
-   servem; banco nao.
-3. **Fechar o retangulo do lago em vez do contorno da agua** tampa a passagem de
-   cima do patio. A pedra segue a agua, nao o retangulo.
+1. **A porta e um vao de DOIS tiles**, nas colunas `c0+2` e `c0+3` de cada pod
+   (11-12, 17-18, 30-31, 36-37) e nas linhas 11-12 e 18-19 das colunas 8 e 39.
+   Dois tiles em vez de um porque com um so, um vaso mal posto selava a sala -
+   ja aconteceu com tres de uma vez.
+2. **A volta em torno do lago tem UM tile de largura.** Peca solida nas duas
+   pontas do corredor de fora fecha um bolso de nove celulas. Aconteceu com dois
+   arbustos; sobrou um so, e no canto.
+3. **A entrada principal e o unico elo com o jardim.** Ela fica na parede sul,
+   colunas 16 e 17. Sem ela o verde de fora inteiro - 356 celulas - fica sem
+   ligacao com o predio.
 
 `testes/mapa.js` cobre os tres: sala sem chao alcancavel, mesa sem onde sentar e
 area grande ilhada. Rode antes de dizer que esta pronto.
 
-> Os 26 tiles ilhados que o teste aceita sao a faixa de grama atras da parede
-> sul, que nunca teve acesso e nao incomoda.
+> Hoje o mapa fecha em **zero** celula ilhada. O teto de 40 do teste e folga
+> pra quem mexer; se passar disso, tem passagem entupida.
 
 ## Densidade
 
@@ -40,9 +63,10 @@ Por sala, o que a referencia mostra e o que foi aplicado:
 | Salas da frente (172719) | quadro, planta de porte, armario | idem, com a peca de parede variando por sala |
 | Corredor (172652) | parede continua de estante/quadro/planta | idem, alternando pra nao virar paredao |
 | Lounge (172725) | estante no fundo, sofa, mesa redonda, **pufes** | idem, com 4 pufes e tapete redondo |
-| Reuniao (172825) | mesa grande com **cadeiras vermelhas** | idem - e o unico ponto de cor forte do andar |
-| Huddle (172815) | **mesa redonda** com um assento por lado | idem, num canto da sala de reuniao |
-| Lago (172749) | poca **cercada de pedra**, com assento olhando pra ela | idem, com poltrona nos quatro lados |
+| Conferencia (172825) | mesa 3x2 com dez **poltronas vermelhas**, solta no salao | idem - e o unico ponto de cor forte do andar |
+| Huddle (172815, 172804) | **mesa redonda** com um assento por lado | idem, e agora sao quatro salas assim |
+| Lago (172749) | poca com pedra em volta e assento olhando pra ela | idem, pedra nas quinas e assento em cima e embaixo |
+| Lobby (172839) | tapete de losangos, sofa e balcao de recepcao | idem, na faixa sul |
 
 ## Tiles novos
 
@@ -57,15 +81,21 @@ Por sala, o que a referencia mostra e o que foi aplicado:
 O **balcao** (`BALCAO`) ja existia sem uso e serve pros dois: e o balcao da
 recepcao e a bancada da copa.
 
-## Lobby e copa: o que nao coube
+## Lobby e copa
 
-A referencia tem um **lobby** (172839) e uma **copa** (172742) como comodos
-proprios. Aqui nao cabem: o corredor tem 4 linhas de altura. Viraram duas ilhas
-dentro dele - o movel ocupa a linha 13 e sobram as linhas 14 e 15 pra passar.
+Antes eles nao cabiam: o corredor tinha 4 linhas e viraram duas ilhas espremidas
+dentro dele. Com o salao aberto da referencia sobrou espaco, e os dois viraram o
+que sao na referencia - a **copa** e sala fechada de 5x6 na coluna oeste, e o
+**lobby** e a faixa sul, com tapete de losangos, sofa e balcao de recepcao.
 
-E ai mora a armadilha de novo: a linha 13 nas colunas 7, 15, 31 e 39 e a saida
-das portas. Movel ali deixa quem sai da sala num bolso de duas celulas. Foi o
-que aconteceu com a geladeira na primeira tentativa, e `testes/mapa.js` pegou.
+**A largura da arte tem que bater com a largura do movel no mapa.** A mesa
+passou a ser 3x1 e a arte era de 2 tiles: o ladrilho repetia a coluna do meio e
+saia mesa emendada torto. Quando a arte e mais larga ou mais alta que a celula,
+o modo e `'alto'` - uma celula so desenha, e a peca inteira sai dela.
+
+**`SOFA_CIMA` nao tem desenho proprio.** Quem pinta o sofa inteiro e
+`SOFA_BAIXO` (arte de 3x2, em `'alto'`). Posto sozinho, `SOFA_CIMA` nao
+aparece - o lounge ficou com um vao no lugar do sofa ate isso cair a ficha.
 
 **Assento com desenho proprio precisa sair do ramo generico.** `POLTRONA` e
 `PUFE` estao em `ASSENTOS`, e o ramo que desenha cadeira de escritorio pega tudo

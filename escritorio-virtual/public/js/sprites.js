@@ -112,6 +112,16 @@
     CACTO:         { f: 'furniture/planter.png', c: 3, r: 0, w: 1, h: 3, modo: 'alto' },
     VASO_FLORES:   { f: 'small-items/flowers.png', c: 0, r: 0, w: 1, h: 1 },
 
+    // --- parede e chao ------------------------------------------------------
+    // Quadro emoldurado do pacote, no lugar da moldurinha desenhada a mao.
+    QUADRO: { f: 'wall-items/paintings-abstract.png', c: 4, r: 1, w: 1, h: 1, solto: true },
+    // A TV do pacote e larga: ocupa DUAS celulas do mapa. Por isso no mapa ela
+    // vai sempre em par - uma TV de uma celula so nao existe na folha.
+    TV: { f: 'furniture/tv-widescreen.png', c: 12, r: 0, w: 2, h: 2, modo: 'alto' },
+    // Tapete de losangos, o mesmo do lobby da referencia. Tem borda propria,
+    // entao so fecha certo em bloco de 3x3.
+    TAPETE: { f: 'furniture-rugs/diamond-rug-tiling.png', c: 9, r: 3, w: 3, h: 3 },
+
     // --- area verta la fora -------------------------------------------------
     // A arvore e maior que o tile dela: 3 de largura por 4 de altura, plantada
     // no tile e transbordando pros lados e pra cima. `solto` porque cada
