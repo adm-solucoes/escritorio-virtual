@@ -243,13 +243,12 @@ function buildMap() {
   // de fora e o anel virava um bolso de nove celulas sem saida.
   set(3, 26, ARBUSTO);
 
-  // ---------- 4. a parede norte do hall, coberta de movel ----------
-  // Na referencia sao 15 pecas em 24 tiles: quase nao sobra parede nua. As
-  // colunas de porta (c0+2 e c0+3 de cada pod) e o vao do patio ficam livres.
-  [[9, PLANTA_GRANDE], [10, ESTANTE], [13, ESTANTE], [14, QUADRO], [15, CACTO],
-    [16, ESTANTE], [19, GELADEIRA], [20, BALCAO],
-    [27, PLANTA], [28, ESTANTE], [29, ESTANTE], [32, RELOGIO], [33, LOUSA],
-    [34, CAVALETE], [35, ESTANTE], [38, PLANTA_GRANDE]]
+  // ---------- 4. a parede norte do hall ----------
+  // A referencia tem a parede cheia, mas cheia de coisa DIFERENTE. Encher a
+  // nossa de estante repetida nao deu densidade, deu ruido: virou um paredao.
+  // Ficaram nove pecas, alternando alto e baixo, com parede nua entre elas.
+  [[10, ESTANTE], [13, ESTANTE], [15, CACTO], [19, GELADEIRA], [20, BALCAO],
+    [28, ESTANTE], [33, LOUSA], [35, CAVALETE], [38, PLANTA_GRANDE]]
     .forEach(([c, t]) => set(8, c, t));
 
   // ---------- 5. Copa ----------
@@ -312,13 +311,10 @@ function buildMap() {
   // ---------- 10b. o canto direito do salao ----------
   // Um respiro de estar entre a baia e a sala da ponta, senao sobrava um
   // quarteirao de piso liso do lado direito inteiro.
-  set(19, 35, MESA_CENTRO);
-  set(19, 34, POLTRONA); set(19, 36, POLTRONA);
-  set(18, 33, PLANTA_GRANDE); set(20, 37, PLANTA);
   set(25, 36, MESA_REDONDA);
   set(24, 36, CADEIRA_BAIXO); set(26, 36, CADEIRA);
   set(25, 35, CADEIRA_DIR); set(25, 37, CADEIRA_ESQ);
-  set(23, 34, PLANTA_GRANDE); set(27, 39, VASO_FLORES);
+  set(23, 34, PLANTA_GRANDE);
 
   // ---------- 11. Lounge ----------
   // Composicao simetrica da referencia: estante e estante no fundo, sofa no
@@ -355,13 +351,12 @@ function buildMap() {
   set(23, 21, PLANTA_GRANDE); set(23, 29, PLANTA_GRANDE);
 
   // ---------- 14. a parede sul, tambem coberta ----------
-  // A TV do pacote e larga: vai em par de celulas, senao a arte corta no meio.
-  [[4, PLANTA_GRANDE], [6, TV], [7, TV], [8, QUADRO], [9, QUADRO], [10, QUADRO],
-    [12, CABIDE], [14, ESTANTE], [15, ESTANTE], [17, LOUSA], [19, PLANTA],
-    [21, ARMARIO], [22, ARMARIO], [24, IMPRESSORA], [26, BEBEDOURO],
-    [28, PLANTA_GRANDE], [30, TV], [31, TV], [32, ESTANTE], [33, ESTANTE],
-    [35, QUADRO], [37, RELOGIO], [39, PLANTA], [41, ARMARIO], [42, ARMARIO],
-    [44, CACTO]]
+  // Mesma poda da parede norte. A TV do pacote e larga: vai em par de celulas,
+  // senao a arte corta no meio.
+  [[4, PLANTA_GRANDE], [6, TV], [7, TV], [10, QUADRO], [13, CABIDE],
+    [15, ESTANTE], [16, ESTANTE], [19, PLANTA], [22, ARMARIO],
+    [25, IMPRESSORA], [27, BEBEDOURO], [30, TV], [31, TV], [34, QUADRO],
+    [37, PLANTA], [40, ARMARIO], [43, CACTO]]
     .forEach(([c, t]) => set(28, c, t));
 
   // ---------- 15. o verde em volta do predio ----------

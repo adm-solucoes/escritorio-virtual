@@ -1316,6 +1316,22 @@
 
     } else if (type === M.AGUA) {
       const b = bordasDoMovel(tiles, r, c, type);
+      // O lago da referencia e redondo, e o nosso era um retangulo azul. Cada
+      // celula da beirada corta o canto EXTERNO - aquele onde as duas laterais
+      // sao borda -, e o conjunto fecha numa poca arredondada. O recorte nao
+      // pinta nada: so impede a agua de chegar ali, e o chao que ja foi
+      // desenhado aparece.
+      const L = 128 * U;
+      const raio = 0.42 * L;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(x, y, L, L, [
+        b.cima && b.esq ? raio : 0,
+        b.cima && b.dir ? raio : 0,
+        b.baixo && b.dir ? raio : 0,
+        b.baixo && b.esq ? raio : 0,
+      ]);
+      ctx.clip();
       q(ctx, x, y, 0, 0, 128, 128, '#3f8fc9'); // fundo mais escuro
       q(ctx, x, y, 0, 0, 128, 64, '#4fa3da'); // agua mais clara no alto
       // marolas: tracinhos estaveis, dependem so de c/r
@@ -1340,6 +1356,7 @@
       if (b.baixo) q(ctx, x, y, 0, 124, 128, 4, '#2f6f9e');
       if (b.esq) q(ctx, x, y, 0, 0, 4, 128, '#2f6f9e');
       if (b.dir) q(ctx, x, y, 124, 0, 4, 128, '#2f6f9e');
+      ctx.restore();
 
     } else if (type === M.PEDRA) {
       q(ctx, x, y, 20, 96, 88, 12, 'rgba(52,62,52,0.20)'); // sombra no chao

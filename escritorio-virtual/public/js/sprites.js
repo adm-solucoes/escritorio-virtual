@@ -59,10 +59,12 @@
   //          o movel) ou 'alto'
   const CATALOGO = {
     // --- assentos -----------------------------------------------------------
-    CADEIRA:       { f: 'furniture-seating/chair-office.png', c: 0, r: 0, w: 1, h: 1 },
-    CADEIRA_BAIXO: { f: 'furniture-seating/chair-office.png', c: 0, r: 2, w: 1, h: 1 },
-    CADEIRA_DIR:   { f: 'furniture-seating/chair-office.png', c: 1, r: 0, w: 1, h: 1 },
-    CADEIRA_ESQ:   { f: 'furniture-seating/chair-office.png', c: 1, r: 1, w: 1, h: 1 },
+    // A cadeira de escritorio tambem fica fora: a do pacote e um bloco escuro
+    // visto de cima, e a da referencia tem encosto de TELA, duas barras laranja
+    // na altura dos bracos e apoio de cabeca - os tres detalhes que fazem a
+    // gente reconhecer a cadeira do Gather. A versao desenhada tem os tres, e e
+    // ela que volta por cima de quem senta (senao a pessoa aparece flutuando na
+    // frente do encosto).
 
     // poltrona vermelha da sala de reuniao: 4 direcoes na mesma linha de cor
     CADEIRA_VERMELHA:       { f: 'furniture-seating/chair-sofa-a.png', c: 3, r: 1, w: 1, h: 1 },
@@ -79,19 +81,17 @@
     SOFA_CIMA:  { vazio: true },
 
     // --- mesas --------------------------------------------------------------
-    // A mesa do mapa e 3 de largura por 1 de profundidade, e a arte da mesa e
-    // 3 x 2: o tampo sobe pra fora da celula e a frente com as pernas fica na
-    // celula. Por isso 'alto' - so a celula da esquerda desenha, e ela pinta a
-    // mesa inteira. Com a arte de 2 tiles que tinha aqui, a mesa de 3 saia
-    // repetida no meio, feito duas mesas emendadas torto.
-    MESA:         { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
-    MESA_BAIXO:   { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
-    MESA_ESQ:     { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
-    MESA_DIR:     { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
-    MESA_MONITOR:       { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
-    MESA_MONITOR_BAIXO: { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
-    MESA_MONITOR_ESQ:   { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
-    MESA_MONITOR_DIR:   { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
+    // MESA fica FORA do catalogo de proposito.
+    //
+    // A mesa do mapa e 3x1 e toda arte de mesa do pacote e 3x2: em modo alto o
+    // tampo sobe pra linha DE CIMA, que nao e celula da mesa. Ou seja: o que a
+    // pessoa ve como mesa nao e clicavel, e o sistema de reivindicar mesa para
+    // de funcionar. Alem disso `tampoAte` diz que a superficie e a metade de
+    // cima da celula - com a arte deslocada, o item ia pousar em cima do pe.
+    //
+    // A mesa desenhada a mao (`tampoDeMesa`) cabe na propria celula, com tampo,
+    // faixa da frente, gaveteira e pe, e ja segue a medida da referencia. Ela
+    // continua sendo a mesa.
 
     MESA_CENTRO: { f: 'furniture/end-table.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
 
