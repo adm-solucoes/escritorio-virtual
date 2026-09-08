@@ -164,23 +164,24 @@ const OBJETOS = {
 // testes/mesas.js tem uma trava justamente pra isso.
 const OBJETO_MAX = 37;
 
-const SALAS_FRENTE = [
-  { c0: 3, c1: 11 },
-  { c0: 11, c1: 19 },
-  { c0: 27, c1: 35 },
-  { c0: 35, c1: 44 },
-];
+const PODS = [9, 15, 28, 34]; // coluna de partida de cada sala privativa
 
 const ROOMS = [
-  { id: 'diretoria', nome: 'Diretoria', r0: 4, c0: 3, r1: 11, c1: 11 },
-  { id: 'financeiro', nome: 'Financeiro', r0: 4, c0: 12, r1: 11, c1: 19 },
-  { id: 'patio', nome: 'Patio', r0: 4, c0: 20, r1: 11, c1: 26 },
-  { id: 'projetos', nome: 'Projetos', r0: 4, c0: 27, r1: 11, c1: 35 },
-  { id: 'marketing', nome: 'Marketing', r0: 4, c0: 36, r1: 11, c1: 44 },
-  { id: 'corredor', nome: 'Corredor', r0: 12, c0: 3, r1: 15, c1: 44 },
-  { id: 'lounge', nome: 'Lounge', r0: 16, c0: 3, r1: 29, c1: 13 },
-  { id: 'time', nome: 'Time', r0: 16, c0: 14, r1: 29, c1: 32 },
-  { id: 'reuniao', nome: 'Sala de Reuniao', r0: 16, c0: 33, r1: 29, c1: 44 },
+  { id: 'diretoria', nome: 'Diretoria', r0: 3, c0: 9, r1: 7, c1: 13 },
+  { id: 'financeiro', nome: 'Financeiro', r0: 3, c0: 15, r1: 7, c1: 19 },
+  { id: 'patio', nome: 'Patio', r0: 3, c0: 21, r1: 8, c1: 26 },
+  { id: 'projetos', nome: 'Projetos', r0: 3, c0: 28, r1: 7, c1: 32 },
+  { id: 'marketing', nome: 'Marketing', r0: 3, c0: 34, r1: 7, c1: 38 },
+  { id: 'copa', nome: 'Copa', r0: 9, c0: 3, r1: 14, c1: 7 },
+  { id: 'reuniao', nome: 'Sala de Reuniao', r0: 16, c0: 3, r1: 21, c1: 7 },
+  { id: 'treinamento', nome: 'Treinamento', r0: 9, c0: 40, r1: 14, c1: 44 },
+  { id: 'huddle', nome: 'Huddle', r0: 16, c0: 40, r1: 21, c1: 44 },
+  { id: 'time', nome: 'Time', r0: 10, c0: 9, r1: 17, c1: 32 },
+  { id: 'lounge', nome: 'Lounge', r0: 22, c0: 3, r1: 28, c1: 11 },
+  { id: 'recepcao', nome: 'Recepcao', r0: 22, c0: 12, r1: 28, c1: 19 },
+  { id: 'conferencia', nome: 'Conferencia', r0: 22, c0: 20, r1: 28, c1: 29 },
+  // pega o resto do predio, e so depois o verde de fora
+  { id: 'hall', nome: 'Hall', r0: 8, c0: 2, r1: 29, c1: 45 },
   { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 31, c1: 47 },
 ];
 
@@ -196,176 +197,177 @@ function buildMap() {
   const linhaH = (r, c0, c1, t) => { for (let c = c0; c <= c1; c++) set(r, c, t); };
   const linhaV = (c, r0, r1, t) => { for (let r = r0; r <= r1; r++) set(r, c, t); };
 
-  // ---------- salas privativas da frente ----------
-  SALAS_FRENTE.forEach(({ c0, c1 }, i) => {
-    linhaH(4, c0, c1, PAREDE);
-    linhaH(4, c0 + 1, c1 - 1, JANELA);
-    linhaH(11, c0, c1, PAREDE);
-    linhaV(c0, 4, 11, PAREDE);
-    linhaV(c1, 4, 11, PAREDE);
-    set(11, Math.floor((c0 + c1) / 2), LIVRE);
-
-    // A mesa da sala privativa e a MESMA do resto do andar: 3 de largura por
-    // 2 de fundo, com uma cadeira. Antes era 2x1 com duas cadeiras - eram os
-    // quatro unicos postos fora do padrao, e 2x1 e a mesinha estreita que a
-    // gente ja tinha decidido que nao e mesa.
-    rect(5, c0 + 2, 6, c0 + 4, MESA_MONITOR);
-    set(7, c0 + 3, CADEIRA);
-    // Na referencia (172719) a sala privativa nao e mesa+cadeira num quadrado
-    // vazio: tem quadro na parede, planta de porte e armario. As quatro salas
-    // sao iguais no mapa, entao a variacao vem do `i`: cada uma ganha uma peca
-    // de parede diferente, pra nao parecerem quatro copias.
-    set(5, c0 + 1, [QUADRO, LOUSA, RELOGIO, QUADRO][i % 4]);
-    set(5, c1 - 1, PLANTA_GRANDE);
-    set(9, c0 + 1, ESTANTE);
-    set(9, c0 + 2, ESTANTE);
-    set(9, c1 - 1, ARMARIO);
-    set(8, c1 - 1, [CACTO, VASO_FLORES, CACTO, VASO_FLORES][i % 4]);
+  // ---------- 1. faixa norte: quatro salas privativas e o patio ----------
+  // Na referencia a sala privativa e um POD de 5x5 que avanca pra fora do bloco,
+  // com janelao no fundo, uma arvore no canto, a mesa encostada na janela e a
+  // cadeira na linha de baixo. Nada mais. Antes a gente tinha uma caixa de 8x8
+  // cheia de movel pra disfarcar o tamanho.
+  linhaH(2, 8, 39, PAREDE);
+  [8, 14, 20, 27, 33, 39].forEach((c) => linhaV(c, 2, 8, PAREDE));
+  PODS.forEach((c0) => {
+    linhaH(2, c0 + 1, c0 + 3, JANELA);
+    set(3, c0 + 4, PLANTA_GRANDE);
+    linhaH(4, c0 + 1, c0 + 3, MESA_MONITOR);   // mesa 3x1
+    set(5, c0 + 2, CADEIRA);                   // cadeira na linha de baixo
   });
 
-  // ---------- patio com lago ----------
-  // pedras e arbustos so nas bordas: o anel em volta do lago fica livre
-  // Na referencia (172749) o lago nao e um retangulo azul: e uma poca redonda
-  // **cercada de pedra por todos os lados**, com arbusto em volta e assento
-  // olhando pra ela. O anel de fora fica livre pra dar a volta.
-  rect(6, 22, 8, 24, AGUA);
-  set(5, 23, AGUA); set(9, 23, AGUA);          // arredonda em cruz
-  // pedra fechando o contorno inteiro do lago
-  // A pedra fecha o contorno da AGUA e mais nada. Fechar o retangulo inteiro
-  // (linha 4 de ponta a ponta) selou o patio por cima - e era por ali que o
-  // jardim de fora se ligava ao resto do mapa. testes/mapa.js pega isso agora.
-  [[4, 23],
-    [5, 22], [5, 24],
-    [6, 21], [6, 25], [7, 21], [7, 25], [8, 21], [8, 25],
-    [9, 22], [9, 24],
-    [10, 23]]
-    .forEach(([r, c]) => set(r, c, PEDRA));
-  [[4, 20], [4, 26], [10, 20], [10, 26], [6, 19], [8, 27], [5, 27], [9, 19]]
-    .forEach(([r, c]) => set(r, c, ARBUSTO));
-  // O anel em volta do lago tem UM tile de largura. Banco e solido: posto ali,
-  // ele parte o caminho e o jardim de fora fica sem ligacao com o resto do mapa.
-  // Poltrona e assento CAMINHAVEL, entao da pra sentar olhando a agua sem
-  // fechar a volta.
-  set(6, 20, POLTRONA); set(8, 20, POLTRONA);
-  set(6, 26, POLTRONA); set(8, 26, POLTRONA);
+  // ---------- 2. o bloco principal ----------
+  linhaH(8, 2, 45, PAREDE);
+  linhaH(29, 2, 45, PAREDE);
+  linhaV(2, 8, 29, PAREDE);
+  linhaV(45, 8, 29, PAREDE);
+  // as duas colunas de salas fechadas so vao ate a linha 21: dai pra baixo o
+  // salao abre na largura inteira, como na referencia
+  linhaV(8, 8, 21, PAREDE);
+  linhaV(39, 8, 21, PAREDE);
+  linhaH(15, 3, 7, PAREDE); linhaH(22, 3, 7, PAREDE);
+  linhaH(15, 40, 44, PAREDE); linhaH(22, 40, 44, PAREDE);
 
-  // ---------- paredes externas ----------
-  linhaV(3, 12, 30, PAREDE);
-  linhaV(44, 12, 30, PAREDE);
-  linhaH(30, 3, 44, PAREDE);
+  // portas: vao de DOIS tiles, nao de um. E o que a referencia usa, e e o que
+  // impede que um vaso mal posto sele a sala.
+  PODS.forEach((c0) => { set(8, c0 + 2, LIVRE); set(8, c0 + 3, LIVRE); });
+  linhaH(8, 21, 26, LIVRE);                    // o patio desagua no hall
+  // entrada principal, embaixo da recepcao: e por ela que se chega do jardim
+  set(29, 16, LIVRE); set(29, 17, LIVRE);
+  [11, 12, 18, 19].forEach((r) => { set(r, 8, LIVRE); set(r, 39, LIVRE); });
 
-  // ---------- corredor ----------
-  // A parede do corredor na referencia (172652) e continua de estante, quadro e
-  // planta - quase nao sobra parede nua. Aqui vai a mesma ideia, alternando
-  // estante / peca de parede / verde pra nao virar um paredao de estante.
-  // As colunas 7, 15, 31 e 39 sao as PORTAS das salas da frente (o vao que o
-    // `set(11, meio, LIVRE)` abre). Movel ali sela a sala: foi o que eu fiz na
-    // primeira tentativa e deixou tres salas inalcancaveis. Ficam livres.
-    [[4, ESTANTE], [5, ESTANTE], [6, QUADRO],
-    [9, CAVALETE], [10, PLANTA], [11, TV],
-    [12, LOUSA], [13, LOUSA], [16, PLANTA_GRANDE],
-    [17, IMPRESSORA], [18, PLANTA], [19, QUADRO], [20, ESTANTE], [21, ESTANTE],
-    [22, CABIDE], [24, RELOGIO], [25, QUADRO], [26, PLANTA_GRANDE],
-    [28, ESTANTE], [29, ESTANTE], [30, QUADRO],
-    [33, IMPRESSORA], [34, PLANTA], [35, TV],
-    [36, LOUSA], [37, LOUSA], [40, PLANTA_GRANDE],
-    [41, ARMARIO], [42, ARMARIO]]
-    .forEach(([c, t]) => set(12, c, t));
+  // ---------- 3. patio: o lago do Koi Pond ----------
+  // Anel de pedra fechado em volta da agua e mais nada dentro. A volta de fora
+  // fica limpa: da pra dar a volta no lago inteiro pelos dois lados.
+  rect(4, 22, 7, 25, AGUA);
+  [[4, 22], [4, 25], [7, 22], [7, 25]].forEach(([r, c]) => set(r, c, PEDRA));
+  set(3, 22, CADEIRA_BAIXO); set(3, 24, CADEIRA_BAIXO);
+  set(8, 23, CADEIRA); set(8, 25, CADEIRA);
+  set(5, 21, CADEIRA_DIR); set(6, 26, CADEIRA_ESQ);
+  // So um arbusto, e no canto: dois deles tapavam as duas pontas do corredor
+  // de fora e o anel virava um bolso de nove celulas sem saida.
+  set(3, 26, ARBUSTO);
 
-  // ---------- recepcao e copa, no corredor ----------
-  // A referencia tem um LOBBY com balcao de recepcao (172839) e uma COPA com
-  // cafeteira e geladeira (172742). Aqui elas nao cabem como sala - o corredor
-  // tem 4 linhas -, entao viram duas ilhas dentro dele: o balcao ocupa a linha
-  // 13 e sobram as linhas 14 e 15 pra passar.
-  linhaH(13, 18, 20, BALCAO);                    // balcao da recepcao
-  set(13, 17, PLANTA_GRANDE); set(13, 21, PLANTA_GRANDE);
-  set(14, 19, CADEIRA_BAIXO);                    // quem atende, virado pro balcao
+  // ---------- 4. a parede norte do hall, coberta de movel ----------
+  // Na referencia sao 15 pecas em 24 tiles: quase nao sobra parede nua. As
+  // colunas de porta (c0+2 e c0+3 de cada pod) e o vao do patio ficam livres.
+  [[9, PLANTA_GRANDE], [10, ESTANTE], [13, ESTANTE], [14, QUADRO], [15, CACTO],
+    [16, ESTANTE], [19, GELADEIRA], [20, BALCAO],
+    [27, PLANTA], [28, ESTANTE], [29, ESTANTE], [32, RELOGIO], [33, LOUSA],
+    [34, CAVALETE], [35, ESTANTE], [38, PLANTA_GRANDE]]
+    .forEach(([c, t]) => set(8, c, t));
 
-  // As colunas 7, 15, 31 e 39 sao as portas das salas da frente. Movel na linha
-  // 13 nelas fecha a saida: quem sai da porta cai num bolso de duas celulas. A
-  // copa fica das colunas 9 a 11, longe das quatro.
-  linhaH(13, 9, 10, BALCAO);                     // bancada da copa
-  set(13, 11, GELADEIRA);
+  // ---------- 5. Copa ----------
+  // Bancada com cafeteira embutida na parede, mesa redonda no meio e uma
+  // cadeira por lado. Sem mesa de trabalho: copa e copa.
+  [[3, ARMARIO], [4, BALCAO], [5, BALCAO], [6, GELADEIRA], [7, PLANTA]]
+    .forEach(([c, t]) => set(8, c, t));
+  set(11, 5, MESA_REDONDA);
+  set(10, 5, CADEIRA_BAIXO); set(12, 5, CADEIRA);
+  set(11, 4, CADEIRA_DIR); set(11, 6, CADEIRA_ESQ);
+  set(9, 3, PLANTA_GRANDE); set(14, 7, VASO_FLORES);
 
-  // ---------- divisorias ----------
-  linhaV(14, 17, 29, PAREDE);
-  linhaV(33, 17, 29, PAREDE);
+  // ---------- 6. Sala de Reuniao (huddle de 4, coluna oeste) ----------
+  [[3, ESTANTE], [4, ESTANTE], [5, QUADRO], [6, QUADRO], [7, PLANTA]]
+    .forEach(([c, t]) => set(15, c, t));
+  set(18, 5, MESA_REDONDA);
+  set(17, 5, CADEIRA_BAIXO); set(19, 5, CADEIRA);
+  set(18, 4, CADEIRA_DIR); set(18, 6, CADEIRA_ESQ);
+  set(21, 3, ARMARIO); set(21, 7, IMPRESSORA);
 
-  // ---------- Lounge ----------
-  // Montado pela referencia (172725): estante cheia no fundo, sofa de um lado,
-  // banco de madeira do outro, mesa redonda no meio e **pufe em cada canto** -
-  // e o pufe que da a cara de lounge, mais que o sofa.
-  linhaH(17, 4, 8, ESTANTE);
-  linhaH(20, 6, 8, SOFA_CIMA);
-  linhaH(25, 6, 8, SOFA_BAIXO);
-  set(22, 7, MESA_CENTRO);
-  set(21, 5, PUFE); set(21, 9, PUFE);
-  set(24, 5, PUFE); set(24, 9, PUFE);
-  set(22, 5, TAPETE_REDONDO);                    // tapete redondo sob a mesa
-  set(18, 4, PLANTA_GRANDE); set(18, 10, PLANTA_GRANDE);
-  set(26, 4, VASO_FLORES); set(26, 10, PLANTA_GRANDE);
-  set(18, 12, PLANTA);
-  set(28, 4, PLANTA);
-  set(20, 12, QUADRO); set(24, 12, QUADRO);
-  set(27, 11, MESA);
-  set(28, 11, CADEIRA);
-  set(29, 8, POLTRONA); set(29, 6, POLTRONA);
+  // ---------- 7. Treinamento (huddle do quadro branco, coluna leste) ----------
+  [[40, LOUSA], [41, LOUSA], [42, JANELA], [43, CAVALETE], [44, ARMARIO]]
+    .forEach(([c, t]) => set(8, c, t));
+  set(11, 42, MESA_REDONDA);
+  set(10, 42, CADEIRA_BAIXO); set(12, 42, CADEIRA);
+  set(11, 41, CADEIRA_DIR); set(11, 43, CADEIRA_ESQ);
+  set(9, 44, PLANTA_GRANDE); set(14, 40, CACTO);
 
-  // ---------- Time ----------
-  // Postos individuais, com vao entre eles. Medindo a referencia
-  // (referencias/10-MESA-closeup-gavetas-e-pe.png), UMA pessoa fica numa mesa de
-  // ~4 tiles de largura. A versao anterior punha 6 pessoas numa placa de 3 tiles
-  // - meio tile por pessoa -, o que fazia o conjunto parecer uma mesa gigante de
-  // refeitorio em vez das baias do Gather.
-  [18, 24].forEach((r) => {
-    [15, 20, 25, 30].forEach((c) => {
-      // 2 de largura por 1 de profundidade: a mesa da referencia e bem mais
-      // larga do que funda. Com 2x2 ela virava um quadrado.
-      // 3 blocos de largura por 2 de profundidade (medido pelo Caio na
-      // referencia). As 2 fileiras dao a profundidade; o tampo da fileira da
-      // frente e curto porque a de tras ja entregou uma celula inteira.
-      rect(r, c, r + 1, c + 2, MESA_MONITOR);
-      set(r + 2, c + 1, CADEIRA);
+  // ---------- 8. Huddle (o do aquario, coluna leste) ----------
+  [[40, AQUARIO], [41, PLANTA], [42, ESTANTE], [43, ESTANTE], [44, LUMINARIA_PE]]
+    .forEach(([c, t]) => set(15, c, t));
+  set(18, 42, MESA_REDONDA);
+  set(17, 42, CADEIRA_BAIXO); set(19, 42, POLTRONA);
+  set(18, 41, CADEIRA_DIR); set(18, 43, CADEIRA_ESQ);
+  set(21, 44, TV);
+
+  // ---------- 9. baias de trabalho: duas ilhas de carpete ----------
+  // Mesa de 3 de largura por UMA de profundidade, cadeira na linha de baixo -
+  // essa e a medida da referencia. A profundidade 2 que a gente usava era o que
+  // fazia a baia parecer mesa de refeitorio.
+  //
+  // O tile de vao entre uma mesa e a vizinha nao e enfeite: celulasDaMesa()
+  // junta celulas de mesa que se tocam, entao mesa colada na outra viraria um
+  // movel so e uma pessoa reivindicaria as tres de uma vez.
+  [9, 21].forEach((c0) => {
+    [11, 15].forEach((r) => {
+      [0, 4, 8].forEach((d) => {
+        linhaH(r, c0 + d, c0 + d + 2, MESA_MONITOR);
+        set(r + 1, c0 + d + 1, CADEIRA);
+      });
     });
   });
-  set(17, 31, PLANTA);
-  set(29, 15, PLANTA);
-  set(22, 22, MESA_CENTRO);
-  set(21, 22, CADEIRA_BAIXO); set(23, 22, CADEIRA);
-  // parede da sala, que estava nua
-  set(17, 16, QUADRO); set(17, 21, ESTANTE); set(17, 22, ESTANTE);
-  set(17, 26, QUADRO); set(17, 30, TV);
-  set(29, 20, PLANTA_GRANDE); set(29, 26, IMPRESSORA); set(29, 31, CACTO);
-  set(22, 15, PLANTA_GRANDE); set(22, 32, PLANTA_GRANDE);
 
-  // ---------- Sala de Reuniao ----------
-  // Cadeira VERMELHA em volta da mesa grande: e o que a referencia mostra na
-  // sala de conferencia (172825), e o vermelho e o unico ponto de cor forte no
-  // andar - com cadeira escura a sala sumia no roxo do carpete.
-  linhaH(17, 37, 40, LOUSA);
-  rect(21, 37, 22, 41, MESA_REUNIAO);
-  linhaH(20, 37, 41, CADEIRA_VERMELHA_BAIXO);
-  linhaH(23, 37, 41, CADEIRA_VERMELHA);
-  set(21, 36, CADEIRA_VERMELHA_DIR); set(22, 36, CADEIRA_VERMELHA_DIR);
-  set(21, 42, CADEIRA_VERMELHA_ESQ); set(22, 42, CADEIRA_VERMELHA_ESQ);
-  set(17, 42, TV);
-  set(18, 43, PLANTA_GRANDE);
-  // Sala de huddle da referencia (172815): mesa redonda com um assento em cada
-  // lado, num canto separado da mesa grande de conferencia.
-  set(26, 42, AQUARIO); set(28, 41, LUMINARIA_PE);
-  set(27, 39, MESA_REDONDA);
-  set(26, 39, CADEIRA_BAIXO); set(28, 39, CADEIRA);
-  set(27, 38, CADEIRA_DIR); set(27, 40, CADEIRA_ESQ);
-  set(26, 36, BEBEDOURO); set(26, 43, ARMARIO);
-  set(28, 34, PLANTA);
-  set(28, 43, ARMARIO);
-  set(28, 37, TAPETE); set(28, 38, TAPETE); set(28, 39, TAPETE);
+  // ---------- 10. huddle solto no meio do salao ----------
+  set(14, 35, MESA_REDONDA);
+  set(13, 35, CADEIRA_BAIXO); set(15, 35, CADEIRA);
+  set(14, 34, CADEIRA_DIR); set(14, 36, CADEIRA_ESQ);
+  set(12, 34, PLANTA_GRANDE); set(16, 36, PLANTA);
 
-  // ---------- area verde ----------
-  [[1, 5], [2, 9], [1, 14], [2, 19], [1, 24], [2, 29], [1, 34], [2, 39], [1, 43],
-    [6, 1], [12, 1], [20, 1], [27, 1], [6, 46], [13, 46], [21, 46], [28, 46],
-    [31, 8], [31, 20], [31, 36], [1, 1], [1, 46]]
+  // ---------- 10b. o canto direito do salao ----------
+  // Um respiro de estar entre a baia e a sala da ponta, senao sobrava um
+  // quarteirao de piso liso do lado direito inteiro.
+  set(19, 35, MESA_CENTRO);
+  set(19, 34, POLTRONA); set(19, 36, POLTRONA);
+  set(18, 33, PLANTA_GRANDE); set(20, 37, PLANTA);
+  set(25, 36, MESA_REDONDA);
+  set(24, 36, CADEIRA_BAIXO); set(26, 36, CADEIRA);
+  set(25, 35, CADEIRA_DIR); set(25, 37, CADEIRA_ESQ);
+  set(23, 34, PLANTA_GRANDE); set(27, 39, VASO_FLORES);
+
+  // ---------- 11. Lounge ----------
+  // Composicao simetrica da referencia: estante e estante no fundo, sofa no
+  // meio, um par de pufe em cada lateral e dois bancos na frente.
+  linhaH(23, 4, 5, ESTANTE); linhaH(23, 9, 10, ESTANTE);
+  set(24, 4, PLANTA_GRANDE); set(24, 10, PLANTA_GRANDE);
+  // SOFA_BAIXO e o sofa inteiro (3x2): a arte sobe pra linha de cima sozinha.
+  // SOFA_CIMA nao tem desenho proprio - posto sozinho, o sofa simplesmente
+  // nao aparecia.
+  linhaH(24, 6, 8, SOFA_BAIXO);
+  set(25, 7, MESA_CENTRO);
+  set(25, 4, PUFE); set(25, 10, PUFE);
+  set(26, 4, PUFE); set(26, 10, PUFE);
+  linhaH(26, 6, 8, BANCO);
+  set(27, 4, VASO_FLORES); set(27, 10, PUFE);
+
+  // ---------- 12. Recepcao ----------
+  linhaH(24, 15, 17, BALCAO);
+  set(23, 16, CADEIRA_BAIXO);                  // quem atende, virado pro balcao
+  set(23, 12, PLANTA_GRANDE); set(23, 19, CABIDE);
+  set(27, 13, POLTRONA); set(27, 17, POLTRONA);
+  set(26, 19, PLANTA_GRANDE);
+
+  // ---------- 13. mesa de conferencia, solta no salao ----------
+  // Na referencia ela nao mora numa sala: fica no meio do tijolinho, com dez
+  // poltronas vermelhas em volta. O vermelho e o unico ponto de cor forte do
+  // andar.
+  rect(25, 24, 26, 26, MESA_REUNIAO);
+  linhaH(24, 24, 26, CADEIRA_VERMELHA_BAIXO);
+  linhaH(27, 24, 26, CADEIRA_VERMELHA);
+  set(25, 23, CADEIRA_VERMELHA_DIR); set(26, 23, CADEIRA_VERMELHA_DIR);
+  set(25, 27, CADEIRA_VERMELHA_ESQ); set(26, 27, CADEIRA_VERMELHA_ESQ);
+  set(23, 21, PLANTA_GRANDE); set(23, 29, PLANTA_GRANDE);
+
+  // ---------- 14. a parede sul, tambem coberta ----------
+  [[4, PLANTA_GRANDE], [6, TV], [8, QUADRO], [9, QUADRO], [10, QUADRO],
+    [12, CABIDE], [14, ESTANTE], [15, ESTANTE], [17, LOUSA], [19, PLANTA],
+    [21, ARMARIO], [22, ARMARIO], [24, IMPRESSORA], [26, BEBEDOURO],
+    [28, PLANTA_GRANDE], [30, TV], [32, ESTANTE], [33, ESTANTE], [35, QUADRO],
+    [37, RELOGIO], [39, PLANTA], [41, ARMARIO], [42, ARMARIO], [44, CACTO]]
+    .forEach(([c, t]) => set(28, c, t));
+
+  // ---------- 15. o verde em volta do predio ----------
+  [[0, 4], [1, 12], [0, 20], [1, 28], [0, 36], [1, 44], [0, 0], [1, 47],
+    [4, 0], [11, 1], [18, 0], [25, 1], [4, 47], [11, 46], [18, 47], [25, 46],
+    [31, 6], [30, 16], [31, 26], [30, 36], [31, 43]]
     .forEach(([r, c]) => set(r, c, ARVORE));
+  [[2, 3], [2, 45], [6, 46], [20, 46], [6, 1], [20, 1], [30, 10], [30, 30]]
+    .forEach(([r, c]) => set(r, c, ARBUSTO));
 
   return tiles;
 }
@@ -454,11 +456,11 @@ function isWalkable(x, y) {
   return true;
 }
 
-// No corredor, em frente ao patio
+// No salao, logo abaixo do vao do patio
 const SPAWN_POINTS = [
-  { x: 21.5 * TILE, y: 13.5 * TILE },
-  { x: 22.5 * TILE, y: 13.5 * TILE },
-  { x: 21.5 * TILE, y: 14.5 * TILE },
+  { x: 22.5 * TILE, y: 9.5 * TILE },
+  { x: 23.5 * TILE, y: 9.5 * TILE },
+  { x: 24.5 * TILE, y: 9.5 * TILE },
 ];
 
 function getSpawnPoint() {

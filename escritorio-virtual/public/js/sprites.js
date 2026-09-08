@@ -79,16 +79,19 @@
     SOFA_CIMA:  { vazio: true },
 
     // --- mesas --------------------------------------------------------------
-    // Bancada comprida que emenda: 3 tiles de largura, tampo em cima e frente
-    // embaixo. Vale pras quatro direcoes porque a camera e sempre a mesma.
-    MESA:         { f: 'furniture/desk-office.png', c: 2, r: 2, w: 2, h: 2 },
-    MESA_BAIXO:   { f: 'furniture/desk-office.png', c: 2, r: 2, w: 2, h: 2 },
-    MESA_ESQ:     { f: 'furniture/desk-office.png', c: 2, r: 2, w: 2, h: 2 },
-    MESA_DIR:     { f: 'furniture/desk-office.png', c: 2, r: 2, w: 2, h: 2 },
-    MESA_MONITOR:       { f: 'furniture/desk-office.png', c: 2, r: 2, w: 2, h: 2 },
-    MESA_MONITOR_BAIXO: { f: 'furniture/desk-office.png', c: 2, r: 2, w: 2, h: 2 },
-    MESA_MONITOR_ESQ:   { f: 'furniture/desk-office.png', c: 2, r: 2, w: 2, h: 2 },
-    MESA_MONITOR_DIR:   { f: 'furniture/desk-office.png', c: 2, r: 2, w: 2, h: 2 },
+    // A mesa do mapa e 3 de largura por 1 de profundidade, e a arte da mesa e
+    // 3 x 2: o tampo sobe pra fora da celula e a frente com as pernas fica na
+    // celula. Por isso 'alto' - so a celula da esquerda desenha, e ela pinta a
+    // mesa inteira. Com a arte de 2 tiles que tinha aqui, a mesa de 3 saia
+    // repetida no meio, feito duas mesas emendadas torto.
+    MESA:         { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
+    MESA_BAIXO:   { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
+    MESA_ESQ:     { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
+    MESA_DIR:     { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
+    MESA_MONITOR:       { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
+    MESA_MONITOR_BAIXO: { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
+    MESA_MONITOR_ESQ:   { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
+    MESA_MONITOR_DIR:   { f: 'furniture/table-card.png', c: 0, r: 4, w: 3, h: 2, modo: 'alto' },
 
     MESA_CENTRO: { f: 'furniture/end-table.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
 
@@ -128,7 +131,9 @@
   // (borda, quina, transicao pra terra), que e outro problema — o desenho a
   // mao continua ate isso ser resolvido.
   const PISOS = {
-    tijolo:        { f: 'structure-floor/wood-floor-a.png', c: 3, r: 1, w: 1, h: 2 },
+    // O salao da referencia e tijolinho creme em fiada alternada, nao tabua.
+    // A folha `tile-a` e a que chega mais perto: creme claro e de junta miuda.
+    tijolo:        { f: 'structure-floor/tile-a.png', c: 0, r: 0, w: 1, h: 1 },
     ladrilho:      { f: 'structure-floor/tile-c.png', c: 0, r: 0, w: 2, h: 2 },
     carpete_roxo:  { f: 'structure-floor/geometric-carpet-c.png', c: 3, r: 0, w: 1, h: 1 },
     carpete_azul:  { f: 'structure-floor/geometric-carpet-c.png', c: 4, r: 0, w: 1, h: 1 },

@@ -31,23 +31,23 @@ function conferir(nome, real, esperado) {
   bate ? ok++ : falhou++;
 }
 
-// A Ana pega a mesa clicando no canto de baixo a direita dela
-conferir('Ana pega a mesa clicando em 17,19', mesas.alternar(17, 19, ANA), true);
-conferir('  a mesa dela e a 15,18 (canto de cima a esquerda)', mesas.mesaDaPessoa(ANA), '15,18');
-conferir('  e a mesa tem as 6 celulas', mesas.paraEnvio()[0].celulas.length, 6);
+// A Ana pega a mesa clicando na celula da direita dela
+conferir('Ana pega a mesa clicando em 11,11', mesas.alternar(11, 11, ANA), true);
+conferir('  a mesa dela e a 9,11 (celula da esquerda)', mesas.mesaDaPessoa(ANA), '9,11');
+conferir('  e a mesa tem as 3 celulas', mesas.paraEnvio()[0].celulas.length, 3);
 
 // O Bruno tenta pegar a mesma mesa, por outra celula
-conferir('Bruno nao rouba a mesa da Ana (clicando em 15,18)', mesas.alternar(15, 18, BRUNO), false);
-conferir('  e a mesa continua da Ana', mesas.mesaDaPessoa(ANA), '15,18');
+conferir('Bruno nao rouba a mesa da Ana (clicando em 9,11)', mesas.alternar(9, 11, BRUNO), false);
+conferir('  e a mesa continua da Ana', mesas.mesaDaPessoa(ANA), '9,11');
 conferir('  Bruno segue sem mesa', mesas.mesaDaPessoa(BRUNO), null);
 
 // O Bruno pega a mesa do lado
-conferir('Bruno pega a mesa vizinha', mesas.alternar(21, 19, BRUNO), true);
+conferir('Bruno pega a mesa vizinha', mesas.alternar(13, 11, BRUNO), true);
 conferir('  sao duas mesas ocupadas', mesas.paraEnvio().length, 2);
 
 // A Ana troca de mesa: a antiga tem que ficar livre
-conferir('Ana troca pra uma terceira mesa', mesas.alternar(26, 18, ANA), true);
-conferir('  a mesa nova e dela', mesas.mesaDaPessoa(ANA), '25,18');
+conferir('Ana troca pra uma terceira mesa', mesas.alternar(26, 15, ANA), true);
+conferir('  a mesa nova e dela', mesas.mesaDaPessoa(ANA), '25,15');
 conferir('  continua com 2 ocupadas (nao acumulou)', mesas.paraEnvio().length, 2);
 
 // Largar pelo perfil
@@ -56,63 +56,63 @@ conferir('  ficou so a do Bruno', mesas.paraEnvio().length, 1);
 conferir('  largar de novo nao faz nada', mesas.largarDe(ANA), false);
 
 // Nao e mesa
-conferir('clicar no chao nao pega nada', mesas.alternar(21, 14, ANA), false);
+conferir('clicar no chao nao pega nada', mesas.alternar(12, 13, ANA), false);
 
 // ---- itens em cima da mesa (posicao livre) ----
 const CANECA = 5;
 const LIVROS = 10;
-mesas.alternar(17, 19, ANA); // Ana volta pra mesa 15,18
+mesas.alternar(11, 11, ANA); // Ana volta pra mesa 9,11
 const itensDa = (chave) => mesas.paraEnvio().find((m) => m.chave === chave).itens;
 
-conferir('Ana poe caneca na propria mesa', mesas.porItem(15.3, 18.4, CANECA, ANA), true);
-conferir('  e outra na MESMA celula, noutro ponto', mesas.porItem(15.8, 18.7, CANECA, ANA), true);
-conferir('  as duas ficam (nao e uma por celula)', itensDa('15,18').length, 2);
-const primeiro = itensDa('15,18')[0];
-conferir('  e guardam a posicao com fracao', [primeiro.o, primeiro.x, primeiro.y], [CANECA, 15.3, 18.4]);
-conferir('Ana poe livros noutra celula da mesma mesa', mesas.porItem(17.2, 19.1, LIVROS, ANA), true);
+conferir('Ana poe caneca na propria mesa', mesas.porItem(9.3, 11.2, CANECA, ANA), true);
+conferir('  e outra na MESMA celula, noutro ponto', mesas.porItem(9.8, 11.35, CANECA, ANA), true);
+conferir('  as duas ficam (nao e uma por celula)', itensDa('9,11').length, 2);
+const primeiro = itensDa('9,11')[0];
+conferir('  e guardam a posicao com fracao', [primeiro.o, primeiro.x, primeiro.y], [CANECA, 9.3, 11.2]);
+conferir('Ana poe livros noutra celula da mesma mesa', mesas.porItem(11.2, 11.1, LIVROS, ANA), true);
 
-conferir('Bruno NAO poe nada na mesa da Ana', mesas.porItem(16.5, 18.5, CANECA, BRUNO), false);
-conferir('Ana NAO poe nada na mesa do Bruno', mesas.porItem(21.5, 18.5, CANECA, ANA), false);
-conferir('ninguem poe item no chao', mesas.porItem(21.5, 14.5, CANECA, ANA), false);
+conferir('Bruno NAO poe nada na mesa da Ana', mesas.porItem(10.5, 11.3, CANECA, BRUNO), false);
+conferir('Ana NAO poe nada na mesa do Bruno', mesas.porItem(13.5, 11.3, CANECA, ANA), false);
+conferir('ninguem poe item no chao', mesas.porItem(12.5, 13.5, CANECA, ANA), false);
 
 // o id que ainda nao existe - a armadilha do OBJETO_MAX
 const map = require(path.join(RAIZ, 'server', 'map.js'));
 conferir('item acima do OBJETO_MAX (' + map.OBJETO_MAX + ') e recusado',
-  mesas.porItem(16.5, 19.5, map.OBJETO_MAX + 1, ANA), false);
+  mesas.porItem(10.5, 11.4, map.OBJETO_MAX + 1, ANA), false);
 
 // tirar e mover apontam pelo ID, nao por "o mais perto" - com duas canecas
 // encostadas, chute nao serve
-conferir('objeto 0 nao serve mais de borracha', mesas.porItem(15.85, 18.75, 0, ANA), false);
-const alvoId = itensDa('15,18')[1].id;
+conferir('objeto 0 nao serve mais de borracha', mesas.porItem(9.85, 11.4, 0, ANA), false);
+const alvoId = itensDa('9,11')[1].id;
 conferir('cada coisa tem id proprio', typeof alvoId === 'string' && alvoId.length > 3, true);
-conferir('mover leva a coisa certa pro ponto novo', mesas.moverItem(alvoId, 16.9, 19.2, ANA), true);
-conferir('  e ela foi mesmo', itensDa('15,18').find((i) => i.id === alvoId).x, 16.9);
-conferir('  a outra nao saiu do lugar', itensDa('15,18')[0].x, 15.3);
-conferir('Bruno nao move coisa da mesa da Ana', mesas.moverItem(alvoId, 16, 19, BRUNO), false);
-conferir('nao da pra mover pra fora da mesa', mesas.moverItem(alvoId, 21.5, 18.5, ANA), false);
+conferir('mover leva a coisa certa pro ponto novo', mesas.moverItem(alvoId, 10.9, 11.25, ANA), true);
+conferir('  e ela foi mesmo', itensDa('9,11').find((i) => i.id === alvoId).x, 10.9);
+conferir('  a outra nao saiu do lugar', itensDa('9,11')[0].x, 9.3);
+conferir('Bruno nao move coisa da mesa da Ana', mesas.moverItem(alvoId, 10, 11, BRUNO), false);
+conferir('nao da pra mover pra fora da mesa', mesas.moverItem(alvoId, 13.5, 11.3, ANA), false);
 conferir('Bruno nao tira coisa da mesa da Ana', mesas.tirarItem(alvoId, BRUNO), false);
 conferir('tirar pelo id funciona', mesas.tirarItem(alvoId, ANA), true);
-conferir('  e tirou a certa (sobrou a de 15.3)', itensDa('15,18')[0].x, 15.3);
+conferir('  e tirou a certa (sobrou a de 9.3)', itensDa('9,11')[0].x, 9.3);
 conferir('tirar id que nao existe nao faz nada', mesas.tirarItem('naoexiste', ANA), false);
 
 // teto por mesa
 let postos = 0;
-for (let i = 0; i < 30; i++) if (mesas.porItem(15.1 + (i % 5) * 0.1, 18.1, CANECA, ANA)) postos++;
-conferir('a mesa nao aceita item infinito', itensDa('15,18').length <= 14, true);
+for (let i = 0; i < 30; i++) if (mesas.porItem(9.1 + (i % 5) * 0.1, 11.1, CANECA, ANA)) postos++;
+conferir('a mesa nao aceita item infinito', itensDa('9,11').length <= 14, true);
 
 conferir('largar a mesa leva as coisas junto', mesas.largarDe(ANA), true);
-mesas.alternar(17, 19, ANA);
-conferir('  e a mesa volta vazia', itensDa('15,18').length, 0);
+mesas.alternar(11, 11, ANA);
+conferir('  e a mesa volta vazia', itensDa('9,11').length, 0);
 
-mesas.porItem(15.5, 18.5, CANECA, ANA);
-conferir('trocar de mesa tambem larga as coisas', mesas.alternar(26, 18, ANA), true);
+mesas.porItem(9.5, 11.3, CANECA, ANA);
+conferir('trocar de mesa tambem larga as coisas', mesas.alternar(26, 15, ANA), true);
 conferir('  a mesa antiga nao esta mais na lista',
-  mesas.paraEnvio().some((m) => m.chave === '15,18'), false);
+  mesas.paraEnvio().some((m) => m.chave === '9,11'), false);
 mesas.largarDe(ANA);
 
 // Sobrevive ao restart: le o arquivo de novo num processo limpo
 const salvo = JSON.parse(fs.readFileSync(ARQUIVO, 'utf8'));
-conferir('o disco guardou a mesa do Bruno', salvo.mesas, [{ chave: '20,18', uid: BRUNO, itens: [] }]);
+conferir('o disco guardou a mesa do Bruno', salvo.mesas, [{ chave: '13,11', uid: BRUNO, itens: [] }]);
 
 fs.writeFileSync(ARQUIVO, original === null ? JSON.stringify({ mesas: [] }, null, 2) : original);
 console.log('\n  ' + ok + ' passaram, ' + falhou + ' falharam');
