@@ -21,26 +21,23 @@ Estas sao as folhas que o `public/js/sprites.js` realmente desenha. Todas sob
 
 | Arquivo local | Peca no pacote | Autores |
 |---|---|---|
+| `furniture-seating/chair-dining-a.png` | Chair, Dining (all) | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) |
 | `furniture-seating/chair-office.png` | Chair, Office | Eliza Wyatt (DeathsDarling) |
-| `furniture-seating/chair-sofa-a.png` | Chair, Sofa (all) | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt |
-| `furniture-seating/ottoman-small-a.png` | Ottoman (all) | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt |
+| `furniture-seating/chair-sofa-a.png` | Chair, Sofa (all) | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) |
+| `furniture-seating/ottoman-small-a.png` | Ottoman (all) | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) |
 | `furniture-seating/sofa-casual-a.png` | Sofa Set, Casual | Eliza Wyatt (DeathsDarling) |
 | `furniture/cabinet.png` | Cabinet | Lanea Zimmerman (Sharm), Eliza Wyatt |
-| `furniture/copy-machine.png` | Copy Machine | Eliza Wyatt (DeathsDarling) |
-| `furniture/countertop.png` | Countertop | Lanea Zimmerman (Sharm), Eliza Wyatt |
-| `furniture/desk-office.png` | Desk, Office | Lanea Zimmerman (Sharm), Eliza Wyatt |
 | `furniture/end-table.png` | End Table | Eliza Wyatt (DeathsDarling) |
 | `furniture/fridge.png` | Fridge | Eliza Wyatt (DeathsDarling) |
-| `furniture/lighting-floor.png` | Lighting, Floor | Lanea Zimmerman (Sharm), Eliza Wyatt |
+| `furniture/lighting-floor.png` | Lighting, Floor | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
 | `furniture/planter.png` | Planter | Lanea Zimmerman (Sharm) |
 | `furniture/water-cooler.png` | Water Cooler | Eliza Wyatt (DeathsDarling) |
-| `small-items/flowers.png` | Flowers | Lanea Zimmerman (Sharm), Eliza Wyatt |
-| `structure-floor/geometric-carpet-c.png` | Geometric Carpet C | Eliza Wyatt (DeathsDarling) |
+| `small-items/flowers.png` | Flowers | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
+| `structure-floor/tile-a.png` | Tile A | Eliza Wyatt (DeathsDarling) |
 | `structure-floor/tile-c.png` | Tile C | Eliza Wyatt (DeathsDarling) |
-| `structure-floor/wood-floor-a.png` | Wood Floor A | Lanea Zimmerman (Sharm), Eliza Wyatt |
-| `terrain/plants-summer.png` | Plants (all seasons) | Lanea Zimmerman (Sharm), Eliza Wyatt |
-| `terrain/rocks-grasslands.png` | Rocks, Grasslands | Lanea Zimmerman (Sharm), Eliza Wyatt |
-| `terrain/trees-summer.png` | Trees (all seasons) | Lanea Zimmerman (Sharm), Eliza Wyatt |
+| `terrain/plants-summer.png` | Plants (all seasons) | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling), Hyptosis |
+| `terrain/rocks-grasslands.png` | Rocks | Eliza Wyatt (DeathsDarling) |
+| `terrain/trees-summer.png` | Trees (all seasons) | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
 
 Varias pecas vem de conjuntos LPC mais antigos, que o proprio pacote credita:
 
@@ -56,7 +53,7 @@ A pasta tem o pacote inteiro (**320 PNGs**), nao so o que ja entrou:
 
 | Pasta | Folhas | Serve pra |
 |---|---|---|
-| `furniture/`, `furniture-seating/`, `furniture-beds/`, `furniture-rugs/` | 92 | mesas, 7 modelos de sofa, camas, tapetes |
+opy-machine.png`/d
 | `small-items/`, `small-items-food/`, `small-items-fabric/` | 56 | notebook, cafeteira, papel, telefone, comida |
 | `wall-items/` | 13 | quadros (4 estilos), posteres, cortinas, luminaria de parede |
 | `structure-walls/`, `structure-wall-borders/` | 28 | paredes e rodateto (**ver ressalva abaixo**) |

@@ -185,6 +185,9 @@
         <button id="btn-trello" class="trilho-btn" type="button" title="Quadro do Trello">
           <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6.5" y="6.5" width="4.5" height="9" rx="1" fill="currentColor"/><rect x="13" y="6.5" width="4.5" height="5.5" rx="1" fill="currentColor"/></svg>
         </button>
+        <button id="btn-estante" class="trilho-btn" type="button" title="Estante: o acervo de livros da sede">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9h17M3.5 15h17" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 5.5v3M9 5.5v3M6.5 11.5v3M9 11.5v3M6.5 17.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
         <button id="btn-decorar" class="trilho-btn oculto" type="button" title="Decorar o escritorio">
           <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 20l3.5-1 9-9a2.1 2.1 0 0 0-3-3l-9 9L4 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.5 5.5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
@@ -410,6 +413,38 @@
         <div id="trello-colunas" class="trello-colunas"></div>
       </aside>
 
+      <aside id="painel-estante" class="painel-estante oculto">
+        <div class="estante-topo">
+          <div class="estante-titulo-bloco">
+            <h2>Estante</h2>
+            <span id="estante-conta" class="estante-conta"></span>
+          </div>
+          <a id="estante-pasta-link" class="estante-pasta-link oculto" target="_blank" rel="noopener noreferrer">Abrir a pasta no Drive</a>
+          <button id="btn-fechar-estante" class="btn-icone-pequeno" type="button" title="Fechar">&#10005;</button>
+        </div>
+        <p class="estante-nota">O acervo da ADM, aberto de onde voce estiver. Encostar numa estante do mapa abre esta lista.</p>
+        <input id="estante-busca" class="estante-busca" type="search" placeholder="Buscar por titulo, autor ou tema" />
+        <div id="estante-aviso" class="estante-aviso oculto"></div>
+        <div id="estante-lista" class="estante-lista"></div>
+        <form id="estante-form" class="estante-form">
+          <div class="estante-form-titulo">Por um livro na estante</div>
+          <input id="estante-titulo" type="text" placeholder="Titulo" maxlength="120" required />
+          <input id="estante-url" type="url" placeholder="Link (Drive, PDF, site)" maxlength="600" required />
+          <div class="estante-form-linha">
+            <input id="estante-autor" type="text" placeholder="Autor" maxlength="80" />
+            <input id="estante-tag" type="text" placeholder="Tema" maxlength="24" />
+          </div>
+          <button class="btn btn-primario btn-pequeno" type="submit">Adicionar</button>
+        </form>
+        <div id="estante-pasta-bloco" class="estante-pasta-bloco oculto">
+          <div class="estante-form-titulo">Pasta do Drive da sede</div>
+          <div class="estante-form-linha">
+            <input id="estante-pasta-campo" type="url" placeholder="https://drive.google.com/..." maxlength="600" />
+            <button id="estante-pasta-salvar" class="btn btn-secundario btn-pequeno" type="button">Salvar</button>
+          </div>
+        </div>
+      </aside>
+
       <aside id="painel-chat" class="painel-chat oculto">
         <div class="chat-coluna-conversas">
           <div class="chat-coluna-topo">
@@ -473,6 +508,7 @@
   <script src="js/chat.js"></script>
   <script src="js/calendario.js"></script>
   <script src="js/trello.js"></script>
+  <script src="js/estante.js"></script>
   <script src="js/decorador.js"></script>
   <script src="js/cartaomesa.js"></script>
   <script src="js/itemmesa.js"></script>

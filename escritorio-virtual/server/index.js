@@ -10,6 +10,7 @@ const auth = require('./auth');
 const google = require('./google');
 const agenda = require('./agenda');
 const trello = require('./trello');
+const estante = require('./estante');
 const mesasStore = require('./mesas');
 
 const PORT = process.env.PORT || 3500;
@@ -523,8 +524,50 @@ app.post('/api/google/desconectar', sessao.exigirLogin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- a estante: o acervo de livros da sede ----
+// Chegar perto de uma estante no mapa abre isto. O acervo e um so pra sede
+// inteira - ver server/estante.js.
+app.get('/api/estante', sessao.exigirLogin, (req, res) => {
+  res.json(estante.ler());
+});
+
+app.post('/api/estante/livro', sessao.exigirLogin, (req, res) => {
+  const r = estante.adicionar(req.body, req.usuario);
+  if (r.erro) return res.status(400).json({ erro: r.erro });
+  res.json(estante.ler());
+});
+
+app.delete('/api/estante/livro/:id', sessao.exigirLogin, (req, res) => {
+  const r = estante.remover(req.params.id, req.usuario);
+  // 403 e nao 400: a diferenca entre "nao existe" e "nao e seu" importa pra
+  // quem le o erro na tela.
+  if (r.erro) return res.status(r.erro.includes("pode tirar") ? 403 : 404).json({ erro: r.erro });
+  res.json(estante.ler());
+});
+
+// A pasta do Drive e uma so pra sede: quem muda e a diretoria.
+app.put('/api/estante/pasta', sessao.exigirLogin, (req, res) => {
+  if (!req.usuario.isAdmin) return res.status(403).json({ erro: 'So a diretoria muda a pasta da estante.' });
+  const r = estante.definirPasta(req.body && req.body.url);
+  if (r.erro) return res.status(400).json({ erro: r.erro });
+  res.json(estante.ler());
+});
+
 // Rotas de conta antes do estatico: /api/... nunca cai no index.html.
 app.use('/api', auth.criarRotas(sanitizeAppearance));
+// Em desenvolvimento o navegador NAO guarda nada em cache.
+//
+// Isto existe porque custou tempo de verdade: depois de mexer no game.js, a
+// pagina continuava mostrando o desenho velho, e a conclusao facil era "a
+// correcao nao funcionou" quando o problema era o arquivo antigo em cache. Em
+// producao o cache continua valendo - so o modo de desenvolvimento abre mao
+// dele, que e onde o arquivo muda a cada minuto.
+if (sessao.SEM_LOGIN) {
+  app.use((req, res, proximo) => {
+    res.set('Cache-Control', 'no-store, must-revalidate');
+    proximo();
+  });
+}
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // SEM_LOGIN=1: entra direto numa conta de desenvolvimento, sem a tela de login.

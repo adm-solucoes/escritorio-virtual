@@ -331,6 +331,25 @@
         if (tiles[r][c] === OfficeMap.ARVORE) drawObstacleTile(mctx, c, r, OfficeMap.ARVORE, TILE, tiles);
       }
     }
+
+    // A FACE DO MURO SEMPRE POR CIMA - a regra, aplicada de uma vez no fim.
+    //
+    // Nao basta tratar o movel que ocupa a celula do muro: peca alta plantada na
+    // fileira de BAIXO tambem sobe e cobre o muro, e a arvore e a planta grande
+    // fazem isso de proposito (`atravessa`). Depois que tudo ja foi desenhado,
+    // esta passada devolve a faixa de cima de todo muro deitado. E o que garante
+    // que a linha da parede nunca some, venha o que vier na frente dela.
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const deitado = ehParede(tiles[r][c])
+          && !ehParede(tiles[r - 1] && tiles[r - 1][c])
+          && !ehParede(tiles[r + 1] && tiles[r + 1][c]);
+        if (deitado || movelNoMuro(tiles, r, c)) {
+          faceDoMuro(mctx, c * TILE, r * TILE, bordasMuro(tiles, r, c));
+        }
+      }
+    }
+
     // camada de cima por ultimo: o que esta apoiado fica visivel sobre o movel
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -362,7 +381,11 @@
     tijolo_quente: { base: '#e6d3b4', junta: '#d3bd9a', luz: '#eeddc2', sombra: '#dcc9a6' },
     cinza: { base: '#d2d6dd', junta: '#adb4c0', luz: '#e4e7ec', sombra: '#c2c7d1' },
     ladrilho: { base: '#e4e7ee', junta: '#b6bece', luz: '#f2f4f8', sombra: '#d3d8e3' },
-    carpete_roxo: { base: '#8b7fd0', claro: '#a294de' },
+    // Carpete de escritorio, nao tabuleiro: os dois tons da placa ficam PERTO um
+    // do outro. O par antigo (#8b7fd0/#a294de) encaixava na paleta como
+    // #838ad1/#a4b0dc - dois lilases bem diferentes, e de longe o chao virava
+    // xadrez. Estes ja sao cor de paleta, entao passam inteiros.
+    carpete_roxo: { base: '#655789', claro: '#7c6ea6' },
     carpete_azul: { base: '#5d6577', claro: '#6e7789' },
     grama: { base: '#8ecb7c', claro: 'rgba(58,124,58,0.28)' },
   };
@@ -513,6 +536,109 @@
   // parede (senao aparece um traco entre a parede e o janelao ao lado).
   function ehParede(t) {
     return t === OfficeMap.PAREDE || t === OfficeMap.JANELA;
+  }
+
+  // Movel que o MAPA colocou na linha do muro. Varrendo pros lados na mesma
+  // linha, chega em parede dos dois lados sem cruzar chao livre.
+  //
+  // Isto existe porque o mapa usa celulas do muro pra encostar estante,
+  // geladeira e balcao - e como o tile do movel SUBSTITUI o da parede, o muro
+  // ficava com um vao ali. A copa, por exemplo, tinha cinco moveis seguidos no
+  // lugar da parede norte, e dava pra ver a grama do lado de fora.
+  // Movel que o MAPA colocou na linha do muro. Duas condicoes, e as duas
+  // importam:
+  //
+  //   1. a celula SEPARA dois lugares - o que tem em cima nao e a mesma sala do
+  //      que tem embaixo. Movel no meio de uma sala tem a mesma sala dos dois
+  //      lados, e nao entra na regra;
+  //   2. andando pros lados por celulas solidas, chega num muro DEITADO (parede
+  //      que nao tem parede em cima nem embaixo, ou seja: muro na horizontal,
+  //      que e o que tem face visivel).
+  //
+  // Basta chegar num muro de UM lado. A primeira versao exigia dos dois, e por
+  // isso a estante no fim de um trecho de parede - com chao livre do outro lado
+  // - ficava de fora da regra e continuava apagando o muro.
+  function movelNoMuro(tiles, r, c) {
+    const M = OfficeMap;
+    const t = tiles[r] && tiles[r][c];
+    if (!t || ehParede(t)) return false;
+    if (M.isTileWalkable && M.isTileWalkable(c, r)) return false;
+
+    const acima = M.getRoomAtTile(c, r - 1);
+    const abaixo = M.getRoomAtTile(c, r + 1);
+    if ((acima ? acima.id : null) === (abaixo ? abaixo.id : null)) return false;
+
+    const muroDeitado = (k) => ehParede(tiles[r] && tiles[r][k])
+      && !ehParede(tiles[r - 1] && tiles[r - 1][k])
+      && !ehParede(tiles[r + 1] && tiles[r + 1][k]);
+
+    for (const passo of [-1, 1]) {
+      for (let k = c + passo, n = 0; n < 12; k += passo, n++) {
+        const v = tiles[r] && tiles[r][k];
+        if (v === undefined) break;
+        if (muroDeitado(k)) return true;
+        if (v === M.LIVRE) break;
+        if (M.isTileWalkable && M.isTileWalkable(k, r)) break;
+      }
+    }
+    return false;
+  }
+
+
+  // "E muro pra efeito de desenho?" - parede de verdade ou movel encostado na
+  // linha dela. Sem contar o movel, o muro saia com risco de borda de cada lado
+  // da estante, como se cada pedaco fosse um muro solto.
+  function ehMuroVisual(tiles, r, c) {
+    if (!tiles[r]) return false;
+    return ehParede(tiles[r][c]) || movelNoMuro(tiles, r, c);
+  }
+
+  function bordasMuro(tiles, r, c) {
+    return {
+      cima: !ehMuroVisual(tiles, r - 1, c),
+      baixo: !ehMuroVisual(tiles, r + 1, c),
+      esq: !ehMuroVisual(tiles, r, c - 1),
+      dir: !ehMuroVisual(tiles, r, c + 1),
+    };
+  }
+
+  // O desenho do muro em si, separado pra poder sair tambem POR BAIXO do movel
+  // que ocupa a celula dele.
+  function pintarMuro(ctx, x, y, b) {
+    q(ctx, x, y, 0, 0, 128, 128, '#4a5162');
+    if (b.cima) {
+      q(ctx, x, y, 0, 0, 128, 30, '#5b6376');
+      q(ctx, x, y, 0, 0, 128, 3, '#6f7889'); // luz na quina
+      q(ctx, x, y, 0, 30, 128, 2, '#3c4354'); // sombra sob a face de cima
+    }
+    if (b.baixo) {
+      q(ctx, x, y, 0, 104, 128, 24, '#343a48'); // rodape
+      q(ctx, x, y, 0, 104, 128, 2, '#59617a'); // fio de luz
+    }
+    // emenda de painel: vertical no muro deitado, horizontal no muro em pe
+    if (b.cima || b.baixo) q(ctx, x, y, 63, 34, 2, 68, 'rgba(38,43,56,0.35)');
+    else q(ctx, x, y, 0, 63, 128, 2, 'rgba(38,43,56,0.30)');
+    if (b.cima) q(ctx, x, y, 0, 0, 128, 2, TRACO);
+    if (b.baixo) q(ctx, x, y, 0, 126, 128, 2, TRACO);
+    if (b.esq) q(ctx, x, y, 0, 0, 2, 128, TRACO);
+    if (b.dir) q(ctx, x, y, 126, 0, 2, 128, TRACO);
+  }
+
+  // So a face do muro: a faixa clara de cima e o contorno. E o que garante que a
+  // linha do muro continue visivel POR CIMA de qualquer movel encostado nela.
+  //
+  // Sem isto nao adianta pintar o muro por baixo: estante, geladeira e balcao
+  // sao opacos e ocupam a celula inteira, entao tapavam o muro do mesmo jeito e
+  // o corredor continuava parecendo aberto.
+  function faceDoMuro(ctx, x, y, b) {
+    if (b.cima) {
+      q(ctx, x, y, 0, 0, 128, 30, '#5b6376');
+      q(ctx, x, y, 0, 0, 128, 3, '#6f7889');
+      q(ctx, x, y, 0, 30, 128, 2, '#3c4354');
+      q(ctx, x, y, 0, 0, 128, 2, TRACO);
+    }
+    if (b.esq) q(ctx, x, y, 0, 0, 2, 128, TRACO);
+    if (b.dir) q(ctx, x, y, 126, 0, 2, 128, TRACO);
   }
 
   function bordasParede(tiles, r, c) {
@@ -962,41 +1088,50 @@
     };
   }
 
+  // Trava de re-entrada da regra do muro: o desenho do movel chama esta mesma
+  // funcao de novo, e sem isto ela cairia na regra outra vez, pra sempre.
+  let dentroDaRegraDoMuro = false;
+
   function drawObstacleTile(ctx, c, r, type, TILE, tiles) {
     const x = c * TILE, y = r * TILE;
     const M = OfficeMap;
     const meio = TILE / 2;
 
+    if (!tiles) tiles = M.tiles;
+
+    // REGRA DO MURO: movel encostado na linha do muro nunca apaga o muro.
+    //
+    // O mapa encosta estante, geladeira e balcao ESCREVENDO nas celulas do muro
+    // - o tile do movel substitui o da parede, e o muro ficava com um vao ali.
+    // Pintar o muro so por baixo nao resolve: o movel e opaco e ocupa a celula
+    // toda. Entao vai em sanduiche: muro embaixo, movel no meio, e a FACE do
+    // muro por cima. O movel encosta no muro em vez de virar o muro.
+    if (type !== M.PAREDE && !dentroDaRegraDoMuro && movelNoMuro(tiles, r, c)) {
+      const bm = bordasMuro(tiles, r, c);
+      pintarMuro(ctx, x, y, bm);
+      dentroDaRegraDoMuro = true;                       // trava a re-entrada
+      try {
+        drawObstacleTile(ctx, c, r, type, TILE, tiles); // o movel
+      } finally {
+        dentroDaRegraDoMuro = false;
+      }
+      faceDoMuro(ctx, x, y, bm);
+      return;
+    }
+
     // Arte do pacote LPC primeiro; o desenho a mao abaixo e o reserva. Enquanto
     // a folha nao chegou (ou a peca nao tem sprite) isto devolve false e o mapa
     // sai desenhado como antes, em vez de sair com buraco.
     // Creditos: public/assets/lpc-moveis/CREDITS.md
-    if (window.Sprites && Sprites.desenhar(ctx, c, r, type, TILE, tiles || (tiles = M.tiles))) return;
+    if (window.Sprites
+        && Sprites.desenhar(ctx, c, r, type, TILE, tiles, dentroDaRegraDoMuro)) return;
 
     if (type === M.PAREDE) {
       // parede cinza-azulada escura, como as divisorias do Gather.
-      // O contorno so sai na borda do bloco de parede: desenhar em todo tile
-      // riscava uma grade por cima do muro inteiro.
-      const b = bordasParede(tiles, r, c);
-      q(ctx, x, y, 0, 0, 128, 128, '#4a5162');
-      // face de cima e rodape so nas pontas do muro: desenhar em todo tile
-      // listrava a parede vertical de faixas horizontais repetidas
-      if (b.cima) {
-        q(ctx, x, y, 0, 0, 128, 30, '#5b6376');
-        q(ctx, x, y, 0, 0, 128, 3, '#6f7889'); // luz na quina
-        q(ctx, x, y, 0, 30, 128, 2, '#3c4354'); // sombra sob a face de cima
-      }
-      if (b.baixo) {
-        q(ctx, x, y, 0, 104, 128, 24, '#343a48'); // rodape
-        q(ctx, x, y, 0, 104, 128, 2, '#59617a'); // fio de luz
-      }
-      // emenda de painel: vertical no muro deitado, horizontal no muro em pe
-      if (b.cima || b.baixo) q(ctx, x, y, 63, 34, 2, 68, 'rgba(38,43,56,0.35)');
-      else q(ctx, x, y, 0, 63, 128, 2, 'rgba(38,43,56,0.30)');
-      if (b.cima) q(ctx, x, y, 0, 0, 128, 2, TRACO);
-      if (b.baixo) q(ctx, x, y, 0, 126, 128, 2, TRACO);
-      if (b.esq) q(ctx, x, y, 0, 0, 2, 128, TRACO);
-      if (b.dir) q(ctx, x, y, 126, 0, 2, 128, TRACO);
+      // As bordas olham `ehMuroVisual`, e nao so `ehParede`: assim o movel
+      // encostado na linha do muro conta como muro, e o risco de borda nao
+      // aparece de cada lado dele.
+      pintarMuro(ctx, x, y, bordasMuro(tiles, r, c));
 
     } else if (M.MESAS_DIRECIONAIS.has(type)) {
       // A placa da mesa e sempre a mesma: a camera olha de cima e do sul, entao
@@ -1332,14 +1467,32 @@
         b.baixo && b.esq ? raio : 0,
       ]);
       ctx.clip();
-      q(ctx, x, y, 0, 0, 128, 128, '#3f8fc9'); // fundo mais escuro
-      q(ctx, x, y, 0, 0, 128, 64, '#4fa3da'); // agua mais clara no alto
-      // marolas: tracinhos estaveis, dependem so de c/r
-      for (let i = 0; i < 5; i++) {
-        const ox = ((c * 41 + r * 23 + i * 37) % 96) + 8;
-        const oy = ((c * 29 + r * 53 + i * 43) % 104) + 10;
-        q(ctx, x, y, ox, oy, 22, 3, 'rgba(255,255,255,0.28)');
-        q(ctx, x, y, ox + 6, oy + 5, 12, 2, 'rgba(255,255,255,0.16)');
+      // Agua com FUNDO: escura no meio, clareando pra beira. Antes era uma cor
+      // chapada com a metade de cima mais clara, o que dava um retangulo
+      // pintado - a profundidade e o que faz ler como lago em vez de piscina.
+      q(ctx, x, y, 0, 0, 128, 128, '#2b6b96');            // parte funda
+      if (b.cima) {
+        q(ctx, x, y, 0, 0, 128, 30, '#3f8fc9');
+        q(ctx, x, y, 0, 0, 128, 12, '#5aa8d8');           // raso junto da margem
+      }
+      if (b.baixo) {
+        q(ctx, x, y, 0, 98, 128, 30, '#3f8fc9');
+        q(ctx, x, y, 0, 116, 128, 12, '#5aa8d8');
+      }
+      if (b.esq) {
+        q(ctx, x, y, 0, 0, 30, 128, '#3f8fc9');
+        q(ctx, x, y, 0, 0, 12, 128, '#5aa8d8');
+      }
+      if (b.dir) {
+        q(ctx, x, y, 98, 0, 30, 128, '#3f8fc9');
+        q(ctx, x, y, 116, 0, 12, 128, '#5aa8d8');
+      }
+      // marolas: menos e mais discretas que antes, so pra quebrar a cor lisa
+      for (let i = 0; i < 3; i++) {
+        const ox = ((c * 41 + r * 23 + i * 37) % 88) + 16;
+        const oy = ((c * 29 + r * 53 + i * 43) % 96) + 16;
+        q(ctx, x, y, ox, oy, 20, 2, 'rgba(255,255,255,0.20)');
+        q(ctx, x, y, ox + 7, oy + 6, 10, 2, 'rgba(255,255,255,0.12)');
       }
       // carpa: corpo, cabeca clara e cauda
       if ((c + r) % 3 === 0) {
@@ -1351,11 +1504,12 @@
         q(ctx, x, y, px + 8, py + 2, 8, 4, '#ffffff');
         q(ctx, x, y, px + 2, py + 4, 4, 4, TRACO);
       }
-      // borda da agua so onde o lago termina
-      if (b.cima) q(ctx, x, y, 0, 0, 128, 4, '#2f6f9e');
-      if (b.baixo) q(ctx, x, y, 0, 124, 128, 4, '#2f6f9e');
-      if (b.esq) q(ctx, x, y, 0, 0, 4, 128, '#2f6f9e');
-      if (b.dir) q(ctx, x, y, 124, 0, 4, 128, '#2f6f9e');
+      // Espuma na margem, no lugar do risco escuro que tinha antes: agua nao faz
+      // contorno escuro contra a grama, faz uma linha clara de arrebentacao.
+      if (b.cima) q(ctx, x, y, 0, 0, 128, 4, 'rgba(233,246,252,0.75)');
+      if (b.baixo) q(ctx, x, y, 0, 124, 128, 4, 'rgba(233,246,252,0.75)');
+      if (b.esq) q(ctx, x, y, 0, 0, 4, 128, 'rgba(233,246,252,0.75)');
+      if (b.dir) q(ctx, x, y, 124, 0, 4, 128, 'rgba(233,246,252,0.75)');
       ctx.restore();
 
     } else if (type === M.PEDRA) {
@@ -2710,6 +2864,8 @@
 
     atualizarJogadorLocal(dt);
     interpolarRemotos(dt);
+    // Encostou numa estante? O acervo abre sozinho (ver js/estante.js).
+    Estante.verProximidade(players.get(selfId));
     Calls.updateProximity(players);
     atualizarBadgeSala();
     animarCamera(dt);
@@ -3427,6 +3583,7 @@
     Chat.init();
     Calendario.init();
     Trello.init();
+    Estante.iniciar();
     Pessoas.init();
     Network.connect(profile);
 
@@ -3454,6 +3611,11 @@
     desenharPiso: drawFloorTile,
     desenharEtiquetaSala,
     redesenharMapa: prerenderMap,
+    // O canvas do pre-render, pra poder CONFERIR o mapa pronto em vez de
+    // redesenhar uma replica e conferir a replica. E assim que a auditoria
+    // mede se a face do muro sobreviveu a tudo que foi desenhado por cima.
+    canvasDoMapa: () => mapCanvas,
+    escalaDoMapa: () => escalaDoMapa,
     STATUS_COR,
     STATUS_LABEL,
     corDoId,

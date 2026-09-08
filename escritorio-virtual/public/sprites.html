@@ -38,7 +38,8 @@
   <script>
   (function () {
     var M = window.OfficeMap, T = M.TILE, Z = 2;
-    var LARG = 4, ALT = 4;   // celulas desenhadas em volta, pra ver a emenda
+    var LARG = 4, ALT = 5;   // celulas em volta, pra ver a emenda e a parede
+    var PAREDE = M.PAREDE;
 
     function quadro(nome, id) {
       var cel = document.createElement('div');
@@ -54,10 +55,13 @@
         for (var c = 0; c < LARG; c++) window.Game.desenharPiso(ctx, c, r, T, 0);
       }
 
-      // grade falsa: bloco 3x2 do tile no meio, com folga em volta
+      // Grade falsa com PAREDE em cima. E o cenario que expoe o bug: peca em modo
+      // 'alto' desenha pra fora da propria celula, pra cima, e apaga a parede
+      // que ja tinha sido desenhada ali.
       var grade = [];
       for (r = 0; r < ALT + 2; r++) grade.push(new Array(LARG + 2).fill(0));
-      for (r = 2; r <= 3; r++) for (c = 1; c <= 3; c++) grade[r][c] = id;
+      for (c = 0; c < LARG + 2; c++) { grade[1][c] = PAREDE; grade[2][c] = PAREDE; }
+      for (r = 3; r <= 4; r++) for (c = 1; c <= 3; c++) grade[r][c] = id;
 
       ctx.save();
       ctx.translate(-T, -T);

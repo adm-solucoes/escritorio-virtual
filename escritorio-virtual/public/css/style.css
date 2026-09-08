@@ -1955,3 +1955,112 @@ button { font-family: inherit; }
   .topo-esq { left: 70px; }
   .minimapa { display: none; }
 }
+
+/* ---------- estante: o acervo de livros da sede ---------- */
+/* Painel LATERAL, nao tela cheia. Ele abre sozinho quando a pessoa passa perto
+   de uma estante no mapa, entao nao pode tapar o jogo nem impedir de andar. */
+.painel-estante {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(360px, 88%);
+  z-index: 26;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  background: var(--painel);
+  border-left: 1px solid var(--borda);
+  box-shadow: var(--sombra-painel);
+  overflow: hidden;
+}
+.estante-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.estante-titulo-bloco { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; }
+.estante-topo h2 { margin: 0; font-size: 17px; }
+.estante-conta { font-size: 12px; color: var(--texto-fraco); white-space: nowrap; }
+.estante-pasta-link {
+  font-size: 12.5px;
+  color: var(--indigo);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.estante-pasta-link:hover { text-decoration: underline; }
+.estante-nota { margin: 0; font-size: 12.5px; color: var(--texto-fraco); }
+.estante-busca {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+  background: var(--painel-alt);
+}
+.estante-aviso {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fdecea;
+  color: #8a1f16;
+  font-size: 13px;
+}
+.estante-lista {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.estante-vazia { margin: 6px 2px; font-size: 13px; color: var(--texto-fraco); }
+.estante-livro {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--painel-alt);
+}
+.estante-livro:hover { border-color: var(--borda-forte); }
+.estante-livro-abrir {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  text-decoration: none;
+  color: inherit;
+}
+.estante-livro-titulo { font-size: 13.5px; font-weight: 600; }
+.estante-livro-linha { font-size: 12px; color: var(--texto-fraco); }
+.estante-tirar {
+  border: 0;
+  background: transparent;
+  color: var(--texto-fraco);
+  cursor: pointer;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 0 8px 8px 0;
+}
+.estante-tirar:hover { background: #fdecea; color: var(--vermelho); }
+.estante-form, .estante-pasta-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--borda);
+}
+.estante-form-titulo { font-size: 12px; font-weight: 600; color: var(--texto-fraco); }
+.estante-form input, .estante-pasta-bloco input {
+  padding: 7px 9px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.estante-form-linha { display: flex; gap: 6px; }
+.estante-form-linha input { flex: 1; min-width: 0; }

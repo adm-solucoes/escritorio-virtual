@@ -235,55 +235,77 @@ function buildMap() {
   // Anel de pedra fechado em volta da agua e mais nada dentro. A volta de fora
   // fica limpa: da pra dar a volta no lago inteiro pelos dois lados.
   rect(4, 22, 7, 25, AGUA);
-  [[4, 22], [4, 25], [7, 22], [7, 25]].forEach(([r, c]) => set(r, c, PEDRA));
-  set(3, 22, CADEIRA_BAIXO); set(3, 24, CADEIRA_BAIXO);
-  set(8, 23, CADEIRA); set(8, 25, CADEIRA);
-  set(5, 21, CADEIRA_DIR); set(6, 26, CADEIRA_ESQ);
+  // Lago SEM pedra, e de proposito.
+  //
+  // As pedras ocupavam as quatro quinas do quadrado de agua, e o que sobrava
+  // era uma cruz azul em vez de um lago: barra de 2 tiles cruzando uma de 4.
+  // Com as quinas cheias de agua, o recorte de canto arredondado fecha o
+  // contorno redondo.
+  //
+  // E nao da pra por as pedras na margem: a volta do lago tem 1 tile de
+  // largura, entao qualquer coisa solida ali corta o caminho - a primeira
+  // tentativa ilhou 12 tiles, e o testes/mapa.js pegou.
+  // Sem cadeira em volta do lago: cadeira de escritorio (ou de refeitorio) na
+  // beira de um lago nao existe em lugar nenhum, e enchia o patio de movel
+  // solto. O anel de pedra e a volta livre bastam.
   // So um arbusto, e no canto: dois deles tapavam as duas pontas do corredor
   // de fora e o anel virava um bolso de nove celulas sem saida.
   set(3, 26, ARBUSTO);
 
   // ---------- 4. a parede norte do hall ----------
+  // Duas fileiras, e a diferenca entre elas nao e enfeite:
+  //
+  //   linha 8 (a PAREDE) - so o que PENDURA: quadro, lousa, relogio, TV.
+  //   linha 9 (o CHAO)   - o que fica de pe: estante, geladeira, bancada.
+  //
+  // Movel de pe posto DENTRO da linha do muro nao cabe: a celula do muro tem 1
+  // tile de altura, e uma estante tem 2. Ou ela apagava o muro, ou saia cortada
+  // ao meio, ou - pior - subia pra dentro da sala do outro lado da parede. No
+  // chao, encostada, ela tem a linha do muro inteira pra subir, e tapa a parede
+  // como tapa na vida real.
+  //
   // A referencia tem a parede cheia, mas cheia de coisa DIFERENTE. Encher a
-  // nossa de estante repetida nao deu densidade, deu ruido: virou um paredao.
-  // Ficaram nove pecas, alternando alto e baixo, com parede nua entre elas.
+  // nossa de estante repetida nao deu densidade, deu ruido.
+  set(8, 33, LOUSA);
   [[10, ESTANTE], [13, ESTANTE], [15, CACTO], [19, GELADEIRA], [20, BALCAO],
-    [28, ESTANTE], [33, LOUSA], [35, CAVALETE], [38, PLANTA_GRANDE]]
-    .forEach(([c, t]) => set(8, c, t));
+    [28, ESTANTE], [35, CAVALETE], [38, PLANTA_GRANDE]]
+    .forEach(([c, t]) => set(9, c, t));
 
   // ---------- 5. Copa ----------
   // Bancada com cafeteira embutida na parede, mesa redonda no meio e uma
   // cadeira por lado. Sem mesa de trabalho: copa e copa.
   [[3, ARMARIO], [4, BALCAO], [5, BALCAO], [6, GELADEIRA], [7, PLANTA]]
-    .forEach(([c, t]) => set(8, c, t));
+    .forEach(([c, t]) => set(9, c, t));
   set(11, 5, MESA_REDONDA);
   set(10, 5, CADEIRA_BAIXO); set(12, 5, CADEIRA);
   set(11, 4, CADEIRA_DIR); set(11, 6, CADEIRA_ESQ);
-  set(9, 3, PLANTA_GRANDE); set(14, 7, VASO_FLORES);
+  set(14, 7, VASO_FLORES);
 
   // ---------- 6. Sala de Reuniao (huddle de 4, coluna oeste) ----------
-  [[3, ESTANTE], [4, ESTANTE], [5, QUADRO], [6, QUADRO], [7, PLANTA]]
-    .forEach(([c, t]) => set(15, c, t));
+  set(15, 5, QUADRO); set(15, 6, QUADRO);
+  [[3, ESTANTE], [4, ESTANTE], [7, PLANTA]]
+    .forEach(([c, t]) => set(16, c, t));
   set(18, 5, MESA_REDONDA);
   set(17, 5, CADEIRA_BAIXO); set(19, 5, CADEIRA);
   set(18, 4, CADEIRA_DIR); set(18, 6, CADEIRA_ESQ);
   set(21, 3, ARMARIO); set(21, 7, IMPRESSORA);
 
   // ---------- 7. Treinamento (huddle do quadro branco, coluna leste) ----------
-  [[40, LOUSA], [41, LOUSA], [42, JANELA], [43, CAVALETE], [44, ARMARIO]]
-    .forEach(([c, t]) => set(8, c, t));
+  [[40, LOUSA], [41, LOUSA], [42, JANELA]].forEach(([c, t]) => set(8, c, t));
+  [[40, PLANTA_GRANDE], [43, CAVALETE], [44, ARMARIO]]
+    .forEach(([c, t]) => set(9, c, t));
   set(11, 42, MESA_REDONDA);
   set(10, 42, CADEIRA_BAIXO); set(12, 42, CADEIRA);
   set(11, 41, CADEIRA_DIR); set(11, 43, CADEIRA_ESQ);
-  set(9, 44, PLANTA_GRANDE); set(14, 40, CACTO);
+  set(14, 40, CACTO);
 
   // ---------- 8. Huddle (o do aquario, coluna leste) ----------
   [[40, AQUARIO], [41, PLANTA], [42, ESTANTE], [43, ESTANTE], [44, LUMINARIA_PE]]
-    .forEach(([c, t]) => set(15, c, t));
+    .forEach(([c, t]) => set(16, c, t));
   set(18, 42, MESA_REDONDA);
   set(17, 42, CADEIRA_BAIXO); set(19, 42, POLTRONA);
   set(18, 41, CADEIRA_DIR); set(18, 43, CADEIRA_ESQ);
-  set(21, 43, TV); set(21, 44, TV);
+  set(22, 44, TV);                             // pendurada, entao vai na parede
 
   // ---------- 9. baias de trabalho: duas ilhas de carpete ----------
   // Mesa de 3 de largura por UMA de profundidade, cadeira na linha de baixo -
@@ -351,12 +373,17 @@ function buildMap() {
   set(23, 21, PLANTA_GRANDE); set(23, 29, PLANTA_GRANDE);
 
   // ---------- 14. a parede sul, tambem coberta ----------
-  // Mesma poda da parede norte. A TV do pacote e larga: vai em par de celulas,
-  // senao a arte corta no meio.
-  [[4, PLANTA_GRANDE], [6, TV], [7, TV], [10, QUADRO], [13, CABIDE],
-    [15, ESTANTE], [16, ESTANTE], [19, PLANTA], [22, ARMARIO],
-    [25, IMPRESSORA], [27, BEBEDOURO], [30, TV], [31, TV], [34, QUADRO],
-    [37, PLANTA], [40, ARMARIO], [43, CACTO]]
+  // Mesma divisao da parede norte: o que pendura na linha 29 (a parede), o que
+  // fica de pe na linha 28 (o chao). Aqui o movel de pe sobe pra DENTRO do
+  // salao, que e pra onde ele tem que subir - a parede fica atras dele.
+  //
+  // A TV voltou a ser de uma celula so: a do pacote saiu do catalogo (todas as
+  // telas da folha estao apagadas), e a desenhada cabe num tile.
+  [[6, TV], [10, QUADRO], [30, TV], [34, QUADRO]]
+    .forEach(([c, t]) => set(29, c, t));
+  [[4, PLANTA_GRANDE], [13, CABIDE], [15, ESTANTE], [16, ESTANTE], [19, PLANTA],
+    [22, ARMARIO], [25, IMPRESSORA], [27, BEBEDOURO], [37, PLANTA],
+    [40, ARMARIO], [43, CACTO]]
     .forEach(([c, t]) => set(28, c, t));
 
   // ---------- 15. o verde em volta do predio ----------

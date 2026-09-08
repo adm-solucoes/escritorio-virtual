@@ -49,6 +49,57 @@
     ouvintes.forEach((fn) => fn());
   }
 
+  // ------------------------------------------------------- cadeira por sala
+  // "Tem cadeira e cadeiras": na referencia o salao de trabalho tem cadeira de
+  // escritorio, e copa, hall, patio e as salas de reuniao tem cadeira comum, em
+  // cores diferentes. O mapa tem UM tile de cadeira por direcao — criar um tile
+  // novo pra cada modelo custaria caro (sao cinco lugares pra registrar cada um,
+  // ver testes/itens.js). Entao o modelo e escolhido na hora de desenhar, pela
+  // sala em que a celula esta.
+  //
+  // A folha `chair-dining-a` tem 7 colunas x 8 cores. As colunas que interessam:
+  //   0 = de frente (encosto atras do assento, pessoa olhando pra ca)
+  //   1 = de perfil com o encosto a esquerda  -> quem senta olha pra DIREITA
+  //   4 = de perfil com o encosto a direita   -> quem senta olha pra ESQUERDA
+  //   6 = de costas (so o encosto e os pes)   -> quem senta olha pra CIMA
+  // As colunas 2, 3 e 5 sao pedacos de sobreposicao, nao cadeira inteira.
+  const FOLHA_JANTAR = 'furniture-seating/chair-dining-a.png';
+  // De costas a folha separa a cadeira em DUAS camadas, pra caber gente no meio:
+  // a coluna 5 e so o assento (fica atras de quem senta) e a 6 e so o encosto e
+  // os pes (fica na frente). Desenhar so a 6 dava um esqueleto sem assento, que
+  // na tela parecia uma mesinha. Por isso `up` pede as duas, uma sobre a outra.
+  const COLUNA_JANTAR = { down: 0, right: 1, left: 4, up: 5 };
+  const CAMADA_DE_CIMA = { up: 6 };
+  const CADEIRA_DA_SALA = {
+    copa:        3,   // verde
+    hall:        2,   // azul
+    patio:       3,   // verde, combinando com a area externa
+    reuniao:     2,   // azul
+    treinamento: 0,   // amarelo
+    huddle:      1,   // vermelho, junto da poltrona
+  };
+
+  function cadeiraDaSala(direcao) {
+    return (c, r) => {
+      const M = window.OfficeMap;
+      const sala = M && M.getRoomAtTile && M.getRoomAtTile(c, r);
+      const linha = sala && CADEIRA_DA_SALA[sala.id];
+      if (linha === undefined) return null;   // salao e salas privativas: a de escritorio
+      const acima = CAMADA_DE_CIMA[direcao];
+      // w/h/modo vem explicitos: sem isso a cadeira de refeitorio herdaria o
+      // 1x2 'alto' da de escritorio e sairia com o dobro da altura.
+      return {
+        f: FOLHA_JANTAR,
+        c: COLUNA_JANTAR[direcao],
+        r: linha,
+        w: 1,
+        h: 1,
+        modo: 'ladrilho',
+        porCima: acima === undefined ? null : { c: acima, r: linha },
+      };
+    };
+  }
+
   // ---------------------------------------------------------------- catalogo
   // Chaves sao NOMES de constante do OfficeMap, resolvidos depois que o map.js
   // carregou. Assim este arquivo nao depende da ordem dos <script>.
@@ -59,12 +110,20 @@
   //          o movel) ou 'alto'
   const CATALOGO = {
     // --- assentos -----------------------------------------------------------
-    // A cadeira de escritorio tambem fica fora: a do pacote e um bloco escuro
-    // visto de cima, e a da referencia tem encosto de TELA, duas barras laranja
-    // na altura dos bracos e apoio de cabeca - os tres detalhes que fazem a
-    // gente reconhecer a cadeira do Gather. A versao desenhada tem os tres, e e
-    // ela que volta por cima de quem senta (senao a pessoa aparece flutuando na
-    // frente do encosto).
+    // Cadeira de escritorio do pacote, nas quatro direcoes. A folha e 3x3:
+    // coluna 0 traz as vistas de frente e de tras, coluna 1 os dois perfis.
+    //
+    // Ela ja saiu daqui uma vez, por medo de quebrar o encosto que volta por
+    // cima de quem senta. Nao quebra: `desenharEncostoPorCima` recorta o tile e
+    // chama `drawObstacleTile`, que pergunta ao pacote antes de desenhar a mao.
+    // O sprite entra no recorte igualzinho.
+    CADEIRA:       { f: 'furniture-seating/chair-office.png', c: 0, r: 0, w: 1, h: 1, variar: cadeiraDaSala('up') },
+    // De frente a cadeira ocupa DUAS linhas na folha (encosto em cima,
+    // assento embaixo): pegando so a de baixo, 24 dos 32 pixels do topo eram
+    // cortados e a cadeira saia sem encosto.
+    CADEIRA_BAIXO: { f: 'furniture-seating/chair-office.png', c: 0, r: 1, w: 1, h: 2, modo: 'alto', variar: cadeiraDaSala('down') },
+    CADEIRA_DIR:   { f: 'furniture-seating/chair-office.png', c: 1, r: 0, w: 1, h: 1, variar: cadeiraDaSala('right') },
+    CADEIRA_ESQ:   { f: 'furniture-seating/chair-office.png', c: 1, r: 1, w: 1, h: 1, variar: cadeiraDaSala('left') },
 
     // poltrona vermelha da sala de reuniao: 4 direcoes na mesma linha de cor
     CADEIRA_VERMELHA:       { f: 'furniture-seating/chair-sofa-a.png', c: 3, r: 1, w: 1, h: 1 },
@@ -96,40 +155,87 @@
     MESA_CENTRO: { f: 'furniture/end-table.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
 
     // --- armazenagem --------------------------------------------------------
-    ESTANTE: { f: 'furniture/cabinet.png', c: 2, r: 3, w: 1, h: 2, modo: 'alto' },
-    ARMARIO: { f: 'furniture/cabinet.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
-    BALCAO:  { f: 'furniture/countertop.png', c: 3, r: 4, w: 1, h: 2, modo: 'alto' },
+    // Estante ALTA, de dois tiles - e a estante cheia de livro, que e a peca que
+    // da cara de escritorio na parede. Ela nao cabia enquanto o mapa encostava
+    // movel DENTRO da linha do muro; agora o movel de pe fica no chao, colado na
+    // parede, e sobra a linha inteira do muro pra ela subir.
+    //
+    // `atravessa` porque ela DEVE tapar a parede atras: estante encostada na
+    // parede esconde a parede, e num mapa visto de cima e assim que se le
+    // profundidade. Sem isso o recorte cortava a estante na altura do muro e
+    // sobrava meia estante.
+    // `emenda` = esta arte foi feita pra ficar em FILEIRA. Na folha as estantes
+    // de rows 3-4 sao uma parede corrida de estanteria, e a linha escura da
+    // lateral pertence as duas vizinhas ao mesmo tempo. Recortar uma celula
+    // corta essa linha - o que o testes/cenario.js chama de vazamento -, mas
+    // aqui isso e o desenho, nao um erro: cada fatia sai uma estante inteira.
+    // Sem a marca, o teste acusaria a peca toda vez.
+    ESTANTE: { f: 'furniture/cabinet.png', c: 2, r: 3, w: 1, h: 2, modo: 'alto', atravessa: true, emenda: true },
+    // BALCAO tambem fica de fora: o `countertop` do pacote e balcao de taverna,
+    // madeira escura com painel almofadado. Recepcao de escritorio e clara.
 
     // --- eletro e utilidades ------------------------------------------------
-    GELADEIRA:    { f: 'furniture/fridge.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
-    BEBEDOURO:    { f: 'furniture/water-cooler.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
-    IMPRESSORA:   { f: 'furniture/copy-machine.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
-    LUMINARIA_PE: { f: 'furniture/lighting-floor.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
+    // A folha tem TRES geladeiras de 1 tile, nao uma de tres: a coluna 0 tem a
+    // dobradica virada pra um lado e a 2 pro outro. A 1 e a de frente, que e a
+    // que serve encostada na parede - com a 0 a geladeira saia torta.
+    GELADEIRA:    { f: 'furniture/fridge.png', c: 1, r: 0, w: 1, h: 2, modo: 'alto', atravessa: true },
+    BEBEDOURO:    { f: 'furniture/water-cooler.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto', atravessa: true },
+    // IMPRESSORA fica fora: a copiadora do pacote e UMA maquina de 3 tiles de
+    // largura, e o mapa reserva 1 celula pra ela (e uma delas tem parede do
+    // lado). Recortar 1 tile do meio dava um pedaco de maquina.
+    LUMINARIA_PE: { f: 'furniture/lighting-floor.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto', atravessa: true },
 
     // --- plantas ------------------------------------------------------------
-    PLANTA:        { f: 'furniture/planter.png', c: 4, r: 1, w: 1, h: 2, modo: 'alto' },
-    PLANTA_GRANDE: { f: 'furniture/planter.png', c: 2, r: 0, w: 1, h: 3, modo: 'alto' },
-    CACTO:         { f: 'furniture/planter.png', c: 3, r: 0, w: 1, h: 3, modo: 'alto' },
+    PLANTA:        { f: 'furniture/planter.png', c: 4, r: 1, w: 1, h: 2, modo: 'alto', atravessa: true },
+    PLANTA_GRANDE: { f: 'furniture/planter.png', c: 2, r: 0, w: 1, h: 3, modo: 'alto', atravessa: true },
+    // CACTO fica fora: no pacote a planta espinhosa vem num vaso de PORCELANA
+    // azul-e-branca, que puxa pra antiquario chines. Cacto de escritorio e vaso
+    // simples em cima da mesa, e e o que a versao desenhada faz.
     VASO_FLORES:   { f: 'small-items/flowers.png', c: 0, r: 0, w: 1, h: 1 },
 
     // --- parede e chao ------------------------------------------------------
     // Quadro emoldurado do pacote, no lugar da moldurinha desenhada a mao.
-    QUADRO: { f: 'wall-items/paintings-abstract.png', c: 4, r: 1, w: 1, h: 1, solto: true },
-    // A TV do pacote e larga: ocupa DUAS celulas do mapa. Por isso no mapa ela
-    // vai sempre em par - uma TV de uma celula so nao existe na folha.
-    TV: { f: 'furniture/tv-widescreen.png', c: 12, r: 0, w: 2, h: 2, modo: 'alto' },
-    // Tapete de losangos, o mesmo do lobby da referencia. Tem borda propria,
-    // entao so fecha certo em bloco de 3x3.
-    TAPETE: { f: 'furniture-rugs/diamond-rug-tiling.png', c: 9, r: 3, w: 3, h: 3 },
+    // QUADRO fica FORA do catalogo.
+    //
+    // As colunas 0 a 3 desta folha sao UM mural de 4x2, nao quatro quadros. Os
+    // quadros emoldurados estao nas colunas 4 e 5 - mas NAO estao alinhados a
+    // grade de 32px: cada moldura tem cerca de 0,76 tile e sangra pra celula
+    // vizinha. Qualquer celula inteira que a gente peca corta a borda da
+    // moldura, e e por isso que o quadro saia pela metade. Nao e coordenada
+    // errada: recortar certo exigiria origem em pixel, e o desenho aqui e todo
+    // por tile. O quadro desenhado a mao cabe num tile e fica.
+    // TV fica FORA do catalogo.
+    //
+    // Duas coisas erradas com a do pacote. A coordenada estava em 12,0, que e
+    // celula VAZIA: a folha traz cinco TVs em tamanhos decrescentes e fora de
+    // grade regular (0-3, 4-6, 7-9, 10-11, 12-13), e a menor so ocupa a linha 1
+    // - por isso a TV aparecia como dois retangulos pretos partidos.
+    //
+    // Corrigir a coordenada nao resolve o que importa: TODAS as telas da folha
+    // estao DESLIGADAS, pretas. Numa parede de escritorio isso vira um vao
+    // escuro. A TV desenhada a mao tem tela acesa com conteudo, que e o que faz
+    // ler como tela de apresentacao. Ela fica.
+    // TAPETE fica fora do pacote.
+    //
+    // A folha `diamond-tiling` nao e um tapete de 12x6: sao VARIOS tapetes
+    // encostados um no outro. Montar a peca de 3x3 pelas quinas da folha pegou
+    // quina de tapetes diferentes, e o resultado foi um tapete de quatro cores.
+    // Nao ha como saber onde um acaba e o outro comeca sem olhar cor a cor.
+    //
+    // O tapete desenhado a mao ja tem trama e debrum, e se ajusta a qualquer
+    // formato de bloco - inclusive o 3x3 da recepcao.
 
     // --- area verta la fora -------------------------------------------------
     // A arvore e maior que o tile dela: 3 de largura por 4 de altura, plantada
     // no tile e transbordando pros lados e pra cima. `solto` porque cada
     // arvore e uma so — sem ele, duas arvores vizinhas viravam uma peca de
     // duas celulas e a segunda sumia.
-    ARVORE:   { f: 'terrain/trees-summer.png', c: 4, r: 0, w: 3, h: 4, modo: 'alto', desloca: -1, solto: true },
-    ARBUSTO:  { f: 'terrain/plants-summer.png', c: 2, r: 0, w: 1, h: 1, solto: true },
-    PEDRA:    { f: 'terrain/rocks-grasslands.png', c: 3, r: 2, w: 1, h: 1, solto: true },
+    ARVORE:   { f: 'terrain/trees-summer.png', c: 4, r: 0, w: 3, h: 4, modo: 'alto', desloca: -1, solto: true, atravessa: true },
+    // 2,0 encostava nos arbustos vizinhos da folha e saia cortado dos dois
+    // lados; 6,0 e um arbusto que cabe inteiro na celula.
+    ARBUSTO:  { f: 'terrain/plants-summer.png', c: 6, r: 0, w: 1, h: 1, solto: true },
+    // 3,2 pegava a lasca da pedra grande ao lado. 4,2 e uma pedra inteira.
+    PEDRA:    { f: 'terrain/rocks-grasslands.png', c: 4, r: 2, w: 1, h: 1, solto: true },
   };
 
   // ------------------------------------------------------------------ pisos
@@ -145,8 +251,11 @@
     // A folha `tile-a` e a que chega mais perto: creme claro e de junta miuda.
     tijolo:        { f: 'structure-floor/tile-a.png', c: 0, r: 0, w: 1, h: 1 },
     ladrilho:      { f: 'structure-floor/tile-c.png', c: 0, r: 0, w: 2, h: 2 },
-    carpete_roxo:  { f: 'structure-floor/geometric-carpet-c.png', c: 3, r: 0, w: 1, h: 1 },
-    carpete_azul:  { f: 'structure-floor/geometric-carpet-c.png', c: 4, r: 0, w: 1, h: 1 },
+    // Carpete NAO sai do pacote. O `geometric-carpet` e tapete de medalhao, tipo
+    // persa: bonito, e cobrindo o salao inteiro faz o escritorio virar salao de
+    // castelo. O desenhado a mao (`pisoCarpete`) e carpete em PLACAS, em dois
+    // tons - que e o que escritorio tem de verdade, e o que a referencia mostra.
+    // Com a paleta do pacote aplicada, ele ja nao destoa dos moveis.
   };
 
   // Resolvido em `preparar()`: id do tile -> peca.
@@ -171,6 +280,7 @@
       }
     });
     Object.keys(PISOS).forEach((nome) => folha(PISOS[nome].f));
+    folha(FOLHA_JANTAR);   // usada so pelo `variar`, nao aparece no CATALOGO
     return PECAS;
   }
 
@@ -204,12 +314,30 @@
   }
 
   // Desenha a celula (c,r). Devolve true se a arte do pacote deu conta.
-  function desenhar(ctx, c, r, tipo, TILE, tiles) {
+  // `naLinhaDoMuro` chega do game.js: significa que esta celula E um pedaco do
+  // muro, e nao um lugar dentro da sala.
+  function desenhar(ctx, c, r, tipo, TILE, tiles, naLinhaDoMuro) {
     const pecas = preparar();
     if (!pecas) return false;
-    const peca = pecas[tipo];
+    let peca = pecas[tipo];
     if (!peca) return false;
     if (peca.vazio) return true;          // quem pinta e a celula vizinha
+
+    // A peca pode trocar de folha/celula conforme onde esta (ver `cadeiraDaSala`).
+    if (peca.variar) {
+      const alt = peca.variar(c, r);
+      if (alt) peca = Object.assign({}, peca, alt);
+    }
+
+    // REGRA: na linha do muro so entra peca de UM tile de altura.
+    //
+    // A celula do muro tem 1 tile. Peca mais alta que isso, plantada ali, sobe
+    // pra FORA do predio - a planta grande ia parar no meio da grama - e ainda
+    // por cima leva um corte da faixa do muro que vem por cima dela. Nao ha
+    // coordenada que conserte: o pacote nao tem planta nem geladeira de 1 tile.
+    // Entao nesses casos o desenho a mao assume, que foi feito pra caber num
+    // tile e por isso encosta na parede em vez de atravessar.
+    if (naLinhaDoMuro && (peca.h || 1) > 1) return false;
 
     const reg = folhas[peca.f];
     if (!reg || !reg.ok) return false;    // ainda carregando: cai no desenho antigo
@@ -229,18 +357,70 @@
       if (pos.abaixo > 0) return true;
       if (pos.dx % peca.w !== 0) return true;
       const sobe = peca.h - 1;
+
+      // A arte que sobe NAO pode pintar em cima de parede nem de janela.
+      //
+      // Sem isto, geladeira, estante, planta - qualquer peca mais alta que a
+      // propria celula - apagava a parede logo acima dela: o pre-render desenha
+      // linha por linha, de cima pra baixo, entao a peca (linha de baixo) era
+      // desenhada DEPOIS da parede e passava por cima. Na tela a parede
+      // simplesmente sumia atras do movel.
+      //
+      // O recorte deixa a peca ser cortada na linha da parede, que e o certo
+      // num mapa visto de cima: a parede esta atras e continua inteira.
+      // `atravessa` = esta peca PODE passar por cima da parede. Vale pra duas
+      // familias: o que pendura na parede (TV, que sem isso vira um retangulo
+      // preto cortado) e o que e organico e alto (arvore, planta grande), onde a
+      // copa cobrindo a parede le como profundidade, e nao como buraco. Movel de
+      // silhueta quadrada - geladeira, estante, impressora - continua cortado,
+      // porque ali o corte na parede aparece como falha.
+      const grade2 = peca.atravessa ? null : grade;
+      let recortou = false;
+      if (sobe > 0 && grade2) {
+        const M = window.OfficeMap;
+        ctx.save();
+        ctx.beginPath();
+        for (let dy = 0; dy < peca.h; dy++) {
+          for (let dx = 0; dx < peca.w; dx++) {
+            const cc = c + desloca + dx;
+            const rr = r - sobe + dy;
+            const t = grade2[rr] && grade2[rr][cc];
+            if (t === M.PAREDE || t === M.JANELA) continue;
+            ctx.rect(cc * TILE, rr * TILE, TILE, TILE);
+          }
+        }
+        ctx.clip();
+        recortou = true;
+      }
+
       ctx.drawImage(
         reg.img,
         peca.c * T, peca.r * T, peca.w * T, peca.h * T,
         (c + desloca) * TILE, (r - sobe) * TILE, peca.w * TILE, peca.h * TILE
       );
+      if (recortou) ctx.restore();
       return true;
     }
 
-    // ladrilho: cada celula pega a sua fatia
-    const sx = (peca.c + (pos.dx % peca.w)) * T;
-    const sy = (peca.r + (pos.dy % peca.h)) * T;
+    // ladrilho: cada celula pega a sua fatia. Com `montar`, a fatia nao vem de
+    // um bloco corrido da folha - cada posicao dentro da peca escolhe a sua
+    // parte, que e como o tapete se arma com as quinas certas (ver TAPETE).
+    let sx;
+    let sy;
+    if (peca.montar) {
+      const parte = peca.montar(pos.dx % peca.w, pos.dy % peca.h);
+      sx = parte.c * T;
+      sy = parte.r * T;
+    } else {
+      sx = (peca.c + (pos.dx % peca.w)) * T;
+      sy = (peca.r + (pos.dy % peca.h)) * T;
+    }
     ctx.drawImage(reg.img, sx, sy, T, T, c * TILE, r * TILE, TILE, TILE);
+    // Segunda camada, quando a peca vem partida na folha (ver COLUNA_JANTAR).
+    if (peca.porCima) {
+      ctx.drawImage(reg.img, peca.porCima.c * T, peca.porCima.r * T, T, T,
+        c * TILE, r * TILE, TILE, TILE);
+    }
     return true;
   }
 

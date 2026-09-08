@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auditoria do muro</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      margin: 0; padding: 24px; background: #eceaf6; color: #2c3240;
+      font: 14px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    h1 { margin: 0 0 4px; font-size: 20px; }
+    .aviso { margin: 0 0 18px; color: #666f80; font-size: 13px; max-width: 720px; }
+    .caixa {
+      background: #fff; border-radius: 12px; padding: 16px 18px;
+      box-shadow: 0 6px 18px rgba(30,34,48,.10); max-width: 720px;
+    }
+    .placar { font-size: 15px; margin: 0 0 10px; }
+    .bom { color: #1c7a4a; font-weight: 700; }
+    .ruim { color: #b3261e; font-weight: 700; }
+    ul { margin: 6px 0 0; padding-left: 20px; }
+    li { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+    canvas { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Auditoria do muro</h1>
+  <p class="aviso">
+    Mede o mapa <strong>ja desenhado</strong>, pixel a pixel: em toda parede
+    deitada e em todo movel que o mapa encosta na linha dela, confere se a faixa
+    de cima do muro continua visivel. E o teste da regra "movel nunca apaga o
+    muro" &mdash; sem depender de ninguem olhar print.
+  </p>
+  <div class="caixa" id="saida">medindo...</div>
+
+  <script src="js/map.js"></script>
+  <script src="js/sprites.js"></script>
+  <script>
+    // O pre-render pergunta ao ItemMesa se tem coisa sendo arrastada. Esta
+    // pagina nao carrega o jogo inteiro (nao precisa: so quer o mapa pronto),
+    // entao responde por ele que nao ha nada em movimento.
+    window.ItemMesa = { estaMovendo: function () { return false; }, selecaoAtual: function () { return null; } };
+  </script>
+  <script src="js/game.js"></script>
+  <script>
+  (function () {
+    var M = window.OfficeMap, T = M.TILE;
+
+    function nome(id) {
+      return Object.keys(M).find(function (k) { return M[k] === id && typeof M[k] === 'number'; });
+    }
+
+    function medir() {
+      // Desenha o mapa pelo MESMO caminho do jogo e le o canvas pronto.
+      window.Game.redesenharMapa();
+      var cv = window.Game.canvasDoMapa();
+      var E = window.Game.escalaDoMapa();
+      var W = cv.width;
+      var d = cv.getContext('2d').getImageData(0, 0, W, cv.height).data;
+
+      // As cores da face do muro DEPOIS da paleta do pacote (game.js encaixa
+      // toda cor solida na paleta LPC, entao o #6f7889 do codigo vira #726b7e).
+      function ehFace(px, py) {
+        var i = (py * W + px) * 4, R = d[i], G = d[i + 1], B = d[i + 2];
+        return (Math.abs(R - 0x72) < 18 && Math.abs(G - 0x6b) < 18 && Math.abs(B - 0x7e) < 18)
+            || (Math.abs(R - 0x5b) < 18 && Math.abs(G - 0x63) < 18 && Math.abs(B - 0x76) < 18)
+            || (Math.abs(R - 0x6f) < 18 && Math.abs(G - 0x78) < 18 && Math.abs(B - 0x89) < 18);
+      }
+
+      function pontua(c, r) {
+        var n = 0, t = 0;
+        for (var px = Math.round((c * T + 3) * E); px < Math.round((c * T + T - 3) * E); px++) {
+          for (var py = Math.round((r * T + 1) * E); py < Math.round((r * T + 7) * E); py++) {
+            t++; if (ehFace(px, py)) n++;
+          }
+        }
+        return t ? n / t : 0;
+      }
+
+      var ehP = function (c, r) {
+        var t = M.tiles[r] && M.tiles[r][c];
+        return t === M.PAREDE || t === M.JANELA;
+      };
+      // Muro DEITADO: parede sem parede em cima nem embaixo. So ele tem face.
+      var deitado = function (c, r) { return ehP(c, r) && !ehP(c, r - 1) && !ehP(c, r + 1); };
+
+      // Mesma regra do game.js: separa dois lugares e alcanca um muro deitado.
+      function naLinha(c, r) {
+        var t = M.tiles[r][c];
+        if (!t || ehP(c, r) || M.isTileWalkable(c, r)) return false;
+        if (ehP(c, r - 1)) return false;      // junção em T: parede em pe nao tem face
+        var a = M.getRoomAtTile(c, r - 1), b = M.getRoomAtTile(c, r + 1);
+        if ((a ? a.id : null) === (b ? b.id : null)) return false;
+        for (var s = 0; s < 2; s++) {
+          var p = s ? 1 : -1;
+          for (var k = c + p, n = 0; n < 12; k += p, n++) {
+            var v = M.tiles[r][k];
+            if (v === undefined) break;
+            if (deitado(k, r)) return true;
+            if (v === M.LIVRE || M.isTileWalkable(k, r)) break;
+          }
+        }
+        return false;
+      }
+
+      var puras = [], moveis = [];
+      for (var r = 1; r < M.ROWS - 1; r++) {
+        for (var c = 1; c < M.COLS - 1; c++) {
+          if (deitado(c, r)) puras.push({ c: c, r: r, s: pontua(c, r) });
+          else if (naLinha(c, r)) moveis.push({ c: c, r: r, peca: nome(M.tiles[r][c]), s: pontua(c, r) });
+        }
+      }
+      var ordenadas = puras.map(function (o) { return o.s; }).sort();
+      var med = ordenadas[Math.floor(ordenadas.length / 2)] || 0;
+      var corte = med * 0.6;
+      var falhas = puras.filter(function (o) { return o.s < corte; })
+        .map(function (o) { return 'PAREDE ' + o.c + ',' + o.r + ' - ' + Math.round(o.s * 100) + '%'; })
+        .concat(moveis.filter(function (o) { return o.s < corte; })
+          .map(function (o) { return o.peca + ' ' + o.c + ',' + o.r + ' - ' + Math.round(o.s * 100) + '%'; }));
+
+      var pecas = moveis.map(function (o) { return o.peca; })
+        .filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
+
+      document.getElementById('saida').innerHTML =
+        '<p class="placar"><strong>' + puras.length + '</strong> paredes deitadas e <strong>' +
+        moveis.length + '</strong> moveis encostados na linha delas.</p>' +
+        '<p class="placar">Sem a faixa do muro: <span class="' + (falhas.length ? 'ruim' : 'bom') + '">' +
+        falhas.length + '</span></p>' +
+        (falhas.length ? '<ul><li>' + falhas.join('</li><li>') + '</li></ul>' : '') +
+        '<p class="aviso" style="margin-top:12px">Pecas conferidas na linha do muro: ' +
+        pecas.join(', ') + '.</p>';
+    }
+
+    // As folhas do pacote chegam depois: mede quando tudo estiver carregado.
+    window.Sprites.aoCarregar(function () { setTimeout(medir, 60); });
+  })();
+  </script>
+</body>
+</html>

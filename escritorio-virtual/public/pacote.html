@@ -18,6 +18,16 @@
     }
     .peca h2 { margin: 0; font-size: 14px; }
     .peca .meta { margin: 0 0 8px; font-size: 11.5px; color: #8a91a1; }
+    .barra {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 10px;
+      align-items: center; background: #eceaf6; padding: 8px 0 12px;
+    }
+    input {
+      padding: 7px 10px; border: 1px solid #d4d7e2; border-radius: 8px;
+      font: inherit; background: #fff; min-width: 260px;
+    }
+    .contagem { font-size: 12.5px; color: #8a91a1; }
+    .peca .meta code { color: #5b45c8; }
     .rolagem { overflow-x: auto; line-height: 0; }
     canvas { display: block; image-rendering: pixelated; }
   </style>
@@ -28,24 +38,26 @@
     Cada folha em 3x, com a grade de 32px (= 1 tile do mapa) e o numero da
     coluna/linha. E daqui que saem as coordenadas em <code>js/sprites.js</code>.
   </p>
+  <div class="barra">
+    <input id="busca" type="search" placeholder="filtrar (ex: chair, wall, floor, tree)" />
+    <span class="contagem" id="contagem"></span>
+  </div>
   <div id="lista"></div>
 
   <script>
   (function () {
-    // Ordem de prioridade: primeiro os moveis que estao no mapa hoje.
-    var FOLHAS = [
-      'terrain/trees-summer.png',
-      'terrain/rocks-grasslands.png',
-      'terrain/plants-summer.png',
-      'terrain/flowers.png',
-      'structure-fences/ornamental-fence-a.png'
-    ];
+    // A lista sai dos manifestos gravados no download, entao a pagina mostra
+    // exatamente o que esta no disco - sem lista escrita a mao pra desatualizar.
+    var TODAS = [];
 
     var Z = 3, T = 32, MARGEM = 20;
     var lista = document.getElementById('lista');
+    var busca = document.getElementById('busca');
+    var contagem = document.getElementById('contagem');
 
     // Uma caixa por folha, criada JA na ordem: sem isso o onload embaralha tudo.
-    FOLHAS.forEach(function (caminho) {
+    function mostrar(entrada) {
+      var caminho = entrada.local;
       var caixa = document.createElement('div');
       caixa.className = 'peca';
       lista.appendChild(caixa);
@@ -57,7 +69,8 @@
         caixa.innerHTML =
           '<h2>' + caminho + '</h2>' +
           '<p class="meta">' + img.width + '&times;' + img.height + ' px = ' +
-          cols + '&times;' + rows + ' tiles</p>';
+          cols + '&times;' + rows + ' tiles &mdash; original: <code>' +
+          entrada.origem + '</code></p>';
 
         var rolagem = document.createElement('div');
         rolagem.className = 'rolagem';
@@ -100,7 +113,33 @@
       img.onerror = function () {
         caixa.innerHTML = '<h2>' + caminho + '</h2><p class="meta">NAO CARREGOU</p>';
       };
+    }
+
+    function aplicar() {
+      var termo = busca.value.trim().toLowerCase();
+      var vistas = TODAS.filter(function (e) {
+        return !termo || e.local.toLowerCase().indexOf(termo) >= 0;
+      });
+      lista.innerHTML = '';
+      // No maximo 40 por vez: 320 folhas em 3x de uma vez so trava a aba.
+      vistas.slice(0, 40).forEach(mostrar);
+      contagem.textContent = vistas.length + ' de ' + TODAS.length + ' folhas' +
+        (vistas.length > 40 ? ' - mostrando as 40 primeiras, filtre pra ver o resto' : '');
+    }
+
+    Promise.all([
+      fetch('assets/lpc-moveis/lista.json').then(function (r) { return r.json(); }),
+      fetch('assets/lpc-moveis/lista-ambiente.json').then(function (r) { return r.json(); })
+    ]).then(function (partes) {
+      TODAS = partes[0].concat(partes[1])
+        .filter(function (e) { return /\.png$/i.test(e.local); })
+        .sort(function (a, b) { return a.local < b.local ? -1 : 1; });
+      aplicar();
+    }).catch(function (e) {
+      lista.innerHTML = '<p class="aviso">Nao consegui ler os manifestos: ' + e.message + '</p>';
     });
+
+    busca.addEventListener('input', aplicar);
   })();
   </script>
 </body>

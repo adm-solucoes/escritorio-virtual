@@ -96,26 +96,25 @@ altura)` — os mesmos numeros que estao em [`public/js/sprites.js`](../public/j
 
 | Onde aparece no mapa | Celula | Arquivo local | Caminho original no pacote |
 |---|---|---|---|
-| `CADEIRA`, `CADEIRA_BAIXO`, `CADEIRA_DIR`, `CADEIRA_ESQ` | 0,0 / 0,2 / 1,0 / 1,1 (1×1) | `furniture-seating/chair-office.png` | `Objects/Furniture/Seating/Chair, Office.png` |
-| `CADEIRA_VERMELHA` (+3 direcoes), `POLTRONA` | 3,1 / 0,1 / 1,1 / 2,1 / 3,2 (1×1) | `furniture-seating/chair-sofa-a.png` | `Objects/Furniture/Seating/Chair, Sofa A.png` |
+| `TAPETE` | 9,3 (3×3) | `furniture-rugs/diamond-rug-tiling.png` | `Objects/Furniture/Rugs/Diamond Rug, tiling.png` |
+| `CADEIRA`, `CADEIRA_BAIXO`, `CADEIRA_DIR`, `CADEIRA_ESQ` | 0,0 (1×1) / 0,2 (1×1) / 1,0 (1×1) / 1,1 (1×1) | `furniture-seating/chair-office.png` | `Objects/Furniture/Seating/Chair, Office.png` |
+| `CADEIRA_VERMELHA`, `CADEIRA_VERMELHA_BAIXO`, `CADEIRA_VERMELHA_DIR`, `CADEIRA_VERMELHA_ESQ`, `POLTRONA` | 3,1 (1×1) / 0,1 (1×1) / 1,1 (1×1) / 2,1 (1×1) / 3,2 (1×1) | `furniture-seating/chair-sofa-a.png` | `Objects/Furniture/Seating/Chair, Sofa A.png` |
 | `PUFE` | 2,0 (1×1) | `furniture-seating/ottoman-small-a.png` | `Objects/Furniture/Seating/Ottoman, Small A.png` |
 | `SOFA_BAIXO` | 0,0 (3×2) | `furniture-seating/sofa-casual-a.png` | `Objects/Furniture/Seating/Sofa, Casual A.png` |
-| `MESA` (+7 variantes de direcao) | 2,2 (2×2) | `furniture/desk-office.png` | `Objects/Furniture/Desk, Office.png` |
-| `MESA_CENTRO` | 0,0 (1×2) | `furniture/end-table.png` | `Objects/Furniture/End Table.png` |
-| `ESTANTE`, `ARMARIO` | 2,3 / 0,0 (1×2) | `furniture/cabinet.png` | `Objects/Furniture/Cabinet.png` |
-| `BALCAO` | 3,4 (1×2) | `furniture/countertop.png` | `Objects/Furniture/Countertop.png` |
-| `GELADEIRA` | 0,0 (1×2) | `furniture/fridge.png` | `Objects/Furniture/Fridge.png` |
-| `BEBEDOURO` | 0,0 (1×2) | `furniture/water-cooler.png` | `Objects/Furniture/Water Cooler.png` |
 | `IMPRESSORA` | 0,0 (1×2) | `furniture/copy-machine.png` | `Objects/Furniture/Copy Machine.png` |
+| `MESA_CENTRO` | 0,0 (1×2) | `furniture/end-table.png` | `Objects/Furniture/End Table.png` |
+| `GELADEIRA` | 0,0 (1×2) | `furniture/fridge.png` | `Objects/Furniture/Fridge.png` |
 | `LUMINARIA_PE` | 0,0 (1×2) | `furniture/lighting-floor.png` | `Objects/Furniture/Lighting, Floor.png` |
-| `PLANTA`, `PLANTA_GRANDE`, `CACTO` | 4,1 (1×2) / 2,0 (1×3) / 3,0 (1×3) | `furniture/planter.png` | `Objects/Furniture/Planter.png` |
+| `PLANTA`, `PLANTA_GRANDE` | 4,1 (1×2) / 2,0 (1×3) | `furniture/planter.png` | `Objects/Furniture/Planter.png` |
+| `BEBEDOURO` | 0,0 (1×2) | `furniture/water-cooler.png` | `Objects/Furniture/Water Cooler.png` |
 | `VASO_FLORES` | 0,0 (1×1) | `small-items/flowers.png` | `Objects/Small Items/Flowers.png` |
-| `ARVORE` | 4,0 (3×4) | `terrain/trees-summer.png` | `Terrain/trees_summer.png` |
+| `tijolo` | 0,0 (1×1) | `structure-floor/tile-a.png` | `Structure/Floor/Tile A.png` |
+| `ladrilho` | 0,0 (2×2) | `structure-floor/tile-c.png` | `Structure/Floor/Tile C.png` |
 | `ARBUSTO` | 2,0 (1×1) | `terrain/plants-summer.png` | `Terrain/plants_summer.png` |
 | `PEDRA` | 3,2 (1×1) | `terrain/rocks-grasslands.png` | `Terrain/Rocks, Grasslands.png` |
-| piso `tijolo` (corredor) | 3,1 (1×2) | `structure-floor/wood-floor-a.png` | `Structure/Floor/Wood Floor A.png` |
-| piso `ladrilho` (reuniao) | 0,0 (2×2) | `structure-floor/tile-c.png` | `Structure/Floor/Tile C.png` |
-| piso `carpete_roxo`, `carpete_azul` | 3,0 / 4,0 (1×1) | `structure-floor/geometric-carpet-c.png` | `Structure/Floor/Geometric Carpet C.png` |
+| `ARVORE` | 4,0 (3×4) | `terrain/trees-summer.png` | `Terrain/trees_summer.png` |
+| `QUADRO` | 4,1 (1×1) | `wall-items/paintings-abstract.png` | `Objects/Wall Items/Paintings, Abstract.png` |
+| `CADEIRA` (+3 direcoes), **so em copa, hall, patio, reuniao, treinamento e huddle** | 0/1/4/5+6 x linha da sala | `furniture-seating/chair-dining-a.png` | `Objects/Furniture/Seating/Chair, Dining A.png` |
 
 ---
 
@@ -127,36 +126,37 @@ recolorizacoes de arte de 2012.
 
 | Arquivo local | Autores | Licenca | Conjunto LPC de origem |
 |---|---|---|---|
-| `furniture-seating/chair-office.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | original do LPC Revised |
-| `furniture-seating/chair-sofa-a.png` | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt | OGA-BY 3.0 | [LPC Upholstery](https://opengameart.org/content/lpc-upholstery) |
-| `furniture-seating/ottoman-small-a.png` | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt | OGA-BY 3.0 | [LPC Upholstery](https://opengameart.org/content/lpc-upholstery) |
-| `furniture-seating/sofa-casual-a.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | original do LPC Revised |
-| `furniture/cabinet.png` | Lanea Zimmerman (Sharm), Eliza Wyatt | OGA-BY 3.0 | [LPC modified base tiles](https://opengameart.org/content/lpc-modified-base-tiles) |
-| `furniture/copy-machine.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | original do LPC Revised |
-| `furniture/countertop.png` | Lanea Zimmerman (Sharm), Eliza Wyatt | OGA-BY 3.0 | [LPC modified base tiles](https://opengameart.org/content/lpc-modified-base-tiles) |
-| `furniture/desk-office.png` | Lanea Zimmerman (Sharm), Eliza Wyatt | OGA-BY 3.0 | [LPC modified base tiles](https://opengameart.org/content/lpc-modified-base-tiles) |
-| `furniture/end-table.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | original do LPC Revised |
-| `furniture/fridge.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | original do LPC Revised |
-| `furniture/lighting-floor.png` | Lanea Zimmerman (Sharm), Eliza Wyatt | OGA-BY 3.0 | [LPC modified base tiles](https://opengameart.org/content/lpc-modified-base-tiles) + [LPC Interior Castle Tiles](https://opengameart.org/content/lpc-interior-castle-tiles) |
-| `furniture/planter.png` | Lanea Zimmerman (Sharm) | OGA-BY 3.0 | [LPC Interior Castle Tiles](https://opengameart.org/content/lpc-interior-castle-tiles) |
-| `furniture/water-cooler.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | original do LPC Revised |
-| `small-items/flowers.png` | Lanea Zimmerman (Sharm), Eliza Wyatt | OGA-BY 3.0 | [LPC Interior Castle Tiles](https://opengameart.org/content/lpc-interior-castle-tiles) |
-| `structure-floor/tile-c.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | original do LPC Revised |
-| `structure-floor/wood-floor-a.png` | Lanea Zimmerman (Sharm), Eliza Wyatt | OGA-BY 3.0 | [LPC modified base tiles](https://opengameart.org/content/lpc-modified-base-tiles) |
-| `structure-floor/geometric-carpet-c.png` | **nao consta** (ver abaixo) | OGA-BY 3.0 (presumida) | — |
-| `terrain/trees-summer.png` | Lanea Zimmerman (Sharm), Eliza Wyatt | OGA-BY 3.0 | [LPC base assets](https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles) |
-| `terrain/plants-summer.png` | Lanea Zimmerman (Sharm), Eliza Wyatt, Hyptosis | OGA-BY 3.0 | [Lots of free 2D tiles and sprites (Hyptosis)](https://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis) |
-| `terrain/rocks-grasslands.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | original do LPC Revised |
+| `furniture-rugs/diamond-rug-tiling.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `furniture-seating/chair-office.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `furniture-seating/chair-sofa-a.png` | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | [lpc-upholstery](https://opengameart.org/content/lpc-upholstery) |
+| `furniture-seating/ottoman-small-a.png` | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | [lpc-upholstery](https://opengameart.org/content/lpc-upholstery) |
+| `furniture-seating/sofa-casual-a.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `furniture/copy-machine.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `furniture/end-table.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `furniture/fridge.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `furniture/lighting-floor.png` | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | [lpc-modified-base-tiles](https://opengameart.org/content/lpc-modified-base-tiles)<br>[lpc-interior-castle-tiles](https://opengameart.org/content/lpc-interior-castle-tiles) |
+| `furniture/planter.png` | Lanea Zimmerman (Sharm) | OGA-BY 3.0 | [lpc-interior-castle-tiles](https://opengameart.org/content/lpc-interior-castle-tiles) |
+| `furniture/water-cooler.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `small-items/flowers.png` | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | [lpc-interior-castle-tiles](https://opengameart.org/content/lpc-interior-castle-tiles) |
+| `structure-floor/tile-a.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `structure-floor/tile-c.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `terrain/plants-summer.png` | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling), Hyptosis | OGA-BY 3.0 | [lots-of-free-2d-tiles-and-sprites-by-hyptosis](https://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis) |
+| `terrain/rocks-grasslands.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
+| `terrain/trees-summer.png` | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | [liberated-pixel-cup-lpc-base-assets-sprites-map-tiles](https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles) |
+| `wall-items/paintings-abstract.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
 
-### Um buraco no credito de origem
+### Uma peca, varios modelos
 
-O `Structure/Floor/credits.txt` do pacote lista **Geometric Carpet A** e **B**, mas
-nao o **C** — que e justamente o que estamos usando no carpete das salas. Pelo padrao
-(A e B sao originais da Eliza Wyatt, OGA-BY 3.0) o C quase certamente e o mesmo, mas
-**o pacote nao afirma isso**, entao esta tabela nao afirma tambem.
+A cadeira e a unica peca que **muda de modelo conforme a sala**. O mapa tem um tile
+de cadeira por direcao, e criar um tile novo pra cada modelo custaria caro (sao cinco
+lugares pra registrar cada um, ver `testes/itens.js`). Entao o modelo e escolhido na
+hora de desenhar, pelo `cadeiraDaSala()` do `sprites.js`: salao e salas privativas
+usam a cadeira de escritorio, e copa, hall, patio, reuniao, treinamento e huddle usam
+a de refeitorio, cada uma numa cor.
 
-Se isso incomodar, duas saidas limpas: trocar pro `geometric-carpet-a.png` ou
-`-b.png`, que tem credito explicito, ou perguntar no repositorio de origem.
+De costas, a cadeira de refeitorio vem **partida em duas camadas** na folha (coluna 5
+= assento, coluna 6 = encosto e pes), pra caber gente sentada no meio. Desenhar so a
+coluna 6 dava um esqueleto sem assento, que na tela parecia uma mesinha.
 
 ---
 
@@ -195,21 +195,58 @@ acha. Estes ainda caem:
 
 | Peca | Motivo |
 |---|---|
-| **Parede** | No pacote a parede e **elevacao**: face de 3 tiles de altura vista de frente, mais rodateto por cima. Nosso mapa trata parede como bloco de 1 tile visto de cima. Nao e trocar a imagem, e mudar como o mapa desenha parede. |
+| **Mesa de trabalho** | Ja foi trocada pela do pacote, e voltou (commit `2b3f4fe`). Toda arte de mesa do pacote e 3x2 e a mesa do mapa e 3x1: em modo `alto` o tampo subia pra linha DE CIMA, que nao e celula de mesa. O que a pessoa via como mesa nao era clicavel, reivindicar mesa so pegava na tirinha do pe, e o `tampoAte` mandava o item pousar em cima da perna. |
+| **Carpete** | O `geometric-carpet` do pacote e tapete de medalhao, tipo persa. Cobrindo o salao inteiro, escritorio virava salao de castelo. O desenhado e carpete em PLACAS, em dois tons proximos — que e o que escritorio tem. |
+| **Estante e armario** | As 63 celulas do `cabinet.png` sao a MESMA madeira escura de taverna, e o `shelf.png` e guarda-roupa fechado. Escritorio pede estante clara com pasta e livro colorido. |
+| **Balcao** | O `countertop` do pacote e balcao de taverna, com painel almofadado. |
+| **TV** | Todas as telas da folha estao DESLIGADAS, pretas — na parede vira um vao escuro. A desenhada tem tela acesa com conteudo, que le como tela de apresentacao. (A coordenada tambem estava errada: apontava pra `12,0`, celula vazia, e a TV saia como dois retangulos partidos.) |
+| **Cacto** | No pacote a planta espinhosa vem num vaso de porcelana azul-e-branca, cara de antiquario. |
+| **Parede** | No pacote a parede e **elevacao**: face de 3 tiles de altura vista de frente, mais rodateto. Nosso mapa trata parede como bloco de 1 tile visto de cima. Nao e trocar a imagem, e mudar como o mapa desenha parede. |
+| **Janela** | Mesma coisa: as de `structure-windows` sao janelao ornamental de fachada, pra parede em elevacao. |
 | **Grama** | Vem como autotile (borda, quina, transicao pra terra). Precisa de logica de vizinhanca que ainda nao existe. |
-| **Agua do lago** | Mesmo caso da grama, mais animacao. |
-| **TV, lousa, cavalete, aquario, cabide, relogio de parede, banco, cerca** | Ou o pacote nao tem equivalente, ou falta so escolher a celula. |
-| **Mesa de reuniao, mesa redonda, tapete** | Falta escolher a celula. |
-| **Janela** | O pacote tem, mas a janela dele acompanha a parede em elevacao. Depende de resolver a parede antes. |
+| **Agua do lago** | Mesmo caso da grama, mais animacao. O contorno arredondado da poca e recorte no desenho a mao (`roundRect` + `clip`). |
+| **Lousa, cavalete, aquario, cabide, relogio, banco, cerca** | Ou o pacote nao tem equivalente, ou falta so escolher a celula. |
+| **Mesa de reuniao, mesa redonda** | Falta escolher a celula. |
+
+### Peca alta nao pode comer a parede
+
+Peca em modo `alto` desenha pra fora da propria celula, pra cima. Como o pre-render
+vai linha por linha de cima pra baixo, ela e desenhada DEPOIS da parede e passava por
+cima — na tela a parede sumia atras do movel. Agora o `alto` recorta as celulas de
+parede e janela antes de desenhar.
+
+A excecao e a flag `atravessa`, pra duas familias: o que pendura na parede, e o que e
+organico e alto (arvore, planta grande), onde a copa cobrindo a parede le como
+profundidade e nao como buraco. Movel de silhueta quadrada continua cortado, porque
+ali o corte aparece como falha.
+
+**A licao da primeira linha:** peca do pacote com altura diferente da do mapa nao e
+so questao de ficar bonito — ela **quebra a interacao**, porque o que a pessoa ve
+deixa de bater com a celula que responde ao clique. Antes de trocar uma peca,
+conferir se a arte cabe na celula que o mapa reserva pra ela.
 
 ---
 
 ## 7. Como conferir ou refazer
 
-As duas paginas de apoio nao entram no jogo, so desenham:
+O primeiro conferidor e automatico. `npm run teste` roda o `testes/cenario.js`,
+que quebra se:
 
-- **`/pacote.html`** — folhas cruas em 3x, com a grade de 32px e o numero de cada
-  celula por cima. E daqui que saem as coordenadas da secao 3.
+- uma folha citada no `sprites.js` **nao existe** no disco;
+- uma folha em uso **nao esta creditada** no `CREDITS.md` (isto e quebra de licenca,
+  nao descuido de organizacao);
+- sobrou credito de folha que **saiu de uso**, e a tabela passou a mentir;
+- a celula pedida **cai fora da folha** — o `drawImage` sai vazio e a peca some sem
+  erro nenhum no console.
+
+Esse teste existe porque a coisa ja aconteceu: a TV, o quadro, o tapete do lobby e o
+`tile-a` entraram no `sprites.js` e ninguem lembrou do `CREDITS.md`.
+
+As paginas de apoio nao entram no jogo, so desenham:
+
+- **`/pacote.html`** — as 320 folhas cruas em 3x, com a grade de 32px e o numero de
+  cada celula por cima, mais o caminho original de cada arquivo. Tem campo de busca
+  (`chair`, `wall`, `floor`...). E daqui que saem as coordenadas da secao 3.
 - **`/sprites.html`** — todas as pecas ja trocadas, desenhadas pelo mesmo caminho que
   o mapa usa (`Game.desenharObjeto` numa grade falsa), pra conferir emenda de peca
   larga sem andar pelo mapa.
@@ -218,7 +255,7 @@ As duas paginas de apoio nao entram no jogo, so desenham:
 Pra tracar um arquivo local ate a origem sem abrir nada:
 
 ```bash
-grep -A2 '"local": "furniture/desk-office.png"' public/assets/lpc-moveis/lista.json
+grep -B1 '"local": "furniture/planter.png"' public/assets/lpc-moveis/lista.json
 ```
 
 ---
