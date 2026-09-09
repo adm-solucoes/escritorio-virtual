@@ -1957,32 +1957,50 @@ button { font-family: inherit; }
 }
 
 /* ---------- estante: o acervo de livros da sede ---------- */
-/* Painel LATERAL, nao tela cheia. Ele abre sozinho quando a pessoa passa perto
-   de uma estante no mapa, entao nao pode tapar o jogo nem impedir de andar. */
+/* O painel mostra CAPA e mais nada. Titulo e autor entram no passar do mouse.
+   E a forma de procurar livro na vida: bate o olho na lombada e reconhece.
+
+   Painel lateral, nao tela cheia: mesmo abrindo no clique, o mapa continua
+   visivel atras - clicar no chao fecha a estante e leva a pessoa embora. */
 .painel-estante {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(360px, 88%);
+  width: min(392px, 92%);
   z-index: 26;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px 16px;
-  background: var(--painel);
+  background: #fbfaf7;
   border-left: 1px solid var(--borda);
-  box-shadow: var(--sombra-painel);
-  overflow: hidden;
+  box-shadow: -18px 0 44px rgba(15, 18, 25, 0.13);
 }
+
 .estante-topo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #eae7e0;
 }
-.estante-titulo-bloco { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; }
-.estante-topo h2 { margin: 0; font-size: 17px; }
-.estante-conta { font-size: 12px; color: var(--texto-fraco); white-space: nowrap; }
+.estante-titulo-bloco {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.estante-topo h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.estante-conta {
+  font-size: 12px;
+  color: #9a938a;
+  font-variant-numeric: tabular-nums;
+}
 .estante-pasta-link {
   font-size: 12.5px;
   color: var(--indigo);
@@ -1990,77 +2008,145 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 .estante-pasta-link:hover { text-decoration: underline; }
-.estante-nota { margin: 0; font-size: 12.5px; color: var(--texto-fraco); }
-.estante-busca {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  font: inherit;
-  font-size: 13.5px;
-  background: var(--painel-alt);
+.estante-fechar {
+  border: 0;
+  background: transparent;
+  color: #9a938a;
+  font-size: 13px;
+  line-height: 1;
+  padding: 5px 6px;
+  border-radius: 6px;
+  cursor: pointer;
 }
+.estante-fechar:hover { background: #efece5; color: var(--texto); }
+
 .estante-aviso {
+  margin: 12px 18px 0;
   padding: 8px 10px;
   border-radius: 8px;
   background: #fdecea;
   color: #8a1f16;
   font-size: 13px;
 }
-.estante-lista {
+
+/* A grade: duas capas por fileira, no formato de livro (2:3). */
+.estante-grade {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 14px;
+  padding: 16px 18px 22px;
+  align-content: start;
 }
-.estante-vazia { margin: 6px 2px; font-size: 13px; color: var(--texto-fraco); }
-.estante-livro {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  background: var(--painel-alt);
-}
-.estante-livro:hover { border-color: var(--borda-forte); }
-.estante-livro-abrir {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  text-decoration: none;
-  color: inherit;
-}
-.estante-livro-titulo { font-size: 13.5px; font-weight: 600; }
-.estante-livro-linha { font-size: 12px; color: var(--texto-fraco); }
-.estante-tirar {
-  border: 0;
-  background: transparent;
-  color: var(--texto-fraco);
-  cursor: pointer;
-  padding: 0 10px;
-  font-size: 12px;
-  border-radius: 0 8px 8px 0;
-}
-.estante-tirar:hover { background: #fdecea; color: var(--vermelho); }
-.estante-form, .estante-pasta-bloco {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 10px;
-  border-top: 1px solid var(--borda);
-}
-.estante-form-titulo { font-size: 12px; font-weight: 600; color: var(--texto-fraco); }
-.estante-form input, .estante-pasta-bloco input {
-  padding: 7px 9px;
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  font: inherit;
+.estante-vazia {
+  grid-column: 1 / -1;
+  margin: 4px 0;
   font-size: 13px;
+  color: #9a938a;
 }
-.estante-form-linha { display: flex; gap: 6px; }
-.estante-form-linha input { flex: 1; min-width: 0; }
+
+.estante-capa {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 3;
+  border-radius: 3px 5px 5px 3px;   /* a lombada e o lado que nao arredonda */
+  overflow: hidden;
+  background: #e7e2d9;
+  box-shadow: 0 2px 5px rgba(24, 20, 14, 0.16), 0 10px 20px -10px rgba(24, 20, 14, 0.34);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.estante-capa::before {
+  /* o vinco da lombada, na esquerda: e o que faz a capa ler como LIVRO e nao
+     como cartao */
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 7px;
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.30), rgba(0, 0, 0, 0.06) 62%, rgba(255, 255, 255, 0.16));
+  pointer-events: none;
+}
+.estante-capa:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(24, 20, 14, 0.2), 0 16px 28px -12px rgba(24, 20, 14, 0.42);
+}
+.estante-capa:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 3px;
+}
+.estante-capa img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Sem capa, a gente desenha uma. Cor tirada do titulo, entao o mesmo livro tem
+   sempre a mesma - de relance a estante continua reconhecivel. */
+/* Absoluta dentro da capa: assim o texto NUNCA empurra a caixa. Com ela no
+ fluxo, um titulo de tres linhas crescia a capa alem do 2:3 e a fileira
+ inteira ficava mais alta que a do lado - a grade saia desencontrada. */
+.estante-capa-desenhada {
+  position: absolute;
+  inset: 0;
+  padding: 16px 12px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #fdfbf6;
+  background:
+    radial-gradient(120% 90% at 22% 8%, rgba(255, 255, 255, 0.22), transparent 62%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.26)),
+    hsl(var(--tom, 30) 44% 40%);
+}
+.estante-capa-desenhada-titulo {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.estante-capa-desenhada-titulo::after {
+  content: '';
+  display: block;
+  width: 26px;
+  height: 2px;
+  margin-top: 9px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.estante-capa-desenhada-autor {
+  margin-top: auto;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+/* O titulo so no passar do mouse: a capa e a informacao, o texto e a confirmacao. */
+.estante-capa-faixa {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 20px 10px 8px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(16, 13, 9, 0.86));
+  opacity: 0;
+  transition: opacity 0.14s ease;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.estante-capa:hover .estante-capa-faixa,
+.estante-capa:focus-visible .estante-capa-faixa { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .estante-capa, .estante-capa-faixa { transition: none; }
+  .estante-capa:hover { transform: none; }
+}

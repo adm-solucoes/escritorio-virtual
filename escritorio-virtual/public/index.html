@@ -414,35 +414,16 @@
       </aside>
 
       <aside id="painel-estante" class="painel-estante oculto">
-        <div class="estante-topo">
+        <header class="estante-topo">
           <div class="estante-titulo-bloco">
             <h2>Estante</h2>
             <span id="estante-conta" class="estante-conta"></span>
           </div>
-          <a id="estante-pasta-link" class="estante-pasta-link oculto" target="_blank" rel="noopener noreferrer">Abrir a pasta no Drive</a>
-          <button id="btn-fechar-estante" class="btn-icone-pequeno" type="button" title="Fechar">&#10005;</button>
-        </div>
-        <p class="estante-nota">O acervo da ADM, aberto de onde voce estiver. Encostar numa estante do mapa abre esta lista.</p>
-        <input id="estante-busca" class="estante-busca" type="search" placeholder="Buscar por titulo, autor ou tema" />
+          <a id="estante-pasta-link" class="estante-pasta-link oculto" target="_blank" rel="noopener noreferrer">Pasta no Drive</a>
+          <button id="btn-fechar-estante" class="estante-fechar" type="button" title="Fechar (Esc)">&#10005;</button>
+        </header>
         <div id="estante-aviso" class="estante-aviso oculto"></div>
-        <div id="estante-lista" class="estante-lista"></div>
-        <form id="estante-form" class="estante-form">
-          <div class="estante-form-titulo">Por um livro na estante</div>
-          <input id="estante-titulo" type="text" placeholder="Titulo" maxlength="120" required />
-          <input id="estante-url" type="url" placeholder="Link (Drive, PDF, site)" maxlength="600" required />
-          <div class="estante-form-linha">
-            <input id="estante-autor" type="text" placeholder="Autor" maxlength="80" />
-            <input id="estante-tag" type="text" placeholder="Tema" maxlength="24" />
-          </div>
-          <button class="btn btn-primario btn-pequeno" type="submit">Adicionar</button>
-        </form>
-        <div id="estante-pasta-bloco" class="estante-pasta-bloco oculto">
-          <div class="estante-form-titulo">Pasta do Drive da sede</div>
-          <div class="estante-form-linha">
-            <input id="estante-pasta-campo" type="url" placeholder="https://drive.google.com/..." maxlength="600" />
-            <button id="estante-pasta-salvar" class="btn btn-secundario btn-pequeno" type="button">Salvar</button>
-          </div>
-        </div>
+        <div id="estante-lista" class="estante-grade"></div>
       </aside>
 
       <aside id="painel-chat" class="painel-chat oculto">

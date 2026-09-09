@@ -2864,8 +2864,6 @@
 
     atualizarJogadorLocal(dt);
     interpolarRemotos(dt);
-    // Encostou numa estante? O acervo abre sozinho (ver js/estante.js).
-    Estante.verProximidade(players.get(selfId));
     Calls.updateProximity(players);
     atualizarBadgeSala();
     animarCamera(dt);
@@ -3221,6 +3219,8 @@
   }
 
   function moverPara(destinoX, destinoY) {
+    // Andou pra algum lugar? Entao saiu da estante. Sair dali e sair dali.
+    if (window.Estante) Estante.fechar();
     const self = players.get(selfId);
     if (!self) return false;
     const TILE = OfficeMap.TILE;
@@ -3331,6 +3331,18 @@
       return;
     }
 
+    // Clicou numa estante? Abre o acervo, e ninguem sai do lugar.
+    //
+    // Vale a celula de cima tambem: a estante tem 2 tiles de arte e so 1 de
+    // chao, entao a metade que a pessoa ve mais - as prateleiras - cai na
+    // celula ACIMA da estante. Amarrado so ao tile do chao, clicar no meio da
+    // estante nao abria nada.
+    const ehEstante = (c, r) => OfficeMap.tiles[r] && OfficeMap.tiles[r][c] === OfficeMap.ESTANTE;
+    if (ehEstante(col, row) || ehEstante(col, row + 1)) {
+      ItemMesa.fechar();
+      Estante.abrir();
+      return;
+    }
     if (OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col])) {
       ItemMesa.fechar();
       cliqueNaMesa(col, row, e.clientX, e.clientY);

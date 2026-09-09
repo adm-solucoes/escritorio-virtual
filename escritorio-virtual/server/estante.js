@@ -16,7 +16,7 @@ const LIVROS_MAX = 300;
 // Limites de texto. Nao sao capricho: isto vai pro disco e volta pra tela de
 // todo mundo, entao titulo gigante e o jeito mais facil de estragar o painel
 // dos outros.
-const LIMITE = { titulo: 120, autor: 80, tag: 24, url: 600 };
+const LIMITE = { titulo: 120, autor: 80, tag: 24, url: 600, capa: 600 };
 
 let dados = { pasta: '', livros: [] };
 
@@ -87,6 +87,9 @@ function adicionar(entrada, usuario) {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
     titulo,
     autor: limparTexto(entrada && entrada.autor, LIMITE.autor),
+    // A capa e o que a estante mostra - o resto e so o que aparece ao passar
+    // o mouse. Sem capa a tela desenha uma no lugar, com o titulo.
+    capa: limparUrl(entrada && entrada.capa),
     tag: limparTexto(entrada && entrada.tag, LIMITE.tag),
     url,
     porUid: usuario.id,
