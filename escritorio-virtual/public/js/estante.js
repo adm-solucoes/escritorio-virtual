@@ -176,7 +176,12 @@
     aberto = true;
     porProximidade = !!deProximidade;
     painel.classList.remove('oculto');
-    if (!carregado) buscar(); else render();
+    // Desenha o que ja tem e SEMPRE vai buscar de novo. A primeira versao so
+    // buscava uma vez ("ja carregou, entao ja sei"): livro que outra pessoa
+    // punha na estante nao aparecia pra mais ninguem ate recarregar a pagina -
+    // numa estante compartilhada, isso e a coisa toda.
+    render();
+    buscar();
   }
 
   function fechar(naMao) {
