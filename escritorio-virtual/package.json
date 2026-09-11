@@ -8,7 +8,7 @@
     "dev": "node -e \"process.env.SEM_LOGIN='1'; require('./server/index.js')\"",
     "publicar": "node server/publicar.js",
     "espelhar": "node espelhar.js",
-    "teste": "node testes/mapa.js && node testes/mesas.js && node testes/itens.js && node testes/roupas.js && node testes/cenario.js && node testes/chat.js"
+    "teste": "node testes/mapa.js && node testes/mesas.js && node testes/itens.js && node testes/roupas.js && node testes/cenario.js && node testes/chat.js && node testes/conteudo.js && node testes/convidado.js"
   },
   "engines": {
     "node": ">=18"

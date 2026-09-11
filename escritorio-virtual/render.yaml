@@ -61,8 +61,19 @@ services:
       - key: TRELLO_BOARD_ID
         sync: false
 
-    # Descomente junto com `plan: starter` pra as contas sobreviverem a deploys:
+      # DISCO PERSISTENTE - descomente as tres linhas abaixo JUNTO com o bloco
+      # `disk` do fim do arquivo e com `plan: starter`. Sem isso, server/data/
+      # (contas, chat, decoracao do mapa, mesas) some a cada deploy.
+      #
+      # DATA_DIR manda o servidor guardar os JSONs no ponto de montagem do disco
+      # em vez da pasta do codigo. E o jeito certo: montar um volume POR CIMA de
+      # um caminho que existe dentro do checkout (server/data) depende da
+      # hospedagem nao mexer naquele diretorio no deploy, e e fragil.
+      # - key: DATA_DIR
+      #   value: /var/dados
+
+    # Descomente junto com `plan: starter` e com DATA_DIR acima:
     # disk:
     #   name: dados
-    #   mountPath: /opt/render/project/src/server/data
+    #   mountPath: /var/dados
     #   sizeGB: 1

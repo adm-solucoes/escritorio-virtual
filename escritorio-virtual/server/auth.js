@@ -3,6 +3,7 @@
 const express = require('express');
 const usuarios = require('./usuarios');
 const sessao = require('./sessao');
+const convites = require('./convites');
 
 // Codigo que a diretoria compartilha com a equipe pra liberar o cadastro.
 const CODIGO_SEDE = process.env.CODIGO_SEDE || 'adm-solucoes';
@@ -96,6 +97,40 @@ function criarRotas(sanitizeAppearance) {
     limparErros(ip);
     usuarios.marcarAcesso(usuario.id);
     sessao.definirCookie(res, usuario.id);
+    res.json({ usuario: usuarios.publico(usuario) });
+  });
+
+  // ---------------------------------------------------------------- convite
+  // Ver docs/plano-convidado.md.
+  rotas.post('/convite', sessao.exigirDiretoria, (req, res) => {
+    const horas = Number((req.body || {}).horas) || convites.HORAS_PADRAO;
+    const { token, expiraEm } = convites.criar({ quemCriou: req.usuario.id, horas });
+    res.json({ token, expiraEm, caminho: '/?convite=' + encodeURIComponent(token) });
+  });
+
+  rotas.post('/convite/revogar', sessao.exigirDiretoria, (req, res) => {
+    res.json({ geracao: convites.revogarTodos() });
+  });
+
+  rotas.post('/convite/entrar', (req, res) => {
+    const ip = req.ip || 'desconhecido';
+    // O mesmo freio do login: sem ele daria pra ficar chutando assinatura.
+    if (bloqueado(ip)) {
+      return res.status(429).json({ erro: 'Muitas tentativas. Espera uns minutos.' });
+    }
+
+    const corpo = req.body || {};
+    if (!convites.ler(texto(corpo.token))) {
+      contarErro(ip);
+      return res.status(403).json({ erro: 'Esse link de convite nao vale mais. Peca outro.' });
+    }
+
+    const nome = texto(corpo.nome).slice(0, MAX_NOME);
+    if (!nome) return res.status(400).json({ erro: 'Diz teu nome.' });
+
+    limparErros(ip);
+    const usuario = usuarios.criarConvidado({ nome });
+    sessao.definirCookie(res, usuario.id, sessao.DURACAO_CONVIDADO_MS);
     res.json({ usuario: usuarios.publico(usuario) });
   });
 

@@ -172,15 +172,32 @@ preenche sozinha. So faz falta se um dia a sede ganhar dominio proprio.
 - No **plano free do Render o disco e efemero**: some a cada deploy e a cada
   restart automatico. Na pratica todo mundo perde a conta e o escritorio volta
   pra planta original de tempos em tempos.
-- O `render.yaml` ja pede um disco de 1 GB montado em `server/data`, mas
-  **disco exige plano pago** (o Starter, mais barato). Sem ele o bloco `disk`
-  e recusado.
+- O `render.yaml` ja tem o bloco do disco pronto, **comentado**, porque disco
+  exige plano pago (o Starter, o mais barato). Com `plan: free` o bloco `disk`
+  e recusado pela hospedagem.
+
+### Como ligar o disco (3 linhas no `render.yaml`)
+
+1. `plan: free` -> `plan: starter`
+2. Descomente as duas linhas de `DATA_DIR` em `envVars`
+3. Descomente o bloco `disk` no fim do arquivo
+
+O servidor le a pasta de dados de **`DATA_DIR`** (`server/dados.js`), entao o
+volume e montado num caminho proprio (`/var/dados`) em vez de por cima de
+`server/data`. Isso e de proposito: montar um volume em cima de um diretorio que
+vive dentro do checkout do codigo depende de a hospedagem nao tocar naquele
+caminho durante o deploy, e e justamente o tipo de coisa que funciona ate o dia
+que para. Sem `DATA_DIR` definido nada muda - continua `server/data`, como local.
+
+Pra conferir que pegou: o log de arranque imprime `[dados] usando DATA_DIR: ...`.
+Se essa linha nao aparecer no Render, o disco **nao** esta em uso e os dados
+continuam efemeros.
 
 Escolha uma:
 
 | Caminho | O que da | Custo |
 |---|---|---|
-| **Render Starter + disco** | funciona como esta escrito, sem mexer no codigo | pago (mensal) |
+| **Render Starter + disco** | funciona como esta escrito, mexendo em 3 linhas do `render.yaml` | pago (mensal) |
 | **Plano free, aceitando perder** | serve pra mostrar/testar; conta e decoracao somem sozinhas | gratis |
 | **Trocar o JSON por um banco** | resolve de vez, e o certo se virar ferramenta do dia a dia | Postgres free do Render/Neon, mas **exige reescrever `usuarios.js` e `mapa-editado.js`** |
 
@@ -207,8 +224,10 @@ Enquanto nao tiver TURN, vale avisar o time: "se a chamada nao abrir, e a rede".
 ## 5. Antes do primeiro deploy
 
 - [ ] Apagar `server/data/usuarios.json` local, ou pelo menos saber que as
-      contas de teste (`diretoria@admsolucoes.com` e `dev@local`) **nao** vao
+      contas de teste (`dev@local`, `bot@local` e as de visitante) **nao** vao
       junto - elas nao estao no git, entao o servidor novo comeca vazio.
+      `dev@local` e `bot@local` so nascem com `npm run dev`; em producao
+      (`NODE_ENV=production`) o `SEM_LOGIN` e ignorado e elas nao sao criadas.
 - [ ] Anotar `CODIGO_SEDE` e `ADMIN_CODE` gerados.
 - [ ] Criar a sua conta de diretoria logo no primeiro acesso.
 - [ ] Conferir que a URL abre em **https** (o cookie de sessao so vai com

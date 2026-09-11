@@ -244,6 +244,14 @@
       ctx.restore();
     }
 
+    // Marca dos moveis que abrem conteudo. Fica FORA do pre-render de proposito:
+    // pendurar um link nao pode custar redesenhar o mapa inteiro, e a marca
+    // precisa poder piscar sem isso.
+    //
+    // Sem ela o recurso nao existe: um movel com link e visualmente identico a
+    // um sem link, e ninguem clica no que nao parece clicavel.
+    desenharMarcasDeConteudo(ctx, TILE);
+
     if (celulaAlvo && Decorador.estaPintando()) {
       const podeAqui = Decorador.podeColocarEm(celulaAlvo.col, celulaAlvo.row, celulaAlvo.x, celulaAlvo.y);
       ctx.save();
@@ -256,6 +264,55 @@
       );
       ctx.restore();
     }
+  }
+
+  // Um selo pequeno no canto de cima do movel, com um brilho que respira. Nao e
+  // enfeite: e a unica pista de que aquele movel faz alguma coisa.
+  function desenharMarcasDeConteudo(ctx, TILE) {
+    if (!window.Conteudo) return;
+    const lista = Conteudo.todos();
+    if (!lista.length) return;
+
+    const pulso = 0.72 + 0.28 * Math.sin(Date.now() / 420);
+    ctx.save();
+    lista.forEach(({ c, r }) => {
+      // A marca sobe um tile quando o movel e alto (estante, geladeira, quadro):
+      // ali embaixo ela ficaria escondida atras da propria arte.
+      const alto = ehMovelAlto(c, r);
+      const cx = c * TILE + TILE - 8;
+      const cy = (alto ? r - 1 : r) * TILE + 8;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(23,27,38,0.55)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(99,102,241,' + pulso.toFixed(3) + ')';
+      ctx.fill();
+
+      // elo de corrente minusculo, em dois tracos
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx - 2.6, cy + 1.4);
+      ctx.lineTo(cx - 0.4, cy - 0.8);
+      ctx.moveTo(cx + 0.4, cy + 0.8);
+      ctx.lineTo(cx + 2.6, cy - 1.4);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  // Movel cuja arte passa do proprio tile pra cima. Vale a mesma lista que o
+  // clique olha, senao a marca aparece num lugar e o clique funciona noutro.
+  function ehMovelAlto(c, r) {
+    const M = OfficeMap;
+    const t = M.tiles[r] && M.tiles[r][c];
+    return t === M.ESTANTE || t === M.GELADEIRA || t === M.ARMARIO
+      || t === M.QUADRO || t === M.LOUSA || t === M.TV || t === M.PLANTA_GRANDE;
   }
 
   const cores = new Map();
@@ -3328,6 +3385,14 @@
     if (!self) return;
     const { x: clickX, y: clickY } = coordsDoEvento(e);
 
+    // Decorador no modo link: o clique pendura conteudo no movel, nao anda.
+    // Ver docs/plano-conteudo.md.
+    if (Decorador.noModoLink && Decorador.noModoLink()) {
+      const TILE_L = OfficeMap.TILE;
+      Conteudo.cliqueEm(Math.floor(clickX / TILE_L), Math.floor(clickY / TILE_L), true);
+      return;
+    }
+
     // Com o decorador aberto e um item na mao, o clique coloca em vez de andar.
     if (Decorador.estaPintando()) {
       const tx = clickX / OfficeMap.TILE;
@@ -3377,6 +3442,13 @@
     if (ehEstante(col, row) || ehEstante(col, row + 1)) {
       ItemMesa.fechar();
       Estante.abrir();
+      return;
+    }
+
+    // Movel com conteudo pendurado: abre o que tem ali. Olha a celula de cima
+    // pelo mesmo motivo da estante - a arte alta some da celula de baixo.
+    if (Conteudo.cliqueEm(col, row, false)) {
+      ItemMesa.fechar();
       return;
     }
     if (OfficeMap.tiles[row] && OfficeMap.MESAS_DE_TRABALHO.has(OfficeMap.tiles[row][col])) {
@@ -3568,6 +3640,8 @@
         if (OfficeMap.objetos[o.r]) OfficeMap.objetos[o.r][o.c] = o.o;
       });
       if (temDecoracao) prerenderMap();
+      Conteudo.carregar(data.conteudosMapa);
+      Conteudo.init(players.get(selfId).isAdmin);
       Decorador.init(players.get(selfId).isAdmin);
       Calls.init(selfId);
       Chat.carregarHistorico(data);
@@ -3588,6 +3662,14 @@
       OfficeMap.objetos[m.r][m.c] = m.o;
       prerenderMap();
     });
+
+    // Conteudo nao entra no pre-render: a marca e desenhada a cada quadro, em
+    // cima do mapa ja pronto. Assim pendurar um link nao custa redesenhar 48x32.
+    Network.on('mapa-conteudo-atualizado', (m) => {
+      Conteudo.aplicar(m.c, m.r, m.conteudo);
+      Conteudo.aceito(m.c, m.r);
+    });
+    Network.on('mapa-conteudo-recusado', (m) => Conteudo.recusado(m));
 
     Network.on('player-joined', (data) => {
       players.set(data.id, criarJogadorRemoto(data));

@@ -12,8 +12,9 @@ const fs = require('fs');
 const path = require('path');
 const map = require('./map');
 const usuarios = require('./usuarios');
+const pastaDados = require('./dados');
 
-const ARQUIVO = path.join(__dirname, 'data', 'mesas.json');
+const ARQUIVO = pastaDados.arquivo('mesas.json');
 
 // chave canonica da mesa -> uid da conta dona
 let donos = new Map();

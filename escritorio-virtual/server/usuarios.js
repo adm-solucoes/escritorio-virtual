@@ -3,8 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const pastaDados = require('./dados');
 
-const PASTA = path.join(__dirname, 'data');
+const PASTA = pastaDados.PASTA;
 const ARQUIVO = path.join(PASTA, 'usuarios.json');
 const ARQUIVO_CONFIG = path.join(PASTA, 'config.json');
 
@@ -73,6 +74,9 @@ function hashSenha(senha, salt) {
 }
 
 function senhaConfere(senha, usuario) {
+  // Conta de convidado nasce SEM senha (senhaHash null). Sem esta linha, uma
+  // conta sem hash seria uma conta em que qualquer um entra pelo formulario.
+  if (!usuario || !usuario.senhaHash || !usuario.salt) return false;
   const tentativa = Buffer.from(hashSenha(senha, usuario.salt), 'hex');
   const guardado = Buffer.from(usuario.senhaHash, 'hex');
   if (tentativa.length !== guardado.length) return false;
@@ -102,6 +106,7 @@ function publico(usuario) {
     nome: usuario.nome,
     email: usuario.email,
     isAdmin: !!usuario.isAdmin,
+    convidado: !!usuario.convidado,
     appearance: usuario.appearance || null,
     criadoEm: usuario.criadoEm || null,
   };
@@ -128,6 +133,50 @@ function criar({ nome, email, senha, isAdmin }) {
   return usuario;
 }
 
+// Conta de visitante, criada quando alguem abre um link de convite.
+// Ver docs/plano-convidado.md.
+//
+// E conta de verdade (tem uid proprio) porque o chat, a DM e a presenca todos
+// dependem de um id estavel. O que ela nao tem e senha: ninguem entra nela pelo
+// formulario de login, so pelo link, e so enquanto o cookie durar.
+function criarConvidado({ nome }) {
+  const usuario = {
+    id: crypto.randomUUID(),
+    nome,
+    // e-mail sintetico: preenche o campo que o resto do codigo espera sem
+    // colidir com e-mail de gente de verdade.
+    email: 'convidado@local',
+    emailChave: '',            // string vazia nunca casa com porEmail()
+    salt: null,
+    senhaHash: null,
+    isAdmin: false,            // visitante nao decora a sede
+    convidado: true,
+    appearance: null,
+    criadoEm: Date.now(),
+    ultimoAcesso: Date.now(),
+  };
+  usuario.emailChave = 'convidado-' + usuario.id + '@local';
+  usuario.email = usuario.emailChave;
+  usuarios.push(usuario);
+  salvar();
+  return usuario;
+}
+
+// Convidado nao acumula: sem isto o usuarios.json ganharia uma conta por
+// visitante, pra sempre. 7 dias e bem mais que a sessao de 12 horas dele, entao
+// nao ha risco de apagar alguem que ainda esta na sede.
+const VALIDADE_CONVIDADO_MS = 7 * 24 * 60 * 60 * 1000;
+
+function limparConvidadosVelhos() {
+  const corte = Date.now() - VALIDADE_CONVIDADO_MS;
+  const antes = usuarios.length;
+  usuarios = usuarios.filter((u) => !u.convidado || (u.ultimoAcesso || u.criadoEm || 0) > corte);
+  if (usuarios.length !== antes) {
+    console.log('[usuarios] ' + (antes - usuarios.length) + ' conta(s) de convidado expirada(s) removida(s)');
+    salvar();
+  }
+}
+
 function marcarAcesso(id) {
   const u = porId(id);
   if (!u) return;
@@ -145,12 +194,14 @@ function atualizarPerfil(id, { nome, appearance }) {
 }
 
 carregar();
+limparConvidadosVelhos();
 
 module.exports = {
   porEmail,
   porId,
   publico,
   criar,
+  criarConvidado,
   senhaConfere,
   marcarAcesso,
   atualizarPerfil,

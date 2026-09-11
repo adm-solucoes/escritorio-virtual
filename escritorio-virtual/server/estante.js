@@ -9,8 +9,9 @@
 // em qual sala esta qual livro.
 const fs = require('fs');
 const path = require('path');
+const pastaDados = require('./dados');
 
-const ARQUIVO = path.join(__dirname, 'data', 'estante.json');
+const ARQUIVO = pastaDados.arquivo('estante.json');
 const LIVROS_MAX = 300;
 
 // Limites de texto. Nao sao capricho: isto vai pro disco e volta pra tela de

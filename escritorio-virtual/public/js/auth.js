@@ -3,8 +3,17 @@
 (function () {
   let tela, form, erroEl, botao;
   let abaEntrar, abaCriar;
-  let modo = 'entrar'; // 'entrar' | 'criar'
+  let modo = 'entrar'; // 'entrar' | 'criar' | 'convidado'
   let aoEntrar = null;
+
+  // Link de visitante: `?convite=TOKEN`. Ver docs/plano-convidado.md.
+  const tokenConvite = new URLSearchParams(location.search).get('convite');
+
+  const ROTULO = {
+    entrar: 'Entrar',
+    criar: 'Criar conta e entrar',
+    convidado: 'Entrar como visitante',
+  };
 
   async function pedir(rota, opcoes) {
     const resposta = await fetch('/api' + rota, Object.assign({
@@ -21,7 +30,10 @@
   }
 
   function eu() {
-    return pedir('/eu', { method: 'GET' }).then((d) => d.usuario);
+    return pedir('/eu', { method: 'GET' }).then((d) => {
+      if (tokenConvite) history.replaceState(null, '', location.pathname);
+      return d.usuario;
+    });
   }
 
   function salvarPerfil(dados) {
@@ -48,12 +60,33 @@
   function trocarModo(novo) {
     modo = novo;
     limparErro();
+    const visita = modo === 'convidado';
+
     abaEntrar.classList.toggle('ativa', modo === 'entrar');
     abaCriar.classList.toggle('ativa', modo === 'criar');
+    // No modo visita nao ha o que escolher: quem chegou pelo link nao tem conta
+    // e nao pode criar uma sem o codigo da sede.
+    document.getElementById('login-abas').classList.toggle('oculto', visita);
+
+    // O nome aparece no cadastro E na visita; o resto do cadastro, so no cadastro.
     document.querySelectorAll('.campo-cadastro').forEach((el) => {
       el.classList.toggle('oculto', modo !== 'criar');
     });
-    botao.textContent = modo === 'entrar' ? 'Entrar' : 'Criar conta e entrar';
+    if (visita) document.getElementById('campo-nome').classList.remove('oculto');
+
+    // E-mail e senha somem na visita - e param de ser obrigatorios, senao o
+    // navegador barra o envio de um campo que nem esta na tela.
+    document.querySelectorAll('.campo-conta').forEach((el) => {
+      el.classList.toggle('oculto', visita);
+      const campo = el.querySelector('input');
+      if (campo) campo.required = !visita;
+    });
+
+    document.getElementById('login-sub').textContent = visita
+      ? 'Voce foi convidado pra visitar a sede'
+      : 'Escritorio virtual da empresa junior';
+
+    botao.textContent = ROTULO[modo];
     document.getElementById('login-senha').setAttribute(
       'autocomplete', modo === 'entrar' ? 'current-password' : 'new-password'
     );
@@ -61,9 +94,7 @@
 
   function ocupado(sim) {
     botao.disabled = sim;
-    botao.textContent = sim
-      ? 'So um instante...'
-      : (modo === 'entrar' ? 'Entrar' : 'Criar conta e entrar');
+    botao.textContent = sim ? 'So um instante...' : ROTULO[modo];
   }
 
   async function enviar(ev) {
@@ -76,7 +107,19 @@
 
     try {
       let usuario;
-      if (modo === 'entrar') {
+      if (modo === 'convidado') {
+        usuario = (await pedir('/convite/entrar', {
+          method: 'POST',
+          body: JSON.stringify({
+            token: tokenConvite,
+            nome: document.getElementById('login-nome').value.trim(),
+          }),
+        })).usuario;
+        // Tira o `?convite=` da barra de endereco. Sem isto, um F5 gastaria o
+        // link de novo e criaria uma SEGUNDA conta de visitante pra mesma
+        // pessoa - ela perderia a conversa e o nome na lista duplicaria.
+        history.replaceState(null, '', location.pathname);
+      } else if (modo === 'entrar') {
         usuario = (await pedir('/entrar', {
           method: 'POST',
           body: JSON.stringify({ email, senha }),
@@ -123,7 +166,7 @@
     abaEntrar.addEventListener('click', () => trocarModo('entrar'));
     abaCriar.addEventListener('click', () => trocarModo('criar'));
     form.addEventListener('submit', enviar);
-    trocarModo('entrar');
+    trocarModo(tokenConvite ? 'convidado' : 'entrar');
   }
 
   window.Auth = { init, eu, sair, salvarPerfil, mostrar, esconder };

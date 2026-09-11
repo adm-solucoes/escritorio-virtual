@@ -11,8 +11,9 @@
 // conversa de verdade pra fora da tela.
 const fs = require('fs');
 const path = require('path');
+const pastaDados = require('./dados');
 
-const ARQUIVO = path.join(__dirname, 'data', 'chat.json');
+const ARQUIVO = pastaDados.arquivo('chat.json');
 const ESPERA_MS = 1500; // junta as mensagens de uma rajada num gravar so
 
 let timer = null;

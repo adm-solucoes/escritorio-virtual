@@ -53,6 +53,8 @@
     socket.on('mesas-atualizadas', (data) => emitLocal('mesas-atualizadas', data));
     socket.on('mapa-atualizado', (data) => emitLocal('mapa-atualizado', data));
     socket.on('mapa-objeto-atualizado', (data) => emitLocal('mapa-objeto-atualizado', data));
+    socket.on('mapa-conteudo-atualizado', (data) => emitLocal('mapa-conteudo-atualizado', data));
+    socket.on('mapa-conteudo-recusado', (data) => emitLocal('mapa-conteudo-recusado', data));
     socket.on('agenda', (data) => emitLocal('agenda', data));
     socket.on('trello', (data) => emitLocal('trello', data));
   }
@@ -126,10 +128,15 @@
     if (socket && socket.connected) socket.emit('mapa-objeto', { c, r, o });
   }
 
+  // Pendura (ou tira, com url vazia) um link num movel. Ver docs/plano-conteudo.md.
+  function porConteudoNoMapa(c, r, titulo, url) {
+    if (socket && socket.connected) socket.emit('mapa-conteudo', { c, r, titulo, url });
+  }
+
   window.Network = {
     connect, on, sendMove, sendStatus, sendReaction, sendRtcSignal, sendChatMessage,
     pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, moverItemDaMesa, tirarItemDaMesa,
-    editarMapa, editarObjetoMapa,
+    editarMapa, editarObjetoMapa, porConteudoNoMapa,
     pedirAgenda, pedirTrello,
   };
 })();

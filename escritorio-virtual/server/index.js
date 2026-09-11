@@ -274,6 +274,9 @@ io.on('connection', (socket) => {
       sentado: false,
       status: 'livre',
       isAdmin: !!conta.isAdmin,
+      // Visitante entrou por link (docs/plano-convidado.md). Vai junto pro
+      // cliente porque a lista de pessoas mostra quem e de fora.
+      convidado: !!conta.convidado,
     };
     players.set(socket.id, player);
     nomesPorUid.set(player.uid, player.name);
@@ -290,6 +293,7 @@ io.on('connection', (socket) => {
       mesas: mesasStore.paraEnvio(),
       mudancasMapa: mapaEditado.paraEnvio(),
       objetosMapa: mapaEditado.objetosParaEnvio(),
+      conteudosMapa: mapaEditado.conteudosParaEnvio(),
     });
 
     socket.broadcast.emit('player-joined', player);
@@ -358,6 +362,9 @@ io.on('connection', (socket) => {
   socket.on('mesa-reivindicar', (data) => {
     const player = players.get(socket.id);
     if (!player || !data) return;
+    // Mesa e de quem trabalha aqui. Visitante ocupando mesa deixaria a sede
+    // cheia de lugar preso por gente que foi embora.
+    if (player.convidado) return;
     const col = Number(data.col);
     const row = Number(data.row);
     if (!Number.isInteger(col) || !Number.isInteger(row)) return;
@@ -420,6 +427,7 @@ io.on('connection', (socket) => {
     if (!resultado.mudou) return;
     io.emit('mapa-atualizado', { c, r, t });
     if (resultado.objetoCaiu) io.emit('mapa-objeto-atualizado', { c, r, o: 0 });
+    if (resultado.linkCaiu) io.emit('mapa-conteudo-atualizado', { c, r, conteudo: null });
   });
 
   // Camada de cima: monitor, caneca, papelada... apoiados numa celula.
@@ -438,6 +446,43 @@ io.on('connection', (socket) => {
     if (o && map.MESAS_DE_TRABALHO.has(map.tiles[r][c])) return;
     if (!mapaEditado.editarObjeto(c, r, o)) return;
     io.emit('mapa-objeto-atualizado', { c, r, o });
+  });
+
+  // Terceira camada: o que o movel ABRE no clique. Ver docs/plano-conteudo.md.
+  // So a diretoria poe e tira - o link vai ser aberto pelo navegador de todo
+  // mundo que visita a sede, entao quem escolhe o endereco importa.
+  socket.on('mapa-conteudo', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !player.isAdmin || !data) return;
+
+    const c = Number(data.c);
+    const r = Number(data.r);
+    if (!mapaEditado.posicaoValida(c, r)) return;
+
+    // Sem url = tirar o link.
+    if (!data.url) {
+      if (!mapaEditado.tirarConteudo(c, r)) return;
+      io.emit('mapa-conteudo-atualizado', { c, r, conteudo: null });
+      return;
+    }
+
+    if (!mapaEditado.definirConteudo(c, r, data, player.uid)) {
+      // O cliente precisa saber POR QUE nao pegou, senao a pessoa fica clicando
+      // em "salvar" achando que o servidor nao respondeu.
+      socket.emit('mapa-conteudo-recusado', {
+        c,
+        r,
+        motivo: !mapaEditado.podeTerConteudo(c, r)
+          ? 'Escolhe um movel: chao vazio nao abre nada.'
+          : (!mapaEditado.urlValida(data.url)
+            ? 'O link precisa comecar com http:// ou https://'
+            : 'Poe um nome pro conteudo.'),
+      });
+      return;
+    }
+    io.emit('mapa-conteudo-atualizado', {
+      c, r, conteudo: mapaEditado.conteudosParaEnvio().find((x) => x.c === c && x.r === r),
+    });
   });
 
   socket.on('chat-historico', (data) => {
@@ -563,13 +608,13 @@ app.get('/api/estante', sessao.exigirLogin, (req, res) => {
   res.json(estante.ler());
 });
 
-app.post('/api/estante/livro', sessao.exigirLogin, (req, res) => {
+app.post('/api/estante/livro', sessao.exigirMembro, (req, res) => {
   const r = estante.adicionar(req.body, req.usuario);
   if (r.erro) return res.status(400).json({ erro: r.erro });
   res.json(estante.ler());
 });
 
-app.delete('/api/estante/livro/:id', sessao.exigirLogin, (req, res) => {
+app.delete('/api/estante/livro/:id', sessao.exigirMembro, (req, res) => {
   const r = estante.remover(req.params.id, req.usuario);
   // 403 e nao 400: a diferenca entre "nao existe" e "nao e seu" importa pra
   // quem le o erro na tela.

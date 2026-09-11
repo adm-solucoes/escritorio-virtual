@@ -2170,3 +2170,131 @@ video.mostrando-tela {
   .estante-capa, .estante-capa-faixa { transition: none; }
   .estante-capa:hover { transform: none; }
 }
+
+/* ------------------------------------------------------ convidar visitante
+   Painel que a diretoria abre pra gerar o link de convite.
+   Ver docs/plano-convidado.md. */
+.painel-convite {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(17, 20, 28, 0.45);
+}
+.convite-card {
+  width: min(520px, 100%);
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  box-shadow: var(--sombra-painel);
+  padding: 22px;
+}
+.convite-card h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.convite-ajuda {
+  margin: 0 0 16px;
+  color: var(--texto-fraco);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.convite-linha {
+  display: flex;
+  gap: 8px;
+}
+/* O link e longo e a pessoa precisa ver que copiou o endereco certo; por isso
+   o campo cresce e o botao fica no tamanho do texto. */
+.convite-linha input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--borda-forte);
+  border-radius: 10px;
+  background: var(--painel-alt);
+  font: 500 13px ui-monospace, Consolas, monospace;
+  color: var(--texto);
+}
+.convite-validade {
+  margin: 12px 0 0;
+  color: var(--texto-fraco);
+  font-size: 12.5px;
+  line-height: 1.5;
+  min-height: 18px;
+}
+.convite-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+}
+.convite-revogar {
+  border: none;
+  background: none;
+  padding: 6px 0;
+  font: 600 13px inherit;
+  color: var(--vermelho);
+  cursor: pointer;
+}
+.convite-revogar:hover { text-decoration: underline; }
+.convite-revogar:disabled { opacity: 0.5; cursor: default; text-decoration: none; }
+.convite-acoes .btn {
+  background: var(--painel-alt);
+  color: var(--texto);
+}
+.convite-acoes .btn:hover { background: var(--borda); }
+
+/* --------------------------------------------------- objeto que abre conteudo
+   Reusa o .painel-convite / .convite-card: sao a mesma coisa visualmente, um
+   cartao centrado sobre a sede. Ver docs/plano-conteudo.md. */
+.conteudo-etiqueta {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--indigo-claro);
+  color: var(--indigo-escuro);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* O endereco aparece inteiro ANTES de a pessoa clicar: e o que deixa ela ver
+   pra onde vai. Por isso quebra a linha em vez de cortar com reticencias. */
+.conteudo-url {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--painel-alt);
+  color: var(--texto-fraco);
+  font: 500 12.5px ui-monospace, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.conteudo-acoes { justify-content: flex-end; }
+.conteudo-onde {
+  display: block;
+  margin-top: 6px;
+  font: 500 11.5px ui-monospace, Consolas, monospace;
+  color: var(--texto-fraco);
+}
+.conteudo-erro { margin: 10px 0 0; }
+.conteudo-espaco { flex: 1; }
+#form-por-conteudo .login-campo { margin-top: 12px; }
+
+.decor-link {
+  width: auto;
+  gap: 6px;
+  padding: 0 10px;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.decor-link.ativo {
+  background: var(--indigo);
+  border-color: var(--indigo);
+  color: #fff;
+}

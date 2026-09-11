@@ -31,6 +31,8 @@ Cada feature grande tem um plano com decisao, protocolo e o resultado dos testes
 | `docs/plano-chat.md` | canais, DMs, reacoes, nao lidas |
 | `docs/plano-login.md` | contas, sessao por cookie, o furo que o login fechou |
 | `docs/plano-decorador.md` | decorador, camada de objetos, sentar na cadeira |
+| `docs/plano-convidado.md` | entrar por link, sem conta (e o que o visitante NAO pode) |
+| `docs/plano-conteudo.md` | link pendurado em movel, e por que so http/https |
 | `referencias/README.md` | **as medidas tiradas dos prints do Gather** |
 
 O Caio gosta desse formato: **planeja, salva o plano no projeto, executa, e

@@ -460,8 +460,36 @@
 
   // ---------- edicao ----------
 
+  // Modo "link no objeto": o clique no mapa deixa de pintar e passa a pendurar
+  // conteudo no movel. Ver docs/plano-conteudo.md.
+  //
+  // E um modo separado, e nao mais um item da grade, porque a acao e de outra
+  // natureza: pintar escreve um tile e pronto, pendurar link abre formulario e
+  // precisa saber o que JA tem naquela celula.
+  let modoLink = false;
+
   function estaPintando() {
-    return aberto && !!selecionado;
+    return aberto && !!selecionado && !modoLink;
+  }
+
+  function noModoLink() {
+    return aberto && souAdmin && modoLink;
+  }
+
+  function alternarModoLink() {
+    modoLink = !modoLink;
+    if (modoLink) selecionado = null;   // os dois modos nao convivem
+    atualizarBotaoLink();
+    render();
+  }
+
+  function atualizarBotaoLink() {
+    const b = document.getElementById('decor-link');
+    if (!b) return;
+    b.classList.toggle('ativo', modoLink);
+    b.classList.toggle('oculto', !souAdmin);
+    const dica = document.getElementById('decor-dica');
+    if (modoLink && dica) dica.textContent = 'Clique num movel do mapa pra pendurar (ou tirar) um link nele.';
   }
 
   function temGenteEm(col, row) {
@@ -580,6 +608,8 @@
   function fechar() {
     aberto = false;
     selecionado = null;
+    modoLink = false;
+    atualizarBotaoLink();
     painel.classList.add('oculto');
     document.getElementById('btn-decorar').classList.remove('ativo');
     // Se o painel foi aberto pela plantinha do cartao, a camera ficou colada na
@@ -596,6 +626,9 @@
 
     const botao = document.getElementById('btn-decorar');
     const titulo = document.getElementById('decor-titulo');
+    const botaoLink = document.getElementById('decor-link');
+    if (botaoLink) botaoLink.addEventListener('click', alternarModoLink);
+    atualizarBotaoLink();
 
     // A diretoria decora a casa toda; quem tem mesa decora a propria. Quem nao
     // e nem uma coisa nem outra nao ve o botao (o servidor recusa de qualquer
@@ -658,6 +691,6 @@
 
   window.Decorador = {
     init, estaPintando, pintarEm, podeColocarEm, desenharPreviaNoMapa, pintandoEmCima,
-    abrirEmCima,
+    abrirEmCima, noModoLink,
   };
 })();
