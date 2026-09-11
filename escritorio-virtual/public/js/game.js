@@ -1565,16 +1565,25 @@
       q(ctx, x, y, 100, 88, 12, 22, TRACO);
 
     } else if (type === M.CABIDE) {
-      q(ctx, x, y, 44, 106, 40, 8, 'rgba(60,66,82,0.18)');
-      q(ctx, x, y, 52, 100, 24, 8, '#3b4152'); // base
-      q(ctx, x, y, 60, 24, 8, 78, '#4a5162'); // haste
-      q(ctx, x, y, 60, 24, 3, 78, '#626b80'); // luz na haste
-      // ganchos com casacos pendurados
-      q(ctx, x, y, 34, 34, 26, 6, '#4a5162');
-      q(ctx, x, y, 68, 38, 26, 6, '#4a5162');
-      blob(ctx, x, y, 34, 52, 16, 18, '#f0c65a', 4);
-      blob(ctx, x, y, 94, 56, 16, 18, '#e05a5a', 4);
-      blob(ctx, x, y, 64, 20, 14, 12, '#5a86d0', 4);
+      // Cabide de pe com dois casacos pendurados.
+      //
+      // Antes os casacos eram bolinhas de 16x18 unidades (4x4 pixels) presas em
+      // ganchos de 6 unidades, um pixel e meio: na tela virava um bale de baloes
+      // num palito. Casaco tem forma de casaco - ombro largo em cima, corpo
+      // comprido descendo - e pra essa forma aparecer ela precisa de tamanho.
+      q(ctx, x, y, 40, 108, 48, 8, 'rgba(60,66,82,0.18)');
+      q(ctx, x, y, 48, 98, 32, 12, '#3b4152');                     // base
+      q(ctx, x, y, 60, 20, 8, 80, '#4a5162');                      // haste
+      q(ctx, x, y, 60, 20, 4, 80, '#626b80');                      // luz na haste
+      q(ctx, x, y, 28, 28, 72, 8, '#4a5162');                      // travessa dos ganchos
+      // casaco da esquerda
+      q(ctx, x, y, 24, 32, 32, 12, '#d8a838');                     // ombros
+      q(ctx, x, y, 28, 44, 24, 40, '#f0c65a');                     // corpo
+      q(ctx, x, y, 28, 44, 8, 40, '#ffe08a');                      // dobra clara
+      // casaco da direita
+      q(ctx, x, y, 72, 32, 32, 12, '#b84848');                     // ombros
+      q(ctx, x, y, 76, 44, 24, 44, '#e05a5a');                     // corpo
+      q(ctx, x, y, 76, 44, 8, 44, '#f08080');                      // dobra clara
 
     } else if (type === M.IMPRESSORA) {
       q(ctx, x, y, 12, 106, 104, 8, 'rgba(45,50,64,0.20)');
@@ -1730,39 +1739,49 @@
     } else if (type === M.GELADEIRA) {
       // Geladeira de porta de vidro da copa (referencia 172742): as latas
       // coloridas atras do vidro sao o que a identifica de longe.
+      //
+      // TAMANHO IMPORTA MAIS QUE DETALHE. Um tile tem 128 unidades finas e sai
+      // com 32 pixels: 4 unidades = 1 pixel. A versao antiga tinha DOZE latas de
+      // 12 unidades (3 pixels cada) e tres prateleiras de 4 unidades (UM pixel).
+      // Nada daquilo aparecia de longe: era uma caixa cinza com sujeira dentro.
+      // Agora sao SEIS latas de 24 unidades - 6 pixels - que a gente enxerga.
       q(ctx, x, y, 12, 116, 104, 8, 'rgba(45,50,64,0.20)');
       qContorno(ctx, x, y, 12, 8, 104, 112, 4, '#20242e');
       qArred(ctx, x, y, 13, 9, 102, 110, 3, '#c3c9d6');            // carcaca
-      qArred(ctx, x, y, 20, 16, 88, 84, 2, '#7fc4dd');             // vidro
-      q(ctx, x, y, 20, 16, 88, 20, '#a5dcef');                     // reflexo em cima
-      // prateleiras com latas
-      [24, 48, 72].forEach((py) => {
-        q(ctx, x, y, 20, py + 16, 88, 4, '#dfe6ee');
-        ['#e0607e', '#4da3d6', '#f0a83c', '#3fb08a'].forEach((cor, k) => {
-          q(ctx, x, y, 26 + k * 20, py, 12, 16, cor);
-          q(ctx, x, y, 26 + k * 20, py, 4, 16, 'rgba(255,255,255,0.35)');
+      qArred(ctx, x, y, 20, 16, 88, 80, 2, '#6fbdd8');             // vidro
+      q(ctx, x, y, 20, 16, 88, 16, '#9ed8ea');                     // luz no alto do vidro
+      // duas prateleiras, tres latas grandes em cada
+      [24, 60].forEach((py) => {
+        ['#e0607e', '#f0a83c', '#3fb08a'].forEach((cor, k) => {
+          q(ctx, x, y, 26 + k * 28, py, 24, 28, cor);
+          q(ctx, x, y, 26 + k * 28, py, 8, 28, 'rgba(255,255,255,0.28)');
         });
+        q(ctx, x, y, 20, py + 28, 88, 4, '#dfe6ee');               // prateleira
       });
-      q(ctx, x, y, 24, 20, 8, 76, 'rgba(255,255,255,0.30)');       // brilho do vidro
-      q(ctx, x, y, 100, 48, 8, 28, '#8f97a8');                     // puxador
-      q(ctx, x, y, 20, 104, 88, 12, '#a8aebd');                    // rodape
+      q(ctx, x, y, 96, 40, 12, 36, '#8f97a8');                     // puxador
+      q(ctx, x, y, 20, 100, 88, 16, '#a8aebd');                    // rodape
 
     } else if (type === M.AQUARIO) {
-      // Aquario da sala de huddle (172815): agua clara, peixinho e cascalho.
+      // Aquario da sala de huddle (172815): agua clara, cascalho e UM peixe.
+      //
+      // Pela mesma conta da geladeira: o peixe media 16x8 unidades, ou seja 4x2
+      // pixels, e as plantinhas 8 unidades - 2 pixels. O aquario saia na tela
+      // como um retangulo azul liso. Menos coisas dentro, cada uma grande o
+      // bastante pra existir, e ai da pra ver que e um aquario.
       q(ctx, x, y, 12, 116, 104, 8, 'rgba(45,50,64,0.20)');
       qArred(ctx, x, y, 16, 88, 96, 28, 3, '#5b6376');             // movel de baixo
-      q(ctx, x, y, 20, 92, 88, 4, '#7b8496');
+      q(ctx, x, y, 20, 92, 88, 6, '#7b8496');
       qContorno(ctx, x, y, 16, 24, 96, 64, 3, '#20242e');
       qArred(ctx, x, y, 17, 25, 94, 62, 2, '#3fa8c4');             // agua
-      q(ctx, x, y, 17, 25, 94, 16, '#6fc9dd');                     // luz da superficie
-      q(ctx, x, y, 20, 76, 88, 12, '#c9a86a');                     // cascalho
-      [[40, 60], [72, 66], [56, 70]].forEach(([px, py]) => {
-        q(ctx, x, y, px, py - 16, 8, 20, '#3f8a4a');               // plantinha
-      });
-      q(ctx, x, y, 48, 44, 16, 8, '#f0a83c');                      // peixe
-      q(ctx, x, y, 44, 46, 6, 4, '#f0a83c');
-      q(ctx, x, y, 76, 56, 12, 6, '#e0607e');
-      q(ctx, x, y, 24, 32, 8, 44, 'rgba(255,255,255,0.28)');       // reflexo no vidro
+      q(ctx, x, y, 17, 25, 94, 20, '#6fc9dd');                     // luz da superficie
+      q(ctx, x, y, 20, 72, 88, 16, '#c9a86a');                     // cascalho
+      q(ctx, x, y, 28, 44, 16, 32, '#3f8a4a');                     // planta da esquerda
+      q(ctx, x, y, 84, 40, 16, 36, '#4f9c58');                     // planta da direita
+      // o peixe, grande o bastante pra ser um peixe e nao um risco laranja
+      q(ctx, x, y, 48, 46, 32, 18, '#f0a83c');                     // corpo
+      q(ctx, x, y, 40, 50, 12, 10, '#f0a83c');                     // cauda
+      q(ctx, x, y, 68, 50, 8, 6, '#ffffff');                       // olho
+      q(ctx, x, y, 20, 28, 12, 44, 'rgba(255,255,255,0.26)');      // reflexo no vidro
 
     } else if (type === M.LUMINARIA_PE) {
       // Luminaria de globos (172815): haste fina com bolas de luz espalhadas.
