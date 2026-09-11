@@ -211,6 +211,48 @@
     return false;
   }
 
+  // ----------------------------------------------------- salas de conversa
+  // Em que sala FECHADA a pessoa esta, se estiver em alguma. Sao as de reuniao
+  // e as privativas de uma pessoa so - marcadas com `privativa: true` no mapa.
+  function salaFechadaDe(p) {
+    const M = window.OfficeMap;
+    if (!M || !M.getRoomAtTile) return null;
+    const sala = M.getRoomAtTile(Math.floor(p.x / TILE), Math.floor(p.y / TILE));
+    return sala && sala.privativa ? sala.id : null;
+  }
+
+  // A decisao de falar ou nao com alguem, num lugar so.
+  //
+  // Sala fechada MANDA mais que distancia, nos dois sentidos:
+  //
+  //   dentro da mesma sala -> conversa, e nao importa se estao nas duas pontas
+  //     dela. Reuniao nao e proximidade: quem senta na outra ponta da mesa de
+  //     conferencia participa igual.
+  //
+  //   um dentro, outro fora -> NAO conversa, e nao importa se estao a um passo
+  //     um do outro. E o ponto inteiro de uma sala fechada: dava pra encostar do
+  //     lado de fora da porta e cair na reuniao.
+  //
+  // Fora de sala fechada, vale o de sempre: perto e sem parede no meio.
+  function deveFalarCom(self, outro) {
+    const minha = salaFechadaDe(self);
+    const dele = salaFechadaDe(outro);
+    if (minha || dele) return minha === dele;
+    const dist = Math.hypot(outro.x - self.x, outro.y - self.y);
+    return dist < RAIO_ENTRAR && !paredeEntre(self, outro);
+  }
+
+  // Sair tem folga maior que entrar, senao a chamada pisca com a pessoa andando
+  // em cima da borda. Dentro da mesma sala fechada nao ha borda: so sai quem
+  // sair da sala.
+  function deveContinuarCom(self, outro) {
+    const minha = salaFechadaDe(self);
+    const dele = salaFechadaDe(outro);
+    if (minha || dele) return minha === dele;
+    const dist = Math.hypot(outro.x - self.x, outro.y - self.y);
+    return dist <= RAIO_SAIR && !paredeEntre(self, outro);
+  }
+
   // Volume pela distancia: cheio pertinho, sumindo ate zero no raio de saida.
   function volumePara(dist) {
     const cheio = TILES_VOLUME_CHEIO * TILE;
@@ -245,30 +287,36 @@
 
     playersMap.forEach((p, id) => {
       if (id === selfId) return;
-      const dist = Math.hypot(p.x - self.x, p.y - self.y);
       const jaConectado = peers.has(id);
-      // A parede so e consultada quando importa: e uma varredura pela reta, e
-      // rodar isso pra todo mundo em todo quadro seria desperdicio.
-      const perto = dist < RAIO_ENTRAR;
 
-      // QUALQUER um dos dois propoe - e nao so o de id menor, como era antes.
-      //
-      // O motivo e concreto: `updateProximity` roda no laco de desenho, e o
-      // navegador CONGELA esse laco em aba de segundo plano. Com a regra antiga,
-      // se justamente a pessoa de id menor estivesse com a aba atras (alt-tab, o
-      // tempo todo), a chamada nunca abria - as duas ficavam lado a lado sem
-      // nada acontecer, e nem dava pra desconfiar do porque.
-      //
-      // Os dois propondo ao mesmo tempo nao e problema: o `tratarSinal` ja
-      // resolve a colisao de ofertas - o de id maior desfaz a propria e aceita a
-      // do outro. Essa regra continua sendo a que decide quem cede.
-      if (!jaConectado && perto && cameraAtiva && !paredeEntre(self, p)) {
-        iniciarChamada(id);
-      } else if (jaConectado && (dist > RAIO_SAIR || paredeEntre(self, p))) {
+      if (!jaConectado) {
+        // QUALQUER um dos dois propoe - e nao so o de id menor, como era antes.
+        //
+        // O motivo e concreto: `updateProximity` roda no laco de desenho, e o
+        // navegador CONGELA esse laco em aba de segundo plano. Com a regra
+        // antiga, se justamente a pessoa de id menor estivesse com a aba atras
+        // (alt-tab, o tempo todo), a chamada nunca abria - as duas ficavam lado
+        // a lado sem nada acontecer, e nem dava pra desconfiar do porque.
+        //
+        // Os dois propondo ao mesmo tempo nao e problema: o `tratarSinal` ja
+        // resolve a colisao de ofertas - o de id maior desfaz a propria e aceita
+        // a do outro. Essa regra continua sendo a que decide quem cede.
+        if (cameraAtiva && deveFalarCom(self, p)) iniciarChamada(id);
+        return;
+      }
+
+      if (!deveContinuarCom(self, p)) {
         fecharPeer(id);
-      } else if (jaConectado) {
-        const par = peers.get(id);
-        if (par && par.videoEl) par.videoEl.volume = volumePara(dist);
+        return;
+      }
+
+      const par = peers.get(id);
+      if (par && par.videoEl) {
+        // Dentro da mesma sala fechada o volume e cheio, ponta a ponta: numa
+        // reuniao ninguem fala mais baixo por estar na outra cabeceira.
+        par.videoEl.volume = salaFechadaDe(self)
+          ? 1
+          : volumePara(Math.hypot(p.x - self.x, p.y - self.y));
       }
     });
 

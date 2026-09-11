@@ -167,19 +167,19 @@ const OBJETO_MAX = 37;
 const PODS = [9, 15, 28, 34]; // coluna de partida de cada sala privativa
 
 const ROOMS = [
-  { id: 'diretoria', nome: 'Diretoria', r0: 3, c0: 9, r1: 7, c1: 13 },
-  { id: 'financeiro', nome: 'Financeiro', r0: 3, c0: 15, r1: 7, c1: 19 },
+  { id: 'diretoria', nome: 'Diretoria', r0: 3, c0: 9, r1: 7, c1: 13, privativa: true },
+  { id: 'financeiro', nome: 'Financeiro', r0: 3, c0: 15, r1: 7, c1: 19, privativa: true },
   { id: 'patio', nome: 'Patio', r0: 3, c0: 21, r1: 8, c1: 26 },
-  { id: 'projetos', nome: 'Projetos', r0: 3, c0: 28, r1: 7, c1: 32 },
-  { id: 'marketing', nome: 'Marketing', r0: 3, c0: 34, r1: 7, c1: 38 },
+  { id: 'projetos', nome: 'Projetos', r0: 3, c0: 28, r1: 7, c1: 32, privativa: true },
+  { id: 'marketing', nome: 'Marketing', r0: 3, c0: 34, r1: 7, c1: 38, privativa: true },
   { id: 'copa', nome: 'Copa', r0: 9, c0: 3, r1: 14, c1: 7 },
-  { id: 'reuniao', nome: 'Sala de Reuniao', r0: 16, c0: 3, r1: 21, c1: 7 },
-  { id: 'treinamento', nome: 'Treinamento', r0: 9, c0: 40, r1: 14, c1: 44 },
-  { id: 'huddle', nome: 'Huddle', r0: 16, c0: 40, r1: 21, c1: 44 },
+  { id: 'reuniao', nome: 'Sala de Reuniao', r0: 16, c0: 3, r1: 21, c1: 7, privativa: true },
+  { id: 'treinamento', nome: 'Treinamento', r0: 9, c0: 40, r1: 14, c1: 44, privativa: true },
+  { id: 'huddle', nome: 'Huddle', r0: 16, c0: 40, r1: 21, c1: 44, privativa: true },
   { id: 'time', nome: 'Time', r0: 10, c0: 9, r1: 17, c1: 32 },
   { id: 'lounge', nome: 'Lounge', r0: 22, c0: 3, r1: 28, c1: 11 },
   { id: 'recepcao', nome: 'Recepcao', r0: 22, c0: 12, r1: 28, c1: 19 },
-  { id: 'conferencia', nome: 'Conferencia', r0: 22, c0: 20, r1: 28, c1: 29 },
+  { id: 'conferencia', nome: 'Conferencia', r0: 22, c0: 20, r1: 28, c1: 29, privativa: true },
   // pega o resto do predio, e so depois o verde de fora
   { id: 'hall', nome: 'Hall', r0: 8, c0: 2, r1: 29, c1: 45 },
   { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 31, c1: 47 },

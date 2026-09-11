@@ -55,6 +55,28 @@ Acontece de verdade quando o outro lado recarrega a pagina no meio da
 negociacao. Agora, depois de 12s sem conectar, o par e derrubado e a proximidade
 refaz a chamada sozinha no quadro seguinte.
 
+## 4. Sala fechada manda mais que distancia
+
+Depois dos tres acima, o que faltava do Gather: **area privativa**. A regra vale
+nos dois sentidos, e o segundo e o que importa de verdade.
+
+- **Os dois na mesma sala fechada** → conversam, e nao importa a distancia.
+  Reuniao nao e proximidade: quem senta na outra ponta da mesa de conferencia
+  participa igual a quem esta do lado.
+- **Um dentro, outro fora** → **nao** conversam, e nao importa se estao a um
+  passo um do outro. Sem isso da pra encostar do lado de fora da porta e cair na
+  reuniao - e a Conferencia nem tem parede em volta.
+
+Marcadas com `privativa: true` no mapa, nas duas copias. Sao oito: as quatro de
+reuniao (Reuniao, Conferencia, Huddle, Treinamento) e as quatro privativas de uma
+pessoa so (Diretoria, Financeiro, Projetos, Marketing).
+
+Copa, lounge, recepcao, patio e o salao ficam de fora de proposito: sao lugares
+de esbarrar em alguem, e ali proximidade e o comportamento certo.
+
+Dentro de sala fechada o volume e cheio ponta a ponta - numa reuniao ninguem fala
+mais baixo por estar na outra cabeceira.
+
 ## Resultado dos testes
 
 Medido no jogo de pe, com o bot como segunda pessoa.
@@ -77,3 +99,19 @@ E o volume, medindo enquanto se afasta:
 A ultima linha merece nota: a chamada fechou antes dos 4,5 tiles porque havia
 uma parede no caminho (tile 20,6). Conferido, nao e o raio errado - e a regra 2
 funcionando.
+
+E a sala fechada, com o bot parado no meio da Conferencia:
+
+| Onde o Dev estava | Distancia | Chamada | Volume |
+|---|---|---|---|
+| Hall, colado na borda da sala | 2,0 tiles | **nao** | - |
+| Dentro, do lado do bot | 2,0 tiles | sim | 1,00 |
+| Dentro, canto oposto da sala | **10,8 tiles** | sim | 1,00 |
+
+A primeira e a terceira linha juntas sao a regra inteira: dois tiles de distancia
+nao bastam se voce esta do lado de fora, e dez tiles nao atrapalham se voce esta
+dentro.
+
+O `testes/mapa.js` guarda o dado: as duas copias do mapa tem que marcar as mesmas
+salas como fechadas. Se so uma marcar, nada quebra - a reuniao simplesmente passa
+a vazar pro corredor, calada.

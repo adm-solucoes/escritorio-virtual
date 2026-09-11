@@ -37,6 +37,19 @@ conferir('cliente e servidor tem o mesmo mapa', diferentes, 0);
 conferir('  e o mesmo enum de objetos',
   JSON.stringify(cliente.OBJETOS), JSON.stringify(servidor.OBJETOS));
 
+// ---- salas fechadas ----
+// Sala com `privativa: true` e sala onde a conversa nao vaza: quem esta dentro
+// se ouve inteiro, quem esta fora nao ouve nada (ver docs/plano-proximidade.md).
+// A marca fica nas DUAS copias do mapa, e as duas tem que concordar - se o
+// cliente achar que a sala e fechada e o servidor nao, ninguem quebra: a
+// reuniao so passa a vazar pro corredor, calada.
+const fechadasCliente = cliente.ROOMS.filter((s) => s.privativa).map((s) => s.id).sort();
+const fechadasServidor = servidor.ROOMS.filter((s) => s.privativa).map((s) => s.id).sort();
+conferir('  e as mesmas salas fechadas',
+  JSON.stringify(fechadasCliente), JSON.stringify(fechadasServidor));
+conferir('  com pelo menos as salas de reuniao marcadas',
+  ['conferencia', 'huddle', 'reuniao', 'treinamento'].filter((id) => !fechadasCliente.includes(id)), []);
+
 // ---- da pra chegar em tudo? ----
 const m = servidor;
 const T = m.TILE;

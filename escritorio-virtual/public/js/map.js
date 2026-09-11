@@ -167,19 +167,19 @@
   const PODS = [9, 15, 28, 34]; // coluna de partida de cada sala privativa
 
   const ROOMS = [
-    { id: 'diretoria', nome: 'Diretoria', r0: 3, c0: 9, r1: 7, c1: 13, piso: 'carpete_roxo', cor: '#7a5cd0', labelR: 3, labelC: 9 },
-    { id: 'financeiro', nome: 'Financeiro', r0: 3, c0: 15, r1: 7, c1: 19, piso: 'carpete_roxo', cor: '#3f7fc4', labelR: 3, labelC: 15 },
+    { id: 'diretoria', nome: 'Diretoria', r0: 3, c0: 9, r1: 7, c1: 13, piso: 'carpete_roxo', cor: '#7a5cd0', labelR: 3, labelC: 9, privativa: true },
+    { id: 'financeiro', nome: 'Financeiro', r0: 3, c0: 15, r1: 7, c1: 19, piso: 'carpete_roxo', cor: '#3f7fc4', labelR: 3, labelC: 15, privativa: true },
     { id: 'patio', nome: 'Patio', r0: 3, c0: 21, r1: 8, c1: 26, piso: 'grama', cor: '#3f9e57', labelR: 3, labelC: 21 },
-    { id: 'projetos', nome: 'Projetos', r0: 3, c0: 28, r1: 7, c1: 32, piso: 'carpete_roxo', cor: '#c25a3f', labelR: 3, labelC: 28 },
-    { id: 'marketing', nome: 'Marketing', r0: 3, c0: 34, r1: 7, c1: 38, piso: 'carpete_roxo', cor: '#d98324', labelR: 3, labelC: 34 },
+    { id: 'projetos', nome: 'Projetos', r0: 3, c0: 28, r1: 7, c1: 32, piso: 'carpete_roxo', cor: '#c25a3f', labelR: 3, labelC: 28, privativa: true },
+    { id: 'marketing', nome: 'Marketing', r0: 3, c0: 34, r1: 7, c1: 38, piso: 'carpete_roxo', cor: '#d98324', labelR: 3, labelC: 34, privativa: true },
     { id: 'copa', nome: 'Copa', r0: 9, c0: 3, r1: 14, c1: 7, piso: 'ladrilho', cor: '#c08a3e', labelR: 9, labelC: 3 },
-    { id: 'reuniao', nome: 'Sala de Reuniao', r0: 16, c0: 3, r1: 21, c1: 7, piso: 'carpete_azul', cor: '#e0607e', labelR: 16, labelC: 3 },
-    { id: 'treinamento', nome: 'Treinamento', r0: 9, c0: 40, r1: 14, c1: 44, piso: 'ladrilho', cor: '#2f9e8f', labelR: 9, labelC: 40 },
-    { id: 'huddle', nome: 'Huddle', r0: 16, c0: 40, r1: 21, c1: 44, piso: 'carpete_azul', cor: '#4d8fa0', labelR: 16, labelC: 40 },
+    { id: 'reuniao', nome: 'Sala de Reuniao', r0: 16, c0: 3, r1: 21, c1: 7, piso: 'carpete_azul', cor: '#e0607e', labelR: 16, labelC: 3, privativa: true },
+    { id: 'treinamento', nome: 'Treinamento', r0: 9, c0: 40, r1: 14, c1: 44, piso: 'ladrilho', cor: '#2f9e8f', labelR: 9, labelC: 40, privativa: true },
+    { id: 'huddle', nome: 'Huddle', r0: 16, c0: 40, r1: 21, c1: 44, piso: 'carpete_azul', cor: '#4d8fa0', labelR: 16, labelC: 40, privativa: true },
     { id: 'time', nome: 'Time', r0: 10, c0: 9, r1: 17, c1: 32, piso: 'tijolo', cor: '#7c5cd4', labelR: 10, labelC: 9 },
     { id: 'lounge', nome: 'Lounge', r0: 22, c0: 3, r1: 28, c1: 11, piso: 'tijolo', cor: '#1f9c8a', labelR: 22, labelC: 4 },
     { id: 'recepcao', nome: 'Recepcao', r0: 22, c0: 12, r1: 28, c1: 19, piso: 'tijolo', cor: '#8b98a8', labelR: 22, labelC: 13 },
-    { id: 'conferencia', nome: 'Conferencia', r0: 22, c0: 20, r1: 28, c1: 29, piso: 'tijolo', cor: '#cf4a41', labelR: 22, labelC: 21 },
+    { id: 'conferencia', nome: 'Conferencia', r0: 22, c0: 20, r1: 28, c1: 29, piso: 'tijolo', cor: '#cf4a41', labelR: 22, labelC: 21, privativa: true },
     // pega o resto do predio, e so depois o verde de fora
     { id: 'hall', nome: 'Hall', r0: 8, c0: 2, r1: 29, c1: 45, piso: 'tijolo', cor: '#8b98a8', labelR: 20, labelC: 21 },
     { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 31, c1: 47, piso: 'grama', cor: '#3f9e57', labelR: 1, labelC: 1 },
