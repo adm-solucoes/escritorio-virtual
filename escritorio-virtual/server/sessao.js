@@ -14,9 +14,26 @@ const PRODUCAO = process.env.NODE_ENV === 'production';
 // Nunca liga junto com NODE_ENV=production.
 const SEM_LOGIN = process.env.SEM_LOGIN === '1' && !PRODUCAO;
 let usuarioDev = null;
+// Segunda conta de desenvolvimento, so pro bot de teste. Existe porque testar
+// chamada, divisao de tela ou chat sozinho e impossivel: e preciso uma segunda
+// pessoa na sede. Com uma conta so, os dois entrariam como "Dev" e nao daria
+// pra saber quem e quem na tela.
+let usuarioBot = null;
 
 function definirUsuarioDev(u) {
   usuarioDev = u;
+}
+
+function definirUsuarioBot(u) {
+  usuarioBot = u;
+}
+
+// O bot se identifica no handshake do socket (`query.bot`). So vale com
+// SEM_LOGIN ligado, que por sua vez nunca liga em producao - entao nao ha como
+// alguem virar outra pessoa na sede publica dizendo que e um bot.
+function ehBot(socket) {
+  return SEM_LOGIN && !!usuarioBot
+    && socket.handshake && socket.handshake.query && socket.handshake.query.bot === '1';
 }
 
 function assinar(dados) {
@@ -88,6 +105,7 @@ function usuarioDaRequisicao(req) {
 
 // Usuario do handshake do socket (mesmo cookie).
 function usuarioDoSocket(socket) {
+  if (ehBot(socket)) return usuarioBot;
   if (SEM_LOGIN && usuarioDev) return usuarioDev;
   const cookies = lerCookies(socket.handshake.headers.cookie);
   const id = lerToken(cookies[NOME_COOKIE]);
@@ -110,4 +128,5 @@ module.exports = {
   exigirLogin,
   SEM_LOGIN,
   definirUsuarioDev,
+  definirUsuarioBot,
 };

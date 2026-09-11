@@ -12,6 +12,7 @@ const agenda = require('./agenda');
 const trello = require('./trello');
 const estante = require('./estante');
 const mesasStore = require('./mesas');
+const chatDisco = require('./chat-disco');
 
 const PORT = process.env.PORT || 3500;
 
@@ -48,8 +49,37 @@ const CANAIS = [
   { id: 'projetos', nome: 'projetos', descricao: 'Andamento dos projetos e clientes' },
 ];
 
-const conversas = new Map(); // conversaId -> [mensagem]
-let proximoMsgId = 1;
+// O historico vem do disco: reiniciar o servidor nao apaga mais a conversa.
+// Ver server/chat-disco.js e docs/plano-chat-no-disco.md.
+const doDisco = chatDisco.carregar(MENSAGENS_MAX);
+const conversas = doDisco.conversas; // conversaId -> [mensagem]
+let proximoMsgId = doDisco.proximoMsgId;
+
+function salvarChat() {
+  chatDisco.agendar(conversas, proximoMsgId);
+}
+
+// O historico voltou do disco, mas `nomesPorUid` so enche quando a pessoa
+// conecta. Sem isto, logo depois de reiniciar a lista de conversas mostrava
+// "Alguem" no lugar do nome de quem ainda nao tinha entrado - com a conversa
+// dela ali, legivel, do lado. Os nomes vem da mesma lista de contas do login.
+conversas.forEach((_, conversaId) => {
+  if (!conversaId.startsWith('dm:')) return;
+  participantesDaDm(conversaId).forEach((uid) => {
+    if (nomesPorUid.has(uid)) return;
+    const conta = usuariosStore.porId(uid);
+    if (conta) nomesPorUid.set(uid, conta.nome);
+  });
+});
+
+// Grava na saida: sem isto as ultimas mensagens antes do desligamento morriam
+// na espera de 1,5s do gravador.
+['SIGINT', 'SIGTERM'].forEach((sinal) => {
+  process.on(sinal, () => {
+    chatDisco.agora();
+    process.exit(0);
+  });
+});
 
 function idCanal(canalId) {
   return 'canal:' + canalId;
@@ -129,6 +159,7 @@ function guardarMensagem(conversaId, mensagem) {
   const lista = conversas.get(conversaId);
   lista.push(mensagem);
   if (lista.length > MENSAGENS_MAX) lista.shift();
+  salvarChat();
   return mensagem;
 }
 
@@ -456,6 +487,7 @@ io.on('connection', (socket) => {
 
     if (atualizado.length) mensagem.reacoes[data.emoji] = atualizado;
     else delete mensagem.reacoes[data.emoji];
+    salvarChat(); // a reacao tambem e conteudo: some junto se nao for gravada
 
     entregar(conversaId, 'chat-reacao', {
       conversa: conversaId,
@@ -586,8 +618,34 @@ function prepararContaDev() {
     conta = usuariosStore.porId(conta.id);
   }
   sessao.definirUsuarioDev(conta);
+  prepararContaBot();
   return conta;
 }
+
+// Segunda conta de desenvolvimento, pro bot de teste (`/?bot=1`). Sem ela nao
+// da pra testar chamada, divisao de tela nem conversa sozinho - e com uma conta
+// so, as duas abas entrariam como "Dev" e ninguem saberia quem e quem.
+function prepararContaBot() {
+  const EMAIL = 'bot@local';
+  let conta = usuariosStore.porEmail(EMAIL);
+  if (!conta) {
+    conta = usuariosStore.criar({
+      nome: 'Bot',
+      email: EMAIL,
+      senha: require('crypto').randomBytes(24).toString('hex'),
+      isAdmin: false, // o bot nao edita o mapa: um clique torto dele estragaria a sede
+    });
+  }
+  // Aparencia bem diferente da do Dev, senao os dois bonecos ficam iguais na
+  // tela e o teste de proximidade vira adivinhacao.
+  usuariosStore.atualizarPerfil(conta.id, { appearance: APARENCIA_BOT });
+  sessao.definirUsuarioBot(usuariosStore.porId(conta.id));
+}
+
+const APARENCIA_BOT = sanitizeAppearance({
+  skin: '#8d5524', shirt: '#e0607e', bottom: '#2f7d8c', shoes: '#3a2f2a',
+  hairColor: '#f0a83c', hairStyle: 'longo', glasses: true, glassesColor: '#2b3038',
+});
 
 const APARENCIA_DEV = sanitizeAppearance({
   skin: '#f1c27d', shirt: '#35bdf0', bottom: '#6a7ce0', shoes: '#2b2f38',

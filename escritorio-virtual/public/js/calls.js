@@ -2,8 +2,26 @@
 // Quando dois bonecos ficam pertinho um do outro, os navegadores deles se conectam
 // diretamente (o servidor so entrega o "bilhete" de sinalizacao, nunca ve o video).
 (function () {
-  const RAIO_ENTRAR = 130; // px: distancia pra iniciar a chamada
-  const RAIO_SAIR = 170; // px: distancia pra encerrar (maior que a de entrar, evita ficar entrando/saindo)
+  // ---------------------------------------------------------------- alcance
+  // Medido em TILES, e nao em pixels soltos: o mapa e uma grade, e "tres tiles"
+  // e uma distancia que da pra enxergar na tela e conferir no mapa. Antes eram
+  // 130px, que dao 4,1 tiles - com o zoom em 2x isso e meia tela de distancia,
+  // e a chamada abria com gente que voce mal via.
+  const TILE = 32;
+  const TILES_ENTRAR = 3;
+  const TILES_SAIR = 4.5; // a folga evita a chamada piscar quando voce anda na borda
+  const RAIO_ENTRAR = TILES_ENTRAR * TILE;
+  const RAIO_SAIR = TILES_SAIR * TILE;
+
+  // De onde o som ja comeca a cair. Perto e volume cheio; dai pra fora vai
+  // sumindo ate zero no raio de saida, como no Gather - o corte seco fazia a
+  // conversa aparecer e desaparecer de uma vez.
+  const TILES_VOLUME_CHEIO = 1.5;
+
+  // Quanto tempo uma conexao pode ficar "quase la" antes de ser considerada
+  // perdida. Ver `podarConexoesPresas`.
+  const PACIENCIA_MS = 12000;
+
   const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 
   let selfId = null;
@@ -13,8 +31,10 @@
   let micAtivo = true;
   let videoAtivo = true;
   let streamPendente = null; // camera aberta na tela de entrada, esperando o init
+  let telaStream = null; // o que o navegador devolveu do getDisplayMedia
+  let telaTrack = null; // a track de video da tela, enquanto ela esta dividida
 
-  const peers = new Map(); // id do outro jogador -> { pc, videoEl, remoteDescDefinida, candidatosPendentes }
+  const peers = new Map(); // id do outro jogador -> { pc, videoEl, videoSender, remoteDescDefinida, candidatosPendentes }
 
   function palco() {
     return document.getElementById('palco-remoto');
@@ -37,20 +57,45 @@
     peers.delete(id);
   }
 
+  // Qual video sai daqui agora: a tela, quando esta sendo dividida, senao a
+  // camera. Um so - ver docs/plano-dividir-tela.md.
+  function videoQueVaiSair() {
+    if (telaTrack) return telaTrack;
+    return localStream ? (localStream.getVideoTracks()[0] || null) : null;
+  }
+
   // Garante que todas as tracks locais estao sendo enviadas nessa conexao.
   // Retorna true se alguma foi adicionada agora (ou seja, precisa renegociar).
   // Sem isso, quem cria a conexao antes da propria camera abrir fica mudo pro
   // outro lado pelo resto da chamada.
+  //
+  // O transmissor de VIDEO fica guardado em `p.videoSender`, e nao e procurado
+  // de novo a cada vez. Motivo: ao parar a divisao de tela o transmissor fica
+  // com track nula, e um transmissor de track nula nao diz de que tipo era -
+  // procurando por `s.track.kind` a gente nao acharia esse e criaria um segundo
+  // transmissor de video, o que faz o outro lado receber dois quadros.
   function sincronizarTracks(p) {
     if (!localStream) return false;
-    const jaEnviadas = p.pc.getSenders().map((s) => s.track).filter(Boolean);
     let mudou = false;
-    localStream.getTracks().forEach((track) => {
+
+    const jaEnviadas = p.pc.getSenders().map((s) => s.track).filter(Boolean);
+    localStream.getAudioTracks().forEach((track) => {
       if (jaEnviadas.indexOf(track) === -1) {
         p.pc.addTrack(track, localStream);
         mudou = true;
       }
     });
+
+    const video = videoQueVaiSair();
+    if (video) {
+      if (!p.videoSender) {
+        p.videoSender = p.pc.addTrack(video, localStream);
+        mudou = true;
+      } else if (p.videoSender.track !== video) {
+        // troca sem renegociar: e o que faz a tela entrar na hora
+        p.videoSender.replaceTrack(video);
+      }
+    }
     return mudou;
   }
 
@@ -72,7 +117,11 @@
 
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     const videoEl = criarVideoRemoto(id);
-    p = { pc, videoEl, remoteDescDefinida: false, candidatosPendentes: [] };
+    p = {
+      pc, videoEl, videoSender: null,
+      remoteDescDefinida: false, candidatosPendentes: [],
+      nascidoEm: Date.now(), // pra saber quando desistir (ver podarConexoesPresas)
+    };
     peers.set(id, p);
 
     sincronizarTracks(p);
@@ -140,22 +189,86 @@
     }
   }
 
+  // Tem parede entre os dois? Anda pela reta que liga um ao outro, de quarto em
+  // quarto de tile, e olha o que tem no caminho.
+  //
+  // So PAREDE e JANELA cortam. Movel nao: duas pessoas conversando por cima de
+  // uma mesa e a coisa mais normal de um escritorio, e a mesa e tile solido
+  // igual a parede - barrar por "solido" calaria a sede inteira.
+  function paredeEntre(a, b) {
+    const M = window.OfficeMap;
+    if (!M) return false;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const passos = Math.ceil(Math.hypot(dx, dy) / (TILE / 4));
+    if (passos <= 0) return false;
+    for (let i = 1; i < passos; i++) {
+      const x = a.x + (dx * i) / passos;
+      const y = a.y + (dy * i) / passos;
+      const t = M.tiles[Math.floor(y / TILE)] && M.tiles[Math.floor(y / TILE)][Math.floor(x / TILE)];
+      if (t === M.PAREDE || t === M.JANELA) return true;
+    }
+    return false;
+  }
+
+  // Volume pela distancia: cheio pertinho, sumindo ate zero no raio de saida.
+  function volumePara(dist) {
+    const cheio = TILES_VOLUME_CHEIO * TILE;
+    if (dist <= cheio) return 1;
+    if (dist >= RAIO_SAIR) return 0;
+    return 1 - (dist - cheio) / (RAIO_SAIR - cheio);
+  }
+
+  // Conexao que nasceu e nunca chegou a conectar vira lixo que BLOQUEIA: como
+  // `peers.has(id)` continua verdadeiro, a proximidade nunca tenta de novo e as
+  // duas pessoas ficam lado a lado sem chamada, pra sempre. Acontece de verdade
+  // quando o outro lado recarrega a pagina no meio da negociacao.
+  //
+  // Depois da paciencia, o par e derrubado - e a proximidade, que roda todo
+  // quadro, refaz a chamada sozinha no instante seguinte.
+  function podarConexoesPresas() {
+    const agora = Date.now();
+    peers.forEach((p, id) => {
+      if (p.pc.connectionState === 'connected') return;
+      if (agora - p.nascidoEm < PACIENCIA_MS) return;
+      fecharPeer(id);
+    });
+  }
+
   // Chamado a cada frame do jogo com o mapa atual de jogadores (id -> {x,y,...}).
   function updateProximity(playersMap) {
     if (!selfId) return;
     const self = playersMap.get(selfId);
     if (!self) return;
 
+    podarConexoesPresas();
+
     playersMap.forEach((p, id) => {
       if (id === selfId) return;
       const dist = Math.hypot(p.x - self.x, p.y - self.y);
       const jaConectado = peers.has(id);
+      // A parede so e consultada quando importa: e uma varredura pela reta, e
+      // rodar isso pra todo mundo em todo quadro seria desperdicio.
+      const perto = dist < RAIO_ENTRAR;
 
-      // so o lado com o id "menor" propoe a chamada, pra nao dar dois convites ao mesmo tempo
-      if (!jaConectado && dist < RAIO_ENTRAR && cameraAtiva && selfId < id) {
+      // QUALQUER um dos dois propoe - e nao so o de id menor, como era antes.
+      //
+      // O motivo e concreto: `updateProximity` roda no laco de desenho, e o
+      // navegador CONGELA esse laco em aba de segundo plano. Com a regra antiga,
+      // se justamente a pessoa de id menor estivesse com a aba atras (alt-tab, o
+      // tempo todo), a chamada nunca abria - as duas ficavam lado a lado sem
+      // nada acontecer, e nem dava pra desconfiar do porque.
+      //
+      // Os dois propondo ao mesmo tempo nao e problema: o `tratarSinal` ja
+      // resolve a colisao de ofertas - o de id maior desfaz a propria e aceita a
+      // do outro. Essa regra continua sendo a que decide quem cede.
+      if (!jaConectado && perto && cameraAtiva && !paredeEntre(self, p)) {
         iniciarChamada(id);
-      } else if (jaConectado && dist > RAIO_SAIR) {
+      } else if (jaConectado && (dist > RAIO_SAIR || paredeEntre(self, p))) {
         fecharPeer(id);
+      } else if (jaConectado) {
+        const par = peers.get(id);
+        if (par && par.videoEl) par.videoEl.volume = volumePara(dist);
       }
     });
 
@@ -204,15 +317,23 @@
 
   function aplicarUiCamera() {
     const videoLocal = document.getElementById('video-local');
-    videoLocal.srcObject = localStream;
+    // Dividindo a tela, a previa mostra a TELA: sem esta guarda, qualquer mexida
+    // na camera (mudo, video on/off) devolvia a previa pro rosto no meio da
+    // apresentacao, e so a previa - o que o outro lado recebia continuava sendo
+    // a tela. Ver duas coisas diferentes e pior que ver a errada.
+    if (!telaTrack) videoLocal.srcObject = localStream;
     document.getElementById('preview-local').classList.remove('oculto');
-    document.getElementById('preview-local').classList.toggle('sem-video', !temVideo);
+    document.getElementById('preview-local').classList.toggle('sem-video', !temVideo && !telaTrack);
     document.getElementById('btn-camera').classList.add('ativo');
     document.getElementById('btn-mic').classList.toggle('desativado', !micAtivo);
     document.getElementById('btn-video-toggle').classList.toggle('desativado', !videoAtivo);
   }
 
   function desligarCamera() {
+    // A tela vai junto: dividir tela com a camera desligada deixaria a pessoa
+    // mandando a propria tela sem microfone e sem quadro nenhum na tela dela
+    // pra lembrar disso.
+    if (telaTrack) pararTela();
     if (localStream) localStream.getTracks().forEach((t) => t.stop());
     localStream = null;
     cameraAtiva = false;
@@ -224,6 +345,83 @@
   function alternarCamera() {
     if (cameraAtiva) desligarCamera();
     else ligarCamera();
+  }
+
+  // ------------------------------------------------------------ dividir a tela
+  // A tela ENTRA NO LUGAR da camera, e nao junto: e uma troca de track no
+  // transmissor que ja existe, entao o outro lado nao muda nada - o quadro que
+  // mostrava seu rosto passa a mostrar sua tela. Ver docs/plano-dividir-tela.md.
+
+  async function ligarTela() {
+    if (!cameraAtiva) {
+      mostrarAviso('Ligue a camera ou o microfone antes de dividir a tela.');
+      return;
+    }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    } catch (e) {
+      return; // a pessoa fechou a janela de escolha: nao ha nada a desfazer
+    }
+    const track = stream.getVideoTracks()[0];
+    if (!track) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    telaStream = stream;
+    telaTrack = track;
+    // O navegador tem o proprio botao de "parar de compartilhar", fora da nossa
+    // pagina. Sem escutar isto, a divisao parava pra ele e continuava ligada pra
+    // gente: o botao ficaria aceso mandando uma track morta.
+    telaTrack.addEventListener('ended', pararTela);
+
+    peers.forEach((p, id) => {
+      if (sincronizarTracks(p)) renegociar(id); // so-audio: nao havia video pra trocar
+    });
+    aplicarUiTela();
+  }
+
+  function pararTela() {
+    if (!telaTrack) return;
+    const camera = localStream ? (localStream.getVideoTracks()[0] || null) : null;
+    telaTrack.removeEventListener('ended', pararTela);
+    peers.forEach((p) => {
+      // `replaceTrack(null)` para de mandar video sem derrubar o transmissor -
+      // e por isso que `p.videoSender` fica guardado.
+      if (p.videoSender) p.videoSender.replaceTrack(camera);
+    });
+    telaStream.getTracks().forEach((t) => t.stop());
+    telaStream = null;
+    telaTrack = null;
+    aplicarUiTela();
+  }
+
+  function alternarTela() {
+    if (telaTrack) pararTela();
+    else ligarTela();
+  }
+
+  function aplicarUiTela() {
+    const dividindo = !!telaTrack;
+    const botao = document.getElementById('btn-tela');
+    if (botao) {
+      botao.classList.toggle('ativo', dividindo);
+      botao.title = dividindo ? 'Parar de dividir a tela' : 'Dividir a tela';
+    }
+    const videoLocal = document.getElementById('video-local');
+    if (videoLocal) {
+      videoLocal.srcObject = dividindo ? telaStream : localStream;
+      // no proprio video, e nao no quadro: a grade de chamada move este
+      // elemento pra dentro dela (ver style.css, `video.mostrando-tela`)
+      videoLocal.classList.toggle('mostrando-tela', dividindo);
+    }
+    const preview = document.getElementById('preview-local');
+    if (preview) {
+      preview.classList.toggle('sem-video', !dividindo && !temVideo);
+      preview.classList.toggle('dividindo-tela', dividindo);
+      if (dividindo) preview.classList.remove('oculto');
+    }
   }
 
   function alternarMic() {
@@ -268,6 +466,15 @@
     document.getElementById('btn-camera').addEventListener('click', alternarCamera);
     document.getElementById('btn-mic').addEventListener('click', alternarMic);
     document.getElementById('btn-video-toggle').addEventListener('click', alternarVideo);
+
+    const btnTela = document.getElementById('btn-tela');
+    // Navegador sem `getDisplayMedia` (celular, quase sempre) nao ganha um botao
+    // que so daria erro ao ser tocado.
+    if (btnTela && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+      btnTela.addEventListener('click', alternarTela);
+    } else if (btnTela) {
+      btnTela.remove();
+    }
   }
 
   function temChamadaAtiva(id) {
@@ -306,9 +513,11 @@
   function isCameraAtiva() { return cameraAtiva; }
   function temVideoLocal() { return temVideo; }
 
+  function estaDividindoTela() { return !!telaTrack; }
+
   window.Calls = {
     init, updateProximity, temChamadaAtiva, temVideoRemoto, getVideoRemoto,
     getPeersConectados, getLocalStream, isCameraAtiva, temVideoLocal,
-    usarStreamDaEntrada,
+    usarStreamDaEntrada, alternarTela, estaDividindoTela,
   };
 })();

@@ -937,6 +937,10 @@ button { font-family: inherit; }
 .ctrl-btn.desativado { color: #ff8b8b; }
 .ctrl-btn.desativado .risco { display: block; }
 .ctrl-entrar.ativo { background: var(--verde); color: #06240f; }
+/* Dividindo a tela o botao fica aceso, e num tom diferente do "camera ligada":
+   sao dois estados que convivem, e confundir os dois faz a pessoa achar que
+   parou de dividir quando so desligou o video. */
+.ctrl-btn.ativo { background: var(--roxo, #5b45c8); color: #fff; }
 
 .preview-local {
   position: relative;
@@ -953,6 +957,7 @@ button { font-family: inherit; }
   transform: scaleX(-1);
   background: #111;
 }
+.preview-local.dividindo-tela video { width: 72px; }
 .preview-local.sem-video video { display: none; }
 .preview-local.sem-video::before {
   content: '🎙️';
@@ -1068,6 +1073,21 @@ button { font-family: inherit; }
   display: block;
 }
 .chamada-tile-self video { transform: scaleX(-1); }
+
+/* A previa do proprio video e espelhada porque e o seu rosto: gente espera se
+   ver como no espelho. Tela dividida NAO pode ser espelhada - o texto sairia ao
+   contrario e voce nao conseguiria conferir o que esta mostrando.
+
+   A classe vai no proprio <video>, e nao no quadro em volta, porque a grade de
+   chamada MOVE esse mesmo elemento pra dentro do tile: uma regra presa ao
+   container pararia de valer na hora que a chamada abre. E fica depois das duas
+   regras que ela desfaz (.preview-local video e .chamada-tile-self video), que
+   tem a mesma especificidade - quem vem por ultimo ganha. */
+video.mostrando-tela {
+  transform: none;
+  object-fit: contain;
+  background: #0d1117;
+}
 .chamada-nome {
   position: absolute;
   left: 10px;

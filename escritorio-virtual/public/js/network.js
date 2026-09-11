@@ -13,7 +13,15 @@
   }
 
   function connect(profile) {
-    socket = io({ reconnectionDelay: 500, reconnectionDelayMax: 3000 });
+    // `?bot=1` entra como a segunda conta de desenvolvimento, pra dar pra testar
+    // chamada e divisao de tela sozinho. O servidor so aceita isso com
+    // SEM_LOGIN ligado, que nunca liga em producao. Ver public/js/bot.js.
+    const ehBot = new URLSearchParams(location.search).get('bot') === '1';
+    socket = io({
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 3000,
+      query: ehBot ? { bot: '1' } : {},
+    });
 
     socket.on('connect', () => {
       emitLocal('conexao', 'conectado');
