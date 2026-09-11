@@ -1245,18 +1245,35 @@
 
     } else if (type === M.TAPETE) {
       const b = bordasDoMovel(tiles, r, c, type);
-      q(ctx, x, y, 0, 0, 128, 128, '#dfbca6');
-      // trama do tecido, em pontinhos estaveis
+      // O desenho tem que sobreviver ao TAMANHO REAL. Um tile de 128 unidades
+      // finas vira 32 pixels na tela, ou seja 4 unidades = 1 pixel: a trama
+      // antiga era de pontinhos de 6 unidades, que viravam UM pixel e meio e
+      // sumiam. De longe o tapete era um bloco de cor chapado.
+      //
+      // Agora nada tem menos de 16 unidades (4 pixels na tela), e o losango usa
+      // a posicao GLOBAL da celula pra continuar de um tile pro outro - senao
+      // cada tile repetiria o mesmo desenho e apareceria a emenda.
+      q(ctx, x, y, 0, 0, 128, 128, '#c9a184');
+
+      const gx = c * 128;
+      const gy = r * 128;
       for (let i = 0; i < 128; i += 16) {
-        for (let j = ((i / 16) % 2) * 8; j < 128; j += 16) {
-          q(ctx, x, y, j, i, 6, 6, 'rgba(198,152,120,0.35)');
+        for (let j = 0; j < 128; j += 16) {
+          // losango: pinta onde a soma das coordenadas globais cai no ritmo
+          const sx = (gx + j) / 16;
+          const sy = (gy + i) / 16;
+          if ((sx + sy) % 4 === 0) q(ctx, x, y, j, i, 16, 16, '#b98c6d');
+          else if ((sx - sy + 400) % 4 === 0) q(ctx, x, y, j, i, 16, 16, '#d8b294');
         }
       }
-      const debrum = '#c08a6c';
-      if (b.cima) { q(ctx, x, y, 0, 0, 128, 6, debrum); q(ctx, x, y, 0, 8, 128, 3, 'rgba(255,255,255,0.20)'); }
-      if (b.baixo) { q(ctx, x, y, 0, 122, 128, 6, debrum); q(ctx, x, y, 0, 117, 128, 3, 'rgba(255,255,255,0.20)'); }
-      if (b.esq) { q(ctx, x, y, 0, 0, 6, 128, debrum); q(ctx, x, y, 8, 0, 3, 128, 'rgba(255,255,255,0.20)'); }
-      if (b.dir) { q(ctx, x, y, 122, 0, 6, 128, debrum); q(ctx, x, y, 117, 0, 3, 128, 'rgba(255,255,255,0.20)'); }
+
+      // Debrum: faixa larga na volta, com um fio claro por dentro. E o que faz
+      // ler como tapete e nao como mancha no chao.
+      const debrum = '#8a5c43';
+      if (b.cima) { q(ctx, x, y, 0, 0, 128, 16, debrum); q(ctx, x, y, 0, 20, 128, 4, '#e4c4a8'); }
+      if (b.baixo) { q(ctx, x, y, 0, 112, 128, 16, debrum); q(ctx, x, y, 0, 104, 128, 4, '#e4c4a8'); }
+      if (b.esq) { q(ctx, x, y, 0, 0, 16, 128, debrum); q(ctx, x, y, 20, 0, 4, 128, '#e4c4a8'); }
+      if (b.dir) { q(ctx, x, y, 112, 0, 16, 128, debrum); q(ctx, x, y, 104, 0, 4, 128, '#e4c4a8'); }
 
     } else if (type === M.MESA_CENTRO) {
       // O tampo fica ALTO e menor, pra o pe aparecer embaixo dele: centrado e

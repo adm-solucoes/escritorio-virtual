@@ -191,7 +191,9 @@
     // CACTO fica fora: no pacote a planta espinhosa vem num vaso de PORCELANA
     // azul-e-branca, que puxa pra antiquario chines. Cacto de escritorio e vaso
     // simples em cima da mesa, e e o que a versao desenhada faz.
-    VASO_FLORES:   { f: 'small-items/flowers.png', c: 0, r: 0, w: 1, h: 1 },
+    // 0,0 e uma florzinha solta: pintava 5% da celula e no mapa o vaso ficava
+    // praticamente invisivel. 4,2 e um vaso inteiro (33% da celula).
+    VASO_FLORES:   { f: 'small-items/flowers.png', c: 4, r: 2, w: 1, h: 1 },
 
     // --- parede e chao ------------------------------------------------------
     // Quadro emoldurado do pacote, no lugar da moldurinha desenhada a mao.
