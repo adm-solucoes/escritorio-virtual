@@ -12,8 +12,9 @@ const path = require('path');
 const crypto = require('crypto');
 // so pelo segredo que assina o `state` do OAuth (o mesmo das sessoes)
 const usuarios = require('./usuarios');
+const pastaDados = require('./dados');
 
-const PASTA = path.join(__dirname, 'data');
+const PASTA = pastaDados.PASTA;
 const ARQUIVO = path.join(PASTA, 'google.json');
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';

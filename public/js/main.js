@@ -56,13 +56,34 @@
 
   function preencherMenu(usuario) {
     document.getElementById('menu-conta-nome').textContent = usuario.nome;
-    document.getElementById('menu-conta-email').textContent = usuario.email;
+    // "Convidar visitante" so pra diretoria (o servidor tambem recusa, mas
+    // botao que da 403 e botao quebrado).
+    Convite.mostrarPara(usuario);
+    const avatar = document.getElementById('conta-avatar');
+    avatar.textContent = (usuario.nome || '?').trim().slice(0, 1).toUpperCase();
+    if (usuario.appearance && usuario.appearance.shirt) {
+      avatar.style.background = usuario.appearance.shirt;
+    }
+    // "Entrou em 06/09/2026", como no cartao da referencia. Conta antiga sem a
+    // data nao inventa nada: mostra o e-mail, que e o que sempre existe.
+    const desde = document.getElementById('menu-conta-desde');
+    // Visitante nao ve "Entrou em 11/09" nem um e-mail sintetico que ele nunca
+    // digitou: ve o que ele e.
+    desde.textContent = usuario.convidado
+      ? 'Visitante'
+      : (usuario.criadoEm
+        ? 'Entrou em ' + new Date(usuario.criadoEm).toLocaleDateString('pt-BR')
+        : usuario.email);
   }
 
   function fecharMenu() {
     menuConta.classList.add('oculto');
+    document.getElementById('menu-conta-mais').classList.add('oculto');
   }
 
+  CartaoMesa.init();
+  ItemMesa.init();
+  Convite.init(fecharMenu);
   Auth.init(depoisDoLogin);
   Entrada.init(entrarNoJogo, abrirCriador);
 
@@ -74,10 +95,25 @@
     if (!menuConta.contains(ev.target)) fecharMenu();
   });
 
+  const menuMais = document.getElementById('menu-conta-mais');
+  document.getElementById('btn-conta-mais').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    menuMais.classList.toggle('oculto');
+  });
+
   document.getElementById('btn-trocar-avatar').addEventListener('click', () => {
     fecharMenu();
     abrirCriador();
   });
+
+  // So faz sentido oferecer "largar" pra quem tem mesa, entao o item aparece e
+  // some junto com a mesa. `Game` avisa a cada atualizacao da lista.
+  const btnLargarMesa = document.getElementById('btn-largar-mesa');
+  btnLargarMesa.addEventListener('click', () => {
+    fecharMenu();
+    Network.largarMesa();
+  });
+  Game.aoMudarMinhaMesa((tem) => btnLargarMesa.classList.toggle('oculto', !tem));
 
   document.getElementById('btn-sair').addEventListener('click', async () => {
     fecharMenu();

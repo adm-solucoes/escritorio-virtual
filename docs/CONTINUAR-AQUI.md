@@ -31,6 +31,8 @@ Cada feature grande tem um plano com decisao, protocolo e o resultado dos testes
 | `docs/plano-chat.md` | canais, DMs, reacoes, nao lidas |
 | `docs/plano-login.md` | contas, sessao por cookie, o furo que o login fechou |
 | `docs/plano-decorador.md` | decorador, camada de objetos, sentar na cadeira |
+| `docs/plano-convidado.md` | entrar por link, sem conta (e o que o visitante NAO pode) |
+| `docs/plano-conteudo.md` | link pendurado em movel, e por que so http/https |
 | `referencias/README.md` | **as medidas tiradas dos prints do Gather** |
 
 O Caio gosta desse formato: **planeja, salva o plano no projeto, executa, e
@@ -246,6 +248,18 @@ nao segura nada derruba junto o que estava em cima.
    `server/data`. Esta anotado no README principal.
 
 ---
+
+## 7b. A mesa pessoal tem documento proprio
+
+`docs/mesa-pessoal.md` - estado final: quem pode o que, como o clique se comporta,
+posicao livre e **os cinco lugares onde um item novo precisa entrar** (esquecer
+qualquer um falha em silencio). `docs/plano-mesa-pessoal.md` guarda a historia
+das decisoes.
+
+## 7c. O mapa tem documento proprio
+
+`docs/mapa.md` - as tres armadilhas que ja selaram sala aqui (porta de uma
+celula, anel do lago, contorno da agua) e o que `testes/mapa.js` guarda.
 
 ## 8. Checklist rapido antes de dizer "pronto"
 

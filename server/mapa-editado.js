@@ -3,8 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 const map = require('./map');
+const pastaDados = require('./dados');
 
-const PASTA = path.join(__dirname, 'data');
+const PASTA = pastaDados.PASTA;
 const ARQUIVO = path.join(PASTA, 'mapa.json');
 
 // So esses tipos podem ser colocados pelo decorador. Fora daqui (o chao das
@@ -22,6 +23,7 @@ const TILES_DO_CATALOGO = [
   map.CADEIRA_VERMELHA_BAIXO, map.CADEIRA_VERMELHA_ESQ, map.CADEIRA_VERMELHA_DIR,
   map.MESA_BAIXO, map.MESA_ESQ, map.MESA_DIR,
   map.MESA_MONITOR_BAIXO, map.MESA_MONITOR_ESQ, map.MESA_MONITOR_DIR,
+  map.PUFE, map.MESA_REDONDA, map.GELADEIRA, map.AQUARIO, map.LUMINARIA_PE,
 ];
 
 // chave "c,r" -> tile. Mapa em vez de lista: editar a mesma celula duas vezes
@@ -29,6 +31,12 @@ const TILES_DO_CATALOGO = [
 const mudancas = new Map();
 // chave "c,r" -> id do objeto apoiado na celula (camada de cima).
 const objetos = new Map();
+// chave "c,r" -> { titulo, url, porUid, em }. Terceira camada: o que aquele
+// movel ABRE quando alguem clica nele. Ver docs/plano-conteudo.md.
+const conteudos = new Map();
+
+const MAX_TITULO = 40;
+const MAX_URL = 500;
 
 function chave(c, r) {
   return c + ',' + r;
@@ -50,6 +58,7 @@ function salvar() {
   const dados = {
     mudancas: comoLista(mudancas, 't'),
     objetos: comoLista(objetos, 'o'),
+    conteudos: conteudosParaEnvio(),
   };
   const tmp = ARQUIVO + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(dados, null, 2), 'utf8');
@@ -70,6 +79,18 @@ function carregar() {
       objetos.set(chave(o.c, o.r), o.o);
       map.objetos[o.r][o.c] = o.o;
     });
+    // A validacao roda de novo na leitura, e nao so na escrita: o arquivo e
+    // editavel a mao e um `javascript:` colado ali viraria clique armado pra
+    // todo mundo que entrasse na sede.
+    (dados.conteudos || []).forEach((x) => {
+      if (!posicaoValida(x.c, x.r)) return;
+      const url = urlValida(x.url);
+      const titulo = tituloValido(x.titulo);
+      if (!url || !titulo) return;
+      conteudos.set(chave(x.c, x.r), {
+        titulo, url, porUid: x.porUid || null, em: x.em || null,
+      });
+    });
   } catch (e) {
     console.error('[mapa] nao consegui ler a decoracao:', e.message);
   }
@@ -88,6 +109,66 @@ function objetoValido(o) {
   return Number.isInteger(o) && o >= 0 && o <= map.OBJETO_MAX;
 }
 
+// So http e https. Esta lista curta e o ponto todo: o link vai ser aberto pelo
+// navegador de TODA visita, entao `javascript:` seria codigo rodando na sessao
+// dos outros e `data:`/`file:` seriam paginas forjadas com a cara do site.
+function urlValida(url) {
+  if (typeof url !== 'string') return null;
+  const cru = url.trim();
+  if (!cru || cru.length > MAX_URL) return null;
+  let endereco;
+  try {
+    endereco = new URL(cru);
+  } catch (e) {
+    return null;
+  }
+  if (endereco.protocol !== 'http:' && endereco.protocol !== 'https:') return null;
+  return endereco.href;
+}
+
+function tituloValido(titulo) {
+  if (typeof titulo !== 'string') return null;
+  const limpo = titulo.replace(/\s+/g, ' ').trim().slice(0, MAX_TITULO);
+  return limpo || null;
+}
+
+// Conteudo mora num MOVEL, nunca no chao: uma celula vazia com link seria um
+// pedaco de piso clicavel que ninguem adivinha que existe.
+function podeTerConteudo(c, r) {
+  return posicaoValida(c, r) && map.tiles[r][c] !== map.LIVRE;
+}
+
+function definirConteudo(c, r, { titulo, url }, porUid) {
+  if (!podeTerConteudo(c, r)) return null;
+  const endereco = urlValida(url);
+  const nome = tituloValido(titulo);
+  if (!endereco || !nome) return null;
+
+  conteudos.set(chave(c, r), {
+    titulo: nome, url: endereco, porUid: porUid || null, em: Date.now(),
+  });
+  salvar();
+  return true;
+}
+
+function tirarConteudo(c, r) {
+  if (!conteudos.delete(chave(c, r))) return false;
+  salvar();
+  return true;
+}
+
+// Sem salvar: quem chama ja vai salvar junto com a mudanca que causou isso.
+function limparConteudo(c, r) {
+  return conteudos.delete(chave(c, r));
+}
+
+function conteudosParaEnvio() {
+  return Array.from(conteudos.entries()).map(([k, v]) => {
+    const [c, r] = k.split(',').map(Number);
+    return { c, r, titulo: v.titulo, url: v.url, porUid: v.porUid, em: v.em };
+  });
+}
+
 // Retorna { mudou, objetoCaiu } - `mudou` false quando nada mudou de verdade
 // (pra nao ficar reemitindo o mesmo tile).
 function editar(c, r, t) {
@@ -100,9 +181,12 @@ function editar(c, r, t) {
 
   // Trocou o movel por algo que nao segura nada? O que estava em cima vai junto.
   const objetoCaiu = !map.SUPERFICIES.has(t) && limparObjeto(c, r);
+  // E se a celula virou chao, o link morre com o movel: link em piso vazio
+  // seria um clique invisivel no meio do corredor.
+  const linkCaiu = t === map.LIVRE && limparConteudo(c, r);
 
   salvar();
-  return { mudou: true, objetoCaiu };
+  return { mudou: true, objetoCaiu, linkCaiu };
 }
 
 // Trocar o movel de baixo leva junto o que estava apoiado nele (senao fica um
@@ -141,5 +225,6 @@ carregar();
 
 module.exports = {
   editar, editarObjeto, limparObjeto, paraEnvio, objetosParaEnvio,
-  tileValido, objetoValido, posicaoValida, TILES_DO_CATALOGO,
+  definirConteudo, tirarConteudo, conteudosParaEnvio, podeTerConteudo,
+  tileValido, objetoValido, posicaoValida, urlValida, TILES_DO_CATALOGO,
 };

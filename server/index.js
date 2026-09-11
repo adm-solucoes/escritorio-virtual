@@ -10,6 +10,9 @@ const auth = require('./auth');
 const google = require('./google');
 const agenda = require('./agenda');
 const trello = require('./trello');
+const estante = require('./estante');
+const mesasStore = require('./mesas');
+const chatDisco = require('./chat-disco');
 
 const PORT = process.env.PORT || 3500;
 
@@ -46,8 +49,37 @@ const CANAIS = [
   { id: 'projetos', nome: 'projetos', descricao: 'Andamento dos projetos e clientes' },
 ];
 
-const conversas = new Map(); // conversaId -> [mensagem]
-let proximoMsgId = 1;
+// O historico vem do disco: reiniciar o servidor nao apaga mais a conversa.
+// Ver server/chat-disco.js e docs/plano-chat-no-disco.md.
+const doDisco = chatDisco.carregar(MENSAGENS_MAX);
+const conversas = doDisco.conversas; // conversaId -> [mensagem]
+let proximoMsgId = doDisco.proximoMsgId;
+
+function salvarChat() {
+  chatDisco.agendar(conversas, proximoMsgId);
+}
+
+// O historico voltou do disco, mas `nomesPorUid` so enche quando a pessoa
+// conecta. Sem isto, logo depois de reiniciar a lista de conversas mostrava
+// "Alguem" no lugar do nome de quem ainda nao tinha entrado - com a conversa
+// dela ali, legivel, do lado. Os nomes vem da mesma lista de contas do login.
+conversas.forEach((_, conversaId) => {
+  if (!conversaId.startsWith('dm:')) return;
+  participantesDaDm(conversaId).forEach((uid) => {
+    if (nomesPorUid.has(uid)) return;
+    const conta = usuariosStore.porId(uid);
+    if (conta) nomesPorUid.set(uid, conta.nome);
+  });
+});
+
+// Grava na saida: sem isto as ultimas mensagens antes do desligamento morriam
+// na espera de 1,5s do gravador.
+['SIGINT', 'SIGTERM'].forEach((sinal) => {
+  process.on(sinal, () => {
+    chatDisco.agora();
+    process.exit(0);
+  });
+});
 
 function idCanal(canalId) {
   return 'canal:' + canalId;
@@ -127,6 +159,7 @@ function guardarMensagem(conversaId, mensagem) {
   const lista = conversas.get(conversaId);
   lista.push(mensagem);
   if (lista.length > MENSAGENS_MAX) lista.shift();
+  salvarChat();
   return mensagem;
 }
 
@@ -151,14 +184,6 @@ function avisoDeSistema(texto) {
   io.emit('chat-mensagem', mensagem);
 }
 
-// Mesas reivindicadas: "col,row" -> socket.id. Uma mesa por pessoa; some quando
-// a pessoa sai (tudo em memoria, igual ao resto do estado).
-const mesas = new Map();
-
-function chaveMesa(col, row) {
-  return col + ',' + row;
-}
-
 // Tem alguem em pe nessa celula? (usado pra nao deixar decorar em cima de gente)
 function alguemNoTile(col, row) {
   for (const p of players.values()) {
@@ -167,22 +192,6 @@ function alguemNoTile(col, row) {
   return false;
 }
 
-function ehTileDeMesa(col, row) {
-  if (row < 0 || row >= map.ROWS || col < 0 || col >= map.COLS) return false;
-  return map.tiles[row][col] === map.MESA_MONITOR;
-}
-
-function mesaDoJogador(id) {
-  for (const [chave, dono] of mesas) if (dono === id) return chave;
-  return null;
-}
-
-function mesasParaEnvio() {
-  return Array.from(mesas.entries()).map(([chave, dono]) => {
-    const jogador = players.get(dono);
-    return { chave, donoId: dono, donoNome: jogador ? jogador.name : '' };
-  });
-}
 
 const MAX_NAME_LEN = 18;
 const STATUS_VALIDOS = ['livre', 'focado', 'reuniao'];
@@ -209,9 +218,21 @@ function sanitizeAppearance(appearance) {
     bottom: allowedHex(a.bottom, '#6a7ce0'),
     shoes: allowedHex(a.shoes, '#2b2f38'),
     hairColor: allowedHex(a.hairColor, '#2b3038'),
-    hairStyle: allowedEnum(a.hairStyle, ['curto', 'longo', 'moicano', 'careca'], 'curto'),
+    hairStyle: allowedEnum(a.hairStyle, ['careca', 'curto', 'raspado', 'espetado', 'cacheado', 'afro', 'dread', 'pixie', 'chanel', 'longo', 'moicano', 'franja', 'bagunca', 'topete', 'trancinhas', 'twists', 'chanel_reto', 'longo_messy', 'cachos', 'ondulado', 'tranca', 'rabo'], 'curto'),
     glasses: !!a.glasses,
     glassesColor: allowedHex(a.glassesColor, '#2b3038'),
+    // As formas de roupa. A lista tem que bater com a do public/js/character.js
+    // - se divergir, o servidor troca calado a peca da pessoa pelo padrao.
+    topStyle: allowedEnum(a.topStyle, ['camiseta', 'vneck', 'polo', 'regata', 'manga', 'social', 'gola'], 'camiseta'),
+    jaqueta: allowedEnum(a.jaqueta, ['nenhuma', 'blazer', 'cardigan', 'sobretudo'], 'nenhuma'),
+    jaquetaColor: allowedHex(a.jaquetaColor, '#2b2f38'),
+    bottomStyle: allowedEnum(a.bottomStyle, ['calca', 'social', 'bermuda', 'saia', 'legging', 'dobrada'], 'calca'),
+    barba: allowedEnum(a.barba, ['nenhuma', 'bigode', 'curta', 'chevron', 'cheia'], 'nenhuma'),
+    chapeu: allowedEnum(a.chapeu, ['nenhum', 'bandana', 'bone', 'coco', 'faixa'], 'nenhum'),
+    chapeuColor: allowedHex(a.chapeuColor, '#e03a3a'),
+    shoesStyle: allowedEnum(a.shoesStyle, ['tenis', 'sandalia', 'bota', 'pantufa', 'descalco'], 'tenis'),
+    pescoco: allowedEnum(a.pescoco, ['nenhum', 'gravata', 'lenco'], 'nenhum'),
+    pescocoColor: allowedHex(a.pescocoColor, '#a03028'),
   };
 }
 
@@ -253,6 +274,9 @@ io.on('connection', (socket) => {
       sentado: false,
       status: 'livre',
       isAdmin: !!conta.isAdmin,
+      // Visitante entrou por link (docs/plano-convidado.md). Vai junto pro
+      // cliente porque a lista de pessoas mostra quem e de fora.
+      convidado: !!conta.convidado,
     };
     players.set(socket.id, player);
     nomesPorUid.set(player.uid, player.name);
@@ -266,9 +290,10 @@ io.on('connection', (socket) => {
       conversaPadrao: idCanal('geral'),
       mensagens: mensagensDe(idCanal('geral')),
       dms: dmsDoUid(player.uid),
-      mesas: mesasParaEnvio(),
+      mesas: mesasStore.paraEnvio(),
       mudancasMapa: mapaEditado.paraEnvio(),
       objetosMapa: mapaEditado.objetosParaEnvio(),
+      conteudosMapa: mapaEditado.conteudosParaEnvio(),
     });
 
     socket.broadcast.emit('player-joined', player);
@@ -337,25 +362,52 @@ io.on('connection', (socket) => {
   socket.on('mesa-reivindicar', (data) => {
     const player = players.get(socket.id);
     if (!player || !data) return;
+    // Mesa e de quem trabalha aqui. Visitante ocupando mesa deixaria a sede
+    // cheia de lugar preso por gente que foi embora.
+    if (player.convidado) return;
     const col = Number(data.col);
     const row = Number(data.row);
     if (!Number.isInteger(col) || !Number.isInteger(row)) return;
-    if (!ehTileDeMesa(col, row)) return;
 
-    const chave = chaveMesa(col, row);
-    const donoAtual = mesas.get(chave);
-    if (donoAtual && donoAtual !== socket.id) return; // mesa de outra pessoa
+    // O dono e a CONTA. Clicar em qualquer celula pega o movel inteiro; clicar
+    // de novo larga. Quem decide as duas coisas e o server/mesas.js.
+    if (!mesasStore.alternar(col, row, player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+  });
 
-    const anterior = mesaDoJogador(socket.id);
-    if (anterior) mesas.delete(anterior);
+  // Largar pelo cartao do perfil, como o "Unclaim my desk" da referencia.
+  socket.on('mesa-largar', () => {
+    const player = players.get(socket.id);
+    if (!player || !mesasStore.largarDe(player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+  });
 
-    if (donoAtual === socket.id) {
-      // clicou na propria mesa: larga
-      io.emit('mesas-atualizadas', mesasParaEnvio());
-      return;
-    }
-    mesas.set(chave, socket.id);
-    io.emit('mesas-atualizadas', mesasParaEnvio());
+  // Personalizar a PROPRIA mesa. Nao exige diretoria de proposito: e o
+  // `mesa-item` que faz a mesa ser sua de verdade. Quem decide se pode e o
+  // server/mesas.js - a celula tem que ser de uma mesa reivindicada por voce.
+  socket.on('mesa-item', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data) return;
+    // x e y vem COM FRACAO: a pessoa poe onde quiser em cima da mesa, nao no
+    // centro da celula.
+    if (!mesasStore.porItem(Number(data.x), Number(data.y), Number(data.o), player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+  });
+
+  // Mover e tirar apontam a coisa pelo id, nao por "a mais perto do clique":
+  // com duas canecas encostadas, chute nao serve.
+  socket.on('mesa-item-mover', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data || typeof data.id !== 'string') return;
+    if (!mesasStore.moverItem(data.id, Number(data.x), Number(data.y), player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+  });
+
+  socket.on('mesa-item-tirar', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data || typeof data.id !== 'string') return;
+    if (!mesasStore.tirarItem(data.id, player.uid)) return;
+    io.emit('mesas-atualizadas', mesasStore.paraEnvio());
   });
 
   // Decorar o escritorio: so a diretoria. A checagem que vale e essa aqui - o
@@ -375,6 +427,7 @@ io.on('connection', (socket) => {
     if (!resultado.mudou) return;
     io.emit('mapa-atualizado', { c, r, t });
     if (resultado.objetoCaiu) io.emit('mapa-objeto-atualizado', { c, r, o: 0 });
+    if (resultado.linkCaiu) io.emit('mapa-conteudo-atualizado', { c, r, conteudo: null });
   });
 
   // Camada de cima: monitor, caneca, papelada... apoiados numa celula.
@@ -386,8 +439,50 @@ io.on('connection', (socket) => {
     const r = Number(data.r);
     const o = Number(data.o);
     if (!mapaEditado.posicaoValida(c, r) || !mapaEditado.objetoValido(o)) return;
+    // Em cima de MESA quem manda e o dono dela, pelo `mesa-item`. Deixar a
+    // diretoria pintar aqui criava uma armadilha: parecia igual, mas encaixava
+    // no centro da celula e nao dava pra mover nem excluir clicando.
+    // Tirar (o === 0) continua valendo, pra limpar o que ficou de antes.
+    if (o && map.MESAS_DE_TRABALHO.has(map.tiles[r][c])) return;
     if (!mapaEditado.editarObjeto(c, r, o)) return;
     io.emit('mapa-objeto-atualizado', { c, r, o });
+  });
+
+  // Terceira camada: o que o movel ABRE no clique. Ver docs/plano-conteudo.md.
+  // So a diretoria poe e tira - o link vai ser aberto pelo navegador de todo
+  // mundo que visita a sede, entao quem escolhe o endereco importa.
+  socket.on('mapa-conteudo', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !player.isAdmin || !data) return;
+
+    const c = Number(data.c);
+    const r = Number(data.r);
+    if (!mapaEditado.posicaoValida(c, r)) return;
+
+    // Sem url = tirar o link.
+    if (!data.url) {
+      if (!mapaEditado.tirarConteudo(c, r)) return;
+      io.emit('mapa-conteudo-atualizado', { c, r, conteudo: null });
+      return;
+    }
+
+    if (!mapaEditado.definirConteudo(c, r, data, player.uid)) {
+      // O cliente precisa saber POR QUE nao pegou, senao a pessoa fica clicando
+      // em "salvar" achando que o servidor nao respondeu.
+      socket.emit('mapa-conteudo-recusado', {
+        c,
+        r,
+        motivo: !mapaEditado.podeTerConteudo(c, r)
+          ? 'Escolhe um movel: chao vazio nao abre nada.'
+          : (!mapaEditado.urlValida(data.url)
+            ? 'O link precisa comecar com http:// ou https://'
+            : 'Poe um nome pro conteudo.'),
+      });
+      return;
+    }
+    io.emit('mapa-conteudo-atualizado', {
+      c, r, conteudo: mapaEditado.conteudosParaEnvio().find((x) => x.c === c && x.r === r),
+    });
   });
 
   socket.on('chat-historico', (data) => {
@@ -437,6 +532,7 @@ io.on('connection', (socket) => {
 
     if (atualizado.length) mensagem.reacoes[data.emoji] = atualizado;
     else delete mensagem.reacoes[data.emoji];
+    salvarChat(); // a reacao tambem e conteudo: some junto se nao for gravada
 
     entregar(conversaId, 'chat-reacao', {
       conversa: conversaId,
@@ -462,11 +558,8 @@ io.on('connection', (socket) => {
       const saiu = players.get(socket.id);
       players.delete(socket.id);
       avisoDeSistema(saiu.name + ' saiu da sede');
-      const mesa = mesaDoJogador(socket.id);
-      if (mesa) {
-        mesas.delete(mesa);
-        io.emit('mesas-atualizadas', mesasParaEnvio());
-      }
+      // A mesa NAO e largada aqui: ela e da conta, nao da sessao. Quem quiser
+      // sair dela clica nela de novo ou usa o botao no proprio perfil.
       io.emit('player-left', { id: socket.id });
     }
   });
@@ -508,8 +601,50 @@ app.post('/api/google/desconectar', sessao.exigirLogin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- a estante: o acervo de livros da sede ----
+// Chegar perto de uma estante no mapa abre isto. O acervo e um so pra sede
+// inteira - ver server/estante.js.
+app.get('/api/estante', sessao.exigirLogin, (req, res) => {
+  res.json(estante.ler());
+});
+
+app.post('/api/estante/livro', sessao.exigirMembro, (req, res) => {
+  const r = estante.adicionar(req.body, req.usuario);
+  if (r.erro) return res.status(400).json({ erro: r.erro });
+  res.json(estante.ler());
+});
+
+app.delete('/api/estante/livro/:id', sessao.exigirMembro, (req, res) => {
+  const r = estante.remover(req.params.id, req.usuario);
+  // 403 e nao 400: a diferenca entre "nao existe" e "nao e seu" importa pra
+  // quem le o erro na tela.
+  if (r.erro) return res.status(r.erro.includes("pode tirar") ? 403 : 404).json({ erro: r.erro });
+  res.json(estante.ler());
+});
+
+// A pasta do Drive e uma so pra sede: quem muda e a diretoria.
+app.put('/api/estante/pasta', sessao.exigirLogin, (req, res) => {
+  if (!req.usuario.isAdmin) return res.status(403).json({ erro: 'So a diretoria muda a pasta da estante.' });
+  const r = estante.definirPasta(req.body && req.body.url);
+  if (r.erro) return res.status(400).json({ erro: r.erro });
+  res.json(estante.ler());
+});
+
 // Rotas de conta antes do estatico: /api/... nunca cai no index.html.
 app.use('/api', auth.criarRotas(sanitizeAppearance));
+// Em desenvolvimento o navegador NAO guarda nada em cache.
+//
+// Isto existe porque custou tempo de verdade: depois de mexer no game.js, a
+// pagina continuava mostrando o desenho velho, e a conclusao facil era "a
+// correcao nao funcionou" quando o problema era o arquivo antigo em cache. Em
+// producao o cache continua valendo - so o modo de desenvolvimento abre mao
+// dele, que e onde o arquivo muda a cada minuto.
+if (sessao.SEM_LOGIN) {
+  app.use((req, res, proximo) => {
+    res.set('Cache-Control', 'no-store, must-revalidate');
+    proximo();
+  });
+}
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // SEM_LOGIN=1: entra direto numa conta de desenvolvimento, sem a tela de login.
@@ -528,8 +663,34 @@ function prepararContaDev() {
     conta = usuariosStore.porId(conta.id);
   }
   sessao.definirUsuarioDev(conta);
+  prepararContaBot();
   return conta;
 }
+
+// Segunda conta de desenvolvimento, pro bot de teste (`/?bot=1`). Sem ela nao
+// da pra testar chamada, divisao de tela nem conversa sozinho - e com uma conta
+// so, as duas abas entrariam como "Dev" e ninguem saberia quem e quem.
+function prepararContaBot() {
+  const EMAIL = 'bot@local';
+  let conta = usuariosStore.porEmail(EMAIL);
+  if (!conta) {
+    conta = usuariosStore.criar({
+      nome: 'Bot',
+      email: EMAIL,
+      senha: require('crypto').randomBytes(24).toString('hex'),
+      isAdmin: false, // o bot nao edita o mapa: um clique torto dele estragaria a sede
+    });
+  }
+  // Aparencia bem diferente da do Dev, senao os dois bonecos ficam iguais na
+  // tela e o teste de proximidade vira adivinhacao.
+  usuariosStore.atualizarPerfil(conta.id, { appearance: APARENCIA_BOT });
+  sessao.definirUsuarioBot(usuariosStore.porId(conta.id));
+}
+
+const APARENCIA_BOT = sanitizeAppearance({
+  skin: '#8d5524', shirt: '#e0607e', bottom: '#2f7d8c', shoes: '#3a2f2a',
+  hairColor: '#f0a83c', hairStyle: 'longo', glasses: true, glassesColor: '#2b3038',
+});
 
 const APARENCIA_DEV = sanitizeAppearance({
   skin: '#f1c27d', shirt: '#35bdf0', bottom: '#6a7ce0', shoes: '#2b2f38',

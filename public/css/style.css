@@ -35,7 +35,7 @@ html, body {
   height: 100%;
   background: var(--fundo);
   color: var(--texto);
-  font-family: 'Manrope', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .tela {
@@ -154,42 +154,204 @@ button { font-family: inherit; }
   left: 58px;
   bottom: 12px;
   z-index: 40;
-  width: 200px;
+  /* larga o bastante pro "Entrou em 07/09/2026" caber numa linha so */
+  width: 236px;
   padding: 6px;
   border-radius: 12px;
   background: var(--painel);
   border: 1px solid var(--borda);
   box-shadow: var(--sombra-painel);
 }
-.menu-conta-topo {
+.conta-topo {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 10px 12px;
+}
+/* Bolinha com a inicial, como no cartao de perfil da referencia. */
+.conta-avatar {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  background: var(--roxo);
+}
+.conta-id {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px 10px;
-  border-bottom: 1px solid var(--borda);
-  margin-bottom: 4px;
+  gap: 1px;
+  min-width: 0;
 }
-.menu-conta-topo strong { font-size: 13px; }
-.menu-conta-topo span {
+.conta-id strong {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conta-id span {
   font-size: 11px;
   color: var(--texto-fraco);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.menu-conta-item {
-  width: 100%;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 8px;
+.conta-acoes {
+  display: flex;
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+.conta-editar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--roxo);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.conta-editar:hover { filter: brightness(1.08); }
+.conta-mais {
+  flex: none;
+  width: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--borda);
+  border-radius: 9px;
   background: transparent;
   color: var(--texto);
-  font-family: inherit;
+  cursor: pointer;
+}
+.conta-mais:hover { background: var(--hover); }
+
+/* Barrinha escura que sai em cima da coisa selecionada, como a barra de objeto
+   selecionado do Gather (referencias/9x-ui-gather-111539.png). */
+.barra-item {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 62;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #2b3040;
+  box-shadow: 0 8px 22px rgba(20, 22, 30, 0.34);
+}
+.barra-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #eef0f6;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.barra-item-btn:hover { background: rgba(255, 255, 255, 0.10); }
+.barra-item-btn.perigo { color: #ff9a90; }
+.barra-item-btn.perigo:hover { background: rgba(255, 120, 108, 0.16); }
+.barra-item-risco {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Cartao da mesa: o mesmo desenho do cartao da conta, mas solto na tela - ele
+   nasce no ponto onde a mesa foi clicada. */
+.cartao-mesa {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  width: 250px;
+  padding-top: 4px;
+  border-radius: 14px;
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  box-shadow: var(--sombra-painel);
+}
+.cartao-mesa-fechar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--texto-fraco);
+  cursor: pointer;
+}
+.cartao-mesa-fechar:hover { background: var(--hover); }
+.cartao-mesa-avatar-caixa { position: relative; flex: none; }
+/* bolinha de status encostada na borda do avatar, como no print */
+.cartao-mesa-status {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--painel);
+  background: #63d9c4;
+}
+.cartao-mesa .conta-topo { padding-right: 34px; }
+
+/* O menuzinho escuro que sai do "..." - e o do print da referencia. */
+/* Sai encostado no cartao, nunca POR CIMA da fileira de botoes - senao ele
+   cobre a plantinha e o proprio "..." e o clique seguinte bate nele. O cartao
+   da conta vive colado no rodape, entao o dele abre pra cima. */
+.menu-suspenso {
+  position: absolute;
+  right: 10px;
+  bottom: auto;
+  top: calc(100% + 6px);
+  z-index: 5;
+  min-width: 178px;
+  padding: 5px;
+  border-radius: 10px;
+  background: #2b3040;
+  box-shadow: 0 10px 26px rgba(20, 22, 30, 0.34);
+}
+.menu-suspenso-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #eef0f6;
+  font: inherit;
   font-size: 13px;
   text-align: left;
   cursor: pointer;
 }
-.menu-conta-item:hover { background: var(--painel-alt); }
-.menu-conta-item.perigo { color: #b42318; }
+.menu-suspenso-item:hover { background: rgba(255, 255, 255, 0.10); }
+.menu-conta .menu-suspenso {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
 
 /* ============ Tela de entrada (o "Welcome to..." da referencia) ============ */
 #tela-entrada {
@@ -775,6 +937,10 @@ button { font-family: inherit; }
 .ctrl-btn.desativado { color: #ff8b8b; }
 .ctrl-btn.desativado .risco { display: block; }
 .ctrl-entrar.ativo { background: var(--verde); color: #06240f; }
+/* Dividindo a tela o botao fica aceso, e num tom diferente do "camera ligada":
+   sao dois estados que convivem, e confundir os dois faz a pessoa achar que
+   parou de dividir quando so desligou o video. */
+.ctrl-btn.ativo { background: var(--roxo, #5b45c8); color: #fff; }
 
 .preview-local {
   position: relative;
@@ -791,6 +957,7 @@ button { font-family: inherit; }
   transform: scaleX(-1);
   background: #111;
 }
+.preview-local.dividindo-tela video { width: 72px; }
 .preview-local.sem-video video { display: none; }
 .preview-local.sem-video::before {
   content: '🎙️';
@@ -906,6 +1073,21 @@ button { font-family: inherit; }
   display: block;
 }
 .chamada-tile-self video { transform: scaleX(-1); }
+
+/* A previa do proprio video e espelhada porque e o seu rosto: gente espera se
+   ver como no espelho. Tela dividida NAO pode ser espelhada - o texto sairia ao
+   contrario e voce nao conseguiria conferir o que esta mostrando.
+
+   A classe vai no proprio <video>, e nao no quadro em volta, porque a grade de
+   chamada MOVE esse mesmo elemento pra dentro do tile: uma regra presa ao
+   container pararia de valer na hora que a chamada abre. E fica depois das duas
+   regras que ela desfaz (.preview-local video e .chamada-tile-self video), que
+   tem a mesma especificidade - quem vem por ultimo ganha. */
+video.mostrando-tela {
+  transform: none;
+  object-fit: contain;
+  background: #0d1117;
+}
 .chamada-nome {
   position: absolute;
   left: 10px;
@@ -1065,32 +1247,53 @@ button { font-family: inherit; }
 .decor-aba:hover { background: var(--painel-alt); }
 .decor-aba.ativa { background: #e9eaee; }
 
+/* A grade segue o painel do Gather (referencias/42-decorator-mesas.png): so a
+   arte, grande, solta no branco - sem legenda embaixo e sem caixinha em volta.
+   O nome fica no tooltip. Antes eram miniaturas de 40px com o nome debaixo, e
+   o texto ocupava mais espaco que o desenho. */
 .decor-grade {
   flex: 1;
   overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 4px;
   align-content: start;
 }
 .decor-item {
+  position: relative;   /* o selo de girar se pendura no canto */
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 9px 4px;
+  justify-content: center;
+  padding: 14px 6px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
-  color: var(--texto-fraco);
-  font-family: inherit;
-  font-size: 10px;
-  text-align: center;
   cursor: pointer;
 }
 .decor-item:hover { background: var(--painel-alt); }
-.decor-item.ativa { border-color: var(--indigo); background: rgba(79, 70, 229, 0.07); color: var(--texto); }
-.decor-item canvas { width: 40px; height: 40px; image-rendering: pixelated; border-radius: 6px; }
+.decor-item.ativa { border-color: var(--indigo); background: rgba(79, 70, 229, 0.07); }
+.decor-item canvas {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+/* Selo de girar, no canto de cima a direita da celula - e ele que avisa que a
+   peca tem outras direcoes, sem precisar seleciona-la pra descobrir. */
+.decor-girar {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--borda);
+  border-radius: 50%;
+  background: var(--painel);
+  color: var(--texto-fraco);
+}
+.decor-girar:hover { color: var(--indigo); border-color: var(--indigo); }
 .decor-vazio { grid-column: 1 / -1; margin: 12px 0; color: var(--texto-fraco); font-size: 13px; text-align: center; }
 
 .decor-dica { margin: 0; font-size: 11px; color: var(--texto-fraco); line-height: 1.4; }
@@ -1220,7 +1423,7 @@ button { font-family: inherit; }
   border-radius: 8px;
   padding: 5px 12px;
   cursor: pointer;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 13px;
 }
 .cal-nav:hover, .cal-hoje-btn:hover { border-color: var(--indigo); }
@@ -1771,4 +1974,327 @@ button { font-family: inherit; }
   .editor-preview { width: 100%; margin: 0 18px 18px; height: 220px; }
   .topo-esq { left: 70px; }
   .minimapa { display: none; }
+}
+
+/* ---------- estante: o acervo de livros da sede ---------- */
+/* O painel mostra CAPA e mais nada. Titulo e autor entram no passar do mouse.
+   E a forma de procurar livro na vida: bate o olho na lombada e reconhece.
+
+   Painel lateral, nao tela cheia: mesmo abrindo no clique, o mapa continua
+   visivel atras - clicar no chao fecha a estante e leva a pessoa embora. */
+.painel-estante {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(392px, 92%);
+  z-index: 26;
+  display: flex;
+  flex-direction: column;
+  background: #fbfaf7;
+  border-left: 1px solid var(--borda);
+  box-shadow: -18px 0 44px rgba(15, 18, 25, 0.13);
+}
+
+.estante-topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #eae7e0;
+}
+.estante-titulo-bloco {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.estante-topo h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.estante-conta {
+  font-size: 12px;
+  color: #9a938a;
+  font-variant-numeric: tabular-nums;
+}
+.estante-pasta-link {
+  font-size: 12.5px;
+  color: var(--indigo);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.estante-pasta-link:hover { text-decoration: underline; }
+.estante-fechar {
+  border: 0;
+  background: transparent;
+  color: #9a938a;
+  font-size: 13px;
+  line-height: 1;
+  padding: 5px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.estante-fechar:hover { background: #efece5; color: var(--texto); }
+
+.estante-aviso {
+  margin: 12px 18px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fdecea;
+  color: #8a1f16;
+  font-size: 13px;
+}
+
+/* A grade: duas capas por fileira, no formato de livro (2:3). */
+.estante-grade {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 14px;
+  padding: 16px 18px 22px;
+  align-content: start;
+}
+.estante-vazia {
+  grid-column: 1 / -1;
+  margin: 4px 0;
+  font-size: 13px;
+  color: #9a938a;
+}
+
+.estante-capa {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 3;
+  border-radius: 3px 5px 5px 3px;   /* a lombada e o lado que nao arredonda */
+  overflow: hidden;
+  background: #e7e2d9;
+  box-shadow: 0 2px 5px rgba(24, 20, 14, 0.16), 0 10px 20px -10px rgba(24, 20, 14, 0.34);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.estante-capa::before {
+  /* o vinco da lombada, na esquerda: e o que faz a capa ler como LIVRO e nao
+     como cartao */
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 7px;
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.30), rgba(0, 0, 0, 0.06) 62%, rgba(255, 255, 255, 0.16));
+  pointer-events: none;
+}
+.estante-capa:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(24, 20, 14, 0.2), 0 16px 28px -12px rgba(24, 20, 14, 0.42);
+}
+.estante-capa:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 3px;
+}
+.estante-capa img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Sem capa, a gente desenha uma. Cor tirada do titulo, entao o mesmo livro tem
+   sempre a mesma - de relance a estante continua reconhecivel. */
+/* Absoluta dentro da capa: assim o texto NUNCA empurra a caixa. Com ela no
+ fluxo, um titulo de tres linhas crescia a capa alem do 2:3 e a fileira
+ inteira ficava mais alta que a do lado - a grade saia desencontrada. */
+.estante-capa-desenhada {
+  position: absolute;
+  inset: 0;
+  padding: 16px 12px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #fdfbf6;
+  background:
+    radial-gradient(120% 90% at 22% 8%, rgba(255, 255, 255, 0.22), transparent 62%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.26)),
+    hsl(var(--tom, 30) 44% 40%);
+}
+.estante-capa-desenhada-titulo {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.estante-capa-desenhada-titulo::after {
+  content: '';
+  display: block;
+  width: 26px;
+  height: 2px;
+  margin-top: 9px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.estante-capa-desenhada-autor {
+  margin-top: auto;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+/* O titulo so no passar do mouse: a capa e a informacao, o texto e a confirmacao. */
+.estante-capa-faixa {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 20px 10px 8px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(16, 13, 9, 0.86));
+  opacity: 0;
+  transition: opacity 0.14s ease;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.estante-capa:hover .estante-capa-faixa,
+.estante-capa:focus-visible .estante-capa-faixa { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .estante-capa, .estante-capa-faixa { transition: none; }
+  .estante-capa:hover { transform: none; }
+}
+
+/* ------------------------------------------------------ convidar visitante
+   Painel que a diretoria abre pra gerar o link de convite.
+   Ver docs/plano-convidado.md. */
+.painel-convite {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(17, 20, 28, 0.45);
+}
+.convite-card {
+  width: min(520px, 100%);
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  box-shadow: var(--sombra-painel);
+  padding: 22px;
+}
+.convite-card h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.convite-ajuda {
+  margin: 0 0 16px;
+  color: var(--texto-fraco);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.convite-linha {
+  display: flex;
+  gap: 8px;
+}
+/* O link e longo e a pessoa precisa ver que copiou o endereco certo; por isso
+   o campo cresce e o botao fica no tamanho do texto. */
+.convite-linha input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--borda-forte);
+  border-radius: 10px;
+  background: var(--painel-alt);
+  font: 500 13px ui-monospace, Consolas, monospace;
+  color: var(--texto);
+}
+.convite-validade {
+  margin: 12px 0 0;
+  color: var(--texto-fraco);
+  font-size: 12.5px;
+  line-height: 1.5;
+  min-height: 18px;
+}
+.convite-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+}
+.convite-revogar {
+  border: none;
+  background: none;
+  padding: 6px 0;
+  font: 600 13px inherit;
+  color: var(--vermelho);
+  cursor: pointer;
+}
+.convite-revogar:hover { text-decoration: underline; }
+.convite-revogar:disabled { opacity: 0.5; cursor: default; text-decoration: none; }
+.convite-acoes .btn {
+  background: var(--painel-alt);
+  color: var(--texto);
+}
+.convite-acoes .btn:hover { background: var(--borda); }
+
+/* --------------------------------------------------- objeto que abre conteudo
+   Reusa o .painel-convite / .convite-card: sao a mesma coisa visualmente, um
+   cartao centrado sobre a sede. Ver docs/plano-conteudo.md. */
+.conteudo-etiqueta {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--indigo-claro);
+  color: var(--indigo-escuro);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* O endereco aparece inteiro ANTES de a pessoa clicar: e o que deixa ela ver
+   pra onde vai. Por isso quebra a linha em vez de cortar com reticencias. */
+.conteudo-url {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--painel-alt);
+  color: var(--texto-fraco);
+  font: 500 12.5px ui-monospace, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.conteudo-acoes { justify-content: flex-end; }
+.conteudo-onde {
+  display: block;
+  margin-top: 6px;
+  font: 500 11.5px ui-monospace, Consolas, monospace;
+  color: var(--texto-fraco);
+}
+.conteudo-erro { margin: 10px 0 0; }
+.conteudo-espaco { flex: 1; }
+#form-por-conteudo .login-campo { margin-top: 12px; }
+
+.decor-link {
+  width: auto;
+  gap: 6px;
+  padding: 0 10px;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.decor-link.ativo {
+  background: var(--indigo);
+  border-color: var(--indigo);
+  color: #fff;
 }

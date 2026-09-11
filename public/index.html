@@ -6,7 +6,7 @@
   <title>Escritorio Virtual - ADM Solucoes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 
   <!-- App instalavel no computador (PWA). Ver docs/app-computador.md. -->
@@ -31,26 +31,26 @@
           </svg>
         </div>
         <h1>ADM Solucoes</h1>
-        <p>Escritorio virtual da empresa junior</p>
+        <p id="login-sub">Escritorio virtual da empresa junior</p>
       </header>
 
-      <div class="login-abas" role="tablist">
+      <div id="login-abas" class="login-abas" role="tablist">
         <button id="aba-entrar" class="login-aba ativa" type="button" role="tab">Entrar</button>
         <button id="aba-criar" class="login-aba" type="button" role="tab">Criar conta</button>
       </div>
 
       <form id="form-login" class="login-form" novalidate>
-        <label class="login-campo campo-cadastro oculto">
+        <label id="campo-nome" class="login-campo campo-cadastro oculto">
           <span>Nome</span>
           <input id="login-nome" type="text" maxlength="18" placeholder="Como te chamam na sede" autocomplete="name" />
         </label>
 
-        <label class="login-campo">
+        <label class="login-campo campo-conta">
           <span>E-mail</span>
           <input id="login-email" type="email" placeholder="voce@admsolucoes.com" autocomplete="email" required />
         </label>
 
-        <label class="login-campo">
+        <label class="login-campo campo-conta">
           <span>Senha</span>
           <input id="login-senha" type="password" placeholder="Pelo menos 8 caracteres" autocomplete="current-password" required />
         </label>
@@ -185,6 +185,9 @@
         <button id="btn-trello" class="trilho-btn" type="button" title="Quadro do Trello">
           <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6.5" y="6.5" width="4.5" height="9" rx="1" fill="currentColor"/><rect x="13" y="6.5" width="4.5" height="5.5" rx="1" fill="currentColor"/></svg>
         </button>
+        <button id="btn-estante" class="trilho-btn" type="button" title="Estante: o acervo de livros da sede">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9h17M3.5 15h17" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 5.5v3M9 5.5v3M6.5 11.5v3M9 11.5v3M6.5 17.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
         <button id="btn-decorar" class="trilho-btn oculto" type="button" title="Decorar o escritorio">
           <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 20l3.5-1 9-9a2.1 2.1 0 0 0-3-3l-9 9L4 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.5 5.5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
@@ -193,12 +196,36 @@
           <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
         <div id="menu-conta" class="menu-conta oculto">
-          <div class="menu-conta-topo">
-            <strong id="menu-conta-nome"></strong>
-            <span id="menu-conta-email"></span>
+          <div class="conta-topo">
+            <div id="conta-avatar" class="conta-avatar"></div>
+            <div class="conta-id">
+              <strong id="menu-conta-nome"></strong>
+              <span id="menu-conta-desde"></span>
+            </div>
           </div>
-          <button id="btn-trocar-avatar" class="menu-conta-item" type="button">Trocar avatar</button>
-          <button id="btn-sair" class="menu-conta-item perigo" type="button">Sair da conta</button>
+          <div class="conta-acoes">
+            <button id="btn-trocar-avatar" class="conta-editar" type="button">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 19.5c0-3.2 3.1-5 7-5s7 1.8 7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              Editar perfil
+            </button>
+            <button id="btn-conta-mais" class="conta-mais" type="button" title="Mais opcoes" aria-label="Mais opcoes">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="5.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="18.5" r="1.6" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div id="menu-conta-mais" class="menu-suspenso oculto">
+            <button id="btn-largar-mesa" class="menu-suspenso-item oculto" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="3.5" y="6.5" width="17" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 13.5v4M18 13.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              Largar minha mesa
+            </button>
+            <button id="btn-convidar" class="menu-suspenso-item oculto" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 7.5h11v9H4z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 7.5l5.5 4.5L15 7.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M18 9v6m3-3h-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              Convidar visitante
+            </button>
+            <button id="btn-sair" class="menu-suspenso-item" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M14 4.5H6.5v15H14M12 12h8m0 0l-3-3m3 3l-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Sair da conta
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -259,6 +286,10 @@
           <svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="6.5" width="12" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 11l5.5-3v8L15 13z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
         </button>
 
+        <button id="btn-tela" class="ctrl-btn" type="button" title="Dividir a tela">
+          <svg viewBox="0 0 24 24" width="18" height="18"><rect x="2.5" y="4.5" width="19" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 20.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 14.5V8.5m0 0L9.5 11M12 8.5l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
         <button id="btn-emojis" class="ctrl-btn" type="button" title="Reacoes">
           <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="10" r="1.1" fill="currentColor"/><circle cx="15" cy="10" r="1.1" fill="currentColor"/><path d="M8.5 14.2a4.2 4.2 0 0 0 7 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
@@ -282,9 +313,57 @@
         </div>
       </div>
 
+      <!-- Barrinha da coisa selecionada em cima da mesa -->
+      <div id="barra-item" class="barra-item oculto">
+        <button id="btn-item-mover" class="barra-item-btn" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3m3-3l3 3M12 21l-3-3m3 3l3-3M3 12l3-3m-3 3l3 3M21 12l-3-3m3 3l-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Mover
+        </button>
+        <span class="barra-item-risco"></span>
+        <button id="btn-item-excluir" class="barra-item-btn perigo" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Excluir
+        </button>
+      </div>
+
+      <!-- Cartao da mesa, no formato do print 13-menu-largar-mesa.png -->
+      <div id="cartao-mesa" class="cartao-mesa oculto">
+        <button id="btn-fechar-cartao-mesa" class="cartao-mesa-fechar" type="button" title="Fechar" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="conta-topo">
+          <div class="cartao-mesa-avatar-caixa">
+            <div id="cartao-mesa-avatar" class="conta-avatar"></div>
+            <span id="cartao-mesa-status" class="cartao-mesa-status"></span>
+          </div>
+          <div class="conta-id">
+            <strong id="cartao-mesa-nome"></strong>
+            <span id="cartao-mesa-sub"></span>
+          </div>
+        </div>
+        <div id="cartao-mesa-acoes" class="conta-acoes">
+          <button id="btn-cartao-editar" class="conta-editar" type="button">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 19.5c0-3.2 3.1-5 7-5s7 1.8 7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Editar perfil
+          </button>
+          <button id="btn-cartao-personalizar" class="conta-mais" type="button" title="Personalizar a mesa" aria-label="Personalizar a mesa">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 20v-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12 13c0-3.3 2.4-6 5.5-6 0 3.3-2.4 6-5.5 6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 15c0-3-2.2-5.5-5-5.5 0 3 2.2 5.5 5 5.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          </button>
+          <button id="btn-cartao-mesa-mais" class="conta-mais" type="button" title="Mais opcoes" aria-label="Mais opcoes">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="5.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="18.5" r="1.6" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div id="cartao-mesa-mais" class="menu-suspenso oculto">
+          <button id="btn-cartao-largar" class="menu-suspenso-item" type="button">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="3.5" y="6.5" width="17" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 13.5v4M18 13.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            Largar minha mesa
+          </button>
+        </div>
+      </div>
+
       <aside id="painel-decorador" class="painel-decorador oculto">
         <div class="decor-topo">
-          <h2>Decorador</h2>
+          <h2 id="decor-titulo">Decorador</h2>
           <button id="btn-fechar-decorador" class="painel-fechar" type="button" title="Fechar">
             <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
@@ -294,6 +373,10 @@
         <div id="decor-grade" class="decor-grade"></div>
         <p id="decor-dica" class="decor-dica"></p>
         <div class="decor-rodape">
+          <button id="decor-link" class="decor-historico decor-link oculto" type="button" title="Pendurar um link num movel">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 1 0-5.7-5.7l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 1 0 5.7 5.7l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Link
+          </button>
           <button id="decor-desfazer" class="decor-historico" type="button" title="Desfazer">
             <svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 7L4.5 11.5 9 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 11.5H14a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
@@ -340,6 +423,19 @@
         </div>
         <div id="trello-aviso" class="trello-aviso oculto"></div>
         <div id="trello-colunas" class="trello-colunas"></div>
+      </aside>
+
+      <aside id="painel-estante" class="painel-estante oculto">
+        <header class="estante-topo">
+          <div class="estante-titulo-bloco">
+            <h2>Estante</h2>
+            <span id="estante-conta" class="estante-conta"></span>
+          </div>
+          <a id="estante-pasta-link" class="estante-pasta-link oculto" target="_blank" rel="noopener noreferrer">Pasta no Drive</a>
+          <button id="btn-fechar-estante" class="estante-fechar" type="button" title="Fechar (Esc)">&#10005;</button>
+        </header>
+        <div id="estante-aviso" class="estante-aviso oculto"></div>
+        <div id="estante-lista" class="estante-grade"></div>
       </aside>
 
       <aside id="painel-chat" class="painel-chat oculto">
@@ -391,7 +487,12 @@
   </section>
 
   <script src="/socket.io/socket.io.js"></script>
+  <!-- O bot de teste entra antes de tudo: ele precisa trocar a camera por um
+       video sintetico ANTES que qualquer tela peca a webcam. Fica inerte sem
+       `?bot=1` na URL. Ver public/js/bot.js. -->
+  <script src="js/bot.js"></script>
   <script src="js/map.js"></script>
+  <script src="js/sprites.js"></script>
   <script src="js/pathfinding.js"></script>
   <script src="js/character.js"></script>
   <script src="js/network.js"></script>
@@ -404,9 +505,73 @@
   <script src="js/chat.js"></script>
   <script src="js/calendario.js"></script>
   <script src="js/trello.js"></script>
+  <!-- Objeto que abre conteudo. Ver docs/plano-conteudo.md. -->
+  <div id="painel-conteudo" class="painel-convite oculto" role="dialog" aria-modal="true" aria-labelledby="conteudo-titulo">
+    <div class="convite-card">
+      <span class="conteudo-etiqueta">Conteudo neste objeto</span>
+      <h2 id="conteudo-titulo"></h2>
+      <p id="conteudo-url" class="conteudo-url"></p>
+      <div class="convite-acoes conteudo-acoes">
+        <button id="btn-fechar-conteudo" class="btn" type="button">Fechar</button>
+        <button id="btn-abrir-conteudo" class="btn btn-primario" type="button">Abrir em nova aba</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="painel-por-conteudo" class="painel-convite oculto" role="dialog" aria-modal="true" aria-labelledby="por-conteudo-h">
+    <form id="form-por-conteudo" class="convite-card" novalidate>
+      <h2 id="por-conteudo-h">Conteudo neste objeto</h2>
+      <p class="convite-ajuda">
+        Quem clicar neste movel vai ver o nome abaixo e poder abrir o link.
+        Vale pra planilha do projeto, quadro do Miro, pasta no Drive, formulario.
+        <span id="por-conteudo-onde" class="conteudo-onde"></span>
+      </p>
+      <label class="login-campo">
+        <span>Nome</span>
+        <input id="por-conteudo-titulo" type="text" maxlength="40" placeholder="Planilha de horas" autocomplete="off" />
+      </label>
+      <label class="login-campo">
+        <span>Link</span>
+        <input id="por-conteudo-url" type="url" placeholder="https://..." autocomplete="off" />
+      </label>
+      <p id="por-conteudo-erro" class="login-erro conteudo-erro oculto" role="alert"></p>
+      <div class="convite-acoes">
+        <button id="btn-tirar-conteudo" class="convite-revogar oculto" type="button">Tirar o link</button>
+        <span class="conteudo-espaco"></span>
+        <button id="btn-cancelar-conteudo" class="btn" type="button">Cancelar</button>
+        <button class="btn btn-primario" type="submit">Salvar</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="painel-convite" class="painel-convite oculto" role="dialog" aria-modal="true" aria-labelledby="convite-titulo">
+    <div class="convite-card">
+      <h2 id="convite-titulo">Convidar visitante</h2>
+      <p class="convite-ajuda">
+        Quem abrir este link entra na sede <strong>sem criar conta</strong>. Visita:
+        anda, conversa e entra em chamada - mas nao decora o escritorio, nao pega
+        mesa e nao mexe na estante.
+      </p>
+      <div class="convite-linha">
+        <input id="convite-link" type="text" readonly aria-label="Link do convite" />
+        <button id="btn-copiar-convite" class="btn btn-primario" type="button">Copiar</button>
+      </div>
+      <p id="convite-validade" class="convite-validade"></p>
+      <div class="convite-acoes">
+        <button id="btn-revogar-convites" class="convite-revogar" type="button">Invalidar todos os links</button>
+        <button id="btn-fechar-convite" class="btn" type="button">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/estante.js"></script>
   <script src="js/decorador.js"></script>
+  <script src="js/cartaomesa.js"></script>
+  <script src="js/itemmesa.js"></script>
   <script src="js/pessoas.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/convite.js"></script>
+  <script src="js/conteudo.js"></script>
   <script src="js/main.js"></script>
   <script>
     // Registra o service worker so em HTTPS (ou localhost): e o que faz o

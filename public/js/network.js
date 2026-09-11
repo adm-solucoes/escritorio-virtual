@@ -13,7 +13,15 @@
   }
 
   function connect(profile) {
-    socket = io({ reconnectionDelay: 500, reconnectionDelayMax: 3000 });
+    // `?bot=1` entra como a segunda conta de desenvolvimento, pra dar pra testar
+    // chamada e divisao de tela sozinho. O servidor so aceita isso com
+    // SEM_LOGIN ligado, que nunca liga em producao. Ver public/js/bot.js.
+    const ehBot = new URLSearchParams(location.search).get('bot') === '1';
+    socket = io({
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 3000,
+      query: ehBot ? { bot: '1' } : {},
+    });
 
     socket.on('connect', () => {
       emitLocal('conexao', 'conectado');
@@ -45,6 +53,8 @@
     socket.on('mesas-atualizadas', (data) => emitLocal('mesas-atualizadas', data));
     socket.on('mapa-atualizado', (data) => emitLocal('mapa-atualizado', data));
     socket.on('mapa-objeto-atualizado', (data) => emitLocal('mapa-objeto-atualizado', data));
+    socket.on('mapa-conteudo-atualizado', (data) => emitLocal('mapa-conteudo-atualizado', data));
+    socket.on('mapa-conteudo-recusado', (data) => emitLocal('mapa-conteudo-recusado', data));
     socket.on('agenda', (data) => emitLocal('agenda', data));
     socket.on('trello', (data) => emitLocal('trello', data));
   }
@@ -81,6 +91,27 @@
     if (socket && socket.connected) socket.emit('mesa-reivindicar', { col, row });
   }
 
+  // Largar sem precisar achar a mesa no mapa - e o "Unclaim my desk" da
+  // referencia, que fica no proprio perfil.
+  function largarMesa() {
+    if (socket && socket.connected) socket.emit('mesa-largar');
+  }
+
+  // Poe/tira coisa em cima da PROPRIA mesa, na posicao exata do clique (x e y
+  // sao tiles com fracao). O servidor recusa nas mesas dos outros.
+  function itemNaMinhaMesa(x, y, o) {
+    if (socket && socket.connected) socket.emit('mesa-item', { x, y, o });
+  }
+
+  // Mover e tirar apontam pelo id da coisa, nao pela posicao.
+  function moverItemDaMesa(id, x, y) {
+    if (socket && socket.connected) socket.emit('mesa-item-mover', { id, x, y });
+  }
+
+  function tirarItemDaMesa(id) {
+    if (socket && socket.connected) socket.emit('mesa-item-tirar', { id });
+  }
+
   function pedirAgenda() {
     if (socket && socket.connected) socket.emit('agenda-pedir');
   }
@@ -97,9 +128,15 @@
     if (socket && socket.connected) socket.emit('mapa-objeto', { c, r, o });
   }
 
+  // Pendura (ou tira, com url vazia) um link num movel. Ver docs/plano-conteudo.md.
+  function porConteudoNoMapa(c, r, titulo, url) {
+    if (socket && socket.connected) socket.emit('mapa-conteudo', { c, r, titulo, url });
+  }
+
   window.Network = {
     connect, on, sendMove, sendStatus, sendReaction, sendRtcSignal, sendChatMessage,
-    pedirHistorico, reagirMensagem, reivindicarMesa, editarMapa, editarObjetoMapa,
+    pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, moverItemDaMesa, tirarItemDaMesa,
+    editarMapa, editarObjetoMapa, porConteudoNoMapa,
     pedirAgenda, pedirTrello,
   };
 })();

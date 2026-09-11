@@ -4,8 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const map = require('./map');
+const pastaDados = require('./dados');
 
-const PASTA = path.join(__dirname, 'data');
+const PASTA = pastaDados.PASTA;
 const ARQUIVO = path.join(PASTA, 'reunioes.json');
 
 const MAX_REUNIOES = 500;

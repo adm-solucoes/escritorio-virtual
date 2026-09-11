@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const tunel = require('./tunel');
+const pastaDados = require('./dados');
 
 if (process.env.SEM_LOGIN === '1') {
   console.error('SEM_LOGIN=1 nao combina com publicar: todo mundo que abrisse o');
@@ -16,7 +17,7 @@ if (process.env.SEM_LOGIN === '1') {
   process.exit(1);
 }
 
-const PASTA = path.join(__dirname, 'data');
+const PASTA = pastaDados.PASTA;
 const PALAVRAS = ['tucano', 'caju', 'vento', 'mare', 'sertao', 'farol', 'coco', 'duna',
   'jangada', 'aroeira', 'buriti', 'cariri'];
 

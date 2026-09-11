@@ -15,7 +15,99 @@
     '#e8d4b0', '#ffffff', '#9aa0ad', '#2b2f38',
   ];
   const SHIRT_COLORS = ROUPA_COLORS;
-  const HAIR_STYLES = ['curto', 'longo', 'moicano', 'careca'];
+  // O cabelo ja tinha formas, mas num formato proprio (uma lista de nomes
+  // mais um `careca` tratado a parte). Virou o mesmo formato das roupas: uma
+  // peca com arquivo, e `arq: null` no careca - a mesma coisa que "sem
+  // jaqueta". Um jeito so de descrever peca, um jeito so de desenhar.
+  const CABELOS = [
+    { id: 'careca', nome: 'Careca', arq: null },
+    { id: 'curto', nome: 'Curto', arq: 'hair_curto.png' },
+    { id: 'raspado', nome: 'Raspado', arq: 'hair_raspado.png' },
+    { id: 'espetado', nome: 'Espetado', arq: 'hair_espetado.png' },
+    { id: 'cacheado', nome: 'Cacheado', arq: 'hair_cacheado.png' },
+    { id: 'afro', nome: 'Afro', arq: 'hair_afro.png' },
+    { id: 'dread', nome: 'Dreads', arq: 'hair_dread.png' },
+    { id: 'pixie', nome: 'Pixie', arq: 'hair_pixie.png' },
+    { id: 'chanel', nome: 'Chanel', arq: 'hair_chanel.png' },
+    { id: 'longo', nome: 'Longo', arq: 'hair_longo.png' },
+    { id: 'moicano', nome: 'Moicano', arq: 'hair_moicano.png' },
+    { id: 'franja', nome: 'Franja', arq: 'hair_franja.png' },
+    { id: 'bagunca', nome: 'Bagunca', arq: 'hair_bagunca.png' },
+    { id: 'topete', nome: 'Topete', arq: 'hair_topete.png' },
+    { id: 'trancinhas', nome: 'Trancinhas', arq: 'hair_trancinhas.png' },
+    { id: 'twists', nome: 'Twists', arq: 'hair_twists.png' },
+    { id: 'chanel_reto', nome: 'Chanel reto', arq: 'hair_chanel_reto.png' },
+    { id: 'longo_messy', nome: 'Longo solto', arq: 'hair_longo_messy.png' },
+    { id: 'cachos', nome: 'Cachos', arq: 'hair_cachos.png' },
+    // Estes tem DUAS folhas: `arqAtras` vai atras do corpo (o volume que cai
+    // nas costas) e `arq` na frente. E assim que o LPC monta cabelo comprido -
+    // sem isso, so dava pra usar os penteados que cabem todos na frente.
+    { id: 'ondulado', nome: 'Ondulado', arq: 'hair_ondulado_fg.png', arqAtras: 'hair_ondulado_bg.png' },
+    { id: 'tranca', nome: 'Tranca', arq: 'hair_tranca_fg.png', arqAtras: 'hair_tranca_bg.png' },
+    { id: 'rabo', nome: 'Rabo de cavalo', arq: 'hair_rabo_fg.png', arqAtras: 'hair_rabo_bg.png' },
+  ];
+  // Camada do pescoco - fica por cima da camisa e por baixo da cabeca.
+  const PESCOCOS = [
+    { id: 'nenhum', nome: 'Nada', arq: null },
+    { id: 'gravata', nome: 'Gravata', arq: 'neck_gravata.png' },
+    { id: 'lenco', nome: 'Lenco', arq: 'neck_lenco.png' },
+  ];
+  const SAPATOS = [
+    { id: 'tenis', nome: 'Tenis', arq: 'feet.png' },
+    { id: 'sandalia', nome: 'Sandalia', arq: 'pes_sandalia.png' },
+    { id: 'bota', nome: 'Bota', arq: 'pes_bota.png' },
+    { id: 'pantufa', nome: 'Pantufa', arq: 'pes_pantufa.png' },
+    { id: 'descalco', nome: 'Descalco', arq: null },
+  ];
+
+  // As FORMAS de roupa. Cada uma e uma spritesheet LPC propria (576x256, as
+  // mesmas 4 direcoes x 9 quadros das outras camadas) - e por isso que da pra
+  // trocar a forma, e nao so a cor. `arq: null` = camada desligada.
+  //
+  // Ver assets/lpc/CREDITS.md: cada arquivo tem autor e licenca proprios.
+  const TOPS = [
+    { id: 'camiseta', nome: 'Camiseta', arq: 'torso.png' },
+    { id: 'vneck', nome: 'Gola V', arq: 'top_vneck.png' },
+    { id: 'polo', nome: 'Polo', arq: 'top_polo.png' },
+    { id: 'regata', nome: 'Regata', arq: 'top_regata.png' },
+    { id: 'manga', nome: 'Manga longa', arq: 'top_manga.png' },
+    { id: 'social', nome: 'Social', arq: 'top_social.png' },
+    { id: 'gola', nome: 'Gola careca', arq: 'top_gola.png' },
+  ];
+  const JAQUETAS = [
+    { id: 'nenhuma', nome: 'Sem jaqueta', arq: null },
+    { id: 'blazer', nome: 'Blazer', arq: 'jaqueta_blazer.png' },
+    { id: 'cardigan', nome: 'Cardigan', arq: 'jaqueta_cardigan.png' },
+    { id: 'sobretudo', nome: 'Sobretudo', arq: 'jaqueta_sobretudo.png' },
+  ];
+  const BOTTOMS = [
+    { id: 'calca', nome: 'Calca', arq: 'legs.png' },
+    { id: 'social', nome: 'Calca social', arq: 'baixo_social.png' },
+    { id: 'bermuda', nome: 'Bermuda', arq: 'baixo_bermuda.png' },
+    { id: 'saia', nome: 'Saia', arq: 'baixo_saia.png' },
+    { id: 'legging', nome: 'Legging', arq: 'baixo_legging.png' },
+    { id: 'dobrada', nome: 'Calca dobrada', arq: 'baixo_dobrada.png' },
+  ];
+  const BARBAS = [
+    { id: 'nenhuma', nome: 'Sem barba', arq: null },
+    { id: 'bigode', nome: 'Bigode', arq: 'barba_bigode.png' },
+    { id: 'curta', nome: 'Barba', arq: 'barba_curta.png' },
+    { id: 'chevron', nome: 'Chevron', arq: 'barba_chevron.png' },
+    { id: 'cheia', nome: 'Barba cheia', arq: 'barba_cheia.png' },
+  ];
+  const CHAPEUS = [
+    { id: 'nenhum', nome: 'Sem chapeu', arq: null },
+    { id: 'bandana', nome: 'Bandana', arq: 'chapeu_bandana.png' },
+    { id: 'bone', nome: 'Bone', arq: 'chapeu_bone.png' },
+    { id: 'coco', nome: 'Chapeu coco', arq: 'chapeu_coco.png' },
+    { id: 'faixa', nome: 'Faixa', arq: 'chapeu_faixa.png' },
+  ];
+
+  const ids = (lista) => lista.map((peca) => peca.id);
+  const acha = (lista, id) => lista.find((peca) => peca.id === id) || lista[0];
+
+  // Mantido porque outros arquivos ja pediam essa lista pelo nome antigo.
+  const HAIR_STYLES = ids(CABELOS);
 
   const PADROES = {
     skin: '#f1c27d',
@@ -25,6 +117,16 @@
     hairColor: '#2b3038',
     hairStyle: 'curto',
     glassesColor: '#2b3038',
+    topStyle: 'camiseta',
+    jaqueta: 'nenhuma',
+    jaquetaColor: '#2b2f38',
+    bottomStyle: 'calca',
+    barba: 'nenhuma',
+    chapeu: 'nenhum',
+    chapeuColor: '#e03a3a',
+    shoesStyle: 'tenis',
+    pescoco: 'nenhum',
+    pescocoColor: '#a03028',
   };
 
   // Perfis antigos (salvos no navegador antes de existirem calca/sapato/cor de
@@ -37,9 +139,21 @@
       bottom: ap.bottom || PADROES.bottom,
       shoes: ap.shoes || PADROES.shoes,
       hairColor: ap.hairColor || PADROES.hairColor,
-      hairStyle: HAIR_STYLES.includes(ap.hairStyle) ? ap.hairStyle : PADROES.hairStyle,
+      hairStyle: acha(CABELOS, ap.hairStyle).id,
       glasses: !!ap.glasses,
       glassesColor: ap.glassesColor || PADROES.glassesColor,
+      // formas novas: perfil salvo antes delas existirem cai no padrao, que e
+      // o que `acha` faz quando nao reconhece o id
+      topStyle: acha(TOPS, ap.topStyle).id,
+      jaqueta: acha(JAQUETAS, ap.jaqueta).id,
+      jaquetaColor: ap.jaquetaColor || PADROES.jaquetaColor,
+      bottomStyle: acha(BOTTOMS, ap.bottomStyle).id,
+      barba: acha(BARBAS, ap.barba).id,
+      chapeu: acha(CHAPEUS, ap.chapeu).id,
+      chapeuColor: ap.chapeuColor || PADROES.chapeuColor,
+      shoesStyle: acha(SAPATOS, ap.shoesStyle).id,
+      pescoco: acha(PESCOCOS, ap.pescoco).id,
+      pescocoColor: ap.pescocoColor || PADROES.pescocoColor,
     };
   }
 
@@ -51,7 +165,10 @@
   const PE_X = 32, PE_Y = 61;
 
   const ASSET_BASE = 'assets/lpc/';
-  const ARQ_HAIR = { curto: 'hair_curto.png', longo: 'hair_longo.png', moicano: 'hair_moicano.png' };
+
+  // A chave da peca no mapa de imagens sai do nome do arquivo, entao duas
+  // formas que apontem pro mesmo PNG compartilham a imagem carregada.
+  function chaveDaPeca(peca) { return 'peca_' + peca.arq.replace('.png', ''); }
 
   function randomOf(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -64,9 +181,19 @@
       bottom: randomOf(ROUPA_COLORS),
       shoes: randomOf(ROUPA_COLORS),
       hairColor: randomOf(HAIR_COLORS),
-      hairStyle: randomOf(HAIR_STYLES),
+      hairStyle: randomOf(ids(CABELOS)),
       glasses: Math.random() < 0.5,
       glassesColor: randomOf(ROUPA_COLORS),
+      topStyle: randomOf(ids(TOPS)),
+      jaqueta: randomOf(ids(JAQUETAS)),
+      jaquetaColor: randomOf(ROUPA_COLORS),
+      bottomStyle: randomOf(ids(BOTTOMS)),
+      barba: randomOf(ids(BARBAS)),
+      chapeu: randomOf(ids(CHAPEUS)),
+      chapeuColor: randomOf(ROUPA_COLORS),
+      shoesStyle: randomOf(ids(SAPATOS)),
+      pescoco: randomOf(ids(PESCOCOS)),
+      pescocoColor: randomOf(ROUPA_COLORS),
     };
   }
 
@@ -88,10 +215,13 @@
       feet: 'feet.png',
       torso: 'torso.png',
       glasses: 'glasses.png',
-      hair_curto: ARQ_HAIR.curto,
-      hair_longo: ARQ_HAIR.longo,
-      hair_moicano: ARQ_HAIR.moicano,
     };
+    // uma entrada por forma. A opcao "sem" (careca, descalco, sem jaqueta)
+    // nao tem arquivo e nao carrega nada.
+    [].concat(TOPS, JAQUETAS, BOTTOMS, BARBAS, CHAPEUS, CABELOS, SAPATOS, PESCOCOS).forEach((peca) => {
+      if (peca.arq) nomes[chaveDaPeca(peca)] = peca.arq;
+      if (peca.arqAtras) nomes['peca_' + peca.arqAtras.replace('.png', '')] = peca.arqAtras;
+    });
     const entradas = Object.entries(nomes);
     const carregadas = await Promise.all(entradas.map(([, arq]) => carregarImagem(ASSET_BASE + arq)));
     entradas.forEach(([chave], i) => { imagens[chave] = carregadas[i]; });
@@ -99,6 +229,7 @@
 
   // Recolore uma spritesheet preservando sombra/luz (canvas blend "color" + mascara de alpha original).
   function recolorir(img, corAlvo) {
+    if (!img) return null;   // camada desligada, ou folha ainda carregando
     const c = document.createElement('canvas');
     c.width = img.width;
     c.height = img.height;
@@ -116,7 +247,12 @@
   const cacheSprites = new Map();
 
   function chaveAparencia(a) {
-    return [a.skin, a.shirt, a.bottom, a.shoes, a.hairColor, a.hairStyle, a.glasses ? 1 : 0, a.glassesColor].join('|');
+    return [
+      a.skin, a.shirt, a.bottom, a.shoes, a.hairColor, a.hairStyle,
+      a.glasses ? 1 : 0, a.glassesColor,
+      a.topStyle, a.jaqueta, a.jaquetaColor, a.bottomStyle, a.barba,
+      a.chapeu, a.chapeuColor, a.shoesStyle, a.pescoco, a.pescocoColor,
+    ].join('|');
   }
 
   // Monta (e guarda em cache) a spritesheet 576x256 final de um jogador, com todas
@@ -126,11 +262,26 @@
     const chave = chaveAparencia(appearance);
     if (cacheSprites.has(chave)) return cacheSprites.get(chave);
 
+    // a folha da forma escolhida em cada slot; null quando a camada esta off
+    const folhaDe = (lista, id) => {
+      const peca = acha(lista, id);
+      return peca.arq ? imagens[chaveDaPeca(peca)] : null;
+    };
+
     const corpoR = recolorir(imagens.body, appearance.skin);
     const cabecaR = recolorir(imagens.head, appearance.skin);
-    const torsoR = recolorir(imagens.torso, appearance.shirt);
-    const pernasR = recolorir(imagens.legs, appearance.bottom);
-    const pesR = recolorir(imagens.feet, appearance.shoes);
+    const torsoR = recolorir(folhaDe(TOPS, appearance.topStyle), appearance.shirt);
+    const pernasR = recolorir(folhaDe(BOTTOMS, appearance.bottomStyle), appearance.bottom);
+    const pesR = recolorir(folhaDe(SAPATOS, appearance.shoesStyle), appearance.shoes);
+    const jaquetaR = recolorir(folhaDe(JAQUETAS, appearance.jaqueta), appearance.jaquetaColor);
+    const barbaImg = folhaDe(BARBAS, appearance.barba);
+    const chapeuR = recolorir(folhaDe(CHAPEUS, appearance.chapeu), appearance.chapeuColor);
+    const pescocoR = recolorir(folhaDe(PESCOCOS, appearance.pescoco), appearance.pescocoColor);
+
+    const cabelo = acha(CABELOS, appearance.hairStyle);
+    const cabeloAtrasR = cabelo.arqAtras
+      ? recolorir(imagens['peca_' + cabelo.arqAtras.replace('.png', '')], appearance.hairColor)
+      : null;
 
     const out = document.createElement('canvas');
     out.width = SHEET_W;
@@ -138,16 +289,22 @@
     const ctx = out.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
-    ctx.drawImage(corpoR, 0, 0);
-    ctx.drawImage(pernasR, 0, 0);
-    ctx.drawImage(pesR, 0, 0);
-    ctx.drawImage(torsoR, 0, 0);
-    ctx.drawImage(cabecaR, 0, 0);
-    if (appearance.glasses) ctx.drawImage(recolorir(imagens.glasses, appearance.glassesColor), 0, 0);
-    if (appearance.hairStyle !== 'careca') {
-      const hairImg = imagens['hair_' + appearance.hairStyle];
-      if (hairImg) ctx.drawImage(recolorir(hairImg, appearance.hairColor), 0, 0);
-    }
+    // A ordem e a de vestir: corpo, calca, sapato, camisa, jaqueta por cima da
+    // camisa, cabeca, barba, oculos, cabelo, e o chapeu por ultimo de todos.
+    const por = (img) => { if (img) ctx.drawImage(img, 0, 0); };
+    por(cabeloAtrasR);   // o cabelo que cai nas costas fica ATRAS do corpo
+    por(corpoR);
+    por(pernasR);
+    por(pesR);
+    por(torsoR);
+    por(pescocoR);   // a gravata cai sobre a camisa, sob a jaqueta
+    por(jaquetaR);
+    por(cabecaR);
+    // barba acompanha a cor do cabelo: ninguem espera escolher as duas
+    if (barbaImg) por(recolorir(barbaImg, appearance.hairColor));
+    if (appearance.glasses) por(recolorir(imagens.glasses, appearance.glassesColor));
+    por(recolorir(folhaDe(CABELOS, appearance.hairStyle), appearance.hairColor));
+    por(chapeuR);
 
     cacheSprites.set(chave, out);
     return out;
@@ -194,6 +351,14 @@
     ROUPA_COLORS,
     HAIR_COLORS,
     HAIR_STYLES,
+    CABELOS,
+    SAPATOS,
+    PESCOCOS,
+    TOPS,
+    JAQUETAS,
+    BOTTOMS,
+    BARBAS,
+    CHAPEUS,
     PADROES,
     resolver,
     randomAppearance,
