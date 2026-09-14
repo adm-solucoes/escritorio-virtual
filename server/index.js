@@ -1075,7 +1075,13 @@ server.listen(PORT, () => {
     console.log(`SEM_LOGIN=1: tela de login desativada, entrando como "${dev.nome}".`);
     console.log('Isso e so pra desenvolvimento - nao suba assim.');
   }
-  if (auth.CODIGO_SEDE === 'adm-solucoes') {
-    console.log('Aviso: usando o codigo da sede padrao. Defina CODIGO_SEDE no deploy.');
+  // Quem entra na sede, dito no arranque. Antes aqui morava um aviso de "voce
+  // esta com o codigo padrao" - que era o pior tipo de aviso: um log que
+  // ninguem le protegendo uma senha escrita num repositorio publico. Agora o
+  // padrao nao existe, e o que sobra e informacao util.
+  console.log('Cria conta: e-mail @' + auth.DOMINIOS.join(', @')
+    + (auth.CODIGO_SEDE ? ' (ou o codigo da sede, pra e-mail de fora)' : ' - so isso'));
+  if (usuariosStore.totalDeContas() === 0) {
+    console.log('Nenhuma conta ainda: a PRIMEIRA a ser criada entra como diretoria.');
   }
 });

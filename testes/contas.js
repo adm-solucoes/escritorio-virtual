@@ -109,9 +109,47 @@ async function registrar(nome, email, admin) {
   try {
     await subir();
 
+    // ------------------------------------------------- quem pode criar conta
+    // A regra mudou: e-mail da empresa entra SEM codigo. O codigo so vale pra
+    // e-mail de fora - e sem CODIGO_SEDE configurado, e-mail de fora nao entra
+    // de jeito nenhum (antes caia num padrao escrito no codigo-fonte, que esta
+    // num repositorio publico).
+    const daEmpresa = await pedir('/api/registrar', {
+      metodo: 'POST',
+      corpo: { nome: 'Caio', email: 'caio@admsolucoes.com.br', senha: 'senha-original-1' },
+    });
+    conferir('e-mail da empresa cria conta SEM codigo', daEmpresa.status, 200);
+    // A primeira conta da sede nasce diretoria: sem isso, sede recem-criada
+    // fica sem ninguem que possa decorar, convidar ou gerenciar - e no plano
+    // free isso acontece a cada publicacao.
+    conferir('  e a PRIMEIRA conta da sede nasce diretoria',
+      daEmpresa.corpo.usuario.isAdmin, true);
+
+    const deForaSemCodigo = await pedir('/api/registrar', {
+      metodo: 'POST',
+      corpo: { nome: 'Fora', email: 'alguem@gmail.com', senha: 'senha-original-1' },
+    });
+    conferir('e-mail de fora SEM codigo e recusado', deForaSemCodigo.status, 403);
+
+    const deForaCodigoErrado = await pedir('/api/registrar', {
+      metodo: 'POST',
+      corpo: { nome: 'Fora', email: 'alguem@gmail.com', senha: 'senha-original-1', codigo: 'chutando' },
+    });
+    conferir('e com o codigo errado tambem', deForaCodigoErrado.status, 403);
+
+    const segunda = await pedir('/api/registrar', {
+      metodo: 'POST',
+      corpo: { nome: 'Bia', email: 'bia@admsolucoes.com.br', senha: 'senha-original-1' },
+    });
+    conferir('a SEGUNDA conta ja nao e diretoria', segunda.corpo.usuario.isAdmin, false);
+
     const chefe = await registrar('Chefe', 'chefe@adm.com', true);
     const ana = await registrar('Ana', 'ana@adm.com', false);
-    conferir('duas contas criadas', [chefe.status, ana.status], [200, 200]);
+    conferir('e-mail de fora COM o codigo entra', [chefe.status, ana.status], [200, 200]);
+    // Com a primeira conta ja criada acima, este e o unico teste que ainda
+    // prova que o codigo de diretoria funciona.
+    conferir('  e o codigo de diretoria promove quem usa', chefe.corpo.usuario.isAdmin, true);
+    conferir('  e nao promove quem nao usa', ana.corpo.usuario.isAdmin, false);
 
     // ------------------------------------------------------ trocar a senha
     const errada = await pedir('/api/senha', { metodo: 'PUT', cookie: ana.cookie, corpo: { senhaAtual: 'chute', novaSenha: 'nova-senha-da-ana' } });
@@ -135,7 +173,8 @@ async function registrar(nome, email, admin) {
     conferir('membro comum nao remove ninguem', (await pedir('/api/membros/qualquer', { metodo: 'DELETE', cookie: anaCookie })).status, 403);
     const lista = await pedir('/api/membros', { cookie: chefe.cookie });
     conferir('diretoria ve a lista', lista.status, 200);
-    conferir('  com as duas contas', lista.corpo.membros.map((m) => m.nome), ['Ana', 'Chefe']);
+    conferir('  com todas as contas, em ordem',
+      lista.corpo.membros.map((m) => m.nome), ['Ana', 'Bia', 'Caio', 'Chefe']);
     conferir('  sem hash nem salt', lista.corpo.membros.some((m) => 'senhaHash' in m || 'salt' in m), false);
     const idAna = lista.corpo.membros.find((m) => m.nome === 'Ana').id;
     const idChefe = lista.corpo.eu;
@@ -187,7 +226,7 @@ async function registrar(nome, email, admin) {
     await espera(300);
     const rem = await pedir('/api/membros/' + idAna, { metodo: 'DELETE', cookie: chefe.cookie });
     conferir('remover: aceita', rem.status, 200);
-    conferir('  e some da lista', rem.corpo.membros.map((m) => m.nome), ['Chefe']);
+    conferir('  e some da lista', rem.corpo.membros.map((m) => m.nome), ['Bia', 'Caio', 'Chefe']);
     await espera(400);
     conferir('  a aba aberta recebe "conta removida"', sockRemover.eventos.some((e) => e[0] === 'conta-encerrada' && e[1].motivo === 'conta-removida'), true);
     conferir('  e sai da sede na hora', sockRemover.fechado(), true);

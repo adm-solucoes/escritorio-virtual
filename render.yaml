@@ -44,7 +44,7 @@ services:
       #
       # Calendario (Google Cloud > APIs e servicos > Credenciais > ID do cliente
       # OAuth, tipo "Aplicativo da Web"). No campo "URIs de redirecionamento
-      # autorizados" ponha:  https://SEU-ENDERECO.onrender.com/api/google/callback
+      # autorizados" ponha:  https://escritorio-virtual-adm.onrender.com/api/google/callback
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

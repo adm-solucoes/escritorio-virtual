@@ -5,9 +5,44 @@ const usuarios = require('./usuarios');
 const sessao = require('./sessao');
 const convites = require('./convites');
 
-// Codigo que a diretoria compartilha com a equipe pra liberar o cadastro.
-const CODIGO_SEDE = process.env.CODIGO_SEDE || 'adm-solucoes';
-const ADMIN_CODE = process.env.ADMIN_CODE || 'adm-solucoes-2026';
+// ---- quem pode criar conta na sede -----------------------------------------
+//
+// O E-MAIL DA EMPRESA E A CREDENCIAL. Quem tem e-mail @admsolucoes ja e da ADM:
+// nao precisa de codigo nenhum pra entrar no escritorio da propria empresa.
+//
+// Isso substituiu o "codigo da sede" como caminho principal, e o Caio resumiu
+// bem o motivo: "esse negocio de codigo sede e uma merda". Ele tinha razao, e
+// eram tres defeitos de uma vez:
+//
+//   1. o codigo vive no painel da hospedagem, mas a conta criada com ele e
+//      apagada a cada deploy (disco efemero do plano free). Ou seja: toda
+//      publicacao mandava todo mundo procurar o codigo de novo;
+//   2. sem a variavel configurada, o valor caia num PADRAO ESCRITO NESTE
+//      ARQUIVO - que esta num repositorio publico. Seguranca que depende de
+//      ninguem esquecer de configurar nao e seguranca;
+//   3. e um segredo que anda em grupo de WhatsApp. Depois de vinte pessoas,
+//      nao e mais segredo.
+//
+// O dominio nao resolve tudo: sem servico de e-mail nao da pra VERIFICAR o
+// endereco, entao alguem poderia digitar o e-mail de um colega. Mas o codigo
+// tinha exatamente a mesma fraqueza depois de vazar - com a diferenca de que
+// tambem dava trabalho.
+const DOMINIOS_PADRAO = ['admsolucoes.com.br', 'admsolucoes.com'];
+const DOMINIOS_SEDE = String(process.env.DOMINIOS_SEDE || '')
+  .split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
+const DOMINIOS = DOMINIOS_SEDE.length ? DOMINIOS_SEDE : DOMINIOS_PADRAO;
+
+function ehEmailDaSede(email) {
+  const arroba = String(email || '').lastIndexOf('@');
+  if (arroba < 0) return false;
+  return DOMINIOS.includes(email.slice(arroba + 1).toLowerCase());
+}
+
+// O codigo CONTINUA existindo, pra quem nao tem e-mail da empresa (estagiario
+// com e-mail pessoal, parceiro). Mas sem valor padrao: se ninguem configurou,
+// esse caminho fica FECHADO em vez de abrir com uma senha publica.
+const CODIGO_SEDE = String(process.env.CODIGO_SEDE || '').trim();
+const ADMIN_CODE = String(process.env.ADMIN_CODE || '').trim();
 
 const MAX_NOME = 18;
 const MIN_SENHA = 8;
@@ -60,11 +95,24 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
     const senha = typeof corpo.senha === 'string' ? corpo.senha : '';
     const codigo = texto(corpo.codigo);
 
-    if (codigo !== CODIGO_SEDE) {
-      return res.status(403).json({ erro: 'Codigo da sede invalido. Peca pra diretoria.' });
-    }
     if (!nome) return res.status(400).json({ erro: 'Diz teu nome.' });
     if (!EMAIL_RE.test(email)) return res.status(400).json({ erro: 'E-mail invalido.' });
+
+    // E-mail da empresa entra direto. Quem nao tem precisa do codigo - e se o
+    // codigo nao estiver configurado, esse caminho simplesmente nao existe.
+    if (!ehEmailDaSede(email)) {
+      if (!CODIGO_SEDE) {
+        return res.status(403).json({
+          erro: 'A sede so aceita e-mail @' + DOMINIOS[0] + '. Peca um convite pra diretoria.',
+        });
+      }
+      if (codigo !== CODIGO_SEDE) {
+        return res.status(403).json({
+          erro: 'Com e-mail de fora, precisa do codigo da sede. Peca pra diretoria.',
+        });
+      }
+    }
+
     if (senha.length < MIN_SENHA) {
       return res.status(400).json({ erro: 'A senha precisa de pelo menos ' + MIN_SENHA + ' caracteres.' });
     }
@@ -73,12 +121,27 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
       return res.status(409).json({ erro: 'Ja existe uma conta com esse e-mail.' });
     }
 
+    // A PRIMEIRA CONTA DA SEDE NASCE DIRETORIA.
+    //
+    // Sem isso a sede recem-criada fica sem ninguem que possa decorar, convidar
+    // ou gerenciar contas - e no plano free isso acontece a CADA publicacao,
+    // porque o disco e apagado junto. A saida era ir buscar o ADMIN_CODE no
+    // painel da hospedagem toda vez.
+    //
+    // Nao e um buraco: pra ser a primeira conta a pessoa precisa passar pela
+    // regra de cima, ou seja, ter e-mail da empresa (ou o codigo). O risco real
+    // e a corrida logo depois de um deploy - e ele existia igual antes, so que
+    // com uma senha de diretoria escrita num repositorio publico.
+    const primeira = usuarios.totalDeContas() === 0;
     const usuario = usuarios.criar({
       nome,
       email,
       senha,
-      isAdmin: !!codigoDeAdmin(corpo.codigoAdmin),
+      isAdmin: primeira || !!codigoDeAdmin(corpo.codigoAdmin),
     });
+    if (primeira) {
+      console.log('[contas] primeira conta da sede (' + email + '): entrou como diretoria.');
+    }
     sessao.definirCookie(res, usuario.id);
     res.json({ usuario: usuarios.publico(usuario) });
   });
@@ -275,8 +338,16 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
   return rotas;
 }
 
+// Codigo vazio nao casa com nada: sem ADMIN_CODE configurado, este caminho
+// fica fechado em vez de aceitar string vazia e promover todo mundo.
 function codigoDeAdmin(valor) {
-  return typeof valor === 'string' && valor.trim() === ADMIN_CODE;
+  return !!ADMIN_CODE && typeof valor === 'string' && valor.trim() === ADMIN_CODE;
 }
 
-module.exports = { criarRotas, CODIGO_SEDE };
+module.exports = {
+  criarRotas,
+  CODIGO_SEDE,
+  DOMINIOS,
+  // pros testes
+  _ehEmailDaSede: ehEmailDaSede,
+};

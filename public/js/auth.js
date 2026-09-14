@@ -57,6 +57,32 @@
     erroEl.classList.add('oculto');
   }
 
+  // Quem tem e-mail da empresa nao precisa de codigo nenhum, entao nem ve o
+  // campo. Ele so aparece quando a pessoa digita um e-mail de FORA - e ai
+  // aparece junto com a explicacao de por que ele apareceu.
+  //
+  // A lista de dominios e a mesma do servidor (server/auth.js), mas aqui ela e
+  // so pra decidir o que MOSTRAR: quem decide quem entra continua sendo o
+  // servidor. Se as duas divergirem, o pior que acontece e o campo aparecer a
+  // toa - nunca o contrario.
+  const DOMINIOS_SEDE = ['admsolucoes.com.br', 'admsolucoes.com'];
+
+  function ehEmailDaSede(email) {
+    const arroba = String(email || '').lastIndexOf('@');
+    if (arroba < 0) return false;
+    return DOMINIOS_SEDE.includes(email.slice(arroba + 1).toLowerCase().trim());
+  }
+
+  function mostrarCampoCodigo() {
+    const campo = document.getElementById('campo-codigo');
+    if (!campo) return;
+    const email = document.getElementById('login-email').value;
+    // Enquanto a pessoa nao digitou um e-mail completo, o campo fica fora do
+    // caminho: mostrar "precisa do codigo" antes do @ seria assustar a toa.
+    const deFora = email.includes('@') && !ehEmailDaSede(email);
+    campo.classList.toggle('oculto', modo !== 'criar' || !deFora);
+  }
+
   function trocarModo(novo) {
     modo = novo;
     limparErro();
@@ -73,6 +99,8 @@
       el.classList.toggle('oculto', modo !== 'criar');
     });
     if (visita) document.getElementById('campo-nome').classList.remove('oculto');
+    // O campo do codigo tem regra propria: ele so existe pra e-mail de fora.
+    mostrarCampoCodigo();
 
     // E-mail e senha somem na visita - e param de ser obrigatorios, senao o
     // navegador barra o envio de um campo que nem esta na tela.
@@ -178,6 +206,8 @@
 
     abaEntrar.addEventListener('click', () => trocarModo('entrar'));
     abaCriar.addEventListener('click', () => trocarModo('criar'));
+    // O campo do codigo aparece e some conforme a pessoa digita o e-mail.
+    document.getElementById('login-email').addEventListener('input', mostrarCampoCodigo);
     form.addEventListener('submit', enviar);
     trocarModo(tokenConvite ? 'convidado' : 'entrar');
   }

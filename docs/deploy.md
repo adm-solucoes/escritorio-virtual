@@ -1,5 +1,30 @@
 # Sair do local: colocar o escritorio no ar
 
+> ## A sede no ar
+>
+> **https://escritorio-virtual-adm.onrender.com**
+>
+> Plano **free**: ela DORME depois de ~15 min sem ninguem, e a primeira visita
+> depois disso leva ate um minuto pra acordar. Avise quem for testar - senao
+> parece que caiu.
+>
+> Publicar: `npm run espelhar` (empurra pro espelho; o Render percebe sozinho).
+>
+> ### Depois de CADA deploy, no plano free
+>
+> O disco e efemero: `server/data/` some, e **todas as contas somem junto**.
+>
+> Criar a sua de novo e so **e-mail @admsolucoes.com.br** - sem codigo nenhum,
+> sem ir no painel. E a **primeira conta da sede nasce diretoria**, entao voce
+> ja volta podendo decorar, convidar e gerenciar contas.
+>
+> Isso substituiu o "codigo da sede" como caminho principal. O codigo continua
+> existindo so pra quem NAO tem e-mail da empresa, e ai ele vem de `CODIGO_SEDE`
+> no painel do Render (**Environment**). Sem essa variavel configurada, e-mail de
+> fora simplesmente nao cria conta - nao ha mais valor padrao.
+>
+> Pra parar de perder conta a cada deploy, ver a secao 3 (disco persistente).
+
 O projeto ja esta pronto pra rodar fora da sua maquina: o servidor usa
 `process.env.PORT`, o cookie de sessao vira `Secure` sozinho quando
 `NODE_ENV=production`, e a flag `SEM_LOGIN` e ignorada em producao.
@@ -159,7 +184,7 @@ arquivo.
 No Google Cloud, em **URIs de redirecionamento autorizados**, cadastre:
 
 ```
-https://SEU-ENDERECO.onrender.com/api/google/callback
+https://escritorio-virtual-adm.onrender.com/api/google/callback
 ```
 
 Sem isso o Google recusa a conexao com `redirect_uri_mismatch`. Nao precisa

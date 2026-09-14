@@ -55,9 +55,14 @@
           <input id="login-senha" type="password" placeholder="Pelo menos 8 caracteres" autocomplete="current-password" required />
         </label>
 
-        <label class="login-campo campo-cadastro oculto">
+        <!-- O codigo da sede so aparece pra quem digitou um e-mail DE FORA.
+             Quem tem @admsolucoes entra direto, e nem fica sabendo que existe
+             um codigo - ver o `mostrarCampoCodigo` em js/auth.js. -->
+        <label id="campo-codigo" class="login-campo campo-cadastro oculto">
           <span>Codigo da sede</span>
           <input id="login-codigo" type="text" placeholder="Peca pra diretoria" autocomplete="off" />
+          <small class="login-dica">Seu e-mail nao e da ADM, entao a diretoria
+            precisa te passar o codigo.</small>
         </label>
 
         <details class="campo-admin campo-cadastro oculto">
