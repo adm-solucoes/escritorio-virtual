@@ -21,6 +21,23 @@ self.addEventListener('activate', (evento) => {
   );
 });
 
+// Clique numa notificacao da sede (Android e app instalado mostram por aqui):
+// traz a aba pra frente e avisa a pagina qual conversa abrir.
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+  const dados = evento.notification.data || {};
+  evento.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((abas) => {
+      const aba = abas.find((c) => new URL(c.url).origin === self.location.origin);
+      if (aba) {
+        aba.postMessage({ tipo: 'notificacao-clicada', dados });
+        return aba.focus();
+      }
+      return self.clients.openWindow('/');
+    })
+  );
+});
+
 self.addEventListener('fetch', (evento) => {
   const req = evento.request;
   // so navegacao: o resto (js, css, socket.io) vai direto pra rede

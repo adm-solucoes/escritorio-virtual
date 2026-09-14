@@ -50,6 +50,17 @@ function subir() {
         SESSION_SECRET: 'segredo-de-teste-bem-comprido',
         SEM_LOGIN: '',
         NODE_ENV: 'test',      // 'production' poria o cookie como Secure e o teste e http
+        // Vazias de proposito: o ambiente ganha do .env, e sem isso o teste
+        // usaria as credenciais de verdade da maquina - e falharia sem internet.
+        GOOGLE_CLIENT_ID: '',
+        GOOGLE_CLIENT_SECRET: '',
+        TRELLO_API_KEY: '',
+        TRELLO_TOKEN: '',
+        TRELLO_BOARD_ID: '',
+        GOOGLE_DRIVE_PASTA: '',
+        GOOGLE_CONTA_SERVICO: '',
+        CLOUDFLARE_TURN_KEY_ID: '',
+        CLOUDFLARE_TURN_TOKEN: '',
       }),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -154,13 +165,15 @@ function pedir(rota, { metodo = 'GET', corpo, cookie } = {}) {
     const geraConvite = await pedir('/api/convite', { metodo: 'POST', cookie: visita.cookie });
     conferir('visitante nao gera convite', geraConvite.status, 403);
 
-    const poeLivro = await pedir('/api/estante/livro', {
-      metodo: 'POST', cookie: visita.cookie, corpo: { titulo: 'x', url: 'http://x' },
-    });
-    conferir('visitante nao mexe na estante', poeLivro.status, 403);
+    // A estante mostra a capa pra todo mundo, mas o LIVRO e so da sede: o acervo
+    // e material interno. O id nem precisa existir - a porta fecha antes.
+    const abreLivro = await pedir('/api/estante/qualquerid123/arquivo', { cookie: visita.cookie });
+    conferir('visitante nao abre livro da estante', abreLivro.status, 403);
 
     const leEstante = await pedir('/api/estante', { cookie: visita.cookie });
-    conferir('mas LE a estante normalmente', leEstante.status, 200);
+    conferir('mas VE a estante normalmente', leEstante.status, 200);
+    conferir('  e a estante avisa que ele nao le',
+      leEstante.corpo && leEstante.corpo.podeLer, false);
 
     // ------------------------------------------------------------- revogar
     const revoga = await pedir('/api/convite/revogar', { metodo: 'POST', cookie: chefe.cookie });

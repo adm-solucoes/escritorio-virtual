@@ -30,4 +30,16 @@ if (PASTA !== PADRAO) {
   console.log('[dados] usando DATA_DIR: ' + PASTA);
 }
 
-module.exports = { PASTA, arquivo, garantirPasta };
+// Grava texto num arquivo SEM deixar ele pela metade: escreve num temporario ao
+// lado e renomeia por cima. Renomear no mesmo disco e uma operacao so - ou o
+// arquivo velho continua inteiro, ou o novo ja esta la inteiro. Gravar direto
+// por cima, se o processo morrer no meio (deploy, restart, falta de memoria),
+// deixa um JSON cortado, e no arranque seguinte o historico inteiro some.
+function gravarSeguro(caminho, texto) {
+  fs.mkdirSync(path.dirname(caminho), { recursive: true });
+  const tmp = caminho + '.' + process.pid + '.tmp';
+  fs.writeFileSync(tmp, texto, 'utf8');
+  fs.renameSync(tmp, caminho);
+}
+
+module.exports = { PASTA, arquivo, garantirPasta, gravarSeguro };

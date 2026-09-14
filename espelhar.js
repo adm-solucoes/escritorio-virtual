@@ -23,7 +23,26 @@ const AQUI = __dirname;
 const TRABALHO = path.join(os.tmpdir(), 'espelho-escritorio-virtual');
 
 // O que nunca vai pro espelho.
-const DE_FORA = new Set(['.git', 'node_modules', 'referencias', 'data']);
+//
+// Os `CONTINUAR-*.md` sao anotacao interna de handoff entre sessoes, e nao
+// documentacao do produto. Eles nomeiam a conta de servico da biblioteca, o
+// projeto no Google Cloud, os ids dos drives (inclusive o da CONTABILIDADE) e
+// em que pasta do PC do Caio esta o arquivo da chave. Nada disso e senha, mas e
+// exatamente o mapa que alguem usaria pra procurar uma - e o espelho e um
+// repositorio PUBLICO. Ficam so aqui no monorepo.
+const DE_FORA = new Set([
+  '.git', 'node_modules', 'referencias', 'data',
+  'CONTINUAR-AQUI.md', 'CONTINUAR-BIBLIOTECA.md',
+  // O `.env` nunca foi pro espelho, mas ate aqui isso dependia de UMA coisa dar
+  // certo: o `.gitignore` e copiado junto, e o `git add -A` la embaixo obedece a
+  // ele. Funciona - e e frageis demais pro que esta em jogo. Um `.gitignore`
+  // editado, um merge infeliz, e as credenciais do Google, do Trello e a chave
+  // da conta de servico vao pra um repositorio PUBLICO de uma vez so.
+  //
+  // Agora ele nem e copiado: nao chega nem na pasta temporaria. O `.gitignore`
+  // continua sendo a segunda tranca, e nao a unica.
+  '.env',
+]);
 
 const APENDICE_README = `
 ---
@@ -45,11 +64,18 @@ function passo(texto) {
 
 // Copia recursiva pulando o que nao vai pro espelho. `data` so e pulada dentro
 // de server/ - uma pasta chamada data em outro lugar nao teria motivo pra sumir.
+// Pastas cujo NOME COMECA assim tambem ficam de fora. Existe por causa dos
+// `server/data-backup-<data>/`, que o restaurar.js cria antes de sobrescrever:
+// eles sao copias de server/data, ou seja, tem hash de senha e o segredo das
+// sessoes dentro. Nome com data no fim nao cabe numa lista de nomes exatos.
+const PREFIXOS_DE_FORA = ['data-backup-'];
+
 function copiar(origem, destino, relativo) {
   fs.mkdirSync(destino, { recursive: true });
   for (const item of fs.readdirSync(origem, { withFileTypes: true })) {
     const rel = relativo ? relativo + '/' + item.name : item.name;
     if (DE_FORA.has(item.name) && (item.name !== 'data' || rel === 'server/data')) continue;
+    if (PREFIXOS_DE_FORA.some((p) => item.name.startsWith(p))) continue;
 
     const de = path.join(origem, item.name);
     const para = path.join(destino, item.name);

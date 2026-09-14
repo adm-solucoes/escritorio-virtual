@@ -109,6 +109,10 @@ function publico(usuario) {
     convidado: !!usuario.convidado,
     appearance: usuario.appearance || null,
     criadoEm: usuario.criadoEm || null,
+    senhaTemporaria: !!usuario.senhaTemporaria,
+    // so sai em resposta pra PROPRIA pessoa (/api/eu, login): publico() nao vai
+    // na lista de gente do socket
+    whatsapp: usuario.whatsapp || null,
   };
 }
 
@@ -184,6 +188,128 @@ function marcarAcesso(id) {
   salvar();
 }
 
+// ---------- gestao de conta ----------
+//
+// A EJ troca de gente todo semestre. Sem isto, quem saiu continuava com a chave
+// da sede (chat, biblioteca, Trello) e quem esqueceu a senha ficava trancado
+// pra fora - a unica saida era editar este JSON na mao.
+//
+// VERSAO DA SESSAO: a sessao e um cookie assinado, sem estado no servidor. Pra
+// "derrubar" um cookie que ja saiu, o token carrega a versao da conta, e trocar
+// ou redefinir a senha sobe a versao. Todo cookie antigo (o celular esquecido
+// logado, o PC da faculdade) para de valer na hora.
+
+function versaoSessao(usuario) {
+  return (usuario && Number(usuario.versaoSessao)) || 0;
+}
+
+function definirSenha(usuario, senha) {
+  usuario.salt = crypto.randomBytes(16).toString('hex');
+  usuario.senhaHash = hashSenha(senha, usuario.salt);
+  usuario.versaoSessao = versaoSessao(usuario) + 1;
+}
+
+function trocarSenha(id, novaSenha) {
+  const u = porId(id);
+  if (!u || u.convidado) return null;
+  definirSenha(u, novaSenha);
+  u.senhaTemporaria = false;
+  salvar();
+  return u;
+}
+
+// Senha provisoria que a diretoria passa pra pessoa. Palavras + numero: da pra
+// ditar por telefone sem soletrar. Tres palavras de 34 e 4 digitos dao ~28 bits
+// de acaso - pouco pra senha de verdade, suficiente pra provisoria: o login ja
+// barra 10 erros por IP a cada 15 minutos, e a tela pede a troca no 1o acesso.
+const PALAVRAS = [
+  'sede', 'mesa', 'livro', 'cafe', 'porta', 'janela', 'agenda', 'quadro', 'planta',
+  'lousa', 'relogio', 'caneca', 'estante', 'sofa', 'copa', 'jardim', 'painel',
+  'cadeira', 'tapete', 'lampada', 'caderno', 'mochila', 'chave', 'vento', 'sol',
+  'lua', 'rio', 'serra', 'praia', 'coco', 'caju', 'manga', 'acerola', 'jangada',
+];
+function gerarSenhaTemporaria() {
+  const p = () => PALAVRAS[crypto.randomInt(PALAVRAS.length)];
+  return p() + '-' + p() + '-' + p() + '-' + crypto.randomInt(1000, 10000);
+}
+
+function redefinirSenha(id) {
+  const u = porId(id);
+  if (!u || u.convidado) return null;
+  const senha = gerarSenhaTemporaria();
+  definirSenha(u, senha);
+  // a tela pede pra pessoa trocar logo depois de entrar: a provisoria passou
+  // pela mao (ou pelo WhatsApp) de outra pessoa
+  u.senhaTemporaria = true;
+  salvar();
+  return senha;
+}
+
+function remover(id) {
+  const i = usuarios.findIndex((x) => x.id === id);
+  if (i < 0) return null;
+  const [removido] = usuarios.splice(i, 1);
+  salvar();
+  return removido;
+}
+
+function definirDiretoria(id, isAdmin) {
+  const u = porId(id);
+  if (!u || u.convidado) return null;
+  u.isAdmin = !!isAdmin;
+  salvar();
+  return u;
+}
+
+function totalDeDiretoria() {
+  return usuarios.filter((u) => u.isAdmin && !u.convidado).length;
+}
+
+// Lista pra tela de membros da diretoria. Visitante fica de fora: ele some
+// sozinho em 7 dias e nao tem senha pra redefinir.
+function membros() {
+  return usuarios
+    .filter((u) => !u.convidado)
+    .map((u) => ({
+      id: u.id,
+      nome: u.nome,
+      email: u.email,
+      isAdmin: !!u.isAdmin,
+      criadoEm: u.criadoEm || null,
+      ultimoAcesso: u.ultimoAcesso || null,
+      senhaTemporaria: !!u.senhaTemporaria,
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+// ---------- WhatsApp (opcional) ----------
+// A pessoa escolhe mostrar o proprio numero pros membros da sede: e o que liga o
+// botao "Chamar no WhatsApp" no cartao dela. So digitos, com o 55 do Brasil
+// quando vier so DDD + numero. Vazio apaga.
+function normalizarWhatsapp(bruto) {
+  const texto = String(bruto || '').trim();
+  let d = texto.replace(/[^0-9]/g, '');
+  if (!d) return '';
+  // sem "+" na frente e com 10/11 digitos e numero do Brasil sem o 55:
+  // (85) 9 9999-9999. Com "+", a pessoa ja disse o pais.
+  if (!texto.startsWith('+') && (d.length === 10 || d.length === 11)) d = '55' + d;
+  // com "+" vale o tamanho internacional (EUA tem 11 com o 1); sem "+" tem que
+  // ter virado um numero brasileiro completo (12 ou 13 com o 55)
+  const minimo = texto.startsWith('+') ? 8 : 12;
+  if (d.length < minimo || d.length > 15) return null;      // invalido
+  return d;
+}
+
+function definirWhatsapp(id, bruto) {
+  const u = porId(id);
+  if (!u || u.convidado) return { erro: 'Visitante nao cadastra WhatsApp.' };
+  const numero = normalizarWhatsapp(bruto);
+  if (numero === null) return { erro: 'Numero invalido. Use DDD + numero, ex.: (85) 99999-9999.' };
+  u.whatsapp = numero || null;
+  salvar();
+  return { whatsapp: u.whatsapp };
+}
+
 function atualizarPerfil(id, { nome, appearance }) {
   const u = porId(id);
   if (!u) return null;
@@ -205,6 +331,15 @@ module.exports = {
   senhaConfere,
   marcarAcesso,
   atualizarPerfil,
+  trocarSenha,
+  definirWhatsapp,
+  _normalizarWhatsapp: normalizarWhatsapp,
+  redefinirSenha,
+  remover,
+  definirDiretoria,
+  totalDeDiretoria,
+  membros,
+  versaoSessao,
   getSegredoSessao,
   totalDeContas: () => usuarios.length,
   // copia rasa: quem le a lista nao mexe no estado interno

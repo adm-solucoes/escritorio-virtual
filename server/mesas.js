@@ -193,10 +193,9 @@ function normalizarItens(bruto) {
 
 function salvar() {
   try {
-    fs.mkdirSync(path.dirname(ARQUIVO), { recursive: true });
     const dados = Array.from(donos.entries())
       .map(([k, uid]) => ({ chave: k, uid, itens: itens.get(k) || [] }));
-    fs.writeFileSync(ARQUIVO, JSON.stringify({ mesas: dados }, null, 2));
+    pastaDados.gravarSeguro(ARQUIVO, JSON.stringify({ mesas: dados }, null, 2));
   } catch (e) {
     console.error('Nao consegui salvar as mesas:', e.message);
   }

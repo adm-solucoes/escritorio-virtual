@@ -59,6 +59,10 @@
     // "Convidar visitante" so pra diretoria (o servidor tambem recusa, mas
     // botao que da 403 e botao quebrado).
     Convite.mostrarPara(usuario);
+    // Trocar senha (membro) e Membros da sede (diretoria); abre a troca
+    // obrigatoria se a pessoa entrou com senha provisoria.
+    Membros.mostrarPara(usuario);
+    WhatsApp.mostrarPara(usuario);
     const avatar = document.getElementById('conta-avatar');
     avatar.textContent = (usuario.nome || '?').trim().slice(0, 1).toUpperCase();
     if (usuario.appearance && usuario.appearance.shirt) {
@@ -84,6 +88,8 @@
   CartaoMesa.init();
   ItemMesa.init();
   Convite.init(fecharMenu);
+  Membros.init(fecharMenu);
+  WhatsApp.init(fecharMenu);
   Auth.init(depoisDoLogin);
   Entrada.init(entrarNoJogo, abrirCriador);
 

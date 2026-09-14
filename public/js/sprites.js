@@ -63,6 +63,7 @@
   //   4 = de perfil com o encosto a direita   -> quem senta olha pra ESQUERDA
   //   6 = de costas (so o encosto e os pes)   -> quem senta olha pra CIMA
   // As colunas 2, 3 e 5 sao pedacos de sobreposicao, nao cadeira inteira.
+
   const FOLHA_JANTAR = 'furniture-seating/chair-dining-a.png';
   // De costas a folha separa a cadeira em DUAS camadas, pra caber gente no meio:
   // a coluna 5 e so o assento (fica atras de quem senta) e a 6 e so o encosto e
@@ -77,6 +78,7 @@
     reuniao:     2,   // azul
     treinamento: 0,   // amarelo
     huddle:      1,   // vermelho, junto da poltrona
+    biblioteca:  4,   // madeira: cadeira de sala de leitura, sem estofado colorido
   };
 
   function cadeiraDaSala(direcao) {
@@ -98,6 +100,16 @@
         porCima: acima === undefined ? null : { c: acima, r: linha },
       };
     };
+  }
+
+  // Poltrona da biblioteca: a de couro VERDE, linha 3 da mesma folha. Funcao a
+  // parte, e nao inline no catalogo, porque o testes/cenario.js le as
+  // declaracoes com regex ate o primeiro `}` - um objeto dentro da declaracao
+  // corta a leitura no meio.
+  function poltronaDaSala(c, r) {
+    const M = window.OfficeMap;
+    const sala = M && M.getRoomAtTile && M.getRoomAtTile(c, r);
+    return sala && sala.id === 'biblioteca' ? { r: 3 } : null;
   }
 
   // ---------------------------------------------------------------- catalogo
@@ -131,7 +143,9 @@
     CADEIRA_VERMELHA_DIR:   { f: 'furniture-seating/chair-sofa-a.png', c: 1, r: 1, w: 1, h: 1 },
     CADEIRA_VERMELHA_ESQ:   { f: 'furniture-seating/chair-sofa-a.png', c: 2, r: 1, w: 1, h: 1 },
 
-    POLTRONA: { f: 'furniture-seating/chair-sofa-a.png', c: 3, r: 2, w: 1, h: 1 },
+    // Na biblioteca a poltrona e a de COURO VERDE (linha 3 da mesma folha): e a
+    // poltrona de sala de leitura. Nas cabines continua a azul.
+    POLTRONA: { f: 'furniture-seating/chair-sofa-a.png', c: 3, r: 2, w: 1, h: 1, variar: poltronaDaSala },
     PUFE:     { f: 'furniture-seating/ottoman-small-a.png', c: 2, r: 0, w: 1, h: 1 },
 
     // O sofa e uma peca so de 3x2: a fileira de cima do mapa (SOFA_CIMA) fica
@@ -152,7 +166,125 @@
     // faixa da frente, gaveteira e pe, e ja segue a medida da referencia. Ela
     // continua sendo a mesa.
 
-    MESA_CENTRO: { f: 'furniture/end-table.png', c: 0, r: 0, w: 1, h: 2, modo: 'alto' },
+    // h:1, e nao 2. A folha e 2x7 = CATORZE mesinhas de um tile cada (variacoes
+    // de cor), nao uma peca alta. Pedindo h:2 eu recortava a mesinha c0r0 MAIS a
+    // c0r1 logo abaixo, e o jogo desenhava duas mesas empilhadas - foi isso que
+    // aparecia na frente do sofa da copa. Medido com testes/pecas-da-folha.js:
+    // 14 ilhas de 462px, cada uma ocupando 45% da propria celula.
+    MESA_CENTRO: { f: 'furniture/end-table.png', c: 0, r: 0, w: 1, h: 1 },
+
+    // Mesa de reuniao: encaixe exato. A peca da folha e 3x1 e a mesa do mapa
+    // tambem - achada medindo a folha com testes/pecas-da-folha.js, e nao a
+    // olho. 79% da celula pintada, ou seja e tampo mesmo, nao quina de outra
+    // coisa.
+    // A mesa longa esta nas colunas 0-2, linhas 0-1: 3x2. As tres pecas
+    // redondas soltas da coluna 3 em diante sao OUTRO movel - foi nelas que a
+    // primeira tentativa caiu, e a mesa de reuniao virou tres mesinhas
+    // diferentes lado a lado. A ilha que a medicao achou eram elas encostadas.
+    // MEDIDO: a peca do table-rough-wood tem 22 dos 64 pixels VAZIOS no topo do
+    // bloco. Com ela, a cadeira encostava no limite da celula e a mesa so
+    // comecava 0,7 tile abaixo - foi o vao que o Caio viu. Esta tem 0px de
+    // vazio em cima, entao a cadeira encosta na mesa.
+    // A mesa de madeira estava CERTA; errada estava a posicao dela. A peca tem
+    // 22 de 64 pixels vazios no topo do bloco, entao a mesa nascia 0,7 tile
+    // abaixo da celula e as cadeiras pareciam jogadas longe. `sobeY: -11`
+    // centra a arte no bloco: sobra um terco de tile em cima e outro embaixo,
+    // igual dos dois lados, em vez de tudo de um lado so.
+    MESA_REUNIAO: { f: 'furniture/table-rough-wood.png', c: 0, r: 0, w: 3, h: 2, sobeY: -22 },
+    // E as redondas servem pro que elas sao: mesa de quatro lugares.
+    MESA_REDONDA: { f: 'furniture/table-rough-wood.png', c: 4, r: 1, w: 1, h: 1 },
+
+    // --- o que estava desenhado a mao e agora sai do pacote ------------------
+    // Quadro na parede: 1x1 cheio (87%), entao entra direto na celula.
+    // `atravessa` porque ele mora NA linha da parede.
+    QUADRO: { f: 'wall-items/paintings-landscape.png', c: 3, r: 1, w: 1, h: 1, atravessa: true },
+
+    // Banco do jardim: a folha traz 8 cores, uma por coluna. Peca de 1x2, entao
+    // modo alto - o encosto fica na celula de cima.
+    BANCO: { f: 'furniture-seating/ottoman-long-a.png', c: 4, r: 0, w: 1, h: 2, modo: 'alto' },
+
+    // Lago: outro encaixe exato, 3x3 na folha e 3x3 no mapa.
+    AGUA: { f: 'structure-misc/pool-a.png', c: 0, r: 0, w: 3, h: 3 },
+
+    // Armario: 2x2 na folha, e o mapa poe sempre aos pares. Alto, entao a
+    // celula de cima precisa estar livre - o testes/altos.js cobra isso.
+    ARMARIO: { f: 'furniture/dresser.png', c: 1, r: 0, w: 2, h: 2, modo: 'alto', atravessa: true },
+
+    // Relogio de pe: 1 de largura por 3 de altura, a peca mais alta da sede.
+    RELOGIO: { f: 'furniture/clock-grandfather.png', c: 0, r: 0, w: 1, h: 3, modo: 'alto' },
+
+    // Copiadora: 2x2. O mapa passou a por duas celulas lado a lado.
+    IMPRESSORA: { f: 'furniture/copy-machine.png', c: 0, r: 0, w: 2, h: 2, modo: 'alto' },
+
+    // TV de parede: 3x2, na linha do muro, com `atravessa` pra face do muro
+    // poder ser repintada por cima dela.
+    TV: { f: 'furniture/tv-widescreen.png', c: 4, r: 0, w: 3, h: 2, modo: 'alto', atravessa: true },
+
+    // Biombo de pe: 1 de largura por 3 de altura.
+    // Lousa da sala de reuniao: painel emoldurado de 1x1, o creme da folha de
+    // placas. Nao ha "quadro branco" no pacote, mas ha isto - que e o mesmo
+    // objeto: uma superficie clara com moldura, na parede.
+    LOUSA: { f: 'structure-signs/sign-backgrounds-a.png', c: 0, r: 1, w: 1, h: 1, atravessa: true },
+
+    // Espelho de pe na recepcao, no lugar do cabide. Cabide o pacote nao tem;
+    // espelho de corpo inteiro na entrada tem a mesma funcao de mobilia de
+    // chegada, e e movel de recepcao de verdade.
+    CABIDE: { f: 'furniture/mirror-standing.png', c: 0, r: 0, w: 2, h: 2, modo: 'alto' },
+
+    // Vaso alto de pe: 1x3.
+    CACTO: { f: 'furniture/planter.png', c: 4, r: 0, w: 1, h: 3, modo: 'alto' },
+
+    // TAPETE fica fora do CATALOGO porque virou PISO - ver `tapete_sala` em
+    // PISOS, mais abaixo. Tapete e acabamento de chao, nao movel: como piso ele
+    // fica sob a mobilia (que e onde tapete fica) e as pessoas andam em cima.
+    //
+    // O historico das tentativas como movel, que vale pra nao repetir:
+    //
+    //   swirling-vine  - desenho unico de 5x4 SEM borda. No chao da sala leu
+    //                    como piscina: sem borda nao da pra saber onde acaba.
+    //   diamond-rug    - bonito e com borda, mas a folha e opaca de ponta a
+    //                    ponta: nao existe recorte de um tapete so ali dentro,
+    //                    e por isso o testes/cenario.js acusa vazamento. Pelo
+    //                    lado do piso tambem nao vai: `desenharPiso` escolhe a
+    //                    fatia por `c % w`, o que embaralha a ordem e desmonta
+    //                    a borda.
+    //   rainbow (x2)   - listra arco-iris forte. Dominaria a sala e briga com a
+    //                    paleta quente do resto.
+    //
+    // O desenhado a mao ja foi refeito na escala certa (nada abaixo de 16
+    // unidades finas) e e quente. Ele fica.
+
+    // QUATRO PECAS NAO EXISTEM NO PACOTE. Varrido nos nomes das 320 folhas e
+    // nos titulos de todos os credits.txt, com os termos rack/coat/hook/easel/
+    // aquarium/fish/whiteboard/chalkboard/corkboard: zero resultado. O que
+    // chega perto sao cabeceira de cama, espelho de pe e biombo.
+    //
+    //   CABIDE   - nao ha cabide nem gancho de parede
+    //   CAVALETE - nao ha cavalete (saiu do mapa; no lugar entrou o BIOMBO)
+    //   AQUARIO  - nao ha aquario
+    //   LOUSA    - nao ha quadro branco nem lousa; poster nao serve de lousa
+    //              de sala de reuniao
+    //
+    // O BIOMBO foi tentado e desfeito. A folha standing-screen parece trazer
+    // oito biombos de 1 tile, mas medindo as bordas: 57 dos 64 pixels sao
+    // opacos em TODA emenda de tile. Nao sao oito pecas, e UM biombo continuo
+    // de 8 tiles - recortar um tile dali corta painel no meio. Divisoria de
+    // escritorio aberto continua sendo a planta, que e arte do pacote e
+    // funciona.
+    //
+    // As tres que ficam no mapa seguem desenhadas a mao, ja na escala certa.
+
+    // BALCAO fica fora do catalogo, e as duas tentativas ficam registradas:
+    //
+    //   countertop   - gabinete de 4 a 5 tiles de altura, visto de frente.
+    //                  Assume a parede alta do LPC (3 tiles); encostado na nossa
+    //                  faixa de 1 tile, desenharia pra fora do predio.
+    //   table-workshop - cabe na altura certa, mas e uma BANCADA DE OFICINA: no
+    //                  chao da recepcao le como banco de marcenaria, nao como
+    //                  balcao de atendimento.
+    //
+    // O pacote nao tem balcao visto de cima. O desenhado a mao foi feito pra
+    // esta celula e le como balcao - fica ele.
 
     // --- armazenagem --------------------------------------------------------
     // Estante ALTA, de dois tiles - e a estante cheia de livro, que e a peca que
@@ -253,6 +385,41 @@
     // A folha `tile-a` e a que chega mais perto: creme claro e de junta miuda.
     tijolo:        { f: 'structure-floor/tile-a.png', c: 0, r: 0, w: 1, h: 1 },
     ladrilho:      { f: 'structure-floor/tile-c.png', c: 0, r: 0, w: 2, h: 2 },
+
+    // --- madeira e espinha de peixe ------------------------------------------
+    // A direcao de interiores de 2026 e "resimercial": funcionalidade de
+    // escritorio com a materialidade de casa - madeira natural, neutro quente
+    // (taupe, creme), forma arredondada. Carpete roxo com parede cinza e
+    // escritorio de 2010, e e o que a nossa sede tinha.
+    //
+    // Nas folhas do pacote CADA COLUNA E UMA COR e as linhas sao o desencontro
+    // da tabua. Por isso o bloco e 1 de largura por 3 de altura: pegar w maior
+    // misturaria duas cores no mesmo chao.
+    madeira:       { f: 'structure-floor/wood-floor-a.png', c: 4, r: 0, w: 1, h: 3 },
+    madeira_mel:   { f: 'structure-floor/wood-floor-a.png', c: 2, r: 0, w: 1, h: 3 },
+    madeira_escura:{ f: 'structure-floor/wood-floor-a.png', c: 0, r: 0, w: 1, h: 3 },
+    madeira_clara: { f: 'structure-floor/wood-floor-a.png', c: 3, r: 3, w: 1, h: 3 },
+    espinha:       { f: 'structure-floor/herringbone-a.png', c: 2, r: 0, w: 1, h: 3 },
+    espinha_fria:  { f: 'structure-floor/herringbone-a.png', c: 0, r: 0, w: 1, h: 3 },
+
+    // Tapete como PISO. A folha traz blocos de 3x3 com borda, e repetidos eles
+    // leem como PLACA DE CARPETE - que e acabamento de chao de escritorio de
+    // verdade, nao um defeito. Como movel nao dava: `desenharPiso` escolhe a
+    // fatia por `c % w`, entao a ilha precisa comecar numa coluna e numa linha
+    // multiplas de 3 pra borda sair na ordem. As zonas do mapa respeitam isso.
+    // Bloco c9 r3: ESCOLHIDO POR MEDIDA, nao no olho. Amostrei a cor media dos
+    // oito blocos da folha - o amarelo da 108 de saturacao e o teal 76, e os
+    // dois dominavam a sala. Este da 25 e e rgb(194,184,169): taupe quente, que
+    // e a paleta da direcao resimercial do plano.
+    tapete_sala:   { f: 'furniture-rugs/diamond-rug-tiling.png', c: 9, r: 3, w: 3, h: 3 },
+    // o verde da mesma folha, pro canto de leitura da biblioteca
+    tapete_biblioteca: { f: 'furniture-rugs/diamond-rug-tiling.png', c: 3, r: 0, w: 3, h: 3 },
+
+    // O carpete de medalhao (geometric-carpet-c) foi testado e descartado: o
+    // credits.txt do proprio pacote credita "Geometric Carpet A" e "B" e NAO
+    // credita o C. Sem a linha do autor a folha nao pode ser publicada, e
+    // deduzir o autor pelos arquivos vizinhos seria creditar errado - que e pior
+    // do que nao usar. A zona ganha identidade pelo tom da madeira.
     // Carpete NAO sai do pacote. O `geometric-carpet` e tapete de medalhao, tipo
     // persa: bonito, e cobrindo o salao inteiro faz o escritorio virar salao de
     // castelo. O desenhado a mao (`pisoCarpete`) e carpete em PLACAS, em dois
@@ -395,10 +562,17 @@
         recortou = true;
       }
 
+      // `sobeY` desloca a peca em PIXEL dentro do bloco, e nao em tile inteiro
+      // como o `modo: 'alto'`. Existe porque varias pecas do pacote vem com
+      // folga transparente dentro do proprio bloco: a mesa de reuniao tem 22 de
+      // 64 pixels vazios no topo, e sem corrigir isso a cadeira encosta no
+      // limite da celula enquanto a mesa so comeca 0,7 tile abaixo - que le
+      // como cadeira jogada longe da mesa.
+      const ajusteY = ((peca.sobeY || 0) * TILE) / T;
       ctx.drawImage(
         reg.img,
         peca.c * T, peca.r * T, peca.w * T, peca.h * T,
-        (c + desloca) * TILE, (r - sobe) * TILE, peca.w * TILE, peca.h * TILE
+        (c + desloca) * TILE, (r - sobe) * TILE + ajusteY, peca.w * TILE, peca.h * TILE
       );
       if (recortou) ctx.restore();
       return true;

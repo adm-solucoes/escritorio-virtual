@@ -60,6 +60,34 @@ services:
         sync: false
       - key: TRELLO_BOARD_ID
         sync: false
+      #
+      # Biblioteca (a estante le a pasta de livros do Drive). Passo a passo em
+      # docs/estante.md. Em branco, a estante mostra o que estiver em
+      # DATA_DIR/livros - que no plano free some a cada deploy.
+      #   GOOGLE_DRIVE_PASTA   - link da pasta ou so o id dela
+      #   GOOGLE_CONTA_SERVICO - JSON da chave da conta de servico (ou em base64)
+      - key: GOOGLE_DRIVE_PASTA
+        sync: false
+      - key: GOOGLE_CONTA_SERVICO
+        sync: false
+      #
+      # Chamada de video em rede de faculdade/empresa/4G: TURN da Cloudflare.
+      # Em branco a chamada usa so STUN e nao fecha nessas redes. Ver
+      # docs/deploy.md, secao 4.
+      - key: CLOUDFLARE_TURN_KEY_ID
+        sync: false
+      - key: CLOUDFLARE_TURN_TOKEN
+        sync: false
+      #
+      # Backup automatico criptografado no Drive (docs/backup.md). Com os dois,
+      # o site restaura sozinho as contas quando sobe vazio - que no plano free
+      # acontece toda vez que ele dorme ou atualiza.
+      # BACKUP_CHAVE NAO usa generateValue de proposito: se o servico for recriado
+      # o Render sortearia outra, e nenhum backup antigo abriria mais.
+      - key: BACKUP_DRIVE_PASTA
+        sync: false
+      - key: BACKUP_CHAVE
+        sync: false
 
       # DISCO PERSISTENTE - descomente as tres linhas abaixo JUNTO com o bloco
       # `disk` do fim do arquivo e com `plan: starter`. Sem isso, server/data/

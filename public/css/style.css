@@ -275,10 +275,13 @@ button { font-family: inherit; }
 
 /* Cartao da mesa: o mesmo desenho do cartao da conta, mas solto na tela - ele
    nasce no ponto onde a mesa foi clicada. */
+/* Canto superior direito, fixo. Ver o porque em public/js/cartaomesa.js:
+   seguindo o clique, ele tapava a propria mesa de que fala e pulava de lugar a
+   cada clique. */
 .cartao-mesa {
   position: fixed;
-  left: 0;
-  top: 0;
+  right: 16px;
+  top: 16px;
   z-index: 60;
   width: 250px;
   padding-top: 4px;
@@ -1348,6 +1351,162 @@ video.mostrando-tela {
   letter-spacing: 0.4px;
 }
 .cal-lista { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+
+/* ---- reuniao interna da sede ---- */
+.cal-nova { width: 100%; }
+.cal-form { display: flex; flex-direction: column; gap: 8px; }
+.cal-form input[type="text"],
+.cal-form input[type="date"],
+.cal-form input[type="time"],
+.cal-form select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 9px;
+  background: var(--painel);
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+}
+.cal-form-linha { display: flex; gap: 8px; }
+.cal-form-linha > * { flex: 1; min-width: 0; }
+.cal-form-acoes { display: flex; gap: 8px; }
+.cal-form-acoes .btn { flex: 1; }
+.cal-form-cancelar { background: var(--painel-alt); color: var(--texto); }
+.cal-form-erro {
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #fdecea;
+  color: #8a1f16;
+  font-size: 12.5px;
+}
+
+.cal-reuniao {
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--borda);
+  background: var(--painel);
+}
+/* Acontecendo AGORA muda a borda, nao a cor de fundo: o que importa ler no
+   meio da lista e "essa e a de agora", e uma borda marcada diz isso sem
+   transformar o item num bloco colorido que rouba a lista inteira. */
+.cal-reuniao.agora { border-color: #2f5d4a; box-shadow: inset 3px 0 0 #2f5d4a; }
+.cal-reuniao-titulo { font-size: 13px; font-weight: 650; }
+.cal-reuniao-quando { margin-top: 2px; font-size: 12px; color: var(--texto-fraco); }
+.cal-reuniao-acoes { margin-top: 8px; display: flex; gap: 8px; }
+.cal-reuniao-entrar {
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 10px;
+  background: #2f5d4a;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cal-reuniao-entrar:hover { background: #264c3c; }
+.cal-reuniao-desmarcar {
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--texto-fraco);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cal-reuniao-desmarcar:hover { background: var(--painel-alt); color: var(--texto); }
+.cal-vazio { margin: 0; font-size: 12.5px; color: var(--texto-fraco); }
+
+/* ---- chamada marcada: a barra que fica por cima do mapa ---- */
+/* Em cima e no meio: a pessoa continua ANDANDO pela sede durante a chamada, e
+   precisa saber que esta no ar sem abrir painel nenhum. No canto ela sumiria
+   junto com os outros avisos. */
+.barra-chamada {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 14px;
+  border-radius: 999px;
+  background: rgba(24, 34, 29, 0.94);
+  color: #eaf3ee;
+  font-size: 12.5px;
+  box-shadow: 0 6px 20px rgba(12, 18, 15, 0.3);
+}
+/* O ponto pisca porque "no ar" e estado, nao aviso: piscando ele continua
+   dizendo a mesma coisa depois de cinco minutos na tela. */
+.barra-chamada-ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #58d08b;
+  animation: chamada-pulso 1.8s ease-in-out infinite;
+}
+@keyframes chamada-pulso { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .barra-chamada-ponto { animation: none; }
+}
+.barra-chamada-titulo { font-weight: 650; }
+.barra-chamada-gente { opacity: 0.72; }
+.barra-chamada-sair {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 11px;
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.barra-chamada-sair:hover { background: rgba(255, 255, 255, 0.24); }
+
+/* "Ligar" no topo do canal */
+.chat-ligar {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--painel);
+  color: var(--texto);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chat-ligar:hover { border-color: #2f5d4a; color: #2f5d4a; }
+
+/* O "Entrar" que vem junto com o convite, na propria mensagem */
+.chat-msg-entrar {
+  margin-left: 8px;
+  border: 0;
+  border-radius: 7px;
+  padding: 3px 10px;
+  background: #2f5d4a;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  font-style: normal;
+  cursor: pointer;
+}
+.chat-msg-entrar:hover { background: #264c3c; }
+
+/* Reuniao da sede na grade e CLICAVEL (leva pra sala); compromisso do Google
+   nao e. O cursor tem que contar isso antes do clique. */
+.cal-evento-interno { cursor: pointer; border: 0; text-align: left; font: inherit; }
+.cal-evento-interno:hover { filter: brightness(1.12); }
 .cal-item {
   display: flex;
   gap: 9px;
@@ -1648,6 +1807,11 @@ video.mostrando-tela {
 .chat-conversas { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
 
 .chat-secao {
+  /* `display: block` porque quem monta isso (textoEl, em chat.js) devolve um
+     <span>, e span e inline: "MENSAGENS DIRETAS" e "Ninguem mais online agora."
+     caiam na MESMA linha, o segundo quebrando por cima do primeiro. O padding
+     tambem nao empurrava nada, pelo mesmo motivo. */
+  display: block;
   padding: 12px 6px 6px;
   font-size: 11px;
   font-weight: 800;
@@ -1713,7 +1877,7 @@ video.mostrando-tela {
   align-items: center;
   justify-content: center;
 }
-.chat-vazio-lista { padding: 10px 8px; color: #9ca3af; font-size: 13px; }
+.chat-vazio-lista { display: block; padding: 4px 8px 10px; color: #9ca3af; font-size: 13px; }
 
 .chat-coluna-mensagens { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .chat-conversa-topo {
@@ -1893,6 +2057,34 @@ video.mostrando-tela {
   justify-content: center;
 }
 .btn-icone-pequeno:hover { background: var(--borda); }
+
+/* UM SO botao de fechar painel.
+   Tinha quatro: `btn-icone-pequeno` (quadrado cheio de 32px, a mesma classe do
+   botao de ENVIAR do chat - por isso nao deu pra so aliviar ela), um do cartao
+   da mesa, um da estante e um do decorador. Quatro pesos diferentes pro mesmo
+   gesto, e e esse tipo de descuido repetido que faz o conjunto parecer amador,
+   mesmo quando cada tela sozinha esta boa.
+   Fechar e acao secundaria: sem fundo parado, so o contorno do foco e um fundo
+   leve no hover. O peso fica pro que a tela faz, nao pra sair dela. */
+.btn-fechar-painel {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto-fraco);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+}
+.btn-fechar-painel:hover { background: var(--painel-alt); color: var(--texto); }
+.btn-fechar-painel:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+/* A estante e o unico painel em fundo creme: mesmo botao, tom da casa. */
+.painel-estante .btn-fechar-painel { color: #9a938a; }
+.painel-estante .btn-fechar-painel:hover { background: #efece5; color: var(--texto); }
 .chat-form .btn-icone-pequeno { background: var(--indigo); color: #fff; width: 42px; }
 .chat-form .btn-icone-pequeno:hover { background: var(--indigo-escuro); }
 
@@ -2021,13 +2213,6 @@ video.mostrando-tela {
   color: #9a938a;
   font-variant-numeric: tabular-nums;
 }
-.estante-pasta-link {
-  font-size: 12.5px;
-  color: var(--indigo);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.estante-pasta-link:hover { text-decoration: underline; }
 .estante-fechar {
   border: 0;
   background: transparent;
@@ -2049,17 +2234,149 @@ video.mostrando-tela {
   font-size: 13px;
 }
 
-/* A grade: duas capas por fileira, no formato de livro (2:3). */
+/* Busca, no TOPO do painel.
+   Veio da referencia: no painel lateral do Gather a busca e o PRIMEIRO
+   elemento, antes dos grupos - nao um extra escondido. Faz sentido aqui pelo
+   mesmo motivo: com o acervo crescendo, rolar quatro setores procurando uma
+   capa e pior que digitar tres letras. */
+.estante-busca-linha {
+  position: relative;
+  padding: 12px 18px 0;
+}
+.estante-busca {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 30px 8px 11px;
+  border: 1px solid #e3dfd6;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+}
+.estante-busca::placeholder { color: #a9a298; }
+.estante-busca:focus {
+  outline: none;
+  border-color: #b9b1a3;
+  box-shadow: 0 0 0 3px rgba(47, 93, 74, 0.12);
+}
+/* o X do type=search e feio e some em alguns temas: uso o meu */
+.estante-busca::-webkit-search-cancel-button { display: none; }
+.estante-busca-limpar {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-25%);
+  border: 0;
+  background: transparent;
+  color: #9a938a;
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.estante-busca-limpar:hover { background: #efece5; color: var(--texto); }
+
+/* A grade: capas no formato de livro (2:3).
+   `auto-fill` com largura minima, e nao duas colunas fixas: no painel de 392px
+   dao TRES por fileira em vez de duas, ou seja 50% mais capa visivel sem rolar.
+   A capa continua grande o bastante pra reconhecer de relance, que e o ponto -
+   e quem abre a estante quase sempre ja sabe o que esta procurando. */
 .estante-grade {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  /* Fileira na altura inteira do conteudo. Sem isso a capa (aspect-ratio +
+     overflow hidden, que deixa ela "encolhivel" ate zero) cabia na altura do
+     painel espremida: com 12 livros as capas encavalavam umas nas outras. */
+  grid-auto-rows: max-content;
   gap: 16px 14px;
   padding: 16px 18px 22px;
   align-content: start;
 }
+/* Filtro por setor: uma fileira so, que rola de lado se o acervo tiver muitos
+   setores - quebrar em duas linhas empurraria as capas pra baixo. */
+.estante-filtros {
+  display: flex;
+  gap: 6px;
+  padding: 12px 18px 2px;
+  /* A fileira rola de lado, mas a barra de rolagem esta escondida - entao ela
+     terminava CORTADA NO MEIO DE UMA PALAVRA, e cortado parece quebrado, nao
+     parece "tem mais pro lado". Esta mascara desbota os ultimos 22px e diz, sem
+     texto nenhum, que a fileira continua. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.estante-filtros::-webkit-scrollbar { display: none; }
+.estante-filtro {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid #e3dfd6;
+  border-radius: 999px;
+  background: #fff;
+  color: #5d574f;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.estante-filtro:hover { border-color: #cfc8bb; color: var(--texto); }
+.estante-filtro:focus-visible { outline: 2px solid #2f5d4a; outline-offset: 2px; }
+.estante-filtro.ativo {
+  background: #2f3a33;
+  border-color: #2f3a33;
+  color: #fbfaf7;
+}
+.estante-filtro-n {
+  font-size: 11px;
+  color: #a8a196;
+  font-variant-numeric: tabular-nums;
+}
+.estante-filtro.ativo .estante-filtro-n { color: #b9c4bc; }
+
+/* Titulo do setor atravessa as duas colunas da grade. */
+/* "Quem esta lendo" na capa. Fica na BASE e por cima da faixa do titulo: a
+   pessoa importa mais que o titulo, que a capa ja diz. Verde da sede, nao
+   vermelho: nao e alerta, e "tem gente aqui". */
+.estante-lendo {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  z-index: 2;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(30, 58, 46, 0.92);
+  color: #eaf3ee;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.estante-setor {
+  grid-column: 1 / -1;
+  margin: 8px 0 -4px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8378;
+}
+.estante-setor:first-child { margin-top: 0; }
+
 .estante-vazia {
   grid-column: 1 / -1;
   margin: 4px 0;
@@ -2070,7 +2387,23 @@ video.mostrando-tela {
 .estante-capa {
   position: relative;
   display: block;
-  aspect-ratio: 2 / 3;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  /* 3:4, e nao 2:3.
+     2:3 e a proporcao de um livro de bolso impresso - mas a nossa capa nao e um
+     livro, e a PAGINA 1 de um PDF, e pagina e A4 ou Letter. Medindo as 12 capas
+     do acervo: de 0,704 (A4) a 0,783 (Letter), nenhuma perto de 0,667. Com a
+     celula em 2:3 e `object-fit: cover`, sumia de 5% a 15% da LARGURA - nos
+     livros da OpenStax quase um sexto da capa, cortada nos dois lados.
+     3:4 = 0,75 fica no meio das duas familias: o corte cai pra no maximo ~6%,
+     que e margem de pagina, e a capa continua preenchendo a celula inteira (sem
+     tarja, e com a lombada caindo em cima da capa e nao do vazio). */
+  aspect-ratio: 3 / 4;
   border-radius: 3px 5px 5px 3px;   /* a lombada e o lado que nao arredonda */
   overflow: hidden;
   background: #e7e2d9;
@@ -2111,7 +2444,9 @@ video.mostrando-tela {
 .estante-capa-desenhada {
   position: absolute;
   inset: 0;
-  padding: 16px 12px 12px 16px;
+  /* Margem menor desde que a capa encolheu pra caber tres por fileira: com
+     16/12 sobrava pouco mais de 70px pro texto e palavra comprida escapava. */
+  padding: 13px 10px 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2123,9 +2458,14 @@ video.mostrando-tela {
 }
 .estante-capa-desenhada-titulo {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.25;
   text-wrap: balance;
+  /* Palavra que nao cabe QUEBRA, em vez de vazar pela borda da capa.
+     "Psicologia Organizacional" numa capa de 104px virava "Organizaciona"
+     cortado no talo - e capa cortada le como bug, nao como titulo comprido. */
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 .estante-capa-desenhada-titulo::after {
   content: '';
@@ -2298,3 +2638,571 @@ video.mostrando-tela {
   border-color: var(--indigo);
   color: #fff;
 }
+
+/* Visitante ve a capa, mas o livro e so da sede: capa um pouco apagada e um
+   cadeado no canto, pra o clique nao parecer quebrado. */
+.estante-capa.so-membros { cursor: default; }
+.estante-capa.so-membros img,
+.estante-capa.so-membros .estante-capa-desenhada { filter: saturate(0.55) brightness(0.92); }
+.estante-capa.so-membros::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(16, 13, 9, 0.72) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='6' y='10.5' width='12' height='9' rx='2' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center / 13px no-repeat;
+}
+
+/* ---------- leitor de livros ---------- */
+/* Tela cheia e escura de proposito: e sala de leitura, nao painel lateral. O
+   unico ponto claro da tela e a pagina - que e pra onde o olho tem que ir. O
+   escuro puxa pro quente, e nao pro preto-azulado do resto da interface: luz
+   quente e a de ler. */
+.leitor {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #171411;
+  color: #efe9df;
+}
+.leitor-barra {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: rgba(23, 20, 17, 0.94);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.leitor-cabeca {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.leitor-cabeca strong {
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.leitor-pagina {
+  flex: none;
+  font-size: 12.5px;
+  color: #a39a8c;
+  font-variant-numeric: tabular-nums;
+}
+.leitor-acoes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.leitor-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.leitor-btn:hover { background: rgba(255, 255, 255, 0.08); }
+.leitor-zoom {
+  min-width: 46px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #a39a8c;
+  font-variant-numeric: tabular-nums;
+}
+.leitor-baixar {
+  margin-left: 8px;
+  padding: 7px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.leitor-baixar:hover { background: rgba(255, 255, 255, 0.08); }
+
+.leitor-palco {
+  position: absolute;
+  top: 54px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+  padding: 24px 70px;
+}
+.leitor-folha {
+  line-height: 0;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 24px 60px -18px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+}
+.leitor-folha canvas { display: block; }
+
+.leitor-virar {
+  position: fixed;
+  top: 50%;
+  z-index: 2;
+  width: 52px;
+  height: 52px;
+  margin-top: -26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #d9d1c4;
+  cursor: pointer;
+}
+.leitor-virar.esquerda { left: 10px; }
+.leitor-virar.direita { right: 10px; }
+.leitor-virar:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); color: #fff; }
+.leitor-virar:disabled { opacity: 0.22; cursor: default; }
+
+.leitor-status {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(239, 233, 223, 0.95);
+  color: #1d1a16;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.leitor :focus-visible {
+  outline: 2px solid #e8c48a;
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .leitor-palco { padding: 16px 12px 72px; }
+  .leitor-virar { top: auto; bottom: 12px; margin-top: 0; }
+  .leitor-zoom, #leitor-menos, #leitor-mais { display: none; }
+}
+
+/* ============ Conta: trocar senha e membros da sede ============
+   Reusa o cartao do convite (.painel-convite / .convite-card). Ver js/membros.js. */
+.login-esqueci {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--texto-fraco);
+  text-align: center;
+}
+.login-esqueci summary { cursor: pointer; font-weight: 600; user-select: none; list-style: none; }
+.login-esqueci summary::-webkit-details-marker { display: none; }
+.login-esqueci summary:hover { color: var(--indigo); }
+.login-esqueci p { margin: 8px 0 0; line-height: 1.5; text-align: left; }
+
+.senha-campo { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.senha-campo span { font-size: 12px; font-weight: 700; color: var(--texto-fraco); }
+.senha-campo input {
+  padding: 10px 12px;
+  border: 1px solid var(--borda-forte);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+  background: var(--painel);
+}
+.senha-campo input:focus {
+  outline: none;
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+}
+#form-senha .login-erro { margin-bottom: 4px; }
+
+.membros-card {
+  width: min(640px, 100%);
+  max-height: min(86vh, 760px);
+  display: flex;
+  flex-direction: column;
+}
+.membros-topo { display: flex; align-items: baseline; gap: 10px; }
+.membros-conta { font-size: 12.5px; color: var(--texto-fraco); }
+.membros-provisoria {
+  margin: 0 0 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff8e6;
+  border: 1px solid #f3dfa8;
+}
+.membros-provisoria p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: #6b4e0f; }
+#membros-erro { margin-bottom: 10px; }
+.membros-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  min-height: 0;
+  border-top: 1px solid var(--borda);
+}
+.membro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--borda);
+}
+.membro-carregando { padding: 14px 2px; color: var(--texto-fraco); font-size: 13px; }
+.membro-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.membro-info strong { font-size: 14px; }
+.membro-email, .membro-meta {
+  font-size: 12.5px;
+  color: var(--texto-fraco);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.membro-meta { font-size: 12px; }
+.membro-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.membro-acao {
+  border: 1px solid var(--borda-forte);
+  background: var(--painel);
+  color: var(--texto);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font: 600 12px inherit;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.membro-acao:hover { background: var(--painel-alt); }
+.membro-acao.perigo { color: var(--vermelho); }
+.membro-acao.perigo:hover { background: #fdeceb; border-color: #f5c2bd; }
+.membro-acao:disabled { opacity: 0.5; cursor: default; }
+@media (max-width: 640px) {
+  .membro { flex-direction: column; align-items: stretch; }
+  .membro-acoes { justify-content: flex-start; }
+}
+/* `.convite-acoes .btn` deixa o botao neutro (e o "Fechar" do convite); aqui o
+   botao de acao e o principal da janela e precisa continuar com peso. */
+.convite-acoes .btn.btn-primario { background: var(--indigo); color: #fff; }
+.convite-acoes .btn.btn-primario:hover { background: var(--indigo-escuro); }
+.convite-acoes .btn.btn-primario:disabled { opacity: 0.6; cursor: default; }
+
+/* ============ Pedido de permissao dos avisos ============ Ver js/avisos.js. */
+.aviso-permissao {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  box-shadow: var(--sombra-painel);
+  color: var(--texto);
+}
+.aviso-permissao svg { flex: none; color: var(--indigo); }
+.aviso-permissao p { flex: 1; margin: 0; font-size: 13px; line-height: 1.4; }
+.aviso-permissao .btn { flex: none; }
+.aviso-permissao-dispensar {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--texto-fraco);
+  font: 600 12.5px inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+.aviso-permissao-dispensar:hover { color: var(--texto); }
+@media (max-width: 640px) {
+  .aviso-permissao { flex-wrap: wrap; bottom: 84px; }
+  .aviso-permissao p { flex-basis: calc(100% - 30px); }
+}
+
+/* ======================================================================
+   CELULAR
+   A sede foi desenhada pra tela de computador: trilho de icones na lateral,
+   paineis lado a lado, dica de teclado. Numa tela de 390px o trilho comia 16%
+   da largura e o chat espremia a conversa numa coluna de uma letra por linha.
+
+   O que muda abaixo de 640px:
+   - o trilho vira barra de abas EMBAIXO, onde o polegar alcanca
+   - cada painel (chat, agenda, Trello, estante, decorador) ocupa a tela, e a
+     barra de abas continua visivel pra trocar de um pro outro
+   - o chat vira uma coluna so: lista de conversas OU a conversa, com voltar
+   - os controles da chamada sobem pra cima da barra de abas
+   - o +/- de zoom some (e pinca, ver game.js) e o minimapa ja sumia em 820px
+   ====================================================================== */
+
+/* Sempre (nao so no celular): sem isto a pinca no mapa dava zoom na PAGINA. */
+#canvas-jogo { touch-action: none; -webkit-tap-highlight-color: transparent; }
+.chat-voltar { display: none; }
+
+@media (max-width: 640px) {
+  :root { --abas-altura: calc(56px + env(safe-area-inset-bottom, 0px)); }
+
+  /* 100vh no celular inclui a barra do navegador, e o rodape ficava escondido
+     atras dela. dvh e a altura que sobra de verdade. */
+  #tela-jogo { height: 100vh; height: 100dvh; }
+
+  /* ---- trilho -> barra de abas ---- */
+  .trilho {
+    top: auto;
+    right: 0;
+    width: auto;
+    height: var(--abas-altura);
+    padding: 0 4px env(safe-area-inset-bottom, 0px);
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 0;
+    border-right: none;
+    border-top: 1px solid var(--borda);
+    z-index: 32;
+  }
+  .trilho-logo, .trilho-espaco, .trilho-atalho { display: none; }
+  .trilho-btn { width: 44px; height: 44px; flex: none; }
+
+  /* menu da conta abre em cima da barra, na largura da tela */
+  .menu-conta {
+    left: 8px;
+    right: 8px;
+    bottom: calc(var(--abas-altura) + 8px);
+    width: auto;
+  }
+  .menu-conta .menu-suspenso { left: 0; right: 0; min-width: 0; }
+  .menu-suspenso-item { padding-top: 11px; padding-bottom: 11px; }
+
+  /* ---- mapa: o que flutua por cima ---- */
+  .topo-esq { left: 10px; top: calc(10px + env(safe-area-inset-top, 0px)); gap: 6px; }
+  .topo-dir { right: 10px; top: calc(10px + env(safe-area-inset-top, 0px)); }
+  /* "Conectado" vira so a bolinha: com sala + conexao + status nao cabia numa linha */
+  .indicador-conectado .texto-indicador { display: none; }
+  .zoom-controles { display: none; }
+  .barra-controle { bottom: calc(var(--abas-altura) + 12px); }
+  .dica-controles {
+    bottom: calc(var(--abas-altura) + 72px);
+    max-width: calc(100vw - 24px);
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+  }
+  .aviso-permissao { bottom: calc(var(--abas-altura) + 72px); }
+  .grade-chamada { inset: calc(60px + env(safe-area-inset-top, 0px)) 8px calc(var(--abas-altura) + 72px) 8px; padding: 8px; }
+  .grade-chamada-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .cartao-pessoa { width: min(280px, calc(100vw - 24px)); }
+  .cartao-mesa { left: 8px; right: 8px; top: calc(8px + env(safe-area-inset-top, 0px)); width: auto; }
+  .busca-rapida { padding-top: 8vh; }
+
+  /* ---- paineis: tela inteira, com a barra de abas aparecendo ---- */
+  .painel-chat,
+  .painel-calendario,
+  .painel-trello,
+  .painel-estante,
+  .painel-decorador {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: var(--abas-altura);
+    width: auto;
+    border: none;
+    box-shadow: none;
+    z-index: 30;
+  }
+
+  /* ---- chat: uma coluna so ---- */
+  .painel-chat { display: block; }
+  .chat-coluna-conversas { width: 100%; height: 100%; border-right: none; }
+  .chat-coluna-mensagens { display: none; height: 100%; }
+  .painel-chat.vendo-conversa .chat-coluna-conversas { display: none; }
+  .painel-chat.vendo-conversa .chat-coluna-mensagens { display: flex; }
+  .chat-voltar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin-left: -8px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    cursor: pointer;
+  }
+  .chat-conversa-topo { padding: 10px 12px; }
+  .chat-form { padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  /* 16px no campo: abaixo disso o iPhone da zoom na pagina ao tocar pra digitar */
+  #chat-input, .chat-busca, .login-campo input, .senha-campo input, #busca-input { font-size: 16px; }
+
+  /* ---- agenda: a lateral vira faixa de cima ---- */
+  .painel-calendario { flex-direction: column; overflow: auto; }
+  .cal-lateral { width: auto; border-right: none; border-bottom: 1px solid var(--borda); }
+}
+
+@media (max-width: 640px) {
+  /* ---- Trello: titulo e link numa linha cada, botoes a direita ---- */
+  .trello-topo { flex-wrap: wrap; row-gap: 4px; padding: 12px 14px; }
+  .trello-topo h2 { font-size: 15px; flex-basis: calc(100% - 150px); }
+  .trello-link { order: 3; flex-basis: 100%; }
+
+  /* ---- editor de avatar: categorias viram fileira que rola de lado ---- */
+  #tela-criador { align-items: stretch; padding: 0; }
+  .editor-card { width: 100%; max-width: none; border-radius: 0; min-height: 100dvh; display: flex; flex-direction: column; }
+  .editor-topo { padding: 14px 16px; }
+  .editor-topo h1 { font-size: 18px; }
+  .editor-espaco-nome { display: none; }
+  .editor-corpo { flex-direction: column; min-height: 0; flex: 1; }
+  .editor-categorias {
+    flex-direction: row;
+    width: auto;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--borda);
+    scrollbar-width: none;
+  }
+  .editor-categorias::-webkit-scrollbar { display: none; }
+  .editor-categoria { flex: none; padding: 6px 10px 6px 6px; gap: 6px; }
+  /* a previa vem PRIMEIRO no celular: e o boneco mudando que a pessoa quer ver */
+  .editor-preview { order: -1; width: auto; height: 170px; margin: 10px 12px 0; }
+  .editor-preview canvas { max-height: 160px; width: auto; }
+  .editor-meio { min-width: 0; padding: 10px 12px; }
+  .editor-opcoes { max-height: none; grid-template-columns: repeat(3, 1fr); }
+  .editor-rodape { padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); position: sticky; bottom: 0; }
+}
+@media (max-width: 640px) {
+  /* Filho de flex em coluna encolhe no maximo ate a largura do conteudo - e a
+     fileira de categorias tem ~1000px de conteudo. Sem min-width: 0 ela
+     esticava o cartao inteiro pra 1028px e a grade de opcoes ia junto. */
+  .editor-card { max-width: 100vw; min-width: 0; }
+  .editor-corpo, .editor-corpo > * { min-width: 0; max-width: 100%; }
+}
+
+/* ============ Estante: abas Digitais / Na sala da ADM ============
+   Ver js/estante.js e server/emprestimos.js. */
+.estante-abas {
+  display: flex;
+  gap: 4px;
+  margin: 10px 18px 0;
+  padding: 3px;
+  border-radius: 10px;
+  background: #efece5;
+}
+.estante-aba {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6b645a;
+  cursor: pointer;
+}
+.estante-aba.ativa { background: #fff; color: var(--texto); box-shadow: 0 1px 3px rgba(24, 20, 14, 0.12); }
+.estante-aba-n { font-weight: 500; color: #a8a196; font-variant-numeric: tabular-nums; margin-left: 2px; }
+
+/* situacao do livro de papel: faixa embaixo da capa (o mesmo lugar do "lendo") */
+.estante-situacao {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  z-index: 2;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.estante-situacao.livre { background: rgba(255, 255, 255, 0.92); color: #2f5d4a; }
+.estante-situacao.meu { background: rgba(47, 93, 74, 0.94); color: #fff; }
+.estante-situacao.fora { background: rgba(120, 72, 16, 0.92); color: #fff3df; }
+/* etiqueta e PDF ficam logo acima da situacao: no topo cobriam o titulo */
+.estante-etiqueta {
+  position: absolute;
+  bottom: 27px;
+  left: 8px;
+  z-index: 2;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #3a342c;
+  font: 600 9.5px ui-monospace, Consolas, monospace;
+}
+.estante-tem-pdf {
+  position: absolute;
+  bottom: 27px;
+  right: 8px;
+  z-index: 2;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #2f3a33;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.estante-fisico .estante-capa-faixa { display: none; }
+
+/* ficha do livro de papel: sobe do pe do painel */
+
+.estante-detalhe {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 5;
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e6e1d8;
+  box-shadow: 0 -10px 34px rgba(24, 20, 14, 0.18);
+}
+.estante-detalhe-topo { display: flex; align-items: flex-start; gap: 10px; }
+.estante-detalhe-topo h3 { flex: 1; margin: 0; font-size: 15px; line-height: 1.3; }
+.estante-detalhe-meta { margin: 6px 0 0; font-size: 12.5px; color: #8a8378; line-height: 1.4; }
+.estante-detalhe-onde { margin: 10px 0 0; font-size: 13.5px; color: var(--texto); }
+.estante-detalhe-conferir {
+  margin: 8px 0 0;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #6b4e0f;
+  font-size: 12px;
+}
+.estante-detalhe-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.estante-detalhe-acoes .btn { padding: 8px 14px; font-size: 13px; }
+
+/* ============ WhatsApp ============ Ver js/whatsapp.js. */
+.cartao-acoes { flex-wrap: wrap; }
+.cartao-whatsapp { color: #14803c; }
+.whatsapp-acoes-direita { display: flex; align-items: center; gap: 8px; margin-left: auto; }

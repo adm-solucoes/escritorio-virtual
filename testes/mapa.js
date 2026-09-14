@@ -48,7 +48,16 @@ const fechadasServidor = servidor.ROOMS.filter((s) => s.privativa).map((s) => s.
 conferir('  e as mesmas salas fechadas',
   JSON.stringify(fechadasCliente), JSON.stringify(fechadasServidor));
 conferir('  com pelo menos as salas de reuniao marcadas',
-  ['conferencia', 'huddle', 'reuniao', 'treinamento'].filter((id) => !fechadasCliente.includes(id)), []);
+  ['reuniao', 'huddle1', 'huddle2', 'cabine1', 'cabine2', 'cabine3']
+    .filter((id) => !fechadasCliente.includes(id)), []);
+
+// Mesma regra pra sala SILENCIOSA: se so uma copia marcar, a biblioteca deixa
+// de ser silenciosa pra metade do sistema e ninguem percebe.
+const silenciosasCliente = cliente.ROOMS.filter((s) => s.silenciosa).map((s) => s.id).sort();
+const silenciosasServidor = servidor.ROOMS.filter((s) => s.silenciosa).map((s) => s.id).sort();
+conferir('  e as mesmas salas silenciosas',
+  JSON.stringify(silenciosasCliente), JSON.stringify(silenciosasServidor));
+conferir('  com a biblioteca marcada', silenciosasCliente.includes('biblioteca'), true);
 
 // ---- da pra chegar em tudo? ----
 const m = servidor;

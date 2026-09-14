@@ -4,11 +4,12 @@
   "description": "Escritorio virtual 2D multiplayer da ADM Solucoes (empresa junior de administracao da UECE)",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js",
+    "start": "node server/iniciar.js",
+    "restaurar": "node server/restaurar.js",
     "dev": "node -e \"process.env.SEM_LOGIN='1'; require('./server/index.js')\"",
     "publicar": "node server/publicar.js",
     "espelhar": "node espelhar.js",
-    "teste": "node testes/mapa.js && node testes/mesas.js && node testes/itens.js && node testes/roupas.js && node testes/cenario.js && node testes/chat.js && node testes/conteudo.js && node testes/convidado.js"
+    "teste": "node testes/mapa.js && node testes/mesas.js && node testes/itens.js && node testes/roupas.js && node testes/cenario.js && node testes/chat.js && node testes/conteudo.js && node testes/altos.js && node testes/emendas.js && node testes/proximidade.js && node testes/chamada-grande.js && node testes/acervo.js && node testes/turn.js && node testes/backup.js && node testes/emprestimos.js && node testes/avisos.js && node testes/reunioes.js && node testes/convidado.js && node testes/contas.js"
   },
   "engines": {
     "node": ">=18"

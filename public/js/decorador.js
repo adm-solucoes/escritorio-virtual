@@ -128,6 +128,7 @@
           { t: m.GELADEIRA, nome: 'Geladeira' },
           { t: m.AQUARIO, nome: 'Aquario' },
           { t: m.LUMINARIA_PE, nome: 'Luminaria de pe' },
+          { t: m.PORTA, nome: 'Porta' },
           { t: m.TAPETE, nome: 'Tapete' },
           { t: m.TAPETE_REDONDO, nome: 'Tapete redondo' },
         ],

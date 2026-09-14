@@ -56,8 +56,7 @@ function escrever() {
     if (guardaveis.length) saida.conversas[conversaId] = guardaveis;
   });
   try {
-    fs.mkdirSync(path.dirname(ARQUIVO), { recursive: true });
-    fs.writeFileSync(ARQUIVO, JSON.stringify(saida));
+    pastaDados.gravarSeguro(ARQUIVO, JSON.stringify(saida));
   } catch (e) {
     console.error('[chat] nao consegui salvar o historico:', e.message);
   }

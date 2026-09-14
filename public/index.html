@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Escritorio Virtual - ADM Solucoes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -68,6 +68,14 @@
         <p id="login-erro" class="login-erro oculto" role="alert"></p>
 
         <button id="btn-login" class="btn btn-primario login-enviar" type="submit">Entrar</button>
+        <details id="login-esqueci" class="login-esqueci">
+          <summary>Esqueci minha senha</summary>
+          <p>
+            Peca pra alguem da <strong>diretoria</strong> abrir
+            <em>Sua conta &rarr; Membros da sede &rarr; Redefinir senha</em>.
+            Voce recebe uma senha provisoria e troca por uma sua no primeiro acesso.
+          </p>
+        </details>
       </form>
     </div>
   </section>
@@ -158,6 +166,16 @@
 
       <div class="vinheta"></div>
 
+      <!-- Barra de chamada marcada. Fica por cima do mapa porque a pessoa
+           continua andando pela sede durante a chamada - ela precisa saber que
+           esta no ar sem abrir painel nenhum. -->
+      <div id="barra-chamada" class="barra-chamada oculto">
+        <span class="barra-chamada-ponto"></span>
+        <span id="barra-chamada-titulo" class="barra-chamada-titulo"></span>
+        <span id="barra-chamada-gente" class="barra-chamada-gente"></span>
+        <button id="barra-chamada-sair" class="barra-chamada-sair" type="button">Sair</button>
+      </div>
+
       <!-- trilho de icones a esquerda, como o Gather -->
       <nav class="trilho">
         <div class="trilho-logo" title="ADM Solucoes">
@@ -184,6 +202,9 @@
         </button>
         <button id="btn-trello" class="trilho-btn" type="button" title="Quadro do Trello">
           <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6.5" y="6.5" width="4.5" height="9" rx="1" fill="currentColor"/><rect x="13" y="6.5" width="4.5" height="5.5" rx="1" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-whatsapp" class="trilho-btn" type="button" title="Abrir o seu WhatsApp numa janela ao lado">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4.5 19.5l1.2-3.6A8 8 0 1 1 8.6 18.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.2 8.6c.3 2.6 2.4 4.9 5.2 5.4l1-1.2-1.8-.9-.8.8c-.9-.4-1.7-1.2-2.1-2.1l.8-.8-.9-1.8z" fill="currentColor"/></svg>
         </button>
         <button id="btn-estante" class="trilho-btn" type="button" title="Estante: o acervo de livros da sede">
           <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9h17M3.5 15h17" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 5.5v3M9 5.5v3M6.5 11.5v3M9 11.5v3M6.5 17.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -221,6 +242,22 @@
               <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 7.5h11v9H4z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 7.5l5.5 4.5L15 7.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M18 9v6m3-3h-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
               Convidar visitante
             </button>
+            <button id="btn-meu-whatsapp" class="menu-suspenso-item oculto" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4.5 19.5l1.2-3.6A8 8 0 1 1 8.6 18.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              Meu WhatsApp
+            </button>
+            <button id="btn-trocar-senha" class="menu-suspenso-item oculto" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              Trocar senha
+            </button>
+            <button id="btn-membros" class="menu-suspenso-item oculto" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="9" cy="8.5" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16 11.5h5M18.5 9v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              Membros da sede
+            </button>
+            <button id="btn-som-avisos" class="menu-suspenso-item" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 16.5h12l-1.6-2.2V10a4.4 4.4 0 0 0-8.8 0v4.3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              <span>Silenciar avisos sonoros</span>
+            </button>
             <button id="btn-sair" class="menu-suspenso-item" type="button">
               <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M14 4.5H6.5v15H14M12 12h8m0 0l-3-3m3 3l-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Sair da conta
@@ -256,7 +293,7 @@
         <div id="grade-chamada-tiles" class="grade-chamada-tiles"></div>
       </div>
 
-      <div id="dica-controles" class="dica-controles">Clique no chao para mover · Chegue perto de alguem para entrar em chamada</div>
+      <div id="dica-controles" class="dica-controles">WASD ou clique para mover · <b>Shift</b> para correr · Chegue perto de alguem para entrar em chamada</div>
       <div id="aviso-camera" class="aviso-camera oculto"></div>
 
       <div class="barra-reacoes oculto" id="barra-reacoes">
@@ -307,7 +344,7 @@
         <div class="painel-salas-card">
           <div class="painel-salas-topo">
             <h2>Visao de salas</h2>
-            <button id="btn-fechar-salas" class="btn-icone-pequeno" type="button" title="Fechar">✕</button>
+            <button id="btn-fechar-salas" class="btn-fechar-painel" type="button" title="Fechar">✕</button>
           </div>
           <div id="grade-salas" class="grade-salas"></div>
         </div>
@@ -328,7 +365,7 @@
 
       <!-- Cartao da mesa, no formato do print 13-menu-largar-mesa.png -->
       <div id="cartao-mesa" class="cartao-mesa oculto">
-        <button id="btn-fechar-cartao-mesa" class="cartao-mesa-fechar" type="button" title="Fechar" aria-label="Fechar">
+        <button id="btn-fechar-cartao-mesa" class="btn-fechar-painel" type="button" title="Fechar" aria-label="Fechar">
           <svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
         <div class="conta-topo">
@@ -364,7 +401,7 @@
       <aside id="painel-decorador" class="painel-decorador oculto">
         <div class="decor-topo">
           <h2 id="decor-titulo">Decorador</h2>
-          <button id="btn-fechar-decorador" class="painel-fechar" type="button" title="Fechar">
+          <button id="btn-fechar-decorador" class="btn-fechar-painel" type="button" title="Fechar">
             <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
         </div>
@@ -390,9 +427,37 @@
         <div class="cal-lateral">
           <div class="cal-lateral-topo">
             <h2>Agenda</h2>
-            <button id="btn-fechar-calendario" class="btn-icone-pequeno" type="button" title="Fechar">✕</button>
+            <button id="btn-fechar-calendario" class="btn-fechar-painel" type="button" title="Fechar">✕</button>
           </div>
           <div id="cal-aviso" class="cal-aviso oculto"></div>
+
+          <!-- Reuniao interna da sede: marcada aqui, com sala, e a chamada
+               acontece na propria sala. Ver docs/plano-reunioes.md. -->
+          <button id="cal-nova" class="btn btn-primario cal-nova" type="button">Marcar reuniao</button>
+          <form id="cal-form" class="cal-form oculto">
+            <input id="cal-f-titulo" type="text" maxlength="80" placeholder="Do que e a reuniao?" required />
+            <div class="cal-form-linha">
+              <input id="cal-f-data" type="date" required />
+              <input id="cal-f-hora" type="time" required />
+            </div>
+            <div class="cal-form-linha">
+              <select id="cal-f-sala" aria-label="Sala"></select>
+              <select id="cal-f-dur" aria-label="Duracao">
+                <option value="30">30 min</option>
+                <option value="60" selected>1 h</option>
+                <option value="90">1 h 30</option>
+                <option value="120">2 h</option>
+              </select>
+            </div>
+            <p id="cal-f-erro" class="cal-form-erro oculto" role="alert"></p>
+            <div class="cal-form-acoes">
+              <button id="cal-f-cancelar" class="btn cal-form-cancelar" type="button">Cancelar</button>
+              <button class="btn btn-primario" type="submit">Marcar</button>
+            </div>
+          </form>
+
+          <div class="cal-lateral-rotulo">Reunioes da sede</div>
+          <div id="cal-reunioes" class="cal-lista"></div>
           <div class="cal-lateral-rotulo">Seus proximos compromissos</div>
           <div id="cal-lista" class="cal-lista"></div>
           <div id="cal-google" class="cal-google"></div>
@@ -418,7 +483,7 @@
           <a id="trello-link" class="trello-link oculto" target="_blank" rel="noopener noreferrer">Abrir no Trello</a>
           <div class="trello-topo-acoes">
             <button id="btn-atualizar-trello" class="btn btn-secundario btn-pequeno" type="button">Atualizar</button>
-            <button id="btn-fechar-trello" class="btn-icone-pequeno" type="button" title="Fechar">&#10005;</button>
+            <button id="btn-fechar-trello" class="btn-fechar-painel" type="button" title="Fechar">&#10005;</button>
           </div>
         </div>
         <div id="trello-aviso" class="trello-aviso oculto"></div>
@@ -431,18 +496,30 @@
             <h2>Estante</h2>
             <span id="estante-conta" class="estante-conta"></span>
           </div>
-          <a id="estante-pasta-link" class="estante-pasta-link oculto" target="_blank" rel="noopener noreferrer">Pasta no Drive</a>
-          <button id="btn-fechar-estante" class="estante-fechar" type="button" title="Fechar (Esc)">&#10005;</button>
+          <button id="btn-fechar-estante" class="btn-fechar-painel" type="button" title="Fechar (Esc)">&#10005;</button>
         </header>
+        <div id="estante-abas" class="estante-abas" role="tablist" aria-label="Acervo">
+          <button type="button" class="estante-aba ativa" data-aba="digital" role="tab" aria-selected="true">Digitais <span class="estante-aba-n"></span></button>
+          <button type="button" class="estante-aba" data-aba="sala" role="tab" aria-selected="false">Na sala da ADM <span class="estante-aba-n"></span></button>
+        </div>
         <div id="estante-aviso" class="estante-aviso oculto"></div>
+        <div id="estante-busca-linha" class="estante-busca-linha oculto">
+          <input id="estante-busca" class="estante-busca" type="search" autocomplete="off"
+                 placeholder="Buscar por titulo ou setor" aria-label="Buscar livro" />
+          <button id="estante-busca-limpar" class="estante-busca-limpar oculto" type="button"
+                  title="Limpar busca" aria-label="Limpar busca">&#10005;</button>
+        </div>
+        <div id="estante-filtros" class="estante-filtros oculto" role="toolbar" aria-label="Setores"></div>
         <div id="estante-lista" class="estante-grade"></div>
+        <!-- Ficha do livro de papel: com quem esta, pegar e devolver. -->
+        <section id="estante-detalhe" class="estante-detalhe oculto" aria-live="polite"></section>
       </aside>
 
       <aside id="painel-chat" class="painel-chat oculto">
         <div class="chat-coluna-conversas">
           <div class="chat-coluna-topo">
             <h2>Chat</h2>
-            <button id="btn-fechar-chat" class="btn-icone-pequeno" type="button" title="Fechar">✕</button>
+            <button id="btn-fechar-chat" class="btn-fechar-painel" type="button" title="Fechar">✕</button>
           </div>
           <input id="chat-busca" class="chat-busca" type="text" placeholder="Buscar conversa..." autocomplete="off" />
           <div id="chat-conversas" class="chat-conversas"></div>
@@ -450,8 +527,17 @@
 
         <div class="chat-coluna-mensagens">
           <div class="chat-conversa-topo">
+            <button id="chat-voltar" class="chat-voltar" type="button" aria-label="Voltar pras conversas">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <h3 id="chat-titulo"># geral</h3>
             <span id="chat-contagem" class="chat-contagem"></span>
+            <!-- Liga pro grupo inteiro, de qualquer canto do mapa. Ver
+                 docs/plano-reunioes.md. -->
+            <button id="chat-ligar" class="chat-ligar oculto" type="button" title="Chamar o grupo">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 7.5c0 6.5 6 12.5 12.5 12.5l2.2-2.6-3.6-2.4-1.9 1.6c-1.9-1-3.8-2.9-4.8-4.8l1.6-1.9-2.4-3.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              Ligar
+            </button>
           </div>
 
           <div id="chat-lista" class="chat-lista"></div>
@@ -504,6 +590,37 @@
   <script src="js/callgrid.js"></script>
   <script src="js/chat.js"></script>
   <script src="js/calendario.js"></script>
+  <!-- Chamada marcada, a que funciona de qualquer canto. Ver js/chamada.js. -->
+  <script src="js/chamada.js"></script>
+  <!-- Leitor de livros da biblioteca. Ver js/leitor.js e docs/estante.md. -->
+  <div id="leitor" class="leitor oculto" role="dialog" aria-modal="true" aria-labelledby="leitor-titulo">
+    <header class="leitor-barra">
+      <button id="leitor-fechar" class="leitor-btn" type="button" title="Voltar pra sede (Esc)" aria-label="Fechar o livro">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="leitor-cabeca">
+        <strong id="leitor-titulo"></strong>
+        <span id="leitor-pagina" class="leitor-pagina"></span>
+      </div>
+      <div class="leitor-acoes">
+        <button id="leitor-menos" class="leitor-btn" type="button" title="Diminuir (-)" aria-label="Diminuir">&minus;</button>
+        <span id="leitor-zoom" class="leitor-zoom">100%</span>
+        <button id="leitor-mais" class="leitor-btn" type="button" title="Aumentar (+)" aria-label="Aumentar">+</button>
+        <a id="leitor-baixar" class="leitor-baixar" download>Baixar</a>
+      </div>
+    </header>
+    <div id="leitor-palco" class="leitor-palco">
+      <button id="leitor-anterior" class="leitor-virar esquerda" type="button" aria-label="Pagina anterior">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="leitor-folha"><canvas id="leitor-canvas"></canvas></div>
+      <button id="leitor-proxima" class="leitor-virar direita" type="button" aria-label="Proxima pagina">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div id="leitor-status" class="leitor-status oculto" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
   <script src="js/trello.js"></script>
   <!-- Objeto que abre conteudo. Ver docs/plano-conteudo.md. -->
   <div id="painel-conteudo" class="painel-convite oculto" role="dialog" aria-modal="true" aria-labelledby="conteudo-titulo">
@@ -512,7 +629,7 @@
       <h2 id="conteudo-titulo"></h2>
       <p id="conteudo-url" class="conteudo-url"></p>
       <div class="convite-acoes conteudo-acoes">
-        <button id="btn-fechar-conteudo" class="btn" type="button">Fechar</button>
+        <button id="btn-fechar-conteudo" class="btn-fechar-painel" type="button">Fechar</button>
         <button id="btn-abrir-conteudo" class="btn btn-primario" type="button">Abrir em nova aba</button>
       </div>
     </div>
@@ -559,11 +676,99 @@
       <p id="convite-validade" class="convite-validade"></p>
       <div class="convite-acoes">
         <button id="btn-revogar-convites" class="convite-revogar" type="button">Invalidar todos os links</button>
-        <button id="btn-fechar-convite" class="btn" type="button">Fechar</button>
+        <button id="btn-fechar-convite" class="btn-fechar-painel" type="button">Fechar</button>
       </div>
     </div>
   </div>
 
+  <!-- Pedido de permissao pros avisos: so num clique da pessoa. Ver js/avisos.js. -->
+  <div id="aviso-permissao" class="aviso-permissao oculto" role="dialog" aria-labelledby="aviso-permissao-texto">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 16.5h12l-1.6-2.2V10a4.4 4.4 0 0 0-8.8 0v4.3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <p id="aviso-permissao-texto">Quer ser avisado quando alguem te chamar, mesmo com a sede em outra aba?</p>
+    <button id="btn-permitir-avisos" class="btn btn-primario btn-pequeno" type="button">Ativar avisos</button>
+    <button id="btn-dispensar-avisos" class="aviso-permissao-dispensar" type="button">Agora nao</button>
+  </div>
+
+  <!-- Numero de WhatsApp opcional. Ver js/whatsapp.js. -->
+  <div id="painel-whatsapp" class="painel-convite oculto" role="dialog" aria-modal="true" aria-labelledby="whatsapp-titulo">
+    <form id="form-whatsapp" class="convite-card" novalidate>
+      <h2 id="whatsapp-titulo">Meu WhatsApp</h2>
+      <p class="convite-ajuda">
+        Com o numero aqui, aparece <strong>WhatsApp</strong> no seu cartao e os colegas
+        te chamam com um clique. So quem e membro da sede ve o botao - visitante nao.
+        E opcional: pra tirar, e so apagar.
+      </p>
+      <label class="senha-campo">
+        <span>Numero com DDD</span>
+        <input id="whatsapp-numero" type="tel" inputmode="tel" autocomplete="tel" placeholder="(85) 99999-9999" />
+      </label>
+      <p id="whatsapp-erro" class="login-erro oculto" role="alert"></p>
+      <div class="convite-acoes">
+        <button id="btn-tirar-whatsapp" class="convite-revogar oculto" type="button">Tirar meu numero</button>
+        <span class="whatsapp-acoes-direita">
+          <button id="btn-fechar-whatsapp" class="btn" type="button">Cancelar</button>
+          <button class="btn btn-primario" type="submit">Salvar</button>
+        </span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Trocar a propria senha. Ver js/membros.js. -->
+  <div id="painel-senha" class="painel-convite oculto" role="dialog" aria-modal="true" aria-labelledby="senha-titulo">
+    <form id="form-senha" class="convite-card" novalidate>
+      <h2 id="senha-titulo">Trocar senha</h2>
+      <p id="senha-ajuda" class="convite-ajuda">
+        Trocar a senha desconecta a sua conta dos outros aparelhos.
+      </p>
+      <label class="senha-campo">
+        <span id="senha-rotulo-atual">Senha atual</span>
+        <input id="senha-atual" type="password" autocomplete="current-password" required />
+      </label>
+      <label class="senha-campo">
+        <span>Senha nova</span>
+        <input id="senha-nova" type="password" autocomplete="new-password" minlength="8" placeholder="Pelo menos 8 caracteres" required />
+      </label>
+      <label class="senha-campo">
+        <span>Repita a senha nova</span>
+        <input id="senha-repetir" type="password" autocomplete="new-password" required />
+      </label>
+      <p id="senha-erro" class="login-erro oculto" role="alert"></p>
+      <div class="convite-acoes">
+        <button id="btn-fechar-senha" class="btn-fechar-painel" type="button">Cancelar</button>
+        <button id="btn-salvar-senha" class="btn btn-primario" type="submit">Trocar senha</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Membros da sede, so diretoria. Ver js/membros.js. -->
+  <div id="painel-membros" class="painel-convite oculto" role="dialog" aria-modal="true" aria-labelledby="membros-titulo">
+    <div class="convite-card membros-card">
+      <div class="membros-topo">
+        <h2 id="membros-titulo">Membros da sede</h2>
+        <span id="membros-conta" class="membros-conta"></span>
+      </div>
+      <p class="convite-ajuda">
+        Quem saiu da ADM: <strong>remova</strong> - a pessoa sai da sede na hora e a
+        mesa dela fica livre. Quem esqueceu a senha: <strong>redefina</strong> e passe
+        a senha provisoria pra ela.
+      </p>
+      <div id="membros-provisoria" class="membros-provisoria oculto" role="status">
+        <p id="membros-provisoria-texto"></p>
+        <div class="convite-linha">
+          <input id="membros-provisoria-senha" type="text" readonly aria-label="Senha provisoria" />
+          <button id="btn-copiar-provisoria" class="btn btn-primario" type="button">Copiar</button>
+        </div>
+      </div>
+      <p id="membros-erro" class="login-erro oculto" role="alert"></p>
+      <ul id="membros-lista" class="membros-lista"></ul>
+      <div class="convite-acoes">
+        <span></span>
+        <button id="btn-fechar-membros" class="btn-fechar-painel" type="button">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/leitor.js"></script>
   <script src="js/estante.js"></script>
   <script src="js/decorador.js"></script>
   <script src="js/cartaomesa.js"></script>
@@ -571,6 +776,9 @@
   <script src="js/pessoas.js"></script>
   <script src="js/game.js"></script>
   <script src="js/convite.js"></script>
+  <script src="js/membros.js"></script>
+  <script src="js/whatsapp.js"></script>
+  <script src="js/avisos.js"></script>
   <script src="js/conteudo.js"></script>
   <script src="js/main.js"></script>
   <script>

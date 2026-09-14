@@ -75,6 +75,25 @@
 
     cartao.appendChild(acoes);
 
+    // WhatsApp so aparece se a pessoa cadastrou o numero. Pedido na hora, um
+    // cartao por vez: o numero nao anda na lista de gente (ver js/whatsapp.js).
+    // Se o cartao ja trocou de pessoa quando a resposta chegar, nao poe nada.
+    if (window.WhatsApp && p.uid && !p.convidado && p.id !== Game.getSelfId()) {
+      WhatsApp.numeroDe(p.uid).then((numero) => {
+        if (!numero || idDoCartao !== id) return;
+        const btnZap = document.createElement('button');
+        btnZap.type = 'button';
+        btnZap.className = 'btn btn-secundario btn-pequeno cartao-whatsapp';
+        btnZap.textContent = 'WhatsApp';
+        btnZap.title = 'Abrir conversa com ' + p.name + ' no WhatsApp';
+        btnZap.addEventListener('click', () => {
+          WhatsApp.chamar(numero);
+          fecharCartao();
+        });
+        acoes.insertBefore(btnZap, btnIr);
+      });
+    }
+
     cartao.classList.remove('oculto');
     // mantem o cartao dentro da tela
     const largura = 226;

@@ -244,6 +244,17 @@
       const el = document.createElement('div');
       el.className = 'chat-msg-sistema';
       el.textContent = msg.texto;
+      // "Fulano comecou uma chamada": o convite vira BOTAO na propria mensagem.
+      // Sem ele a pessoa leria "tem chamada rolando" e nao teria pra onde
+      // clicar - teria que adivinhar que o botao Ligar do topo tambem entra.
+      if (msg.chamada) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chat-msg-entrar';
+        b.textContent = 'Entrar';
+        b.addEventListener('click', () => window.Chamada && Chamada.entrar(msg.chamada));
+        el.appendChild(b);
+      }
       return el;
     }
 
@@ -323,11 +334,24 @@
     }
   }
 
+  // O botao "Ligar" so aparece em CANAL, nao em DM: ligar pra uma pessoa so e
+  // chegar perto dela no mapa, que e o que a sede ja faz. Chamada marcada existe
+  // pra juntar GRUPO de qualquer canto.
+  function ajustarBotaoLigar(conversaId) {
+    const b = document.getElementById('chat-ligar');
+    if (!b) return;
+    b.classList.toggle('oculto', ehDm(conversaId));
+  }
+
   function abrirConversa(conversaId) {
     conversaAtual = conversaId;
+    // No celular o chat e uma coluna so: abrir conversa troca a lista pela
+    // conversa (style.css, .vendo-conversa). No computador a classe nao muda nada.
+    painel.classList.add('vendo-conversa');
     naoLidas.delete(conversaId);
     atualizarBadge();
     renderConversas();
+    ajustarBotaoLigar(conversaId);
 
     if (historico.has(conversaId)) renderConversaAtual(false);
     else {
@@ -439,6 +463,9 @@
     document.getElementById('btn-chat').classList.add('ativo');
     if (conversaId) abrirConversa(conversaId);
     else if (conversaAtual) abrirConversa(conversaAtual);
+    // Abrindo pelo botao do chat, no celular a pessoa cai na LISTA de conversas -
+    // e dali escolhe. Cair direto no #geral esconderia as DMs.
+    if (!conversaId) painel.classList.remove('vendo-conversa');
     renderConversas();
     inputEl.focus();
   }
@@ -468,7 +495,19 @@
 
     document.getElementById('btn-chat').addEventListener('click', () => (aberto ? fechar() : abrir()));
     document.getElementById('btn-fechar-chat').addEventListener('click', fechar);
+    const voltar = document.getElementById('chat-voltar');
+    if (voltar) voltar.addEventListener('click', () => painel.classList.remove('vendo-conversa'));
     formEl.addEventListener('submit', enviar);
+
+    const ligar = document.getElementById('chat-ligar');
+    if (ligar) {
+      ligar.addEventListener('click', () => {
+        if (!conversaAtual || ehDm(conversaAtual)) return;
+        // Manda so o id do canal. Quem monta o convite e resolve o titulo e o
+        // servidor - e ele tambem que decide quem recebe.
+        Network.ligarProGrupo(conversaAtual.slice('canal:'.length));
+      });
+    }
 
     inputEl.addEventListener('input', ajustarAltura);
     inputEl.addEventListener('keydown', (e) => {
@@ -493,5 +532,10 @@
     receberReacao,
     pessoasMudaram,
     abrirDm,
+    abrir,
+    nomeDaConversa,
+    // O avisos.js pergunta isto pra nao tocar som de uma conversa que a pessoa
+    // ja esta lendo na tela.
+    estaVendo: (conversaId) => aberto && conversaAtual === conversaId,
   };
 })();

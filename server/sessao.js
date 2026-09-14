@@ -43,10 +43,26 @@ function assinar(dados) {
   return crypto.createHmac('sha256', usuarios.getSegredoSessao()).update(dados).digest('hex');
 }
 
+// O token leva a VERSAO da sessao da conta (ver usuarios.js, "gestao de conta"):
+// trocar ou redefinir a senha sobe a versao, e todo cookie antigo para de valer.
+// Cookie emitido antes de existir versao nao tem o terceiro campo e conta como
+// versao 0 - por isso ninguem foi deslogado quando isto entrou.
 function criarToken(usuarioId, duracaoMs) {
   const dura = Number(duracaoMs) > 0 ? Number(duracaoMs) : DURACAO_MS;
-  const corpo = Buffer.from(usuarioId + '.' + (Date.now() + dura)).toString('base64url');
+  const conta = usuarios.porId(usuarioId);
+  const versao = usuarios.versaoSessao(conta);
+  const corpo = Buffer.from(usuarioId + '.' + (Date.now() + dura) + '.' + versao).toString('base64url');
   return corpo + '.' + assinar(corpo);
+}
+
+// Dono do token, se a assinatura bate, nao venceu, a conta existe e a versao da
+// sessao e a atual.
+function contaDoToken(token) {
+  const lido = lerToken(token);
+  if (!lido) return null;
+  const conta = usuarios.porId(lido.usuarioId);
+  if (!conta || usuarios.versaoSessao(conta) !== lido.versao) return null;
+  return conta;
 }
 
 function lerToken(token) {
@@ -61,9 +77,9 @@ function lerToken(token) {
   if (assinatura.length !== esperada.length) return null;
   if (!crypto.timingSafeEqual(Buffer.from(assinatura), Buffer.from(esperada))) return null;
 
-  const [usuarioId, expiraEm] = Buffer.from(corpo, 'base64url').toString('utf8').split('.');
+  const [usuarioId, expiraEm, versao] = Buffer.from(corpo, 'base64url').toString('utf8').split('.');
   if (!usuarioId || !expiraEm || Number(expiraEm) < Date.now()) return null;
-  return usuarioId;
+  return { usuarioId, versao: Number(versao) || 0 };
 }
 
 // Parser de cookie pequeno o suficiente pra nao valer uma dependencia nova.
@@ -104,8 +120,7 @@ function limparCookie(res) {
 function usuarioDaRequisicao(req) {
   if (SEM_LOGIN && usuarioDev) return usuarioDev;
   const cookies = lerCookies(req.headers.cookie);
-  const id = lerToken(cookies[NOME_COOKIE]);
-  return id ? usuarios.porId(id) : null;
+  return contaDoToken(cookies[NOME_COOKIE]);
 }
 
 // Usuario do handshake do socket (mesmo cookie).
@@ -113,8 +128,7 @@ function usuarioDoSocket(socket) {
   if (ehBot(socket)) return usuarioBot;
   if (SEM_LOGIN && usuarioDev) return usuarioDev;
   const cookies = lerCookies(socket.handshake.headers.cookie);
-  const id = lerToken(cookies[NOME_COOKIE]);
-  return id ? usuarios.porId(id) : null;
+  return contaDoToken(cookies[NOME_COOKIE]);
 }
 
 // Barra a rota pra quem nao esta logado.

@@ -22,7 +22,27 @@
   // perdida. Ver `podarConexoesPresas`.
   const PACIENCIA_MS = 12000;
 
-  const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+  // Servidores ICE vem do servidor (/api/ice): STUN, e o TURN da Cloudflare
+  // quando configurado - sem TURN a chamada nao fecha em rede de faculdade,
+  // empresa e parte do 4G. Comeca com o STUN de sempre: se a busca falhar, a
+  // chamada fica exatamente como era antes, e nao pior.
+  let iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+  let icePronto = Promise.resolve();
+  const ESPERA_ICE_MS = 4000;
+  const RENOVAR_ICE_MS = 6 * 60 * 60 * 1000; // a credencial do TURN vence em 24h
+
+  function buscarIce() {
+    const busca = fetch('/api/ice', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j && Array.isArray(j.iceServers) && j.iceServers.length) iceServers = j.iceServers;
+      })
+      .catch(() => { /* fica o STUN */ });
+    // Conexao nao espera pra sempre: rede lenta no arranque nao pode segurar a
+    // primeira chamada. Passou do prazo, abre com o que tiver.
+    icePronto = Promise.race([busca, new Promise((ok) => setTimeout(ok, ESPERA_ICE_MS))]);
+    return icePronto;
+  }
 
   let selfId = null;
   let localStream = null;
@@ -33,6 +53,24 @@
   let streamPendente = null; // camera aberta na tela de entrada, esperando o init
   let telaStream = null; // o que o navegador devolveu do getDisplayMedia
   let telaTrack = null; // a track de video da tela, enquanto ela esta dividida
+
+  // ------------------------------------------------------ chamada grande
+  // A chamada e direta entre as pessoas (malha P2P): cada uma manda o proprio
+  // video pra CADA uma das outras. Com 6 pessoas sao 5 videos subindo da internet
+  // de cada participante; com 15, catorze - a conexao de casa e o processador
+  // nao dao conta e a chamada inteira trava, pra todo mundo.
+  //
+  // Passou de 6 pessoas, as CAMERAS saem do ar e fica so a voz (audio e leve:
+  // ~40 kbps por pessoa). Compartilhar tela continua, porque numa reuniao grande
+  // e justamente a tela que importa, e so quem apresenta manda. Volta a ter
+  // camera quando cair pra 5 - a folga evita ligar e desligar a cada um que
+  // entra e sai na borda.
+  //
+  // Reuniao geral de verdade (15, 30 pessoas com video) pede um servidor de
+  // video no meio; ate la, a regra e esta. Ver docs/deploy.md.
+  const LIMITE_OUTROS_COM_VIDEO = 5;   // eu + 5 = 6 pessoas
+  const VOLTA_VIDEO_OUTROS = 4;        // eu + 4 = 5
+  let soVoz = false;
 
   const peers = new Map(); // id do outro jogador -> { pc, videoEl, videoSender, remoteDescDefinida, candidatosPendentes }
 
@@ -61,7 +99,24 @@
   // camera. Um so - ver docs/plano-dividir-tela.md.
   function videoQueVaiSair() {
     if (telaTrack) return telaTrack;
+    if (soVoz) return null;
     return localStream ? (localStream.getVideoTracks()[0] || null) : null;
+  }
+
+  function ajustarChamadaGrande() {
+    const outros = peers.size;
+    if (!soVoz && outros > LIMITE_OUTROS_COM_VIDEO) {
+      soVoz = true;
+      mostrarAviso('Chamada com mais de 6 pessoas: as cameras sairam do ar pra ninguem travar. A voz e o compartilhar tela continuam.');
+    } else if (soVoz && outros <= VOLTA_VIDEO_OUTROS) {
+      soVoz = false;
+      mostrarAviso('A chamada diminuiu: as cameras voltaram.');
+    } else {
+      return;
+    }
+    peers.forEach((p, id) => {
+      if (sincronizarTracks(p)) renegociar(id);
+    });
   }
 
   // Garante que todas as tracks locais estao sendo enviadas nessa conexao.
@@ -95,6 +150,9 @@
         // troca sem renegociar: e o que faz a tela entrar na hora
         p.videoSender.replaceTrack(video);
       }
+    } else if (p.videoSender && p.videoSender.track) {
+      // chamada grande: para de mandar a camera sem derrubar o transmissor
+      p.videoSender.replaceTrack(null);
     }
     return mudou;
   }
@@ -115,7 +173,7 @@
     let p = peers.get(id);
     if (p) return p;
 
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers });
     const videoEl = criarVideoRemoto(id);
     p = {
       pc, videoEl, videoSender: null,
@@ -132,12 +190,19 @@
     };
     pc.onconnectionstatechange = () => {
       if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) fecharPeer(id);
+      // A chamada ABRIU de fato (audio passando). O avisos.js usa isto pra chamar
+      // quem esta com a sede numa aba escondida quando alguem chega perto.
+      if (pc.connectionState === 'connected' && !p.avisouConexao) {
+        p.avisouConexao = true;
+        window.dispatchEvent(new CustomEvent('sede:chamada-conectou', { detail: { id } }));
+      }
     };
 
     return p;
   }
 
   async function iniciarChamada(id) {
+    await icePronto;
     const p = garantirPeer(id);
     try {
       const offer = await p.pc.createOffer();
@@ -150,6 +215,10 @@
 
   async function tratarSinal({ from, signal }) {
     if (!signal || !from) return;
+    // Mesma espera do iniciarChamada, pro lado que RECEBE a oferta tambem abrir
+    // a conexao com o TURN. Todos os sinais esperam a mesma promessa, entao
+    // oferta e candidatos continuam saindo na ordem em que chegaram.
+    await icePronto;
 
     if (signal.type === 'offer') {
       const p = garantirPeer(from);
@@ -221,6 +290,29 @@
     return sala && sala.privativa ? sala.id : null;
   }
 
+  // Sala SILENCIOSA (`silenciosa: true` no mapa): a biblioteca. E a "library
+  // zone" dos escritorios por atividade - area com regra explicita de nao
+  // conversar. Sem ela o silencio da biblioteca seria so desenho: bastava duas
+  // pessoas se sentarem na mesma mesa pra chamada abrir. Ver
+  // docs/plano-biblioteca.md.
+  function salaSilenciosaDe(p) {
+    const M = window.OfficeMap;
+    if (!M || !M.getRoomAtTile) return false;
+    const sala = M.getRoomAtTile(Math.floor(p.x / TILE), Math.floor(p.y / TILE));
+    return !!(sala && sala.silenciosa);
+  }
+
+  // Status que a pessoa escolheu na barra de cima. 'livre' e o unico que aceita
+  // conversa de corredor - 'focado' e 'reuniao' sao a pessoa dizendo, com todas
+  // as letras, que nao quer ser interrompida.
+  //
+  // Sem isto o botao era enfeite: dava pra marcar "Em reuniao" e cair numa
+  // chamada mesmo assim, no meio da reuniao, so porque alguem passou perto.
+  // Botao que promete e nao cumpre e pior do que botao que nao existe.
+  function ocupado(p) {
+    return !!p && !!p.status && p.status !== 'livre';
+  }
+
   // A decisao de falar ou nao com alguem, num lugar so.
   //
   // Sala fechada MANDA mais que distancia, nos dois sentidos:
@@ -234,10 +326,38 @@
   //     lado de fora da porta e cair na reuniao.
   //
   // Fora de sala fechada, vale o de sempre: perto e sem parede no meio.
+  // As duas pessoas entraram na MESMA chamada marcada?
+  //
+  // Esta e a unica regra que ignora o mapa inteiro - distancia, parede, sala,
+  // status. E ela existe porque prender a reuniao a uma sala quebra no caso
+  // obvio: a sala de reuniao esta ocupada. E porque ninguem deveria ter que
+  // largar o lugar onde esta trabalhando pra entrar numa reuniao.
+  //
+  // Entrar numa chamada dessas e um ato deliberado - a pessoa clicou em
+  // "entrar". Por isso ela ganha ate da sala silenciosa: quem entrou na reuniao
+  // e depois foi buscar um livro na biblioteca continua na reuniao.
+  function naMesmaChamada(self, outro) {
+    return !!(self && outro && self.chamada && outro.chamada
+      && self.chamada.id === outro.chamada.id);
+  }
+
   function deveFalarCom(self, outro) {
+    if (naMesmaChamada(self, outro)) return true;
+
+    // Sala silenciosa manda mais que tudo, inclusive sala fechada.
+    if (salaSilenciosaDe(self) || salaSilenciosaDe(outro)) return false;
     const minha = salaFechadaDe(self);
     const dele = salaFechadaDe(outro);
     if (minha || dele) return minha === dele;
+
+    // Status barra a conversa de corredor - mas so DEPOIS da sala fechada, e de
+    // proposito. Entrar numa sala de reuniao e um ato deliberado: quem cruza
+    // aquela porta quis participar, e travar a chamada ali deixaria a sala
+    // muda. Passar perto de alguem no corredor e acidente, e e isso que o
+    // status protege. Vale pros dois lados: nem interrompo quem esta focado,
+    // nem sou puxado pra uma conversa quando eu e que estou.
+    if (ocupado(self) || ocupado(outro)) return false;
+
     const dist = Math.hypot(outro.x - self.x, outro.y - self.y);
     return dist < RAIO_ENTRAR && !paredeEntre(self, outro);
   }
@@ -245,7 +365,17 @@
   // Sair tem folga maior que entrar, senao a chamada pisca com a pessoa andando
   // em cima da borda. Dentro da mesma sala fechada nao ha borda: so sai quem
   // sair da sala.
+  //
+  // Status NAO entra aqui, e isso e escolha. Mudar o proprio status pra "Focado"
+  // no meio de uma conversa derrubaria a chamada na cara do outro, sem ele ter
+  // feito nada - quem quer sair, sai andando. O status barra chamada NOVA; nao
+  // desliga a que ja esta acontecendo.
   function deveContinuarCom(self, outro) {
+    if (naMesmaChamada(self, outro)) return true;
+
+    // Entrou na biblioteca em chamada? A chamada acaba ali. E o contrario da sala
+    // fechada: la dentro todo mundo conversa; aqui ninguem conversa.
+    if (salaSilenciosaDe(self) || salaSilenciosaDe(outro)) return false;
     const minha = salaFechadaDe(self);
     const dele = salaFechadaDe(outro);
     if (minha || dele) return minha === dele;
@@ -312,15 +442,19 @@
 
       const par = peers.get(id);
       if (par && par.videoEl) {
-        // Dentro da mesma sala fechada o volume e cheio, ponta a ponta: numa
-        // reuniao ninguem fala mais baixo por estar na outra cabeceira.
-        par.videoEl.volume = salaFechadaDe(self)
+        // Volume cheio quando a conversa NAO e de corredor: na mesma chamada
+        // marcada, ou na mesma sala fechada. Numa reuniao ninguem fala mais
+        // baixo por estar na outra cabeceira - e menos ainda por estar na outra
+        // ponta do escritorio, que e o caso novo: quem entra numa chamada
+        // marcada continua no lugar onde estava.
+        par.videoEl.volume = (naMesmaChamada(self, p) || salaFechadaDe(self))
           ? 1
           : volumePara(Math.hypot(p.x - self.x, p.y - self.y));
       }
     });
 
     peers.forEach((_, id) => { if (!playersMap.has(id)) fecharPeer(id); });
+    ajustarChamadaGrande();
   }
 
   function mostrarAviso(texto) {
@@ -452,6 +586,9 @@
 
   function aplicarUiTela() {
     const dividindo = !!telaTrack;
+    // Um lugar so decide a UI da tela dividida, entao e daqui que o aviso pro
+    // resto da sede sai tambem - nao de cada caminho que liga ou desliga.
+    if (window.Network && Network.dividirTela) Network.dividirTela(dividindo);
     const botao = document.getElementById('btn-tela');
     if (botao) {
       botao.classList.toggle('ativo', dividindo);
@@ -509,6 +646,8 @@
 
   function init(idJogadorLocal) {
     selfId = idJogadorLocal;
+    buscarIce();
+    setInterval(buscarIce, RENOVAR_ICE_MS);
     Network.on('rtc-signal', tratarSinal);
     adotarStreamPendente();
     document.getElementById('btn-camera').addEventListener('click', alternarCamera);
@@ -534,7 +673,16 @@
   // uma chamada so-audio fica com temChamadaAtiva=true mas isso aqui false.
   function temVideoRemoto(id) {
     const p = peers.get(id);
+    // Chamada grande: a camera do outro saiu do ar e o <video> ficaria congelado
+    // no ultimo quadro. Mostra a inicial - menos quem esta apresentando a tela.
+    if (soVoz && !apresentando(id)) return false;
     return !!(p && p.videoEl && p.videoEl.readyState >= 2 && p.videoEl.videoWidth > 0);
+  }
+
+  function apresentando(id) {
+    const G = window.Game;
+    const outro = G && G.getPlayers && G.getPlayers().get(id);
+    return !!(outro && outro.dividindoTela);
   }
 
   function getVideoRemoto(id) {
@@ -559,13 +707,28 @@
 
   function getLocalStream() { return localStream; }
   function isCameraAtiva() { return cameraAtiva; }
-  function temVideoLocal() { return temVideo; }
+  // Na chamada grande a propria camera tambem sai da grade: mostrar o proprio
+  // video faria a pessoa achar que os outros estao vendo ela.
+  function temVideoLocal() { return temVideo && !soVoz; }
 
   function estaDividindoTela() { return !!telaTrack; }
+
+  // O <video> local, pra TV do mapa poder espelhar a minha propria tela sem
+  // passar pelo WebRTC (eu nao sou peer de mim mesmo).
+  function videoDaTelaLocal() {
+    return telaTrack ? document.getElementById('video-local') : null;
+  }
 
   window.Calls = {
     init, updateProximity, temChamadaAtiva, temVideoRemoto, getVideoRemoto,
     getPeersConectados, getLocalStream, isCameraAtiva, temVideoLocal,
-    usarStreamDaEntrada, alternarTela, estaDividindoTela,
+    usarStreamDaEntrada, alternarTela, estaDividindoTela, videoDaTelaLocal,
+    // As duas regras de decisao saem expostas pra `testes/proximidade.js`
+    // conseguir exercita-las sem navegador. Mesma ideia do `canvasDoMapa` do
+    // game.js: e caro demais so conferir isso a olho, numa chamada de verdade.
+    deveFalarCom, deveContinuarCom,
+    emChamadaGrande: () => soVoz,
+    _ajustarChamadaGrande: ajustarChamadaGrande,
+    _peers: peers,
   };
 })();

@@ -21,20 +21,32 @@ Estas sao as folhas que o `public/js/sprites.js` realmente desenha. Todas sob
 
 | Arquivo local | Peca no pacote | Autores |
 |---|---|---|
+| `furniture-rugs/diamond-rug-tiling.png` | Diamond Rug, tiling | Eliza Wyatt (DeathsDarling) |
 | `furniture-seating/chair-dining-a.png` | Chair, Dining (all) | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) |
 | `furniture-seating/chair-office.png` | Chair, Office | Eliza Wyatt (DeathsDarling) |
 | `furniture-seating/chair-sofa-a.png` | Chair, Sofa (all) | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) |
+| `furniture-seating/ottoman-long-a.png` | Ottoman, Long A | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) |
 | `furniture-seating/ottoman-small-a.png` | Ottoman (all) | Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling) |
 | `furniture-seating/sofa-casual-a.png` | Sofa Set, Casual | Eliza Wyatt (DeathsDarling) |
 | `furniture/cabinet.png` | Cabinet | Lanea Zimmerman (Sharm), Eliza Wyatt |
+| `furniture/clock-grandfather.png` | Clock, Grandfather | Lanea Zimmerman (Sharm) |
+| `furniture/copy-machine.png` | Copy Machine | Eliza Wyatt (DeathsDarling) |
+| `furniture/dresser.png` | Dresser | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
 | `furniture/end-table.png` | End Table | Eliza Wyatt (DeathsDarling) |
 | `furniture/fridge.png` | Fridge | Eliza Wyatt (DeathsDarling) |
 | `furniture/lighting-floor.png` | Lighting, Floor | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
+| `furniture/mirror-standing.png` | Mirror, Standing | Eliza Wyatt (DeathsDarling) |
 | `furniture/planter.png` | Planter | Lanea Zimmerman (Sharm) |
+| `furniture/table-rough-wood.png` | Tables, Rough Wood | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
+| `furniture/tv-widescreen.png` | Tv, Widescreen | Eliza Wyatt (DeathsDarling) |
 | `furniture/water-cooler.png` | Water Cooler | Eliza Wyatt (DeathsDarling) |
 | `small-items/flowers.png` | Flowers | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
+| `structure-floor/herringbone-a.png` | Herringbone | Eliza Wyatt (DeathsDarling) |
 | `structure-floor/tile-a.png` | Tile A | Eliza Wyatt (DeathsDarling) |
 | `structure-floor/tile-c.png` | Tile C | Eliza Wyatt (DeathsDarling) |
+| `structure-floor/wood-floor-a.png` | Wood Floor A | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
+| `structure-misc/pool-a.png` | Pool A | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
+| `structure-signs/sign-backgrounds-a.png` | Sign Backgrounds A | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
 | `terrain/plants-summer.png` | Plants (all seasons) | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling), Hyptosis |
 | `terrain/rocks-grasslands.png` | Rocks | Eliza Wyatt (DeathsDarling) |
 | `terrain/trees-summer.png` | Trees (all seasons) | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
@@ -60,6 +72,7 @@ opy-machine.png`/d
 | `structure-floor/` | 17 | madeira, ladrilho, carpete geometrico e floral |
 | `structure-windows/`, `structure-doors-*/` | 22 | janelas (com versao iluminada) e portas |
 | `terrain/` | 30 | grama, arvores e plantas nas 4 estacoes, pedra, penhasco |
+| `wall-items/paintings-landscape.png` | Paintings, Landscape | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
 | resto (`smithing`, `sewing`, `moveable`, `fx`...) | 62 | ferraria, costura, cadeira de rodas, ondulacao de agua |
 
 Os `credits.txt` originais de cada pasta vieram junto, **sem edicao**. Antes de usar

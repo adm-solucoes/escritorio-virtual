@@ -64,9 +64,16 @@ const MESA_REDONDA = 50;
 const GELADEIRA = 51;
 const AQUARIO = 52;
 const LUMINARIA_PE = 53;
+// Porta que abre quando alguem chega perto. CAMINHAVEL de proposito: ela nao
+// fecha passagem, so mostra que ali e passagem. Ver o desenho em game.js
+// (`desenharPortas`), que roda a cada quadro - porta animada nao cabe no
+// pre-render, que e estatico.
+const PORTA = 54;
 
 const SOLID_TILES = new Set([
-  PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, SOFA_BAIXO, MESA_CENTRO, ESTANTE,
+  // SOFA_BAIXO NAO entra aqui: e onde a pessoa senta. Ver DIRECAO_ASSENTO.
+  // SOFA_CIMA continua solido - aquela celula e o ENCOSTO, nao o assento.
+  PAREDE, MESA, MESA_MONITOR, SOFA_CIMA, MESA_CENTRO, ESTANTE,
   PLANTA, ARVORE, QUADRO, LOUSA, ARMARIO, BALCAO, CERCA, MESA_REUNIAO,
   JANELA, AGUA, PEDRA, ARBUSTO, BANCO, CABIDE, IMPRESSORA, CAVALETE,
   MESA_DUPLA, MESA_NOTEBOOK, PLANTA_GRANDE, VASO_FLORES, CACTO, BEBEDOURO,
@@ -87,6 +94,11 @@ const DIRECAO_ASSENTO = {
   [CADEIRA_VERMELHA_DIR]: 'right',
   [POLTRONA]: 'up',
   [PUFE]: 'up',
+  // O sofa da copa e do lobby e UMA peca de 3x2 ancorada na linha de BAIXO:
+  // a arte sobe e cobre a celula de cima. Entao a celula de baixo e o
+  // ASSENTO (almofada e bracos) e a de cima e o ENCOSTO. Por isso so
+  // SOFA_BAIXO senta, e senta virado pra 'down' - o sofa abre pro sul.
+  [SOFA_BAIXO]: 'down',
 };
 const ASSENTOS = new Set(Object.keys(DIRECAO_ASSENTO).map(Number));
 
@@ -167,22 +179,55 @@ const OBJETO_MAX = 37;
 const PODS = [9, 15, 28, 34]; // coluna de partida de cada sala privativa
 
 const ROOMS = [
-  { id: 'diretoria', nome: 'Diretoria', r0: 3, c0: 9, r1: 7, c1: 13, privativa: true },
-  { id: 'financeiro', nome: 'Financeiro', r0: 3, c0: 15, r1: 7, c1: 19, privativa: true },
-  { id: 'patio', nome: 'Patio', r0: 3, c0: 21, r1: 8, c1: 26 },
-  { id: 'projetos', nome: 'Projetos', r0: 3, c0: 28, r1: 7, c1: 32, privativa: true },
-  { id: 'marketing', nome: 'Marketing', r0: 3, c0: 34, r1: 7, c1: 38, privativa: true },
-  { id: 'copa', nome: 'Copa', r0: 9, c0: 3, r1: 14, c1: 7 },
-  { id: 'reuniao', nome: 'Sala de Reuniao', r0: 16, c0: 3, r1: 21, c1: 7, privativa: true },
-  { id: 'treinamento', nome: 'Treinamento', r0: 9, c0: 40, r1: 14, c1: 44, privativa: true },
-  { id: 'huddle', nome: 'Huddle', r0: 16, c0: 40, r1: 21, c1: 44, privativa: true },
-  { id: 'time', nome: 'Time', r0: 10, c0: 9, r1: 17, c1: 32 },
-  { id: 'lounge', nome: 'Lounge', r0: 22, c0: 3, r1: 28, c1: 11 },
-  { id: 'recepcao', nome: 'Recepcao', r0: 22, c0: 12, r1: 28, c1: 19 },
-  { id: 'conferencia', nome: 'Conferencia', r0: 22, c0: 20, r1: 28, c1: 29, privativa: true },
-  // pega o resto do predio, e so depois o verde de fora
-  { id: 'hall', nome: 'Hall', r0: 8, c0: 2, r1: 29, c1: 45 },
+// ---------------------------------------------------------------- as salas
+//
+// A planta segue o partido de EIXO DE CIRCULACAO (docs/plano-redesenho.md):
+// uma espinha leste-oeste de 3 tiles atravessa o andar, a banda de salas
+// fechadas fica ao norte dela e os bairros de trabalho ao sul.
+//
+// A ordem das zonas no eixo nao e arbitraria: e um GRADIENTE ACUSTICO.
+// Oeste = cabine de chamada e sala de reuniao (silencio). Leste = copa e
+// lounge (barulho). A regra de projeto e nunca encostar zona barulhenta em
+// zona de foco, e aqui isso nao e metafora - o calls.js propaga som por
+// proximidade de verdade.
+//
+// Faixas de linha, de cima pra baixo:
+//    2       parede norte
+//    3..13   banda de salas (11 de profundidade)
+//    14      parede sul da banda, com as portas
+//    15..17  EIXO PRINCIPAL (3 tiles = ~1,5 m: duas pessoas se cruzam)
+//    18..29  bairros de trabalho e recepcao
+//    30      parede sul
+  // --- banda norte, de oeste (silencio) para leste (barulho) ---
+  { id: 'cabine1', nome: 'Cabine 1', r0: 3, c0: 3, r1: 5, c1: 7, privativa: true },
+  { id: 'cabine2', nome: 'Cabine 2', r0: 7, c0: 3, r1: 9, c1: 7, privativa: true },
+  { id: 'cabine3', nome: 'Cabine 3', r0: 11, c0: 3, r1: 13, c1: 7, privativa: true },
+  { id: 'reuniao', nome: 'Sala de Reuniao', r0: 3, c0: 12, r1: 13, c1: 18, privativa: true },
+  { id: 'huddle1', nome: 'Huddle 1', r0: 3, c0: 20, r1: 7, c1: 25, privativa: true },
+  { id: 'huddle2', nome: 'Huddle 2', r0: 9, c0: 20, r1: 13, c1: 25, privativa: true },
+  // Silenciosa: dentro dela a chamada por proximidade nao abre (calls.js).
+  { id: 'biblioteca', nome: 'Biblioteca', r0: 3, c0: 29, r1: 13, c1: 35, silenciosa: true },
+  { id: 'copa', nome: 'Copa e Lounge', r0: 3, c0: 36, r1: 13, c1: 44 },
+
+  // --- sul: recepcao e os quatro bairros ---
+  { id: 'recepcao', nome: 'Recepcao', r0: 18, c0: 3, r1: 29, c1: 9 },
+  { id: 'bairro_a', nome: 'Foco A', r0: 18, c0: 11, r1: 23, c1: 26 },
+  { id: 'bairro_b', nome: 'Foco B', r0: 24, c0: 11, r1: 29, c1: 26 },
+  { id: 'bairro_c', nome: 'Projetos', r0: 18, c0: 28, r1: 23, c1: 43 },
+  { id: 'bairro_d', nome: 'Marketing', r0: 24, c0: 28, r1: 29, c1: 43 },
+
+  // Pega o RESTO do predio inteiro, nao so o eixo: os corredores da banda
+  // norte nao cabem em nenhuma sala nomeada, e sem isto caem no piso padrao,
+  // que e grama - chao de jardim brotando dentro do escritorio.
+  { id: 'hall', nome: 'Hall', r0: 3, c0: 3, r1: 29, c1: 44 },
   { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 31, c1: 47 },
+
+// parede. Cada bairro tem a sua, e as duas duplas ganham tom diferente pra
+// pessoa saber onde esta sem ler etiqueta (principio de "bairro" com
+// identidade visual propria).
+  // Tapete da sala de reuniao, como PLACA DE CARPETE. Comeca em linha e
+  // coluna multiplas de 3 de proposito: `desenharPiso` escolhe a fatia por
+  // `c % 3`, e fora desse alinhamento a borda do bloco sai fora de ordem.
 ];
 
 function buildMap() {
@@ -197,202 +242,313 @@ function buildMap() {
   const linhaH = (r, c0, c1, t) => { for (let c = c0; c <= c1; c++) set(r, c, t); };
   const linhaV = (c, r0, r1, t) => { for (let r = r0; r <= r1; r++) set(r, c, t); };
 
-  // ---------- 1. faixa norte: quatro salas privativas e o patio ----------
-  // Na referencia a sala privativa e um POD de 5x5 que avanca pra fora do bloco,
-  // com janelao no fundo, uma arvore no canto, a mesa encostada na janela e a
-  // cadeira na linha de baixo. Nada mais. Antes a gente tinha uma caixa de 8x8
-  // cheia de movel pra disfarcar o tamanho.
-  linhaH(2, 8, 39, PAREDE);
-  [8, 14, 20, 27, 33, 39].forEach((c) => linhaV(c, 2, 8, PAREDE));
-  PODS.forEach((c0) => {
-    linhaH(2, c0 + 1, c0 + 3, JANELA);
-    set(3, c0 + 4, PLANTA_GRANDE);
-    linhaH(4, c0 + 1, c0 + 3, MESA_MONITOR);   // mesa 3x1
-    set(5, c0 + 2, CADEIRA);                   // cadeira na linha de baixo
+  // ---------------------------------------------------------------- 1. casca
+  // Janela nao e enfeite: e o principio biofilico mais barato que existe -
+  // luz e vista pra fora. Por isso a fachada norte e quase toda envidracada.
+  linhaH(2, 2, 45, PAREDE);
+  linhaH(30, 2, 45, PAREDE);
+  linhaV(2, 2, 30, PAREDE);
+  linhaV(45, 2, 30, PAREDE);
+  [4, 5, 6, 13, 14, 15, 16, 22, 23, 24, 30, 31, 32, 33, 38, 39, 40, 41]
+    .forEach((c) => set(2, c, JANELA));
+  // JANELA so na parede NORTE, que e horizontal.
+  //
+  // O muro daqui e visto de cima: da fileira horizontal a gente ve a FACE
+  // (a faixa clara do topo), e e nela que uma janela desenhada de frente faz
+  // sentido. Na parede lateral a gente ve o lado do muro, e a mesma arte fica
+  // flutuando num painel escuro - foi o que o Caio viu.
+  //
+  // Preferi a lateral cega a uma janela errada. Janela de parede lateral
+  // exigiria a projecao de 3 tiles do LPC, que e o mesmo pendente da parede e
+  // do balcao.
+  // porta da rua, no sul, dando direto na recepcao (folha dupla)
+  set(30, 5, PORTA); set(30, 6, PORTA);
+
+  // -------------------------------------------- 2. banda norte: as divisorias
+  // Parede sul da banda, SO no trecho fechado (a leste dela o jardim e a copa
+  // sao zonas abertas, que dao direto no eixo - cafe aberto pra circulacao e
+  // padrao reconhecido, nao descuido).
+  linhaH(14, 2, 28, PAREDE);
+
+  // cabines de chamada: tres modulos de 5x3, empilhados
+  linhaH(6, 2, 8, PAREDE);
+  linhaH(10, 2, 8, PAREDE);
+  linhaV(8, 3, 13, PAREDE);
+  // SO EM PAREDE HORIZONTAL.
+    //
+    // A folha do pacote e uma porta vista DE FRENTE, e a sede a ve de cima: isso
+    // so funciona no muro deitado, onde a gente enxerga a face dele. Em muro em pe
+    // a gente ve o LADO, e ali a mesma arte fica virada pro lugar errado. Girar 90
+    // graus foi tentado e ficou pior - a porta vira uma tabua deitada no corredor.
+    //
+    // Entao cabine e huddle continuam com vao aberto, que e honesto, ate existir
+    // arte de porta vista de lado. Sexta peca a esbarrar nessa mesma
+    // incompatibilidade de projecao (parede, janela, balcao, bancada, marco).
+  [4, 8, 12].forEach((r) => set(r, 8, LIVRE)); // vao de cada cabine
+
+  // corredor vertical oeste (cols 9-10) desce ate o eixo
+  set(14, 9, LIVRE); set(14, 10, LIVRE);
+
+  // sala de reuniao grande
+  linhaV(11, 3, 13, PAREDE);
+  linhaV(19, 3, 13, PAREDE);
+  set(14, 15, PORTA); // porta pro eixo
+
+  // dois huddles, um sobre o outro, servidos pelo corredor leste (cols 26-27)
+  linhaH(8, 20, 25, PAREDE);
+  linhaV(26, 3, 13, PAREDE);
+  set(5, 26, LIVRE); set(11, 26, LIVRE);  // vao de cada huddle
+  linhaV(28, 3, 13, PAREDE);
+  set(14, 26, LIVRE); set(14, 27, LIVRE); // corredor leste desce pro eixo
+
+  // ------------------------------------------------ 3. dentro das cabines
+  // Cabine de chamada e o movel minimo: uma poltrona, um apoio e uma planta.
+  // Tres delas atendem 32 postos na razao de 1 pra 10-15 pessoas.
+  [3, 7, 11].forEach((r0) => {
+    set(r0 + 1, 4, MESA_CENTRO);   // linha r0 livre pra arte subir
+    set(r0 + 2, 4, POLTRONA);
+    set(r0 + 2, 6, PLANTA);
+    set(r0 + 2, 7, LUMINARIA_PE);
   });
 
-  // ---------- 2. o bloco principal ----------
-  linhaH(8, 2, 45, PAREDE);
-  linhaH(29, 2, 45, PAREDE);
-  linhaV(2, 8, 29, PAREDE);
-  linhaV(45, 8, 29, PAREDE);
-  // as duas colunas de salas fechadas so vao ate a linha 21: dai pra baixo o
-  // salao abre na largura inteira, como na referencia
-  linhaV(8, 8, 21, PAREDE);
-  linhaV(39, 8, 21, PAREDE);
-  linhaH(15, 3, 7, PAREDE); linhaH(22, 3, 7, PAREDE);
-  linhaH(15, 40, 44, PAREDE); linhaH(22, 40, 44, PAREDE);
+  // --------------------------------------------- 4. dentro da sala de reuniao
+  // Mesa de 3 tiles com cadeira dos quatro lados, lousa e TV na parede do
+  // fundo. 8 lugares - a sala grande da razao 1:10.
+  rect(7, 14, 8, 16, MESA_REUNIAO);
+  [14, 15, 16].forEach((c) => { set(6, c, CADEIRA_VERMELHA_BAIXO); set(9, c, CADEIRA_VERMELHA); });
+  set(8, 18, PLANTA);
+  set(3, 13, LOUSA);
+  rect(3, 15, 3, 17, TV);
+  // A planta desce uma linha: em 4,12 ela fechava um canto de UM tile entre
+  // a lousa e a parede, e o mapa nao pode ter bolsao nem de um tile.
+  set(5, 12, PLANTA_GRANDE); set(13, 17, PLANTA);
 
-  // portas: vao de DOIS tiles, nao de um. E o que a referencia usa, e e o que
-  // impede que um vaso mal posto sele a sala.
-  PODS.forEach((c0) => { set(8, c0 + 2, LIVRE); set(8, c0 + 3, LIVRE); });
-  linhaH(8, 21, 26, LIVRE);                    // o patio desagua no hall
-  // entrada principal, embaixo da recepcao: e por ela que se chega do jardim
-  set(29, 16, LIVRE); set(29, 17, LIVRE);
-  [11, 12, 18, 19].forEach((r) => { set(r, 8, LIVRE); set(r, 39, LIVRE); });
 
-  // ---------- 3. patio: o lago do Koi Pond ----------
-  // Anel de pedra fechado em volta da agua e mais nada dentro. A volta de fora
-  // fica limpa: da pra dar a volta no lago inteiro pelos dois lados.
-  rect(4, 22, 7, 25, AGUA);
-  // Lago SEM pedra, e de proposito.
+  // ------------------------------------------------------ 5. dentro dos huddles
+  // 60% ou mais das salas tem que ser de 2 a 6 lugares, porque 80% das
+  // reunioes sao desse tamanho. Duas de quatro lugares cumprem a cota.
+  [3, 9].forEach((r0) => {
+    set(r0 + 2, 22, MESA_REDONDA);
+    set(r0 + 1, 22, CADEIRA_BAIXO);
+    set(r0 + 3, 22, CADEIRA);
+    set(r0 + 2, 21, CADEIRA_DIR);
+    set(r0 + 2, 23, CADEIRA_ESQ);
+    set(r0, 25, PLANTA);
+  });
+  set(3, 20, QUADRO); set(9, 20, QUADRO);
+
+  // ---------------------------------------------------------- 6. biblioteca
+  // Ocupa o antigo jardim inteiro (docs/plano-biblioteca.md). Por dentro ela
+  // segue a regra de zoneamento de biblioteca: do barulho pro silencio, da porta
+  // pro fundo. E o fundo e a fachada norte envidracada - onde a leitura quer
+  // estar, com luz de norte, difusa e sem sol direto no papel.
   //
-  // As pedras ocupavam as quatro quinas do quadrado de agua, e o que sobrava
-  // era uma cruz azul em vez de um lago: barra de 2 tiles cruzando uma de 4.
-  // Com as quinas cheias de agua, o recorte de canto arredondado fecha o
-  // contorno redondo.
+  //   linha 13      entrada, vinda do eixo
+  //   linhas 9-12   acervo: duas fileiras de estante e o corredor entre elas
+  //   linhas 3-8    leitura: mesa debaixo da janela e canto de poltrona
   //
-  // E nao da pra por as pedras na margem: a volta do lago tem 1 tile de
-  // largura, entao qualquer coisa solida ali corta o caminho - a primeira
-  // tentativa ilhou 12 tiles, e o testes/mapa.js pegou.
-  // Sem cadeira em volta do lago: cadeira de escritorio (ou de refeitorio) na
-  // beira de um lago nao existe em lugar nenhum, e enchia o patio de movel
-  // solto. O anel de pedra e a volta livre bastam.
-  // So um arbusto, e no canto: dois deles tapavam as duas pontas do corredor
-  // de fora e o anel virava um bolso de nove celulas sem saida.
-  set(3, 26, ARBUSTO);
+  // A copa, a zona mais barulhenta da sede, fica colada a leste. Por isso:
+  // parede CHEIA entre as duas, e a regra de silencio no calls.js
+  // (`silenciosa: true`) - dentro dela a chamada nao abre.
+  linhaV(36, 3, 14, PAREDE);                 // parede com a copa, sem porta
+  linhaH(14, 29, 36, PAREDE);                // parede com o eixo...
+  // ...e a porta, no canto oeste. Era LIVRE (um vao aberto) porque quando a
+  // biblioteca foi feita a porta animada ainda nao existia; agora existe, e
+  // PORTA e o que fecha a sala de verdade. Importa aqui mais que nas outras:
+  // a biblioteca e `silenciosa`, e sala de silencio com buraco na parede nao
+  // convence ninguem.
+  set(14, 29, PORTA);
 
-  // ---------- 4. a parede norte do hall ----------
-  // Duas fileiras, e a diferenca entre elas nao e enfeite:
+  // Mesa de leitura DEBAIXO da janela: a luz chega de cima e de lado, nao de
+  // frente pro olho. A linha 3 fica livre de proposito - e a faixa de luz.
+  rect(4, 30, 5, 32, MESA_REUNIAO);
+  [30, 31, 32].forEach((c) => set(6, c, CADEIRA));   // viradas pra janela
+  set(5, 29, CADEIRA_DIR); set(5, 33, CADEIRA_ESQ);  // uma em cada ponta
+
+  // Canto de leitura: o SEGUNDO tipo de lugar. Mesa e pra quem estuda de caderno
+  // aberto; poltrona com luminaria e pra quem so le.
+  set(4, 35, POLTRONA);
+  // Luminaria de pe AO LADO da poltrona, e nao atras: a arte dela tem 2 tiles e
+  // sobe - na linha 3 ela subia pra cima do muro e virava arandela. Na 4 ela
+  // sobe pro tapete. E a luz de tarefa, a camada que a luz da janela nao da.
+  // Sem mesinha de apoio: a do pacote sai como duas caixas empilhadas.
+  set(4, 34, LUMINARIA_PE);
+
+  // Acervo: duas fileiras de 5 estantes, SOLTAS das paredes dos lados. As colunas
+  // 29 e 35 ficam livres de ponta a ponta, entao da pra dar a volta nas duas - e
+  // da porta, no canto oeste, a vista corre pela coluna 29 ate a janela. Estante
+  // alta no meio de sala tapa a linha de visao; posta assim ela tapa o acervo,
+  // nao o caminho.
   //
-  //   linha 8 (a PAREDE) - so o que PENDURA: quadro, lousa, relogio, TV.
-  //   linha 9 (o CHAO)   - o que fica de pe: estante, geladeira, bancada.
+  // Cada fileira tem a linha de CIMA livre, porque a arte da estante sobe um
+  // tile. Corredor entre as duas: linhas 10-11 = 1,0 m, acima dos 0,91 m minimos
+  // de corredor de acervo.
+  linhaH(9, 30, 34, ESTANTE);
+  linhaH(12, 30, 34, ESTANTE);
+  set(3, 29, PLANTA);
+  set(13, 35, PLANTA);                       // a arte sobe pra (12,35), que esta livre
+
+  // -------------------------------------------------------- 7. copa e lounge
+  // Extremo LESTE do gradiente acustico: e a zona barulhenta, e fica o mais
+  // longe possivel das cabines de chamada, que estao no extremo oeste.
+  // A bancada do pacote tem 3 de largura por 2 de altura: o balcao ocupa
+  // duas linhas e um multiplo de tres colunas, pra arte nao ser cortada.
+  // TRES GRUPOS, e nada solto entre eles.
   //
-  // Movel de pe posto DENTRO da linha do muro nao cabe: a celula do muro tem 1
-  // tile de altura, e uma estante tem 2. Ou ela apagava o muro, ou saia cortada
-  // ao meio, ou - pior - subia pra dentro da sala do outro lado da parede. No
-  // chao, encostada, ela tem a linha do muro inteira pra subir, e tapa a parede
-  // como tapa na vida real.
+  // A versao anterior tinha as pecas certas e nenhuma composicao: mesinha de
+  // canto sozinha, pufe sozinho, luminaria no meio do chao, poltronas
+  // desencontradas. Cada movel parecia ter caido ali. E o mesmo erro que a
+  // recepcao tinha, e a correcao e a mesma: movel de escritorio anda em grupo,
+  // e o que sobra vira ruido.
   //
-  // A referencia tem a parede cheia, mas cheia de coisa DIFERENTE. Encher a
-  // nossa de estante repetida nao deu densidade, deu ruido.
-  set(8, 33, LOUSA);
-  [[10, ESTANTE], [13, ESTANTE], [15, CACTO], [19, GELADEIRA], [20, BALCAO],
-    [28, ESTANTE], [35, CAVALETE], [38, PLANTA_GRANDE]]
-    .forEach(([c, t]) => set(9, c, t));
-
-  // ---------- 5. Copa ----------
-  // Bancada com cafeteira embutida na parede, mesa redonda no meio e uma
-  // cadeira por lado. Sem mesa de trabalho: copa e copa.
-  [[3, ARMARIO], [4, BALCAO], [5, BALCAO], [6, GELADEIRA], [7, PLANTA]]
-    .forEach(([c, t]) => set(9, c, t));
-  set(11, 5, MESA_REDONDA);
-  set(10, 5, CADEIRA_BAIXO); set(12, 5, CADEIRA);
-  set(11, 4, CADEIRA_DIR); set(11, 6, CADEIRA_ESQ);
-  set(14, 7, VASO_FLORES);
-
-  // ---------- 6. Sala de Reuniao (huddle de 4, coluna oeste) ----------
-  set(15, 5, QUADRO); set(15, 6, QUADRO);
-  [[3, ESTANTE], [4, ESTANTE], [7, PLANTA]]
-    .forEach(([c, t]) => set(16, c, t));
-  set(18, 5, MESA_REDONDA);
-  set(17, 5, CADEIRA_BAIXO); set(19, 5, CADEIRA);
-  set(18, 4, CADEIRA_DIR); set(18, 6, CADEIRA_ESQ);
-  set(21, 3, ARMARIO); set(21, 7, IMPRESSORA);
-
-  // ---------- 7. Treinamento (huddle do quadro branco, coluna leste) ----------
-  [[40, LOUSA], [41, LOUSA], [42, JANELA]].forEach(([c, t]) => set(8, c, t));
-  [[40, PLANTA_GRANDE], [43, CAVALETE], [44, ARMARIO]]
-    .forEach(([c, t]) => set(9, c, t));
-  set(11, 42, MESA_REDONDA);
-  set(10, 42, CADEIRA_BAIXO); set(12, 42, CADEIRA);
-  set(11, 41, CADEIRA_DIR); set(11, 43, CADEIRA_ESQ);
-  set(14, 40, CACTO);
-
-  // ---------- 8. Huddle (o do aquario, coluna leste) ----------
-  [[40, AQUARIO], [41, PLANTA], [42, ESTANTE], [43, ESTANTE], [44, LUMINARIA_PE]]
-    .forEach(([c, t]) => set(16, c, t));
-  set(18, 42, MESA_REDONDA);
-  set(17, 42, CADEIRA_BAIXO); set(19, 42, POLTRONA);
-  set(18, 41, CADEIRA_DIR); set(18, 43, CADEIRA_ESQ);
-  set(22, 44, TV);                             // pendurada, entao vai na parede
-
-  // ---------- 9. baias de trabalho: duas ilhas de carpete ----------
-  // Mesa de 3 de largura por UMA de profundidade, cadeira na linha de baixo -
-  // essa e a medida da referencia. A profundidade 2 que a gente usava era o que
-  // fazia a baia parecer mesa de refeitorio.
+  //   1. BANCADA, colada na parede norte, com a geladeira na ponta.
+  //   2. DUAS MESAS de cafe, de dois lugares, simetricas.
+  //   3. LOUNGE, um bloco so: sofa de tres, mesa de centro na frente e um pufe
+  //      de cada lado dela.
   //
-  // O tile de vao entre uma mesa e a vizinha nao e enfeite: celulasDaMesa()
-  // junta celulas de mesa que se tocam, entao mesa colada na outra viraria um
-  // movel so e uma pessoa reivindicaria as tres de uma vez.
-  [9, 21].forEach((c0) => {
-    [11, 15].forEach((r) => {
-      [0, 4, 8].forEach((d) => {
-        linhaH(r, c0 + d, c0 + d + 2, MESA_MONITOR);
-        set(r + 1, c0 + d + 1, CADEIRA);
-      });
-    });
+  // O chao entre os grupos fica VAZIO de proposito - e por onde se anda.
+  //
+  // POR QUE AS MESAS PERDERAM AS CADEIRAS DE LADO
+  // O Caio disse que a copa estava "muito cheia de coisas". Contando, o
+  // problema nao era a quantidade de movel - era CIRCULACAO. A sala tem 8
+  // colunas uteis (37 a 44). Cada mesa de quatro lugares ocupava 3 delas
+  // (cadeira, mesa, cadeira), e as duas lado a lado tomavam as colunas
+  // 37-39 e 41-43: SEIS das oito, formando uma parede de movel atravessada
+  // na sala. Sobrava a coluna 40 e a 44 pra passar.
+  //
+  // Tirando so as duas cadeiras LATERAIS de cada mesa, a faixa das mesas
+  // passa a ocupar 2 colunas das 8. Mesmo numero de mesas, mesma simetria,
+  // e a sala volta a ter por onde andar. Mesa redonda com duas cadeiras de
+  // frente uma pra outra e o arranjo de bistro - nao fica faltando nada.
+  //
+  // O vaso de 3 tiles de altura tambem saiu: num pe-direito de 11 linhas
+  // ele era a maior massa visual da sala, colado no lounge. Ficou o vaso
+  // baixo do canto.
+
+  // 1. bancada
+  // UMA linha. O balcao e desenhado a mao e cabe na propria celula; as duas
+  // linhas aqui eram resto da tentativa com a bancada do pacote, que foi
+  // revertida. Empilhado em duas ele virava uma pilha de prateleiras brancas -
+  // reverter a arte sem desfazer o mapa deixa esse tipo de rastro.
+  // Ate a coluna 43, e nao 42: sobrava um tile de chao entre a ponta do
+  // balcao e a geladeira, e aquele buraco fazia a geladeira ler como movel
+  // solto no canto em vez de fim da bancada. Cozinha e uma FILEIRA continua.
+  linhaH(3, 37, 43, BALCAO);
+  set(3, 44, GELADEIRA);   // a da coluna 36 saiu: ali e a parede da biblioteca
+
+  // 2. duas mesas de cafe, mesma altura, mesmo espacamento
+  [38, 42].forEach((c) => {
+    set(7, c, MESA_REDONDA);
+    set(6, c, CADEIRA_BAIXO);
+    set(8, c, CADEIRA);
   });
 
-  // ---------- 10. huddle solto no meio do salao ----------
-  set(14, 35, MESA_REDONDA);
-  set(13, 35, CADEIRA_BAIXO); set(15, 35, CADEIRA);
-  set(14, 34, CADEIRA_DIR); set(14, 36, CADEIRA_ESQ);
-  set(12, 34, PLANTA_GRANDE); set(16, 36, PLANTA);
+  // 3. lounge, em bloco: sofa, mesa de centro e um pufe de cada lado
+  rect(10, 38, 10, 40, SOFA_CIMA);
+  rect(11, 38, 11, 40, SOFA_BAIXO);
+  // A mesinha encostada no sofa e os pufes de frente pra ele: sofa, mesa e
+  // dois lugares em 3 colunas, alinhados com o sofa. Antes a mesa ficava na
+  // linha 13 porque a arte dela subia um tile - nao sobe mais (a peca e de
+  // 1 tile; ver MESA_CENTRO em sprites.js), e solta duas linhas abaixo do
+  // sofa ela lia como movel perdido no meio da sala.
+  set(12, 39, MESA_CENTRO);
+  set(13, 38, PUFE); set(13, 40, PUFE);
 
-  // ---------- 10b. o canto direito do salao ----------
-  // Um respiro de estar entre a baia e a sala da ponta, senao sobrava um
-  // quarteirao de piso liso do lado direito inteiro.
-  set(25, 36, MESA_REDONDA);
-  set(24, 36, CADEIRA_BAIXO); set(26, 36, CADEIRA);
-  set(25, 35, CADEIRA_DIR); set(25, 37, CADEIRA_ESQ);
-  set(23, 34, PLANTA_GRANDE);
+  // verde so nos cantos, pra nao competir com os grupos
+  set(13, 44, PLANTA);
 
-  // ---------- 11. Lounge ----------
-  // Composicao simetrica da referencia: estante e estante no fundo, sofa no
-  // meio, um par de pufe em cada lateral e dois bancos na frente.
-  linhaH(23, 4, 5, ESTANTE); linhaH(23, 9, 10, ESTANTE);
-  set(24, 4, PLANTA_GRANDE); set(24, 10, PLANTA_GRANDE);
-  // SOFA_BAIXO e o sofa inteiro (3x2): a arte sobe pra linha de cima sozinha.
-  // SOFA_CIMA nao tem desenho proprio - posto sozinho, o sofa simplesmente
-  // nao aparecia.
-  linhaH(24, 6, 8, SOFA_BAIXO);
-  set(25, 7, MESA_CENTRO);
-  set(25, 4, PUFE); set(25, 10, PUFE);
-  set(26, 4, PUFE); set(26, 10, PUFE);
-  linhaH(26, 6, 8, BANCO);
-  set(27, 4, VASO_FLORES); set(27, 10, PUFE);
-
-  // ---------- 12. Recepcao ----------
-  linhaH(24, 15, 17, BALCAO);
-  set(23, 16, CADEIRA_BAIXO);                  // quem atende, virado pro balcao
-  set(23, 12, PLANTA_GRANDE); set(23, 19, CABIDE);
-  rect(25, 14, 27, 16, TAPETE);                // o tapete de losangos do lobby
-  set(27, 13, POLTRONA); set(27, 17, POLTRONA);
-  set(26, 19, PLANTA_GRANDE);
-
-  // ---------- 13. mesa de conferencia, solta no salao ----------
-  // Na referencia ela nao mora numa sala: fica no meio do tijolinho, com dez
-  // poltronas vermelhas em volta. O vermelho e o unico ponto de cor forte do
-  // andar.
-  rect(25, 24, 26, 26, MESA_REUNIAO);
-  linhaH(24, 24, 26, CADEIRA_VERMELHA_BAIXO);
-  linhaH(27, 24, 26, CADEIRA_VERMELHA);
-  set(25, 23, CADEIRA_VERMELHA_DIR); set(26, 23, CADEIRA_VERMELHA_DIR);
-  set(25, 27, CADEIRA_VERMELHA_ESQ); set(26, 27, CADEIRA_VERMELHA_ESQ);
-  set(23, 21, PLANTA_GRANDE); set(23, 29, PLANTA_GRANDE);
-
-  // ---------- 14. a parede sul, tambem coberta ----------
-  // Mesma divisao da parede norte: o que pendura na linha 29 (a parede), o que
-  // fica de pe na linha 28 (o chao). Aqui o movel de pe sobe pra DENTRO do
-  // salao, que e pra onde ele tem que subir - a parede fica atras dele.
+  // ------------------------------------------------------------ 8. recepcao
+  // Piso de espinha de peixe: a entrada e onde o material bom aparece.
   //
-  // A TV voltou a ser de uma celula so: a do pacote saiu do catalogo (todas as
-  // telas da folha estao apagadas), e a desenhada cabe num tile.
-  [[6, TV], [10, QUADRO], [30, TV], [34, QUADRO]]
-    .forEach(([c, t]) => set(29, c, t));
-  [[4, PLANTA_GRANDE], [13, CABIDE], [15, ESTANTE], [16, ESTANTE], [19, PLANTA],
-    [22, ARMARIO], [25, IMPRESSORA], [27, BEBEDOURO], [37, PLANTA],
-    [40, ARMARIO], [43, CACTO]]
-    .forEach(([c, t]) => set(28, c, t));
+  // A recepcao e DOIS GRUPOS e nada solto no meio. Foi assim que ela ficou
+  // ruim antes: cadeira aqui, mesinha ali, poltrona no canto - cada peca
+  // certa sozinha e o conjunto sem leitura nenhuma. Movel em escritorio anda
+  // em grupo, e o que sobra vira ruido.
+  //
+  //   1. ATENDIMENTO, colado na porta da rua (linha 30, colunas 5-6):
+  //      bancada de 3x2 com quem atende sentado atras dela.
+  //   2. ESPERA, do outro lado: sofa de 3, mesinha na frente e planta.
+  //
+  // O resto do piso fica VAZIO de proposito - e por onde a visita entra e
+  // caminha ate o eixo.
+  // Quem atende senta ATRAS do balcao, virado pra porta da rua (linha 30).
+  // Antes a cadeira ficava na linha 29, entre o balcao e a porta, e virada pra
+  // cima: a recepcionista recebia a visita de costas.
+  linhaH(28, 5, 7, BALCAO);
+  set(27, 6, CADEIRA_BAIXO);
 
-  // ---------- 15. o verde em volta do predio ----------
-  [[0, 4], [1, 12], [0, 20], [1, 28], [0, 36], [1, 44], [0, 0], [1, 47],
-    [4, 0], [11, 1], [18, 0], [25, 1], [4, 47], [11, 46], [18, 47], [25, 46],
-    [31, 6], [30, 16], [31, 26], [30, 36], [31, 43]]
+  rect(20, 4, 20, 6, SOFA_CIMA);
+  rect(21, 4, 21, 6, SOFA_BAIXO);
+  set(22, 5, MESA_CENTRO);   // encostada no sofa: a mesinha e de 1 tile so
+  set(19, 3, PLANTA_GRANDE);
+  set(23, 3, PLANTA);
+
+  set(18, 8, RELOGIO);
+  rect(26, 8, 26, 9, CABIDE);   // espelho de pe, 2x2: linha 25 fica livre
+  linhaV(10, 18, 29, LIVRE); // corredor vertical entre recepcao e bairros
+
+  // ------------------------------------------------------------- 9. bairros
+  // O modulo do posto: mesa de 3 tiles, vao de 1, cadeira centrada. Duas
+  // fileiras de costas uma pra outra formam a bancada - 8 postos por bairro,
+  // 32 no total, que e o que 384 m² comporta a 12 m² por pessoa.
+  // Fileira simples: mesa, UMA cadeira colada nela, e uma linha livre antes da
+  // proxima fileira.
+  //
+  // A versao de costas (duas fileiras de cadeira encostadas) foi desenhada e
+  // descartada na tela: as cadeiras ficavam grudadas e nao dava pra ver onde
+  // terminava um posto e comecava o outro. Fileira simples com respiro entre
+  // os grupos e o que se le - e e arranjo comum em escritorio de verdade.
+  function fileira(r, c0) {
+    for (let i = 0; i < 4; i++) {
+      const c = c0 + 1 + i * 4;
+      rect(r, c, r, c + 2, MESA_MONITOR);
+      set(r + 1, c + 1, CADEIRA);
+    }
+  }
+  [18, 21, 24, 27].forEach((r) => { fileira(r, 11); fileira(r, 28); });
+
+  // Planta entre as bancadas: divisoria verde em vez de divisoria de acrilico.
+  // E o jeito de quebrar a linha de visao sem levantar parede - e some com
+  // aquele efeito de "fileira de mesas sem fim".
+  [[20, 15], [20, 23], [23, 19], [26, 15], [26, 23],
+    [20, 32], [20, 40], [23, 36], [26, 32], [26, 40]]
+    .forEach(([r, c]) => set(r, c, PLANTA));
+  [[20, 27], [26, 27]].forEach(([r, c]) => set(r, c, PLANTA_GRANDE));
+  // Tudo isto vai na linha 29, que e a linha LIVRE do ultimo grupo. Na 28
+  // estao as cadeiras da fileira de cima, e movel ali faria duas coisas
+  // erradas de uma vez: apagaria a cadeira (o `set` sobrescreve, calado) e o
+  // armario, que tem 2 tiles de altura, desenharia por cima da mesa da 27.
+  rect(29, 11, 29, 12, IMPRESSORA); rect(29, 31, 29, 32, IMPRESSORA);
+  set(29, 20, PUFE); set(29, 38, PUFE);
+  set(29, 22, PUFE); set(29, 24, PUFE);
+  set(29, 40, PUFE); set(29, 42, PUFE);
+  set(18, 44, PLANTA_GRANDE); set(24, 44, PLANTA);
+  set(21, 10, BEBEDOURO);
+
+  // ------------------------------------------------------- 10. area externa
+  // Verde em volta do predio. Arvore encostada na parede de proposito: o
+  // predio nao pode parecer largado num campo raso.
+  // REGRA DA VOLTA EM TORNO DO PREDIO: a faixa verde tem 2 tiles de largura no
+  // norte, no oeste e no leste, e o sul e a linha 31, de UM tile so. Logo:
+  // nada de solido na linha 31, e no norte nunca dois solidos na MESMA coluna
+  // (um em cima do outro fecha a passagem). Foi assim que 53 tiles de jardim
+  // ficaram ilhados na primeira tentativa desta planta.
+  // A VOLTA EM TORNO DO PREDIO tem que ficar inteira, e ela e estreita:
+  // 2 colunas no oeste e no leste, 2 linhas no norte, 1 linha no sul. Como nao
+  // existe passo na diagonal, um solido na coluna de fora numa linha mais outro
+  // na coluna de dentro na linha seguinte TRANCA a faixa - foi assim que 26
+  // tiles do lado leste ficaram ilhados.
+  //
+  // Entao a regra e simples: decoracao so na coluna/linha DE FORA (0, 47 e a
+  // linha 0), deixando a de dentro sempre livre como corredor. Nada na linha
+  // 31, que e de um tile so.
+  [[0, 4], [0, 12], [0, 20], [0, 28], [0, 36], [0, 44], [0, 0], [0, 47],
+    [5, 0], [12, 0], [19, 0], [26, 0], [5, 47], [12, 47], [19, 47], [26, 47],
+    [0, 26], [0, 16], [0, 32], [0, 43]]
     .forEach(([r, c]) => set(r, c, ARVORE));
-  [[2, 3], [2, 45], [6, 46], [20, 46], [6, 1], [20, 1], [30, 10], [30, 30]]
+  [[2, 0], [2, 47], [8, 47], [22, 47], [8, 0], [22, 0], [1, 10], [0, 30]]
     .forEach(([r, c]) => set(r, c, ARBUSTO));
+  [[0, 24], [0, 34], [1, 40]].forEach(([r, c]) => set(r, c, PEDRA));
 
   return tiles;
 }
@@ -481,11 +637,13 @@ function isWalkable(x, y) {
   return true;
 }
 
-// No salao, logo abaixo do vao do patio
+// Na recepcao, logo dentro da porta da rua. Quem chega entra por onde uma
+// visita entraria - e nao no meio de uma sala de reuniao, que e onde o spawn
+// antigo caiu quando a planta mudou.
 const SPAWN_POINTS = [
-  { x: 22.5 * TILE, y: 9.5 * TILE },
-  { x: 23.5 * TILE, y: 9.5 * TILE },
-  { x: 24.5 * TILE, y: 9.5 * TILE },
+  { x: 5.5 * TILE, y: 26.5 * TILE },
+  { x: 6.5 * TILE, y: 26.5 * TILE },
+  { x: 7.5 * TILE, y: 26.5 * TILE },
 ];
 
 function getSpawnPoint() {
@@ -529,7 +687,7 @@ module.exports = {
   CADEIRA_VERMELHA_BAIXO, CADEIRA_VERMELHA_ESQ, CADEIRA_VERMELHA_DIR,
   MESA_BAIXO, MESA_ESQ, MESA_DIR,
   MESA_MONITOR_BAIXO, MESA_MONITOR_ESQ, MESA_MONITOR_DIR,
-  PUFE, MESA_REDONDA, GELADEIRA, AQUARIO, LUMINARIA_PE,
+  PUFE, MESA_REDONDA, GELADEIRA, AQUARIO, LUMINARIA_PE, PORTA,
   DIRECAO_MESA,
   MESAS_DIRECIONAIS,
   MESAS_DE_TRABALHO,

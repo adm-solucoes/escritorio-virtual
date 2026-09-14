@@ -144,11 +144,17 @@ Blueprint pede na hora de criar (ficam como `sync: false`, entao nenhum segredo
 entra no repositorio). Deixar em branco nao quebra nada: a aba abre com um aviso
 de "nao configurado".
 
+**Rodando local**, as mesmas variaveis vao em `escritorio-virtual/.env` (copie
+de `.env.example`). O servidor le esse arquivo sozinho ao subir; ele esta no
+`.gitignore` e nunca vai pro repositorio. Variavel definida no ambiente ganha do
+arquivo.
+
 | Variavel | Onde pegar |
 |---|---|
 | `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` | Google Cloud > APIs e servicos > Credenciais > **Criar credenciais > ID do cliente OAuth**, tipo "Aplicativo da Web". Sao as mesmas credenciais que o CRM ja usa. |
 | `TRELLO_API_KEY` e `TRELLO_TOKEN` | https://trello.com/power-ups/admin - a chave aparece na pagina e o token sai do link "Token" ao lado dela |
 | `TRELLO_BOARD_ID` | abra o quadro no Trello e acrescente `.json` no fim da URL: o campo `id` do topo do arquivo |
+| `GOOGLE_DRIVE_PASTA` e `GOOGLE_CONTA_SERVICO` | a pasta de livros da biblioteca e a chave JSON de uma conta de servico com acesso de Leitor a ela. Passo a passo em [estante.md](estante.md#1-a-pasta-do-drive-o-jeito-de-producao). Em branco, a estante le `DATA_DIR/livros` |
 
 No Google Cloud, em **URIs de redirecionamento autorizados**, cadastre:
 
@@ -205,7 +211,23 @@ Isso e decisao sua - nao da pra fugir dela so com codigo.
 
 ## 4. Chamada de video: vai falhar pra parte do time
 
-Hoje o WebRTC usa **so STUN** (`stun:stun.l.google.com:19302`), em
+> **Resolvido com o TURN da Cloudflare** (`server/turn.js`), quando as duas
+> variaveis estao definidas:
+>
+> 1. https://dash.cloudflare.com > **Realtime** > **TURN Server** > criar uma
+>    chave. Aparecem dois valores: **Turn Token ID** e **API Token**.
+> 2. `CLOUDFLARE_TURN_KEY_ID` = o Token ID; `CLOUDFLARE_TURN_TOKEN` = o API
+>    Token. No Render (painel) e/ou no `.env` local.
+>
+> O token fica so no servidor; o navegador recebe de `/api/ice` uma credencial
+> temporaria de 24h. Cota gratis da Cloudflare: 1.000 GB/mes. Sem as variaveis,
+> ou com a Cloudflare fora do ar, a chamada volta pro STUN - o comportamento de
+> antes. O log de arranque diz qual dos dois esta valendo ("Chamada: TURN da
+> Cloudflare ligado").
+>
+> O texto abaixo explica o problema.
+
+Antes do TURN, o WebRTC usava **so STUN** (`stun:stun.l.google.com:19302`), em
 `public/js/calls.js`.
 
 STUN sozinho resolve a maioria das redes domesticas, mas **nao** resolve NAT
@@ -232,3 +254,19 @@ Enquanto nao tiver TURN, vale avisar o time: "se a chamada nao abrir, e a rede".
 - [ ] Criar a sua conta de diretoria logo no primeiro acesso.
 - [ ] Conferir que a URL abre em **https** (o cookie de sessao so vai com
       `Secure` em producao; em http ele e descartado e ninguem consegue logar).
+
+### Chamada grande (mais de 6 pessoas)
+
+A chamada e direta entre as pessoas (malha P2P): cada participante manda o
+proprio video pra cada um dos outros. Com 6 pessoas sao 5 videos subindo da
+internet de cada um; com 15, catorze - a conexao de casa e o processador nao dao
+conta, e a chamada trava pra todo mundo.
+
+Por isso, **passou de 6 pessoas, as cameras saem do ar e fica so a voz**, com
+aviso na tela (`public/js/calls.js`, `testes/chamada-grande.js`). Audio e leve,
+entao uma reuniao de 20 pessoas so de voz aguenta. **Compartilhar tela continua**
+- so quem apresenta manda. As cameras voltam quando a chamada cai pra 5.
+
+Reuniao geral **com video** de 15-30 pessoas pede um servidor de video no meio
+(SFU - por exemplo o da propria Cloudflare, ou LiveKit). Ate la, reuniao geral
+com camera fica no Meet.

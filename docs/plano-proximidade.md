@@ -115,3 +115,77 @@ dentro.
 O `testes/mapa.js` guarda o dado: as duas copias do mapa tem que marcar as mesmas
 salas como fechadas. Se so uma marcar, nada quebra - a reuniao simplesmente passa
 a vazar pro corredor, calada.
+
+---
+
+## Terceira regra: o status da pessoa (12/09/2026)
+
+### O bug
+
+O botao de status (**Livre / Focado / Em reuniao**) existia desde cedo: pintava o
+anel do avatar, aparecia no topo da tela, ia e voltava do servidor. E **nao era
+consultado em lugar nenhum**. `grep -i status public/js/calls.js` dava zero
+ocorrencias fora de comentarios sobre salas.
+
+Na pratica, marcar "Em reuniao" nao impedia nada. Alguem passava perto e a
+chamada abria no meio da reuniao. Botao que promete e nao cumpre e pior que botao
+que nao existe: a pessoa confia nele e baixa a guarda.
+
+### A regra
+
+`deveFalarCom` agora recusa quando **qualquer um dos dois** nao esta `livre` -
+nem interrompo quem esta focado, nem sou puxado pra conversa quando eu e que
+estou.
+
+Duas decisoes dentro disso:
+
+**1. A sala fechada continua mandando mais.** A checagem de status vem DEPOIS da
+sala. Entrar numa sala de reuniao e ato deliberado - quem cruza a porta quis
+participar. Se o status travasse ali, a sala de reuniao ficaria muda justamente
+quando todo mundo esta "em reuniao".
+
+**2. `deveContinuarCom` NAO olha status.** Mudar o proprio status no meio de uma
+conversa derrubaria a chamada na cara do outro, sem ele ter feito nada. O status
+barra chamada **nova**; nao desliga a que ja esta acontecendo. Quem quer sair,
+sai andando.
+
+E a placa em cima da cabeca passa a mostrar o status quando ele nao e "Livre"
+(`Bot · Em reuniao`). Sem isso, quem chegasse perto e nao caisse em chamada
+concluiria que o app quebrou - o motivo precisa estar visivel antes de a pessoa
+tentar.
+
+### Resultado dos testes
+
+`testes/proximidade.js` - 10 checagens, 0 falhas. Carrega o `calls.js` de verdade
+num vm com o **mapa de verdade**, e nao um mapa de mentira: as paredes e as salas
+fechadas sao as do escritorio. As duas regras saem expostas em `window.Calls` so
+pra isso.
+
+| O que | Resultado |
+|---|---|
+| dois livres coladinhos | conversam |
+| o outro focado / em reuniao | nao abre |
+| eu focado | nao abre |
+| os dois ocupados | nao abre |
+| **sem status nenhum** (bot, cliente antigo) | vale como livre - senao ficaria gente muda sem motivo |
+| ja em chamada e mudo pra focado | **continua** |
+| longe, os dois livres | nao abre |
+| parede no meio | nao abre |
+| mesma sala fechada, os dois "Em reuniao" | **conversam** (a sala manda) |
+
+### No navegador, com o bot
+
+O teste que fecha a questao, porque exercita os dois navegadores de verdade:
+
+| Passo | Distancia | Status do bot | Chamada |
+|---|---|---|---|
+| bot entra perto, os dois livres | ~1 tile | Livre | abre (peers 1) |
+| marco o bot como "Em reuniao" | ~1 tile | Em reuniao | **continua** - regra 2 |
+| ando pra longe | 30 tiles | Em reuniao | cai (peers 0) |
+| volto e fico colado 5s | **0,95 tile** | Em reuniao | **nao abre** (peers 0) |
+| volto o bot pra "Livre", sem sair do lugar | 0,95 tile | Livre | **abre** (peers 1) |
+
+As duas ultimas linhas sao o teste inteiro. A penultima sozinha nao provaria nada
+- "nao abriu" tambem e o que se ve quando a chamada esta quebrada. E a ultima,
+com o boneco parado no mesmo pixel e so o status mudando, que separa "barrou" de
+"quebrou".

@@ -81,10 +81,9 @@ function carregar() {
 
 function salvar() {
   try {
-    if (!fs.existsSync(PASTA)) fs.mkdirSync(PASTA, { recursive: true });
     const obj = {};
     contas.forEach((c, uid) => { obj[uid] = c; });
-    fs.writeFileSync(ARQUIVO, JSON.stringify({ contas: obj }, null, 2));
+    pastaDados.gravarSeguro(ARQUIVO, JSON.stringify({ contas: obj }, null, 2));
   } catch (e) {
     console.error('Nao consegui salvar google.json:', e.message);
   }

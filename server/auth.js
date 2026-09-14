@@ -45,8 +45,13 @@ function texto(valor) {
   return typeof valor === 'string' ? valor.trim() : '';
 }
 
-function criarRotas(sanitizeAppearance) {
+// `aoEncerrarConta(uid, motivo)` vem do index.js: derruba os sockets abertos da
+// pessoa (e larga a mesa dela). A sessao HTTP ja cai sozinha - o cookie deixa
+// de valer -, mas uma aba que esta aberta AGORA continuaria dentro da sede ate
+// recarregar, e "removi o ex-membro" nao pode significar "ele sai amanha".
+function criarRotas(sanitizeAppearance, ganchos = {}) {
   const rotas = express.Router();
+  const aoEncerrarConta = typeof ganchos.aoEncerrarConta === 'function' ? ganchos.aoEncerrarConta : () => {};
 
   rotas.post('/registrar', (req, res) => {
     const corpo = req.body || {};
@@ -149,6 +154,112 @@ function criarRotas(sanitizeAppearance) {
     const usuario = sessao.usuarioDaRequisicao(req);
     if (!usuario) return res.status(401).json({ erro: 'Sem sessao.' });
     res.json({ usuario: usuarios.publico(usuario) });
+  });
+
+  // ------------------------------------------------------------------- senha
+  // Trocar a propria senha. Pede a atual: sessao aberta num PC emprestado nao
+  // pode virar conta tomada. Visitante nao tem senha.
+  rotas.put('/senha', sessao.exigirMembro, (req, res) => {
+    const ip = req.ip || 'desconhecido';
+    if (bloqueado(ip)) {
+      return res.status(429).json({ erro: 'Muitas tentativas. Espera uns minutos.' });
+    }
+    const corpo = req.body || {};
+    const atual = typeof corpo.senhaAtual === 'string' ? corpo.senhaAtual : '';
+    const nova = typeof corpo.novaSenha === 'string' ? corpo.novaSenha : '';
+
+    if (!usuarios.senhaConfere(atual, req.usuario)) {
+      contarErro(ip);
+      return res.status(403).json({ erro: 'A senha atual nao confere.' });
+    }
+    if (nova.length < MIN_SENHA) {
+      return res.status(400).json({ erro: 'A senha nova precisa de pelo menos ' + MIN_SENHA + ' caracteres.' });
+    }
+    if (nova.length > MAX_SENHA) return res.status(400).json({ erro: 'Senha grande demais.' });
+    if (nova === atual) return res.status(400).json({ erro: 'A senha nova e igual a atual.' });
+
+    limparErros(ip);
+    const conta = usuarios.trocarSenha(req.usuario.id, nova);
+    // Trocar a senha derruba as OUTRAS sessoes (a versao subiu). Esta aqui
+    // ganha um cookie novo na hora, senao a pessoa caia pro login no mesmo
+    // clique em que trocou a senha.
+    sessao.definirCookie(res, conta.id);
+    res.json({ usuario: usuarios.publico(conta) });
+  });
+
+  // -------------------------------------------------------------- WhatsApp
+  // O proprio numero (vazio apaga).
+  rotas.put('/perfil/whatsapp', sessao.exigirMembro, (req, res) => {
+    const r = usuarios.definirWhatsapp(req.usuario.id, (req.body || {}).numero);
+    if (r.erro) return res.status(400).json({ erro: r.erro });
+    res.json(r);
+  });
+
+  // O numero de um colega, pro botao do cartao. Um por vez e so pra membro: o
+  // numero nao vai na lista de pessoas que o socket manda pra todo mundo -
+  // visitante incluso.
+  rotas.get('/pessoas/:uid/whatsapp', sessao.exigirMembro, (req, res) => {
+    const u = usuarios.porId(req.params.uid);
+    if (!u || u.convidado) return res.json({ whatsapp: null });
+    res.set('Cache-Control', 'no-store');
+    res.json({ whatsapp: u.whatsapp || null });
+  });
+
+  // ---------------------------------------------------------------- membros
+  // Tela da diretoria. Sem servico de e-mail nao ha "esqueci minha senha" por
+  // link: quem esqueceu pede pra diretoria, que gera uma senha provisoria.
+  rotas.get('/membros', sessao.exigirDiretoria, (req, res) => {
+    res.json({ membros: usuarios.membros(), eu: req.usuario.id });
+  });
+
+  function alvoDe(req, res) {
+    const alvo = usuarios.porId(req.params.id);
+    if (!alvo || alvo.convidado) {
+      res.status(404).json({ erro: 'Essa conta nao existe mais.' });
+      return null;
+    }
+    return alvo;
+  }
+
+  rotas.post('/membros/:id/redefinir-senha', sessao.exigirDiretoria, (req, res) => {
+    const alvo = alvoDe(req, res);
+    if (!alvo) return;
+    if (alvo.id === req.usuario.id) {
+      return res.status(400).json({ erro: 'Pra sua propria conta, use "Trocar senha".' });
+    }
+    const senhaTemporaria = usuarios.redefinirSenha(alvo.id);
+    aoEncerrarConta(alvo.id, 'senha-redefinida');
+    console.log('[membros] ' + req.usuario.email + ' redefiniu a senha de ' + alvo.email);
+    // A provisoria sai UMA vez, nesta resposta. Nao fica guardada em lugar
+    // nenhum em texto - so o hash, como qualquer senha.
+    res.json({ senhaTemporaria, membros: usuarios.membros() });
+  });
+
+  rotas.put('/membros/:id/diretoria', sessao.exigirDiretoria, (req, res) => {
+    const alvo = alvoDe(req, res);
+    if (!alvo) return;
+    const isAdmin = !!(req.body && req.body.isAdmin);
+    // Tirar a propria diretoria e o jeito mais facil de trancar a sede sem
+    // ninguem que consiga administrar. Outra pessoa da diretoria faz isso.
+    if (alvo.id === req.usuario.id && !isAdmin) {
+      return res.status(400).json({ erro: 'Peca pra outra pessoa da diretoria tirar a sua.' });
+    }
+    usuarios.definirDiretoria(alvo.id, isAdmin);
+    console.log('[membros] ' + req.usuario.email + (isAdmin ? ' deu' : ' tirou') + ' diretoria de ' + alvo.email);
+    res.json({ membros: usuarios.membros() });
+  });
+
+  rotas.delete('/membros/:id', sessao.exigirDiretoria, (req, res) => {
+    const alvo = alvoDe(req, res);
+    if (!alvo) return;
+    if (alvo.id === req.usuario.id) {
+      return res.status(400).json({ erro: 'Voce nao pode remover a propria conta.' });
+    }
+    // derruba ANTES de apagar: o gancho ainda acha a mesa e o socket pela conta
+    aoEncerrarConta(alvo.id, 'conta-removida');
+    usuarios.remover(alvo.id);
+    console.log('[membros] ' + req.usuario.email + ' removeu ' + alvo.email);
+    res.json({ membros: usuarios.membros() });
   });
 
   rotas.put('/perfil', sessao.exigirLogin, (req, res) => {

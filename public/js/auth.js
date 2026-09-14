@@ -145,8 +145,21 @@
     }
   }
 
+  // Por que a pessoa caiu no login (a diretoria mexeu na conta dela). Vem do
+  // network.js, que guarda o motivo antes de recarregar a pagina.
+  const AVISOS_LOGIN = {
+    'senha-redefinida': 'A diretoria redefiniu a sua senha. Entre com a senha provisoria que ela te passou.',
+    'conta-removida': 'Esta conta foi removida da sede pela diretoria.',
+  };
+
   function mostrar() {
     tela.classList.remove('oculto');
+    let motivo = '';
+    try {
+      motivo = sessionStorage.getItem('aviso-login') || '';
+      sessionStorage.removeItem('aviso-login');
+    } catch (e) { /* sem storage */ }
+    if (AVISOS_LOGIN[motivo]) mostrarErro(AVISOS_LOGIN[motivo]);
     document.getElementById('login-email').focus();
   }
 

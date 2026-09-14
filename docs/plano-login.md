@@ -157,3 +157,46 @@ pro cadastro.
 
 O teste de duas contas so vale em **navegadores diferentes**: duas abas do mesmo
 navegador dividem o cookie, entao sao a mesma pessoa.
+
+---
+
+## 9. Gestao de conta (13/09/2026)
+
+A EJ troca de gente todo semestre. Antes disto, quem saia continuava com acesso
+(chat, biblioteca, Trello) e quem esquecia a senha ficava trancado pra fora - a
+saida era editar `usuarios.json` na mao.
+
+| Quem | O que | Onde |
+|---|---|---|
+| Membro | Trocar a propria senha (pede a atual) | Sua conta > ... > Trocar senha |
+| Diretoria | Ver membros, ultimo acesso, quem esta com senha provisoria | Sua conta > ... > Membros da sede |
+| Diretoria | Redefinir senha: gera uma provisoria (3 palavras + 4 digitos), mostrada UMA vez | idem |
+| Diretoria | Dar / tirar diretoria | idem |
+| Diretoria | Remover conta: a pessoa sai da sede na hora e a mesa dela fica livre | idem |
+
+**Esqueci minha senha.** Nao ha servico de e-mail, entao nao ha link de
+recuperacao: a tela de login explica que e a diretoria que redefine. Quem entra
+com senha provisoria cai direto na tela "Crie a sua senha".
+
+**Derrubar sessao sem guardar sessao.** O cookie continua sem estado no
+servidor, mas agora carrega a *versao da sessao* da conta (`versaoSessao`).
+Trocar ou redefinir a senha sobe a versao, e todo cookie antigo para de valer.
+Cookie emitido antes desta mudanca nao tem o campo e conta como versao 0 - por
+isso ninguem foi deslogado no deploy.
+
+**A aba aberta tambem sai.** Redefinir ou remover emite `conta-encerrada` pro
+socket da pessoa e desconecta; a tela de login diz o motivo.
+
+**Travas:** a diretoria nao remove, nao redefine e nao tira a diretoria da
+propria conta (evita trancar a sede sem ninguem que administre). Visitante nao
+tem senha e nao aparece na lista. Trocar senha usa o mesmo freio de tentativas
+do login.
+
+Rotas: `PUT /api/senha`, `GET /api/membros`,
+`POST /api/membros/:id/redefinir-senha`, `PUT /api/membros/:id/diretoria`,
+`DELETE /api/membros/:id`. Teste de ponta a ponta: `testes/contas.js` (36
+conferencias, com socket de verdade).
+
+**Gravacao segura.** Chat, mesas, reunioes e conexoes do Google passaram a
+gravar num temporario e renomear (`dados.gravarSeguro`), como contas e mapa ja
+faziam: processo morto no meio da gravacao nao deixa mais JSON cortado.

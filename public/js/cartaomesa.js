@@ -21,13 +21,23 @@
     if (!manterFoco) Game.soltarFoco();
   }
 
-  // Encosta no ponto clicado sem vazar pra fora da janela.
-  function posicionar(x, y) {
+  // O cartao mora no CANTO SUPERIOR DIREITO. Nao segue o clique.
+  //
+  // Ja tentei duas vezes seguir o ponto clicado - primeiro centrado nele,
+  // depois subindo pra cima dele - e as duas versoes tinham o mesmo problema de
+  // fundo: o clique acontece EM CIMA da mesa, entao o cartao aparecia em cima
+  // justamente do movel de que ele fala. Empurrar pra cima so troca o que e
+  // tapado (a mesa de tras em vez desta), e a cada clique o cartao pula pra um
+  // lugar diferente da tela - a pessoa tem que procurar onde ele foi parar.
+  //
+  // Canto fixo resolve as tres coisas: nunca cobre a mesa, esta sempre no mesmo
+  // lugar, e a mesa em foco ja e apontada pelo proprio jogo (`focarNaMesa`
+  // aproxima a camera dela). E o que a referencia faz com os paineis de
+  // contexto - eles ancoram num canto, nao flutuam sobre o objeto.
+  //
+  // Posicionamento no CSS (.cartao-mesa). Aqui so falta mostrar.
+  function posicionar() {
     caixa.classList.remove('oculto');
-    const r = caixa.getBoundingClientRect();
-    const margem = 10;
-    caixa.style.left = Math.min(Math.max(margem, x + 12), window.innerWidth - r.width - margem) + 'px';
-    caixa.style.top = Math.min(Math.max(margem, y - r.height / 2), window.innerHeight - r.height - margem) + 'px';
   }
 
   function abrir(mesa, x, y) {
@@ -49,7 +59,7 @@
     desdeEl.textContent = minha ? 'Esta e a sua mesa' : (dono ? 'Esta na sede agora' : 'Fora da sede agora');
     acoesEl.classList.toggle('oculto', !minha);
     maisEl.classList.add('oculto');
-    posicionar(x, y);
+    posicionar();
     // Chega perto: e daqui que a pessoa vai escolher onde pousar cada coisa.
     Game.focarNaMesa(mesa.celulas);
   }

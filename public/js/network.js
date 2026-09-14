@@ -40,6 +40,15 @@
       emitLocal('conexao', 'reconectando');
     });
 
+    // A diretoria removeu a conta ou redefiniu a senha: o servidor derruba o
+    // socket e nao ha o que reconectar. Guarda o motivo pra tela de login dizer
+    // o que aconteceu, em vez de a pessoa cair no login sem entender.
+    socket.on('conta-encerrada', (data) => {
+      try { sessionStorage.setItem('aviso-login', (data && data.motivo) || ''); } catch (e) { /* sem storage */ }
+      socket.close();
+      location.reload();
+    });
+
     socket.on('init', (data) => emitLocal('init', data));
     socket.on('player-joined', (data) => emitLocal('player-joined', data));
     socket.on('player-left', (data) => emitLocal('player-left', data));
@@ -53,10 +62,17 @@
     socket.on('mesas-atualizadas', (data) => emitLocal('mesas-atualizadas', data));
     socket.on('mapa-atualizado', (data) => emitLocal('mapa-atualizado', data));
     socket.on('mapa-objeto-atualizado', (data) => emitLocal('mapa-objeto-atualizado', data));
+    socket.on('tela-mudou', (data) => emitLocal('tela-mudou', data));
+    socket.on('lendo-mudou', (data) => emitLocal('lendo-mudou', data));
     socket.on('mapa-conteudo-atualizado', (data) => emitLocal('mapa-conteudo-atualizado', data));
     socket.on('mapa-conteudo-recusado', (data) => emitLocal('mapa-conteudo-recusado', data));
     socket.on('agenda', (data) => emitLocal('agenda', data));
+    socket.on('reunioes', (data) => emitLocal('reunioes', data));
+    socket.on('reuniao-recusada', (data) => emitLocal('reuniao-recusada', data));
+    socket.on('chamada-mudou', (data) => emitLocal('chamada-mudou', data));
+    socket.on('chamadas', (data) => emitLocal('chamadas', data));
     socket.on('trello', (data) => emitLocal('trello', data));
+    socket.on('acervo-fisico-mudou', (data) => emitLocal('acervo-fisico-mudou', data));
   }
 
   function sendMove(state) {
@@ -65,6 +81,45 @@
 
   function sendStatus(status) {
     if (socket && socket.connected) socket.emit('status', { status });
+  }
+
+  // Avisa a sede que comecei (ou parei) de dividir a tela. Sem este aviso o
+  // resto do escritorio nao tem como saber: a tela dividida so TROCA a faixa de
+  // video do WebRTC, e isso acontece calado dentro da conexao. E e o aviso que
+  // deixa a TV da sala de reuniao espelhar quem esta apresentando.
+  function dividirTela(ligado) {
+    if (socket && socket.connected) socket.emit('tela', { ligado: !!ligado });
+  }
+
+  // Abri (ou fechei) um livro no leitor. Manda so o ID - o titulo quem resolve
+  // e o servidor, contra o acervo dele. Ver o porque em server/index.js.
+  function estouLendo(id) {
+    if (socket && socket.connected) socket.emit('lendo', { id: id || '' });
+  }
+
+  // Reunioes internas da sede. O titulo e a sala sao conferidos no servidor -
+  // ver server/reunioes.js.
+  function marcarReuniao(dados) {
+    if (socket && socket.connected) socket.emit('reuniao-marcar', dados);
+  }
+
+  function desmarcarReuniao(id) {
+    if (socket && socket.connected) socket.emit('reuniao-desmarcar', { id });
+  }
+
+  // Chamada com hora marcada: entra de qualquer canto do mapa, ao contrario da
+  // chamada de corredor, que e por proximidade. Ver server/index.js.
+  function entrarNaChamada(id) {
+    if (socket && socket.connected) socket.emit('chamada-entrar', { id });
+  }
+
+  function sairDaChamada() {
+    if (socket && socket.connected) socket.emit('chamada-sair');
+  }
+
+  // Comeca uma chamada do grupo e CONVIDA o canal - nao arrasta ninguem.
+  function ligarProGrupo(canal) {
+    if (socket && socket.connected) socket.emit('chamada-chamar-grupo', { canal });
   }
 
   function sendReaction(emoji) {
@@ -134,7 +189,7 @@
   }
 
   window.Network = {
-    connect, on, sendMove, sendStatus, sendReaction, sendRtcSignal, sendChatMessage,
+    connect, on, sendMove, sendStatus, dividirTela, estouLendo, marcarReuniao, desmarcarReuniao, entrarNaChamada, sairDaChamada, ligarProGrupo, sendReaction, sendRtcSignal, sendChatMessage,
     pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, moverItemDaMesa, tirarItemDaMesa,
     editarMapa, editarObjetoMapa, porConteudoNoMapa,
     pedirAgenda, pedirTrello,

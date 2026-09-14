@@ -1,4 +1,9 @@
 const path = require('path');
+
+// Credenciais (.env) antes dos require de baixo: google.js e trello.js leem o
+// ambiente na hora em que sao carregados. Ver server/ambiente.js.
+require('./ambiente');
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -10,9 +15,13 @@ const auth = require('./auth');
 const google = require('./google');
 const agenda = require('./agenda');
 const trello = require('./trello');
-const estante = require('./estante');
+const acervo = require('./acervo');
+const turn = require('./turn');
+const emprestimos = require('./emprestimos');
 const mesasStore = require('./mesas');
+const reunioes = require('./reunioes');
 const chatDisco = require('./chat-disco');
+const backup = require('./backup');
 
 const PORT = process.env.PORT || 3500;
 
@@ -74,9 +83,16 @@ conversas.forEach((_, conversaId) => {
 
 // Grava na saida: sem isto as ultimas mensagens antes do desligamento morriam
 // na espera de 1,5s do gravador.
+// E manda o backup do que mudou (server/backup.js) - deploy, restart e o Render
+// dormindo passam todos por aqui, e a hospedagem espera ~30s antes de matar.
+// Segundo Ctrl+C sai na hora: ninguem fica preso esperando o Drive.
+let saindo = false;
 ['SIGINT', 'SIGTERM'].forEach((sinal) => {
-  process.on(sinal, () => {
+  process.on(sinal, async () => {
+    if (saindo) process.exit(0);
+    saindo = true;
     chatDisco.agora();
+    await backup.naSaida(20000);
     process.exit(0);
   });
 });
@@ -167,10 +183,24 @@ function mensagensDe(conversaId) {
   return conversas.get(conversaId) || [];
 }
 
-// Aviso de entrou/saiu no #geral, como o "fulano joined" da referencia.
-function avisoDeSistema(texto) {
+// "Fulano entrou na sede" / "saiu da sede".
+//
+// NAO e guardado no historico, e nao e por economia: presenca e informacao que
+// vale AGORA. Gravada, ela vira arqueologia - quem abrisse o #geral amanha leria
+// dez linhas de gente entrando e saindo ontem antes de achar a primeira
+// conversa de verdade. Quem esta na sede ja se ve no mapa e na lista de pessoas.
+//
+// E tem o COOLDOWN, que e o que resolve o caso comum: recarregar a pagina
+// desconecta e reconecta, e sem ele cada F5 rendia um "saiu" e um "entrou". Nao
+// e noticia. Dois minutos por pessoa.
+const ultimoAvisoDePresenca = new Map();   // uid -> quando
+const ESPERA_AVISO = 2 * 60 * 1000;
+
+// Aviso da sede que FICA no historico: reuniao marcada, reuniao desmarcada.
+// Ao contrario do entra/sai, quem nao estava online na hora precisa ler depois.
+function avisar(texto) {
   const conversaId = idCanal('geral');
-  const mensagem = guardarMensagem(conversaId, {
+  io.emit('chat-mensagem', guardarMensagem(conversaId, {
     id: proximoMsgId++,
     conversa: conversaId,
     autorId: null,
@@ -180,8 +210,30 @@ function avisoDeSistema(texto) {
     ts: Date.now(),
     sistema: true,
     reacoes: {},
+  }));
+}
+
+// A lista e as salas vao juntas: a tela precisa das duas pra montar o formulario
+// e nao faz sentido pedir em dois eventos.
+function dadosDeReunioes() {
+  return { reunioes: reunioes.listar(), salas: reunioes.salasDisponiveis() };
+}
+
+function avisoDePresenca(uid, texto) {
+  const agora = Date.now();
+  if (uid && agora - (ultimoAvisoDePresenca.get(uid) || 0) < ESPERA_AVISO) return;
+  if (uid) ultimoAvisoDePresenca.set(uid, agora);
+  io.emit('chat-mensagem', {
+    id: 'presenca-' + agora,   // id de verdade e do historico; este nunca entra la
+    conversa: idCanal('geral'),
+    autorId: null,
+    autorNome: '',
+    autorIsAdmin: false,
+    texto,
+    ts: agora,
+    sistema: true,
+    reacoes: {},
   });
-  io.emit('chat-mensagem', mensagem);
 }
 
 // Tem alguem em pe nessa celula? (usado pra nao deixar decorar em cima de gente)
@@ -273,6 +325,13 @@ io.on('connection', (socket) => {
       moving: false,
       sentado: false,
       status: 'livre',
+      dividindoTela: false,
+      // Livro aberto no leitor, ou null. Vai junto no `init` pra quem chega
+      // depois ja ver quem esta lendo o que, como o dividindoTela.
+      lendo: null,
+      // Chamada em que a pessoa entrou DE PROPOSITO (reuniao, grupo), ou null.
+      // Ver o bloco de chamadas mais abaixo.
+      chamada: null,
       isAdmin: !!conta.isAdmin,
       // Visitante entrou por link (docs/plano-convidado.md). Vai junto pro
       // cliente porque a lista de pessoas mostra quem e de fora.
@@ -297,7 +356,7 @@ io.on('connection', (socket) => {
     });
 
     socket.broadcast.emit('player-joined', player);
-    avisoDeSistema(player.name + ' entrou na sede');
+    avisoDePresenca(player.uid, player.name + ' entrou na sede');
   });
 
   socket.on('move', (data) => {
@@ -319,14 +378,23 @@ io.on('connection', (socket) => {
     player.sentado = !!data.sentado && !!tileAtual
       && map.ASSENTOS.has(tileAtual[Math.floor(x / map.TILE)]);
 
-    socket.broadcast.emit('player-moved', {
-      id: socket.id,
-      x: player.x,
-      y: player.y,
-      dir: player.dir,
-      moving: player.moving,
-      sentado: player.sentado,
-    });
+    // Kart: 0 a 1 e um angulo em radianos. Aqui e so repasse - isto e desenho,
+    // e desenho nao muda onde a pessoa esta nem no que ela esbarra. O servidor
+    // so garante que e numero e que esta na faixa, pra um cliente adulterado
+    // nao mandar NaN e apagar o boneco na tela dos outros.
+    const kart = Number(data.kart);
+    const kartAng = Number(data.kartAng);
+    player.kart = Number.isFinite(kart) ? Math.max(0, Math.min(1, kart)) : 0;
+    player.kartAng = Number.isFinite(kartAng) ? kartAng : 0;
+
+    // Pacote enxuto: sai pra todo mundo online, ate 10 vezes por segundo por
+    // pessoa andando, e e o que mais gasta trafego na hospedagem. Campo no valor
+    // padrao nao vai (o cliente ja trata ausente como falso/zero).
+    const pacote = { id: socket.id, x: Math.round(player.x), y: Math.round(player.y), dir: player.dir };
+    if (player.moving) pacote.moving = true;
+    if (player.sentado) pacote.sentado = true;
+    if (player.kart) { pacote.kart = player.kart; pacote.kartAng = player.kartAng; }
+    socket.broadcast.emit('player-moved', pacote);
   });
 
   socket.on('status', (data) => {
@@ -335,6 +403,52 @@ io.on('connection', (socket) => {
     if (!STATUS_VALIDOS.includes(data.status)) return;
     player.status = data.status;
     io.emit('player-status', { id: socket.id, status: player.status });
+  });
+
+  // Quem esta dividindo a tela. Fica no player como o status, e vai junto no
+  // `init` pra quem chega depois ja ver a apresentacao em andamento.
+  socket.on('tela', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data) return;
+    const ligado = !!data.ligado;
+    if (player.dividindoTela === ligado) return;
+    player.dividindoTela = ligado;
+    io.emit('tela-mudou', { id: socket.id, ligado });
+  });
+
+  // Quem esta lendo o que. A estante passa a mostrar na capa quem pegou o
+  // livro, e o mapa marca quem esta lendo - que e o que faltava pra ela ser
+  // biblioteca da sede e nao lista de arquivo.
+  //
+  // O TITULO VEM DAQUI, NAO DO CLIENTE. O cliente manda so o id; o servidor
+  // procura no acervo e usa o titulo que ele mesmo tem. Aceitar o titulo do
+  // cliente deixaria qualquer pessoa transmitir o texto que quisesse pra tela
+  // de todo mundo - e isso aparece na capa e em cima da cabeca do boneco.
+  //
+  // Id que nao esta no acervo e ignorado: nao da pra "estar lendo" um livro que
+  // a sede nao tem.
+  socket.on('lendo', async (data) => {
+    const player = players.get(socket.id);
+    if (!player) return;
+
+    const id = data && typeof data.id === 'string' ? data.id : '';
+    if (!id) {
+      if (!player.lendo) return;
+      player.lendo = null;
+      io.emit('lendo-mudou', { id: socket.id, livro: null });
+      return;
+    }
+    // Visitante nao abre livro (a rota do arquivo ja barra); sem esta linha ele
+    // nao leria nada mas apareceria "lendo" na capa pra todo mundo.
+    if (player.convidado) return;
+
+    let livro = null;
+    try { livro = await acervo.acharLivro(id); } catch (e) { return; }
+    if (!livro) return;
+    if (player.lendo && player.lendo.id === livro.id) return;
+
+    player.lendo = { id: livro.id, titulo: livro.titulo };
+    io.emit('lendo-mudou', { id: socket.id, livro: player.lendo });
   });
 
   socket.on('reagir', (data) => {
@@ -349,6 +463,139 @@ io.on('connection', (socket) => {
   socket.on('agenda-pedir', async () => {
     const dados = await agenda.obter();
     socket.emit('agenda', dados);
+    socket.emit('reunioes', dadosDeReunioes());
+  });
+
+  // ---- chamadas com hora marcada, que funcionam de qualquer canto ----------
+  //
+  // A sede ja tinha chamada por PROXIMIDADE: chegou perto, conversa. Isso
+  // resolve o corredor e nao resolve reuniao - reuniao precisa acontecer mesmo
+  // com a sala de reuniao ocupada, e com gente que nao quer largar o lugar onde
+  // esta trabalhando.
+  //
+  // Entao a chamada vira uma SESSAO: quem entra nela fala com quem tambem
+  // entrou, esteja onde estiver no mapa. A proximidade continua existindo por
+  // baixo, pra conversa de corredor.
+  //
+  // O id diz de onde a chamada veio, e e ele que faz duas pessoas caírem na
+  // MESMA sessao sem combinar nada:
+  //     reuniao:12   a reuniao 12 da agenda
+  //     canal:geral  o grupo #geral do chat
+  //
+  // O TITULO E RESOLVIDO AQUI, contra a agenda e a lista de canais - nunca vem
+  // do cliente. Ele aparece na tela de todo mundo que esta na chamada, e aceitar
+  // texto de fora seria deixar qualquer um escrever ali.
+  function tituloDaChamada(id) {
+    if (typeof id !== 'string') return null;
+    const [tipo, resto] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
+    if (tipo === 'reuniao') {
+      const r = reunioes.listar().find((x) => String(x.id) === resto);
+      return r ? r.titulo : null;
+    }
+    if (tipo === 'canal') {
+      const c = CANAIS.find((x) => x.id === resto);
+      return c ? '#' + c.nome : null;
+    }
+    return null;
+  }
+
+  // Quem esta em cada chamada agora. Sai da presenca, entao nao precisa de
+  // arquivo: chamada e coisa do momento - o que fica salvo e a REUNIAO.
+  function quemEstaEm(chamadaId) {
+    const nomes = [];
+    players.forEach((p) => { if (p.chamada && p.chamada.id === chamadaId) nomes.push(p.name); });
+    return nomes;
+  }
+
+  function avisarChamadas() {
+    const mapa = {};
+    players.forEach((p) => {
+      if (!p.chamada) return;
+      if (!mapa[p.chamada.id]) mapa[p.chamada.id] = { id: p.chamada.id, titulo: p.chamada.titulo, gente: [] };
+      mapa[p.chamada.id].gente.push(p.name);
+    });
+    io.emit('chamadas', Object.values(mapa));
+  }
+
+  socket.on('chamada-entrar', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data) return;
+    const titulo = tituloDaChamada(data.id);
+    if (!titulo) return;   // id inventado, reuniao que ja saiu da lista: nao entra
+    player.chamada = { id: data.id, titulo };
+    io.emit('chamada-mudou', { id: socket.id, chamada: player.chamada });
+    avisarChamadas();
+  });
+
+  socket.on('chamada-sair', () => {
+    const player = players.get(socket.id);
+    if (!player || !player.chamada) return;
+    player.chamada = null;
+    io.emit('chamada-mudou', { id: socket.id, chamada: null });
+    avisarChamadas();
+  });
+
+  // "Ligar pro grupo": quem chamou entra, e todo mundo recebe o convite no
+  // canal. Nao arrasta ninguem pra dentro - chamada que comeca sozinha no ouvido
+  // dos outros e o tipo de coisa que faz a pessoa desligar o app.
+  socket.on('chamada-chamar-grupo', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data) return;
+    if (player.convidado) return;
+    const canalId = String(data.canal || '');
+    const canal = CANAIS.find((c) => c.id === canalId);
+    if (!canal) return;
+
+    const id = 'canal:' + canal.id;
+    player.chamada = { id, titulo: '#' + canal.nome };
+    io.emit('chamada-mudou', { id: socket.id, chamada: player.chamada });
+    avisarChamadas();
+
+    const conversaId = idCanal(canal.id);
+    io.emit('chat-mensagem', guardarMensagem(conversaId, {
+      id: proximoMsgId++,
+      conversa: conversaId,
+      autorId: null,
+      autorNome: '',
+      autorIsAdmin: false,
+      texto: player.name + ' comecou uma chamada no #' + canal.nome + '.',
+      ts: Date.now(),
+      sistema: true,
+      chamada: id,          // e isto que vira o botao "Entrar" na mensagem
+      reacoes: {},
+    }));
+  });
+
+  // Reunioes internas: marcar, desmarcar. Ver server/reunioes.js.
+  socket.on('reuniao-marcar', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data) return;
+    // Visitante nao marca reuniao da sede pelo mesmo motivo que nao pega mesa:
+    // ele passa, nao mora aqui.
+    if (player.convidado) return socket.emit('reuniao-recusada', 'Visitante nao marca reuniao.');
+
+    const r = reunioes.criar({
+      titulo: data.titulo, inicio: data.inicio, minutos: data.minutos, sala: data.sala,
+    }, { uid: player.uid, nome: player.name, isAdmin: player.isAdmin });
+
+    if (r.erro) return socket.emit('reuniao-recusada', r.erro);
+
+    io.emit('reunioes', dadosDeReunioes());
+    // Reuniao marcada e AVISO, entao vai pro #geral - e fica gravada ali, ao
+    // contrario do entra/sai. Quem nao estava online na hora precisa ver.
+    const quando = new Date(r.reuniao.inicio);
+    avisar(player.name + ' marcou "' + r.reuniao.titulo + '" na ' + r.reuniao.salaNome
+      + ', ' + quando.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      + ' as ' + quando.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  });
+
+  socket.on('reuniao-desmarcar', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !data) return;
+    const r = reunioes.remover(data.id, { uid: player.uid, isAdmin: player.isAdmin });
+    if (r.erro) return socket.emit('reuniao-recusada', r.erro);
+    io.emit('reunioes', dadosDeReunioes());
+    avisar(player.name + ' desmarcou "' + r.reuniao.titulo + '".');
   });
 
   // Quadro do Trello, sob demanda e com cache no trello.js. O token nunca sai
@@ -557,7 +804,10 @@ io.on('connection', (socket) => {
     if (players.has(socket.id)) {
       const saiu = players.get(socket.id);
       players.delete(socket.id);
-      avisoDeSistema(saiu.name + ' saiu da sede');
+      avisoDePresenca(saiu.uid, saiu.name + ' saiu da sede');
+      // Quem desconecta sai da chamada junto. Sem isto a lista de quem esta na
+      // chamada acumularia gente que fechou a aba.
+      if (saiu.chamada) avisarChamadas();
       // A mesa NAO e largada aqui: ela e da conta, nao da sessao. Quem quiser
       // sair dela clica nela de novo ou usa o botao no proprio perfil.
       io.emit('player-left', { id: socket.id });
@@ -601,37 +851,146 @@ app.post('/api/google/desconectar', sessao.exigirLogin, (req, res) => {
   res.json({ ok: true });
 });
 
-// ---- a estante: o acervo de livros da sede ----
-// Chegar perto de uma estante no mapa abre isto. O acervo e um so pra sede
-// inteira - ver server/estante.js.
-app.get('/api/estante', sessao.exigirLogin, (req, res) => {
-  res.json(estante.ler());
+// ---- a estante: o acervo da biblioteca ----
+// Os livros vem da pasta da biblioteca no Drive (ou de DATA_DIR/livros, enquanto
+// o Drive nao estiver ligado) - ver server/acervo.js e docs/estante.md.
+//
+// O livro chega no navegador PELO NOSSO servidor, nunca por link do Drive: a
+// pasta continua privada, ninguem precisa de conta Google, e ler e baixar
+// acontecem dentro da sede.
+
+// A lista (titulo e capa) qualquer um logado ve, visitante incluso - a
+// estante e parte da sede que se mostra. `podeLer` diz se abre o livro.
+app.get('/api/estante', sessao.exigirLogin, async (req, res) => {
+  try {
+    const { origem, livros } = await acervo.listar();
+    res.json({ origem, podeLer: !req.usuario.convidado, livros: livros.map(acervo.publico) });
+  } catch (e) {
+    console.error('[acervo]', e.message);
+    res.status(502).json({ erro: 'Nao consegui ler a pasta da biblioteca agora.' });
+  }
 });
 
-app.post('/api/estante/livro', sessao.exigirMembro, (req, res) => {
-  const r = estante.adicionar(req.body, req.usuario);
-  if (r.erro) return res.status(400).json({ erro: r.erro });
-  res.json(estante.ler());
+// O LIVRO so pra quem e da sede. O acervo e material interno (e parte dele pode
+// ter direito autoral que nao permite mostrar pra fora), entao visitante ve a
+// capa mas nao abre.
+app.get('/api/estante/:id/arquivo', sessao.exigirMembro, async (req, res) => {
+  try {
+    const livro = await acervo.acharLivro(req.params.id);
+    if (!livro) return res.status(404).json({ erro: 'Esse livro nao esta mais na estante.' });
+    const baixar = req.query.baixar === '1';
+    // nome com acento e espaco precisa do filename* codificado, senao o
+    // navegador salva como "arquivo" ou quebra no meio
+    const nomeArquivo = livro.titulo.replace(/[\\/:*?"<>|]+/g, ' ').trim() + '.pdf';
+    const disposicao = (baixar ? 'attachment' : 'inline') + "; filename*=UTF-8''" + encodeURIComponent(nomeArquivo);
+    const aberto = await acervo.abrirArquivo(livro, req.headers.range);
+    if (aberto.caminho) {
+      // sendFile ja responde Range sozinho, que e o que o leitor usa pra pedir
+      // so as paginas que vai mostrar
+      return res.sendFile(aberto.caminho, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': disposicao, 'Cache-Control': 'private, max-age=300' } });
+    }
+    res.status(aberto.status);
+    res.set(Object.assign({}, aberto.headers, { 'Content-Disposition': disposicao, 'Cache-Control': 'private, max-age=300' }));
+    aberto.stream.on('error', () => res.destroy());
+    // o leitor cancela pedaco que nao precisa mais (virou a pagina rapido):
+    // para de puxar do Drive tambem
+    res.on('close', () => aberto.stream.destroy());
+    aberto.stream.pipe(res);
+  } catch (e) {
+    console.error('[acervo]', e.message);
+    if (!res.headersSent) res.status(502).json({ erro: 'Nao consegui abrir o livro agora.' });
+  }
 });
 
-app.delete('/api/estante/livro/:id', sessao.exigirMembro, (req, res) => {
-  const r = estante.remover(req.params.id, req.usuario);
-  // 403 e nao 400: a diferenca entre "nao existe" e "nao e seu" importa pra
-  // quem le o erro na tela.
-  if (r.erro) return res.status(r.erro.includes("pode tirar") ? 403 : 404).json({ erro: r.erro });
-  res.json(estante.ler());
+app.get('/api/estante/:id/capa', sessao.exigirLogin, async (req, res) => {
+  try {
+    const livro = await acervo.acharLivro(req.params.id);
+    const capa = livro && await acervo.abrirCapa(livro);
+    if (!capa) return res.status(404).end();
+    res.set(Object.assign({}, capa.headers, { 'Cache-Control': 'private, max-age=3600' }));
+    capa.stream.pipe(res);
+  } catch (e) {
+    console.error('[acervo]', e.message);
+    if (!res.headersSent) res.status(502).end();
+  }
 });
 
-// A pasta do Drive e uma so pra sede: quem muda e a diretoria.
-app.put('/api/estante/pasta', sessao.exigirLogin, (req, res) => {
-  if (!req.usuario.isAdmin) return res.status(403).json({ erro: 'So a diretoria muda a pasta da estante.' });
-  const r = estante.definirPasta(req.body && req.body.url);
-  if (r.erro) return res.status(400).json({ erro: r.erro });
-  res.json(estante.ler());
+// ---- acervo FISICO da sala: catalogo + quem esta com cada livro ----
+// Ver server/emprestimos.js. Visitante ve a lista (e parte da sede que se
+// mostra), mas nao pega livro.
+app.get('/api/acervo-fisico', sessao.exigirLogin, (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    livros: emprestimos.listar(),
+    podePegar: !req.usuario.convidado,
+    podeDevolverDeOutros: !!req.usuario.isAdmin,
+    eu: req.usuario.id,
+  });
 });
+
+['pegar', 'devolver'].forEach((acao) => {
+  app.post('/api/acervo-fisico/:id/' + acao, sessao.exigirMembro, (req, res) => {
+    const r = emprestimos[acao](String(req.params.id), req.usuario);
+    if (r.erro) return res.status(r.status || 400).json({ erro: r.erro });
+    // quem esta com a estante aberta ve o livro mudar de dono na hora
+    io.emit('acervo-fisico-mudou');
+    res.json({ ok: true, livros: emprestimos.listar() });
+  });
+});
+
+// Servidores da chamada de video (STUN, e TURN da Cloudflare se configurado).
+// So logado: a credencial do TURN e banda paga por nos. Ver server/turn.js.
+app.get('/api/ice', sessao.exigirLogin, async (req, res) => {
+  const { iceServers, turn: comTurn } = await turn.obter();
+  res.set('Cache-Control', 'no-store');
+  res.json({ iceServers, turn: comTurn });
+});
+
+// Recebe a capa que o navegador desenhou da pagina 1, pra ela ser feita UMA vez
+// e nao uma vez por pessoa por abertura. Ver o porque em server/acervo.js.
+//
+// So quem e da sede manda: visitante nem abre o livro, entao nao teria como ter
+// desenhado a pagina 1 - se ele mandar, ou nao e a capa, ou nao devia ter tido
+// acesso. Nos dois casos a resposta e nao.
+//
+// `express.raw` so nesta rota: o resto da API e JSON, e ligar raw global faria
+// toda requisicao carregar bytes que ninguem le.
+app.post('/api/estante/:id/capa',
+  sessao.exigirMembro,
+  express.raw({ type: ['image/png', 'image/jpeg'], limit: '400kb' }),
+  async (req, res) => {
+    try {
+      const livro = await acervo.acharLivro(req.params.id);
+      if (!livro) return res.status(404).end();
+      const recusa = acervo.guardarCapa(livro.id, req.body);
+      // "ja tem" nao e erro: duas pessoas abrindo a estante ao mesmo tempo
+      // desenham a mesma capa, e a segunda chega depois. A primeira vence e a
+      // segunda nao precisa saber de nada.
+      if (recusa && recusa !== 'ja tem') return res.status(400).json({ erro: recusa });
+      res.json({ ok: true });
+    } catch (e) {
+      console.error('[acervo] capa:', e.message);
+      if (!res.headersSent) res.status(500).end();
+    }
+  });
 
 // Rotas de conta antes do estatico: /api/... nunca cai no index.html.
-app.use('/api', auth.criarRotas(sanitizeAppearance));
+// Conta removida ou senha redefinida pela diretoria: quem esta com a sede
+// aberta AGORA sai na hora, com o motivo na tela. A mesa de quem foi removido
+// volta a ficar livre - senao a sede acumularia mesa presa de ex-membro.
+function encerrarConta(uid, motivo) {
+  io.sockets.sockets.forEach((s) => {
+    if (s.data.usuarioId !== uid) return;
+    s.emit('conta-encerrada', { motivo });
+    s.disconnect(true);
+  });
+  if (motivo === 'conta-removida') {
+    if (mesasStore.largarDe(uid)) io.emit('mesas-atualizadas', mesasStore.paraEnvio());
+    google.desconectar(uid);
+  }
+}
+
+app.use('/api', auth.criarRotas(sanitizeAppearance, { aoEncerrarConta: encerrarConta }));
 // Em desenvolvimento o navegador NAO guarda nada em cache.
 //
 // Isto existe porque custou tempo de verdade: depois de mexer no game.js, a
@@ -699,6 +1058,7 @@ const APARENCIA_DEV = sanitizeAppearance({
 
 server.listen(PORT, () => {
   console.log(`Escritorio virtual ADM Solucoes rodando em http://localhost:${PORT}`);
+  backup.agendar();
   console.log(`Contas cadastradas: ${usuariosStore.totalDeContas()}`);
   if (google.configurado()) {
     console.log('Google Agenda: registre este redirect URI no Google Cloud:');
@@ -707,6 +1067,9 @@ server.listen(PORT, () => {
       console.log('  (veio do padrao; defina SITE_URL se o endereco for outro)');
     }
   }
+  console.log(turn.configurado()
+    ? 'Chamada: TURN da Cloudflare ligado.'
+    : 'Chamada: so STUN (defina CLOUDFLARE_TURN_KEY_ID e CLOUDFLARE_TURN_TOKEN pra redes restritas).');
   if (sessao.SEM_LOGIN) {
     const dev = prepararContaDev();
     console.log(`SEM_LOGIN=1: tela de login desativada, entrando como "${dev.nome}".`);

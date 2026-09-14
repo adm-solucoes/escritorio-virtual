@@ -1,7 +1,66 @@
 // Loop principal do jogo: mapa, movimento, multiplayer e chamada por proximidade.
 (function () {
   const SPEED = 150; // px/s
-  const MOVE_SEND_INTERVAL = 45; // ms
+
+  // ---- WASD e o modo kart -------------------------------------------------
+  // Segurando Shift o boneco acelera e passa a ter INERCIA: a velocidade deixa
+  // de virar na hora e e arrastada pra direcao nova. E isso, e so isso, que da
+  // a sensacao de drift - nao ha fisica de pneu nenhuma aqui, e uma velocidade
+  // que demora pra mudar de ideia.
+  const SPEED_KART = 320;      // px/s no talo
+  const ACEL_KART = 1100;      // px/s2
+  const ATRITO_KART = 2.6;     // por segundo: o quanto a velocidade morre sozinha
+  const POEIRA_MAX = 40;
+
+  // O KART APARECENDO E SUMINDO
+  // Estes tres numeros sao a animacao inteira. Nenhum estado liga/desliga: o
+  // kart tem um valor de 0 a 1 que persegue o alvo, e todo o resto (tamanho,
+  // opacidade, o boneco sentando) sai desse mesmo valor. Por isso soltar o
+  // Shift no meio da entrada nao da tranco - o valor so muda de destino.
+  const KART_ENTRA = 7;   // por segundo: quao rapido ele materializa
+  const KART_SAI = 5;     //              e quao rapido ele evapora
+  const KART_GIRO = 11;   // por segundo: o chassi perseguindo a direcao pedida
+
+  // Angulo de cada direcao do boneco. O kart nasce ja apontando pra ela, senao
+  // ele surgiria virado pra direita e giraria sozinho no primeiro quadro.
+  const ANG_DIR = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+
+  // Caminho mais curto no circulo. Sem isto, virar de 170 pra -170 graus faz o
+  // kart dar a volta inteira ao contrario em vez de cruzar os 180.
+  function aproximarAngulo(atual, alvo, f) {
+    let d = alvo - atual;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    return atual + d * f;
+  }
+
+  const teclas = new Set();
+  const poeira = [];   // rastro de derrapagem: { x, y, vida }
+
+  // Nao mover o boneco enquanto a pessoa DIGITA. Sem isto, escrever "was" no
+  // chat faz o avatar sair andando pela sede.
+  function digitando() {
+    const a = document.activeElement;
+    if (!a) return false;
+    const t = (a.tagName || '').toLowerCase();
+    return t === 'input' || t === 'textarea' || a.isContentEditable;
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (digitando()) return;
+    teclas.add(e.code);
+    // as setas rolam a pagina; W A S D nao, entao so estas precisam de freio
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  });
+  window.addEventListener('keyup', (e) => teclas.delete(e.code));
+  // Perder o foco da janela com tecla apertada deixava o boneco andando sozinho
+  // pra sempre, porque o keyup acontecia fora da pagina.
+  window.addEventListener('blur', () => teclas.clear());
+  // 10 envios por segundo, e nao 22. O movimento e o maior gasto de trafego da
+  // sede: cada pacote vai pra TODO mundo online, e hospedagem cobra por GB. Quem
+  // olha nao percebe - interpolarRemotos anda o boneco na velocidade estimada
+  // entre um pacote e outro, e fica ate mais liso que antes.
+  const MOVE_SEND_INTERVAL = 100; // ms
   // Resolucao interna do mapa: cada tile de 32 e desenhado em 128 pixels de
   // verdade. E o que da espaco pra detalhe (moldura de monitor, trama da
   // cadeira, brilho de 1px) em vez de blocao.
@@ -251,6 +310,9 @@
     // Sem ela o recurso nao existe: um movel com link e visualmente identico a
     // um sem link, e ninguem clica no que nao parece clicavel.
     desenharMarcasDeConteudo(ctx, TILE);
+    desenharTelaNaTV(ctx, TILE);
+    desenharPortas(ctx, TILE);
+    desenharPoeira(ctx);
 
     if (celulaAlvo && Decorador.estaPintando()) {
       const podeAqui = Decorador.podeColocarEm(celulaAlvo.col, celulaAlvo.row, celulaAlvo.x, celulaAlvo.y);
@@ -264,6 +326,245 @@
       );
       ctx.restore();
     }
+  }
+
+  // Porta que abre quando alguem chega perto.
+  //
+  // Ela e CAMINHAVEL: nunca fecha passagem. O que ela faz e dizer que ali e
+  // passagem - antes as portas da sede eram buracos na parede, e num corredor
+  // de parede continua um buraco nao le como porta, le como parede faltando.
+  //
+  // Fica no passe de cada quadro, e nao no pre-render, porque o quadro da
+  // animacao muda com a posicao das pessoas.
+  //
+  // Medidas tiradas da folha, nao chutadas: o quadro FECHADO ocupa x 32..63 e
+  // y 16..63 do bloco de 2x2 (1 tile de largura por 1,5 de altura, comecando
+  // meio tile acima da celula); o ABERTO e a lasca de 8px em x 28..35.
+  // Rastro de derrapagem. Fica embaixo do boneco de proposito: poeira sai do
+  // chao, e por cima ela taparia os pes de quem esta correndo.
+  function desenharPoeira(ctx) {
+    if (!poeira.length) return;
+    ctx.save();
+    poeira.forEach((g) => {
+      const t = Math.max(0, g.vida);
+      ctx.fillStyle = 'rgba(210,200,180,' + (t * 0.45).toFixed(3) + ')';
+      const raio = 3 + (1 - t) * 5;
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, raio, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // PORTA DESENHADA, e nao tirada do pacote.
+  //
+  // A folha do LPC (`12-panel-door-a`) e uma porta vista DE FRENTE: ela assume
+  // parede alta, de 3 tiles. A sede ve o muro DE CIMA, como uma faixa de 1 tile.
+  // Tentei encaixar aquela arte de tres jeitos - inteira (sobrava meio tile),
+  // girada 90 graus (virava tabua deitada) e encolhida (ficou baixa e estranha)
+  // - e procurei substituta em acervo aberto: o que existe e a propria LPC
+  // Animated Doors, porta de nave espacial ou tileset generico. Nenhuma feita
+  // pra muro de 1 tile visto de cima.
+  //
+  // Entao a porta e desenhada aqui, na projecao certa: visto de cima, o que se
+  // ve de uma porta e uma TABUA girando em torno da dobradica. Fechada, ela
+  // deita no vao; aberta, aponta pra dentro da sala. Isso nao tem como ficar
+  // "cortado" nem "atravessado" - a geometria e a do nosso mapa.
+  const PORTA_PERTO = 1.8;         // em tiles: a que distancia ela abre
+  const PORTA_VELOCIDADE = 0.10;   // quanto do giro anda por quadro
+  const PORTA_ESPESSURA = 7;       // em unidades de 128 por tile... nao: em px de mundo
+  const PORTA_MADEIRA = '#9c6b3f';
+  const PORTA_MADEIRA_CLARA = '#b8834f';
+  const PORTA_MADEIRA_ESCURA = '#6f4a2b';
+  // Porta de VIDRO, pra entrada. Escritorio de verdade poe vidro na rua e
+  // madeira dentro, e de cima o vidro tem outra vantagem: le como passagem
+  // mesmo fechado, porque se enxerga atraves dele.
+  const PORTA_VIDRO = '#8fc5e0';
+  const PORTA_VIDRO_CLARO = '#c2e4f2';
+  const PORTA_METAL = '#59617a';
+  const PORTA_METAL_CLARO = '#8b93a8';
+
+  // Quanto cada porta esta aberta, de 0 a 1. Guardado entre quadros - e o que
+  // faz ela GIRAR em vez de trocar de estado num piscar.
+  const aberturaDaPorta = new Map();
+
+  function desenharPortas(ctx, TILE) {
+    if (!window.OfficeMap) return;
+    const M = OfficeMap;
+
+    for (let r = 0; r < M.ROWS; r++) {
+      for (let c = 0; c < M.COLS; c++) {
+        if (M.tiles[r][c] !== M.PORTA) continue;
+
+        // Alguem por perto? Distancia pelo centro da celula, em tiles.
+        const cx = c * TILE + TILE / 2;
+        const cy = r * TILE + TILE / 2;
+        let aberta = false;
+        players.forEach((p) => {
+          if (aberta) return;
+          const d = Math.hypot(p.displayX - cx, p.displayY - cy) / TILE;
+          if (d <= PORTA_PERTO) aberta = true;
+        });
+
+        // Porta dupla: cada folha recua pra sua propria ponta.
+        const parEsquerda = M.tiles[r][c + 1] === M.PORTA;
+        const parDireita = M.tiles[r][c - 1] === M.PORTA;
+
+        const chave = c + ',' + r;
+        const alvo = aberta ? 1 : 0;
+        let t = aberturaDaPorta.has(chave) ? aberturaDaPorta.get(chave) : 0;
+        if (t < alvo) t = Math.min(alvo, t + PORTA_VELOCIDADE);
+        else if (t > alvo) t = Math.max(alvo, t - PORTA_VELOCIDADE);
+        aberturaDaPorta.set(chave, t);
+
+        // Vidro na FACHADA, madeira por dentro: porta na casca do predio (linha
+        // 2 ou 30, coluna 2 ou 45) e de vidro. E o que escritorio faz, e de
+        // cima o vidro ainda ajuda - le como passagem mesmo fechado.
+        const deVidro = r === 2 || r === 30 || c === 2 || c === 45;
+
+        const jamba = 4;
+        const x0 = c * TILE;
+        const y0 = r * TILE;
+
+        // batente: so no lado que da na parede (entre duas folhas ha vao)
+        ctx.fillStyle = '#3c4354';
+        if (!parDireita) ctx.fillRect(x0, y0, jamba, TILE);
+        if (!parEsquerda) ctx.fillRect(x0 + TILE - jamba, y0, jamba, TILE);
+        ctx.fillStyle = '#5b6376';
+        if (!parDireita) ctx.fillRect(x0, y0, jamba, 8);
+        if (!parEsquerda) ctx.fillRect(x0 + TILE - jamba, y0, jamba, 8);
+
+        // A FOLHA. Vista de cima, porta fechada nao e um risco: e o VAO CHEIO
+        // de madeira, com a mesma estrutura de faixa do muro (luz em cima,
+        // corpo embaixo). Abrindo, ela RECUA pra dentro da propria ombreira e
+        // descobre o chao, que ja esta desenhado no mapa.
+        //
+        // Recuar em vez de girar e o que escritorio visto de cima faz. Girar
+        // exigiria a folha varrendo o tile vizinho, e foi o que deu errado: a
+        // tabua caia na grama e as duas folhas se encavalavam.
+        // O vao vai de batente a batente - e onde NAO ha batente (entre as duas
+        // folhas de uma porta dupla) ele vai ate a borda da celula. Sem isso
+        // sobrava uma fresta de 4px no meio do par, e dava pra ver a rua por ela
+        // com as duas portas fechadas.
+        const bordaEsq = parDireita ? x0 : x0 + jamba;
+        const bordaDir = parEsquerda ? x0 + TILE : x0 + TILE - jamba;
+        const vao = bordaDir - bordaEsq;
+        const larg = Math.max(0, Math.round(vao * (1 - t)));
+        if (larg > 0) {
+          const fx = parDireita ? bordaDir - larg : bordaEsq;
+          if (deVidro) {
+            // VIDRO: caixilho de metal, pano de vidro claro e um risco de
+            // reflexo. A mesma linguagem das janelas da fachada.
+            ctx.fillStyle = PORTA_METAL;
+            ctx.fillRect(fx, y0, larg, TILE);
+            ctx.fillStyle = PORTA_VIDRO;
+            ctx.fillRect(fx + 2, y0 + 3, larg - 4, TILE - 7);
+            ctx.fillStyle = PORTA_VIDRO_CLARO;
+            ctx.fillRect(fx + 2, y0 + 3, larg - 4, 5);
+            if (larg > 10) {
+              // reflexo em diagonal, em degraus (nada de linha lisa: o resto
+              // da sede e pixel, e diagonal suave destoa)
+              ctx.fillStyle = 'rgba(255,255,255,0.45)';
+              for (let k = 0; k < 5; k++) {
+                const rx = fx + 3 + k * 2;
+                if (rx < fx + larg - 3) ctx.fillRect(rx, y0 + 18 - k * 2, 2, 3);
+              }
+            }
+            ctx.fillStyle = PORTA_METAL_CLARO;
+            if (larg > 8) {
+              // puxador vertical, na ponta que abre
+              const px = parDireita ? fx + 3 : fx + larg - 4;
+              ctx.fillRect(px, y0 + 9, 2, TILE - 18);
+            }
+          } else {
+            ctx.fillStyle = PORTA_MADEIRA_ESCURA;
+            ctx.fillRect(fx, y0, larg, TILE);
+            ctx.fillStyle = PORTA_MADEIRA;
+            ctx.fillRect(fx, y0 + 2, larg, TILE - 4);
+            ctx.fillStyle = PORTA_MADEIRA_CLARA;
+            ctx.fillRect(fx, y0 + 2, larg, 6);                // luz no topo, como o muro
+            ctx.fillStyle = PORTA_MADEIRA_ESCURA;
+            ctx.fillRect(fx, y0 + TILE - 6, larg, 4);          // sombra na base
+            if (larg > 14) {
+              ctx.fillStyle = PORTA_MADEIRA_ESCURA;
+              ctx.fillRect(fx + 3, y0 + 11, larg - 6, 1);
+              ctx.fillRect(fx + 3, y0 + 20, larg - 6, 1);
+            }
+            if (larg > 8) {
+              ctx.fillStyle = '#d8cf9a';
+              const mx = parDireita ? fx + 3 : fx + larg - 5;
+              ctx.fillRect(mx, y0 + 14, 3, 4);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // A TV espelha a tela de quem esta apresentando NA MESMA SALA que ela.
+  //
+  // Mesma sala e a regra inteira: sem ela, a apresentacao da reuniao apareceria
+  // tambem numa TV do outro lado do andar, pra quem nao esta na conversa. E o
+  // mesmo criterio que o calls.js ja usa pro som.
+  //
+  // Fica FORA do pre-render, no passe de cada quadro, porque video muda 30
+  // vezes por segundo e o mapa pre-renderizado e estatico.
+  function desenharTelaNaTV(ctx, TILE) {
+    if (!window.Calls || !window.OfficeMap) return;
+
+    // Ninguem apresentando: nem sai procurando TV no mapa.
+    let quem = null;
+    players.forEach((p) => { if (p.dividindoTela) quem = p; });
+    if (!quem) return;
+
+    const video = quem.id === selfId
+      ? Calls.videoDaTelaLocal()
+      : Calls.getVideoRemoto(quem.id);
+    if (!video || !video.videoWidth) return;
+
+    const M = OfficeMap;
+    const salaDele = M.getRoomAtTile(Math.floor(quem.x / TILE), Math.floor(quem.y / TILE));
+    if (!salaDele) return;
+
+    for (let r = 0; r < M.ROWS; r++) {
+      for (let c = 0; c < M.COLS; c++) {
+        if (M.tiles[r][c] !== M.TV) continue;
+        if (M.tiles[r][c - 1] === M.TV) continue;   // so a ponta esquerda do aparelho
+        const sala = M.getRoomAtTile(c, r);
+        if (!sala || sala.id !== salaDele.id) continue;
+
+        let c1 = c;
+        while (M.tiles[r][c1 + 1] === M.TV) c1++;
+
+        // A moldura da TV: mesma caixa que o `telaLigada` pinta, pra imagem
+        // cair exatamente dentro dela e nao por cima da borda do aparelho.
+        const x0 = c * TILE + (TILE * 18) / 128;
+        const x1 = (c1 + 1) * TILE - (TILE * 18) / 128;
+        const y0 = r * TILE - (TILE * 86) / 128;
+        const y1 = r * TILE + (TILE * 66) / 128;
+        desenharVideoCobrindo(ctx, video, x0, y0, x1 - x0, y1 - y0);
+
+        // vidro por cima, pra tela nao ficar com cara de adesivo colado
+        ctx.save();
+        ctx.fillStyle = 'rgba(150,200,255,0.10)';
+        ctx.fillRect(x0, y0, x1 - x0, (y1 - y0) * 0.35);
+        ctx.restore();
+      }
+    }
+  }
+
+  // Recorta o video pra COBRIR o retangulo sem deformar. Esticar a imagem numa
+  // tela larga achata rosto e texto, que e justamente o que se quer ler numa
+  // apresentacao.
+  function desenharVideoCobrindo(ctx, video, x, y, larg, alt) {
+    const escala = Math.max(larg / video.videoWidth, alt / video.videoHeight);
+    const lv = larg / escala;
+    const av = alt / escala;
+    ctx.drawImage(
+      video,
+      (video.videoWidth - lv) / 2, (video.videoHeight - av) / 2, lv, av,
+      x, y, larg, alt
+    );
   }
 
   // Um selo pequeno no canto de cima do movel, com um brilho que respira. Nao e
@@ -651,11 +952,23 @@
   }
 
   function bordasMuro(tiles, r, c) {
+    const cima = !ehMuroVisual(tiles, r - 1, c);
+    const esq = !ehMuroVisual(tiles, r, c - 1);
+    const dir = !ehMuroVisual(tiles, r, c + 1);
     return {
-      cima: !ehMuroVisual(tiles, r - 1, c),
+      cima,
       baixo: !ehMuroVisual(tiles, r + 1, c),
-      esq: !ehMuroVisual(tiles, r, c - 1),
-      dir: !ehMuroVisual(tiles, r, c + 1),
+      esq,
+      dir,
+      // `deitado` = a celula faz parte de uma fileira HORIZONTAL de muro
+      // (tem muro na esquerda ou na direita).
+      //
+      // Existe por causa do buraco no L. A faixa clara do topo so era pintada
+      // quando nao havia muro acima; num encontro em L a celula onde a parede
+      // vertical desce TEM muro acima, entao era a unica da fileira sem faixa -
+      // e no meio de uma linha continua isso le como buraco. Numa fileira
+      // horizontal a faixa tem que atravessar a emenda.
+      deitado: !esq || !dir,
     };
   }
 
@@ -663,7 +976,9 @@
   // que ocupa a celula dele.
   function pintarMuro(ctx, x, y, b) {
     q(ctx, x, y, 0, 0, 128, 128, '#4a5162');
-    if (b.cima) {
+    // A face de cima aparece no topo do muro E ao longo de toda fileira
+    // horizontal, pra linha nao quebrar nos encontros em L e em T.
+    if (b.cima || b.deitado) {
       q(ctx, x, y, 0, 0, 128, 30, '#5b6376');
       q(ctx, x, y, 0, 0, 128, 3, '#6f7889'); // luz na quina
       q(ctx, x, y, 0, 30, 128, 2, '#3c4354'); // sombra sob a face de cima
@@ -688,14 +1003,54 @@
   // sao opacos e ocupam a celula inteira, entao tapavam o muro do mesmo jeito e
   // o corredor continuava parecendo aberto.
   function faceDoMuro(ctx, x, y, b) {
-    if (b.cima) {
+    if (b.cima || b.deitado) {
       q(ctx, x, y, 0, 0, 128, 30, '#5b6376');
       q(ctx, x, y, 0, 0, 128, 3, '#6f7889');
       q(ctx, x, y, 0, 30, 128, 2, '#3c4354');
-      q(ctx, x, y, 0, 0, 128, 2, TRACO);
+      // O contorno de cima so no topo DE VERDADE: na emenda com uma parede
+      // vertical ele cortaria a parede que segue pra cima.
+      if (b.cima) q(ctx, x, y, 0, 0, 128, 2, TRACO);
     }
     if (b.esq) q(ctx, x, y, 0, 0, 2, 128, TRACO);
     if (b.dir) q(ctx, x, y, 126, 0, 2, 128, TRACO);
+  }
+
+  // Rabisco de caneta na lousa. Nada abaixo de 16 unidades finas: a lousa tem
+  // 128 de largura e vira 32 pixels na tela, entao traco de 4 unidades some.
+  function escritaNaLousa(ctx, x, y) {
+    q(ctx, x, y, 28, 40, 60, 6, '#3f7fc4');
+    q(ctx, x, y, 28, 56, 44, 6, '#3f7fc4');
+    q(ctx, x, y, 28, 72, 52, 6, '#e0607e');
+    q(ctx, x, y, 84, 70, 16, 16, '#3fa85c');
+  }
+
+  // Onde esta esta celula dentro da TV de 3 tiles: a tela e um retangulo so,
+  // atravessando as tres, entao a borda escura do aparelho fica nas pontas.
+  function posicaoNaTV(tiles, c, r) {
+    const igual = (cc) => tiles[r] && tiles[r][cc] === OfficeMap.TV;
+    if (!igual(c - 1)) return 'esq';
+    if (!igual(c + 1)) return 'dir';
+    return 'meio';
+  }
+
+  // Tela acesa: azul do projetor com um par de blocos claros de "slide". Sem
+  // isto a TV e um retangulo preto, que na parede le como buraco.
+  function telaLigada(ctx, x, y, onde) {
+    // A arte da TV tem 2 tiles de altura e e ancorada na celula de BAIXO: a
+    // tela comeca quase um tile ACIMA desta celula. Por isso o `ay` negativo -
+    // desenhando so a partir de 0, acendia a metade de baixo e a de cima
+    // continuava preta, que foi o que apareceu na primeira tentativa.
+    const x0 = onde === 'esq' ? 18 : 0;
+    const larg = 128 - (onde === 'esq' ? 18 : 0) - (onde === 'dir' ? 18 : 0);
+    q(ctx, x, y, x0, -86, larg, 152, '#2f6ea8');
+    q(ctx, x, y, x0, -86, larg, 34, '#3f8bc9');   // luz no alto da tela
+    if (onde === 'meio') {
+      q(ctx, x, y, 14, -40, 64, 10, 'rgba(255,255,255,0.88)');
+      q(ctx, x, y, 14, -16, 44, 10, 'rgba(255,255,255,0.60)');
+      q(ctx, x, y, 14, 8, 52, 10, 'rgba(255,255,255,0.45)');
+    }
+    if (onde === 'esq') q(ctx, x, y, 40, -40, 56, 10, 'rgba(255,255,255,0.50)');
+    if (onde === 'dir') q(ctx, x, y, 12, -16, 48, 10, 'rgba(255,255,255,0.35)');
   }
 
   function bordasParede(tiles, r, c) {
@@ -1181,7 +1536,17 @@
     // sai desenhado como antes, em vez de sair com buraco.
     // Creditos: public/assets/lpc-moveis/CREDITS.md
     if (window.Sprites
-        && Sprites.desenhar(ctx, c, r, type, TILE, tiles, dentroDaRegraDoMuro)) return;
+        && Sprites.desenhar(ctx, c, r, type, TILE, tiles, dentroDaRegraDoMuro)) {
+      // Conteudo desenhado POR CIMA da arte do pacote.
+      //
+      // A lousa do pacote e uma moldura vazia e a TV e uma tela apagada: as
+      // duas leem como "nada" na parede da sala de reuniao. A moldura e o
+      // aparelho vem do pacote, que e o que da a forma certa; o que esta
+      // ESCRITO neles e desenhado, porque conteudo de tela nenhum pacote traz.
+      if (type === M.LOUSA) escritaNaLousa(ctx, x, y);
+      else if (type === M.TV) telaLigada(ctx, x, y, posicaoNaTV(tiles, c, r));
+      return;
+    }
 
     if (type === M.PAREDE) {
       // parede cinza-azulada escura, como as divisorias do Gather.
@@ -2783,6 +3148,38 @@
   let zoomDoUsuario = 2;   // o que a pessoa escolheu no +/-, pra voltar depois
   let focoCamera = null;   // ponto do mundo pra centralizar; null = segue a pessoa
 
+  // ------------------------------------------------------------- celular
+  // Um dedo e o clique de sempre: o navegador transforma o toque em 'click', e
+  // o boneco anda ate ali. Dois dedos fazem pinca de zoom - no celular nao ha
+  // botao de roda nem espaco sobrando pro +/-. O canvas tem touch-action: none
+  // (style.css): sem isso a pinca daria zoom na PAGINA inteira, com a interface
+  // junto, em vez de no mapa.
+  let pincaFimEm = 0;
+
+  function ligarPinca() {
+    let inicio = null;   // { dist, zoom }
+    const distancia = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 2) return;
+      inicio = { dist: distancia(e.touches) || 1, zoom: zoomAlvo };
+      e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+      if (!inicio || e.touches.length !== 2) return;
+      e.preventDefault();
+      const z = inicio.zoom * (distancia(e.touches) / inicio.dist);
+      zoomAlvo = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 100) / 100));
+      zoomDoUsuario = zoomAlvo;
+    }, { passive: false });
+    const soltar = (e) => {
+      if (!inicio || e.touches.length >= 2) return;
+      inicio = null;
+      pincaFimEm = performance.now();
+    };
+    canvas.addEventListener('touchend', soltar);
+    canvas.addEventListener('touchcancel', soltar);
+  }
+
   function ajustarZoom(passo) {
     zoomAlvo = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((zoomAlvo + passo) * 100) / 100));
     zoomDoUsuario = zoomAlvo;
@@ -2892,6 +3289,8 @@
       moveTarget: null,
       path: [],
       destinoFinal: null,
+      vx: 0,
+      vy: 0,
     });
   }
 
@@ -2911,7 +3310,13 @@
       moving: !!data.moving,
       sentado: !!data.sentado,
       status: STATUS_ORDEM.includes(data.status) ? data.status : 'livre',
+      dividindoTela: !!data.dividindoTela,
       isAdmin: !!data.isAdmin,
+      // Chamada marcada e livro aberto vem junto no `init`: quem chega depois
+      // ja cai na chamada em andamento em vez de ficar de fora ate a proxima
+      // mudanca de estado.
+      chamada: data.chamada || null,
+      lendo: data.lendo || null,
       reacao: null,
     };
   }
@@ -2967,7 +3372,104 @@
     const self = players.get(selfId);
     if (!self) return;
 
+    // ---- teclado: WASD/setas, com Shift virando kart --------------------
+    const ix = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0)
+      - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0);
+    const iy = (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0)
+      - (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0);
+    const temInput = ix !== 0 || iy !== 0;
+    const kart = teclas.has('ShiftLeft') || teclas.has('ShiftRight');
+
+    if (temInput) {
+      // teclado manda: cancela o caminho do clique
+      self.moveTarget = null;
+      self.path = [];
+      self.destinoFinal = null;
+    }
+
+    if (self.vx === undefined) { self.vx = 0; self.vy = 0; }
+
+    if (temInput || self.vx || self.vy) {
+      const n = Math.hypot(ix, iy) || 1;
+      if (kart && temInput) {
+        // acelera na direcao pedida, MAS mantem o que ja tinha - e a inercia
+        // que faz a curva sair aberta
+        self.vx += (ix / n) * ACEL_KART * dt;
+        self.vy += (iy / n) * ACEL_KART * dt;
+      } else if (temInput) {
+        // no passo normal a resposta e imediata: andar dentro do escritorio
+        // tem que ser preciso
+        self.vx = (ix / n) * SPEED;
+        self.vy = (iy / n) * SPEED;
+      }
+      if (!temInput || kart) {
+        const freio = Math.exp(-ATRITO_KART * dt);
+        self.vx *= freio;
+        self.vy *= freio;
+      }
+      const v = Math.hypot(self.vx, self.vy);
+      const teto = kart ? SPEED_KART : SPEED;
+      if (v > teto) { self.vx = (self.vx / v) * teto; self.vy = (self.vy / v) * teto; }
+      if (v < 4 && !temInput) { self.vx = 0; self.vy = 0; }
+    }
+
     let moving = false;
+
+    if (self.vx || self.vy) {
+      const antes = { x: self.x, y: self.y };
+      const r = tryMove(self.x, self.y, self.vx * dt, self.vy * dt);
+      if (r.x === antes.x && self.vx) self.vx = 0;   // bateu na parede: para o eixo
+      if (r.y === antes.y && self.vy) self.vy = 0;
+      self.x = r.x;
+      self.y = r.y;
+
+      const vel = Math.hypot(self.vx, self.vy);
+      moving = vel > 6;
+      if (temInput) {
+        if (Math.abs(ix) > Math.abs(iy)) self.dir = ix > 0 ? 'right' : 'left';
+        else if (iy !== 0) self.dir = iy > 0 ? 'down' : 'up';
+      }
+
+      // POEIRA: so quando esta derrapando de verdade, ou seja quando a
+      // velocidade aponta pra um lado diferente do que a pessoa esta pedindo.
+      if (kart && vel > SPEED_KART * 0.45 && temInput) {
+        const n2 = Math.hypot(ix, iy) || 1;
+        const alinhamento = (self.vx * (ix / n2) + self.vy * (iy / n2)) / vel;
+        if (alinhamento < 0.93 && poeira.length < POEIRA_MAX) {
+          poeira.push({ x: self.x, y: self.y + 8, vida: 1 });
+        }
+      }
+    }
+
+    // ---- o kart em si: aparece, gira e some ------------------------------
+    if (self.kart === undefined) { self.kart = 0; self.kartAng = 0; }
+    // Nasce apontando pro lado que o boneco ja esta olhando.
+    if (self.kart === 0 && kart) self.kartAng = ANG_DIR[self.dir] || 0;
+
+    const alvoKart = kart ? 1 : 0;
+    const taxa = alvoKart > self.kart ? KART_ENTRA : KART_SAI;
+    self.kart += (alvoKart - self.kart) * (1 - Math.exp(-taxa * dt));
+    // Encosta nas pontas, senao ele fica eternamente em 0.999 e nunca "some".
+    if (self.kart < 0.004) self.kart = 0;
+    if (self.kart > 0.996) self.kart = 1;
+
+    // Pra onde o carrinho esta REALMENTE indo (a direcao da velocidade), e nao
+    // pra onde a pessoa esta apontando.
+    //
+    // Isso importa: o desenho compara este angulo com a direcao pra qual o
+    // boneco OLHA, e inclina o carrinho pela diferenca. Enquanto a pessoa nao
+    // vira, os dois batem e o carrinho fica reto; no meio da curva o boneco ja
+    // olha pro lado novo e a velocidade ainda aponta pro antigo - e ai ele
+    // tomba. Se eu perseguisse o input aqui, os dois seriam a mesma coisa e a
+    // inclinacao nunca apareceria.
+    if (self.kart > 0) {
+      const vel = Math.hypot(self.vx || 0, self.vy || 0);
+      let alvoAng = self.kartAng;
+      if (vel > 20) alvoAng = Math.atan2(self.vy, self.vx);
+      else if (temInput) alvoAng = Math.atan2(iy, ix);
+      self.kartAng = aproximarAngulo(self.kartAng, alvoAng, 1 - Math.exp(-KART_GIRO * dt));
+    }
+
     if (self.moveTarget) {
       const dxTotal = self.moveTarget.x - self.x;
       const dyTotal = self.moveTarget.y - self.y;
@@ -3022,28 +3524,55 @@
     self.displayX = self.x;
     self.displayY = self.y;
 
+    for (let i = poeira.length - 1; i >= 0; i--) {
+      poeira[i].vida -= dt * 1.8;
+      if (poeira[i].vida <= 0) poeira.splice(i, 1);
+    }
+
     const agora = performance.now();
-    const mudou =
-      lastSentState.x !== self.x || lastSentState.y !== self.y ||
-      lastSentState.dir !== self.dir || lastSentState.moving !== self.moving ||
-      lastSentState.sentado !== self.sentado;
+    // O kart vai arredondado: a 2 casas no angulo e a 1/20 no valor. Sem isso
+    // ele mudaria em TODO quadro (e um numero que persegue outro, nunca chega
+    // redondo) e a pessoa parada de Shift apertado viraria uma fonte de
+    // mensagem continua pro servidor sem sair do lugar.
+    // Posicao em pixel inteiro: casa decimal de pixel nao aparece na tela e
+    // engordava cada pacote em ~20 bytes.
+    const estado = {
+      x: Math.round(self.x), y: Math.round(self.y), dir: self.dir, moving: self.moving, sentado: self.sentado,
+      kart: Math.round(self.kart * 20) / 20,
+      kartAng: Math.round(self.kartAng * 100) / 100,
+    };
+    const mudou = Object.keys(estado).some((c) => lastSentState[c] !== estado[c]);
     if (mudou && agora - lastMoveSent > MOVE_SEND_INTERVAL) {
-      Network.sendMove({
-        x: self.x, y: self.y, dir: self.dir, moving: self.moving, sentado: self.sentado,
-      });
+      Network.sendMove(estado);
       lastMoveSent = agora;
-      lastSentState = {
-        x: self.x, y: self.y, dir: self.dir, moving: self.moving, sentado: self.sentado,
-      };
+      lastSentState = estado;
     }
   }
 
   function interpolarRemotos(dt) {
     const fator = Math.min(1, dt * 12);
+    const agora = performance.now();
     players.forEach((p) => {
       if (p.id === selfId) return;
-      p.displayX += (p.targetX - p.displayX) * fator;
-      p.displayY += (p.targetY - p.displayY) * fator;
+      // Posicao chega 10x por segundo (MOVE_SEND_INTERVAL). Perseguir so o
+      // ultimo ponto faz a pessoa andar aos trancos: acelera quando o pacote
+      // chega, freia ate o proximo. Entao a mira anda na velocidade estimada
+      // enquanto o proximo nao vem - mas so por um intervalo e meio: pacote
+      // atrasado nao pode fazer o boneco atravessar parede. Simulado: a
+      // velocidade na tela oscilava 18% a 22 pacotes/s e fica em 0% assim.
+      const idade = (agora - (p.tPacote || 0)) / 1000;
+      const adiante = idade < 0.15 ? idade : 0;
+      const miraX = p.targetX + (p.vx || 0) * adiante;
+      const miraY = p.targetY + (p.vy || 0) * adiante;
+      p.displayX += (miraX - p.displayX) * fator;
+      p.displayY += (miraY - p.displayY) * fator;
+
+      // Mesmo tratamento pro kart: quem olha ve a mesma animacao suave que
+      // quem dirige, e nao um kart piscando a cada pacote.
+      if (p.kart === undefined) { p.kart = p.kartAlvo || 0; p.kartAng = p.kartAngAlvo || 0; }
+      p.kart += ((p.kartAlvo || 0) - p.kart) * fator;
+      if (p.kart < 0.004) p.kart = 0;
+      p.kartAng = aproximarAngulo(p.kartAng, p.kartAngAlvo || 0, fator);
     });
   }
 
@@ -3097,6 +3626,215 @@
     ctx.restore();
   }
 
+  // ---- o carrinho, que e o "kart" da sede ---------------------------------
+  //
+  // Arte do PROPRIO pacote: moveable/shopping-cart.png, de Eliza Wyatt, sob
+  // OGA-BY 3.0 (esta no credits.txt da pasta moveable).
+  //
+  // A minha primeira tentativa foi desenhar um kart, e ficou pessimo por um
+  // motivo que da pra nomear: eu desenhei em VISTA DE CIMA debaixo de um boneco
+  // em 3/4. E a mesma incompatibilidade de projecao que derrubou as portas.
+  // Procurei kart pronto e NAO EXISTE em LPC - o gerador oficial tem 21
+  // categorias e nenhuma de veiculo. Esta arte, ao contrario, ja e 3/4, ja e do
+  // mesmo pacote e ja e do mesmo traco.
+  //
+  // A folha e 32x64 = DOIS quadros de 32: o mesmo carrinho espelhado, um com a
+  // alca pra direita e outro pra esquerda. Entao esquerda e direita vem
+  // prontas. Cima e baixo nao existem na folha e sao desenhadas aqui, com as
+  // cores TIRADAS da propria arte (amostradas da folha, nao escolhidas a olho).
+  const FOLHA_CARRINHO = new Image();
+  FOLHA_CARRINHO.src = 'assets/lpc-moveis/moveable/shopping-cart.png';
+  // Amostradas de moveable/shopping-cart.png: as 8 cores que aparecem em mais
+  // de 40 pixels, mais o verde da empunhadura.
+  // ALTURA e CORTE sao MEDIDOS. Contando os pixels opacos de cada uma das 32
+  // linhas da folha:
+  //
+  //     linhas  1..3    a alca, estreita
+  //     linhas  4..11   o aro da cesta, na largura toda (x 1..30)
+  //     linhas 12..25   o corpo da cesta, afinando (x 6..30)
+  //     linhas 26..30   as rodas (x 8..26)
+  //
+  // ALTURA = 30 sai de uma conta: o boneco tem 46px e a cintura fica uns 22px
+  // acima do pe; pra cesta engolir a pessoa da cintura pra baixo, o aro (linha
+  // 4) tem que cair nessa altura, e isso da 30px de carrinho.
+  //
+  // CORTE = 12 e onde o aro acaba e o corpo da cesta comeca: a linha que separa
+  // o que fica ATRAS da pessoa do que fica NA FRENTE dela.
+  //
+  // MIOLO = a faixa de colunas que vira a vista de frente e de tras. Ver
+  // desenharCarrinho.
+  const ALTURA_CARRINHO = 30;
+  const CORTE_CARRINHO = 12;
+  // ---- as duas vistas que a folha nao tem ---------------------------------
+  //
+  // Norte e sul nao existem no pacote, e nao existem em lugar nenhum: procurei
+  // carrinho de 4 direcoes e nao ha, nem no repositorio da autora (o arquivo
+  // original tem os mesmos 1.405 bytes e os mesmos dois quadros). Entao sao
+  // desenhadas aqui - mas desenhadas como PIXEL ART, com a gramatica da folha,
+  // e nao com retangulos meus.
+  //
+  // A gramatica saiu de despejar o quadro de lado pixel a pixel:
+  //   - contorno SEMPRE `a` (#343043), 1px, em volta de tudo
+  //   - trama: vertical a cada 3 colunas, e um fio horizontal claro `h` a cada
+  //     3 linhas. E isso que faz ler como cesta e nao como caixa
+  //   - o aro ganha uma linha `b` (a cor mais clara da folha) em cima
+  //   - roda de 5x5, no mesmo desenho das da folha
+  //   - onze cores, todas da folha. Nenhuma inventada.
+  //
+  // A perspectiva e o que faz as duas funcionarem: o aro de TRAS e mais
+  // estreito e mais alto (esta mais longe), o aro da FRENTE e mais largo e mais
+  // baixo, e o painel afunila pra baixo. Quem senta aparece entre os dois.
+  //
+  // Duas versoes anteriores foram pro lixo aqui: um desenho meu a mao (virou
+  // grade de cadeia) e um recorte das colunas do meio do quadro de lado
+  // (continuava com a perspectiva de lado, so que estreita).
+  const PALETA_CARRINHO = {
+    a: '#343043', b: '#c7cfcc', c: '#818e97', d: '#86b278', e: '#456238',
+    f: '#6a7587', g: '#4b4b60', h: '#a8b3b8', i: '#29253a', j: '#1b192b',
+  };
+
+  const CARRINHO_SUL = [
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '........aaaaaaaaaaaaaaaa........',
+    '........abbbbbbbbbbbbbba........',
+    '........ahhhhhhhhhhhhhha........',
+    '........afcfccfccfccfcca........',
+    '........agiiiiiiiiiiiiga........',
+    '........agiiiiiiiiiiiiga........',
+    '........agiiiiiiiiiiiiga........',
+    '........afiiiiiiiiiiiifa........',
+    '......aaaaaaaaaaaaaaaaaaaa......',
+    '......abbbbbbbbbbbbbbbbbba......',
+    '......ahhhhhhhhhhhhhhhhhha......',
+    '......afifiififiififiififa......',
+    '......acacaacacaacacaacaca......',
+    '......ahhhhhhhhhhhhhhhhhha......',
+    '......afifiififiififiififa......',
+    '......acacaacacaacacaacaca......',
+    '.......ahhhhhhhhhhhhhhhha.......',
+    '.......afifiififiififiifa.......',
+    '.......acacaacacaacacaaca.......',
+    '........ahhhhhhhhhhhhhha........',
+    '........agggggggggggggga........',
+    '........aaaaaaaaaaaaaaaa........',
+    '........gijig......gijig........',
+    '........ijjji......ijjji........',
+    '........jjgjj......jjgjj........',
+    '........ijjji......ijjji........',
+    '.........iji........iji.........',
+    '................................',
+  ];
+
+  // Igual ao sul, mais a BARRA DE EMPURRAR. Ela fica 1px mais larga que a cesta
+  // de cada lado e leva contorno em cima e embaixo: e isso que a faz ler como
+  // barra na frente da cesta, e nao como uma listra verde pintada nela.
+  const CARRINHO_NORTE = [
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '........aaaaaaaaaaaaaaaa........',
+    '........abbbbbbbbbbbbbba........',
+    '........ahhhhhhhhhhhhhha........',
+    '........afcfccfccfccfcca........',
+    '........agiiiiiiiiiiiiga........',
+    '........agiiiiiiiiiiiiga........',
+    '........agiiiiiiiiiiiiga........',
+    '........afiiiiiiiiiiiifa........',
+    '......aaaaaaaaaaaaaaaaaaaa......',
+    '......abbbbbbbbbbbbbbbbbba......',
+    '......ahhhhhhhhhhhhhhhhhha......',
+    '......afifiififiififiififa......',
+    '.....aaaaaaaaaaaaaaaaaaaaaa.....',
+    '.....adddddddddddddddddddda.....',
+    '.....aeeeeeeeeeeeeeeeeeeeea.....',
+    '.....aaaaaaaaaaaaaaaaaaaaaa.....',
+    '.......ahhhhhhhhhhhhhhhha.......',
+    '.......afifiififiififiifa.......',
+    '.......acacaacacaacacaaca.......',
+    '........ahhhhhhhhhhhhhha........',
+    '........agggggggggggggga........',
+    '........aaaaaaaaaaaaaaaa........',
+    '........gijig......gijig........',
+    '........ijjji......ijjji........',
+    '........jjgjj......jjgjj........',
+    '........ijjji......ijjji........',
+    '.........iji........iji.........',
+    '................................',
+  ];
+
+  function pintarMapaDoCarrinho(ctx, mapa) {
+    for (let y = 0; y < mapa.length; y++) {
+      const linha = mapa[y];
+      for (let x = 0; x < linha.length; x++) {
+        const cor = PALETA_CARRINHO[linha[x]];
+        if (!cor) continue;
+        ctx.fillStyle = cor;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  // `parte` e o ponto todo desta funcao:
+  //   'atras'  = aro e alca, desenhado ANTES do boneco (fica atras das costas)
+  //   'frente' = corpo da cesta e rodas, DEPOIS do boneco (tapa as pernas)
+  //
+  // Sem essa divisao o carrinho inteiro vinha por cima e a parede DE TRAS da
+  // cesta tapava o peito - que foi o Caio dizer "ele parece nao estar dentro do
+  // kart". Ninguem esta dentro de nada se a parede de tras passa na frente. E o
+  // mesmo raciocinio do encosto da cadeira.
+  //
+  // Leste e oeste saem da folha do pacote; norte e sul, dos mapas de pixel
+  // acima. O corte em 12 vale pros tres casos porque os tres foram construidos
+  // na mesma grade de 32.
+  function desenharCarrinho(ctx, x, y, dir, k, inclina, parte) {
+    if (k <= 0.01) return;
+    const deLado = dir === 'left' || dir === 'right';
+    if (deLado && !FOLHA_CARRINHO.naturalWidth) return;
+    const s = (0.7 + 0.3 * k) * (ALTURA_CARRINHO / 32);
+    const L = 32 * s;
+
+    ctx.save();
+    ctx.translate(x, y + 2 - L / 2);
+    // O carrinho tomba um pouco pro lado pra onde a pessoa esta VIRANDO
+    // enquanto o corpo ainda desliza reto. No maximo 14 graus de proposito -
+    // arte de pixel girada demais vira borrao.
+    if (inclina) ctx.rotate(Math.max(-0.25, Math.min(0.25, inclina)));
+    ctx.globalAlpha = Math.min(1, k * 1.5);
+    ctx.imageSmoothingEnabled = false;
+    // Daqui pra baixo tudo fala em coordenada da FOLHA (32x32), o que deixa os
+    // numeros medidos acima valerem literalmente no codigo.
+    ctx.translate(-L / 2, -L / 2);
+    ctx.scale(s, s);
+
+    ctx.beginPath();
+    if (parte === 'atras') ctx.rect(0, 0, 32, CORTE_CARRINHO);
+    else ctx.rect(0, CORTE_CARRINHO, 32, 32 - CORTE_CARRINHO);
+    ctx.clip();
+
+    if (deLado) {
+      // Quadro 0 = alca a direita (carrinho apontando pra ESQUERDA);
+      // quadro 1 = o espelho dele.
+      ctx.drawImage(FOLHA_CARRINHO, 0, (dir === 'left' ? 0 : 1) * 32, 32, 32, 0, 0, 32, 32);
+    } else {
+      pintarMapaDoCarrinho(ctx, dir === 'up' ? CARRINHO_NORTE : CARRINHO_SUL);
+    }
+    ctx.restore();
+  }
+
+  // Ate onde o boneco pode aparecer: o fundo da cesta (linha 25 da folha).
+  // Abaixo disso sao as rodas, e entre elas a folha e VAZIA - era por esse vao
+  // que os pes apareciam embaixo do carrinho. Recortar o boneco nesta linha
+  // resolve em todas as quatro direcoes de uma vez, em vez de eu tapar buraco
+  // direcao por direcao.
+  function fundoDaCesta(y, k) {
+    const s = (0.7 + 0.3 * k) * (ALTURA_CARRINHO / 32);
+    return y + 2 - 32 * s + 25 * s;
+  }
+
   function desenharAnelStatus(ctx, x, y, status) {
     ctx.save();
     ctx.strokeStyle = STATUS_COR[status] || STATUS_COR.livre;
@@ -3122,39 +3860,63 @@
 
   // Cracha do jogador no estilo Gather: pilula escura com bolinha de status
   // (ou fone, quando a pessoa esta numa chamada) e o nome do lado.
+  // A placa de nome.
+  //
+  // Era grande, roxa e em negrito, e flutuava bem acima da cabeca. Com uma
+  // pessoa so passava; com o escritorio cheio viravam etiquetas coloridas
+  // tapando o cenario, e e isso que o Caio leu como amador.
+  //
+  // A referencia (`referencias/03-site-pods-por-time.png`) faz o contrario, e
+  // faz por um motivo: a placa e INFORMACAO DE APOIO, nao o assunto da tela. La
+  // ela e uma pilula ESCURA E TRANSLUCIDA, pequena, colada no boneco. O que
+  // chama atencao continua sendo o boneco e o escritorio.
+  //
+  // Entao: fundo escuro em vez de roxo saturado, 10px em vez de 11 em negrito,
+  // 16px de altura em vez de 19, e um ponto redondo de status no lugar do
+  // quadradinho. Quem sou EU ganha um contorno claro de 1px - continua dando
+  // pra achar o proprio boneco de relance, sem precisar de cor gritante.
   function desenharCracha(ctx, x, y, texto, corStatus, emChamada, isSelf) {
     ctx.save();
-    ctx.font = '700 11px Inter, system-ui, sans-serif';
+    // TAMANHO FIXO DE TELA. A placa era desenhada dentro do mundo, entao o zoom
+    // da camera multiplicava ela: com ZOOM em 3,25 (o que a camera usa ao focar
+    // uma mesa) um texto de 10px virava 32px na tela. Era essa a placa gigante.
+    //
+    // Placa de nome e INTERFACE, nao cenario: tem que ter o mesmo tamanho em
+    // qualquer zoom, como um rotulo de mapa. Ancora no mundo (ela segue a
+    // pessoa), desenho em pixel de tela.
+    ctx.translate(x, y);
+    ctx.scale(1 / ZOOM, 1 / ZOOM);
+
+    ctx.font = '600 11px Inter, system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     const larguraTexto = ctx.measureText(texto).width;
-    const padX = 8, icone = 14, h = 19;
+    const padX = 7, icone = 12, h = 17;
     const w = padX * 2 + icone + larguraTexto;
-    const px = x - w / 2;
-    const py = y - h;
+    const px = Math.round(-w / 2);
+    const py = Math.round(-h);
 
-    ctx.fillStyle = isSelf ? '#6d4fc4' : '#7c5cd4';
+    ctx.fillStyle = isSelf ? 'rgba(28,30,40,0.90)' : 'rgba(28,30,40,0.78)';
     ctx.beginPath();
-    ctx.roundRect(px, py, w, h, 9.5);
+    ctx.roundRect(px, py, w, h, 8);
     ctx.fill();
     if (isSelf) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1;
       ctx.stroke();
     }
 
-    const cx = px + padX + 4;
+    const cx = px + padX + 3.5;
     const cy = py + h / 2;
     if (emChamada) {
       desenharIconeFone(ctx, cx, cy, '#ffffff');
     } else {
-      // quadradinho arredondado de status, como na referencia do Gather
       ctx.fillStyle = corStatus;
       ctx.beginPath();
-      ctx.roundRect(cx - 3.5, cy - 3.5, 7, 7, 2);
+      ctx.arc(cx, cy, 3.2, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
     ctx.textAlign = 'left';
     ctx.fillText(texto, px + padX + icone, cy + 0.5);
     ctx.restore();
@@ -3267,19 +4029,79 @@
       if (posandoNaMesa) { ctx.save(); ctx.globalAlpha = 0.3; }
       desenharAnelStatus(ctx, p.displayX, p.displayY, p.status);
 
+      // DENTRO do carrinho, e nao em cima dele. Sao TRES camadas, nesta ordem:
+      //
+      //   1. o aro e a alca  (parede de TRAS da cesta: fica atras das costas)
+      //   2. o boneco
+      //   3. o corpo da cesta e as rodas (parede da FRENTE: tapa as pernas)
+      //
+      // Desenhar o carrinho inteiro por cima era o erro: a parede de tras
+      // passava na frente do peito, e ninguem esta dentro de nada assim. E o
+      // mesmo raciocinio do encosto da cadeira (desenharEncostoPorCima).
+      //
+      // O boneco NAO sobe nem desce: a conta de ALTURA_CARRINHO ja foi feita
+      // pro aro cair na cintura dele. Levantar o boneco, que foi o que eu fiz
+      // antes, desfaz justamente essa conta.
+      const k = p.kart || 0;
+      // O quanto o carrinho esta fora de esquadro com a direcao que o boneco
+      // olha - e disso que sai a inclinacao da derrapagem.
+      let fora = 0;
+      if (k > 0) {
+        fora = (p.kartAng || 0) - (ANG_DIR[p.dir] || 0);
+        while (fora > Math.PI) fora -= Math.PI * 2;
+        while (fora < -Math.PI) fora += Math.PI * 2;
+        desenharCarrinho(ctx, p.displayX, p.displayY, p.dir, k, fora, 'atras');
+      }
+
+      // Os pes apareciam embaixo do carrinho: entre as duas rodas a folha e
+      // vazia, e o pe cabia no vao. Recorto o boneco no fundo da cesta - a
+      // linha desce junto com o `k`, entao nao ha corte seco quando o carrinho
+      // aparece.
+      const recorta = k > 0.02;
+      if (recorta) {
+        ctx.save();
+        ctx.beginPath();
+        const chao = fundoDaCesta(p.displayY, k);
+        const limite = p.displayY + 14 + (chao - (p.displayY + 14)) * k;
+        ctx.rect(p.displayX - 40, p.displayY - 80, 80, limite - (p.displayY - 80));
+        ctx.clip();
+      }
       Character.draw(ctx, p.displayX, py, p.appearance, {
         dir: p.dir,
-        moving: p.sentado ? false : p.moving,
+        moving: (p.sentado || k > 0.5) ? false : p.moving,
         walkTime: localWalkTime,
       });
+      if (recorta) ctx.restore();
+
+      if (k > 0) desenharCarrinho(ctx, p.displayX, p.displayY, p.dir, k, fora, 'frente');
 
       // Sentado: o encosto volta por cima do corpo, senao o boneco fica "em pe
       // em cima" da cadeira em vez de sentado nela.
       if (p.sentado) desenharEncostoPorCima(ctx, p.displayX, p.displayY);
       if (posandoNaMesa) { ctx.restore(); return; }   // sem placa, sem bolha, sem reacao
 
-      const labelY = py - 44;
-      const nomeExibido = (p.isAdmin ? '👑 ' : '') + p.name;
+      // Colada no boneco (a cabeca dele termina uns 37px acima do pe), e nao
+      // flutuando a 44. Placa longe da pessoa vira etiqueta solta no cenario e
+      // obriga o olho a ligar uma coisa na outra.
+      const labelY = py - 38;
+      // O status entra na placa quando nao e "Livre".
+      //
+      // Nao e enfeite: agora "Focado" e "Em reuniao" BARRAM a chamada de
+      // corredor (calls.js). Sem ler o motivo em cima da cabeca da pessoa, quem
+      // chegasse perto e nao caisse em chamada concluiria que o app quebrou -
+      // que e exatamente o tipo de bug fantasma que da trabalho pra achar.
+      // "lendo" ganha do status na placa: quem esta com o leitor aberto na
+      // cara nao esta vendo o escritorio, e isso e mais util saber do que se a
+      // pessoa se marcou como Livre. E usa o espaco que a placa ja tem, em vez
+      // de mais um simbolo flutuando na cabeca dela.
+      const rotuloStatus = p.lendo ? 'lendo'
+        : (p.status && p.status !== 'livre' ? STATUS_LABEL[p.status] : '');
+      // A coroa de diretoria saiu DAQUI (so daqui - ela continua na lista de
+      // pessoas e no chat). Emoji numa pilula de 10px sai borrado, e ser
+      // diretoria nao e informacao que alguem precise ler atravessando o
+      // escritorio - precisa e na hora de saber quem pode decorar ou convidar.
+      // A referencia nao poe cargo nenhum em cima da cabeca.
+      const nomeExibido = p.name + (rotuloStatus ? ' · ' + rotuloStatus : '');
       const emChamada = p.id === selfId
         ? (Calls.isCameraAtiva() && Calls.getPeersConectados().length > 0)
         : Calls.temChamadaAtiva(p.id);
@@ -3383,6 +4205,9 @@
   function onCanvasClick(e) {
     const self = players.get(selfId);
     if (!self) return;
+    // O dedo que sobra no vidro depois da pinca vira 'click': sem esta linha,
+    // dar zoom mandava o boneco andar pra onde o dedo estava.
+    if (performance.now() - pincaFimEm < 450) return;
     const { x: clickX, y: clickY } = coordsDoEvento(e);
 
     // Decorador no modo link: o clique pendura conteudo no movel, nao anda.
@@ -3553,6 +4378,12 @@
     window.addEventListener('resize', setCanvasSize);
 
     canvas.addEventListener('click', onCanvasClick);
+    ligarPinca();
+    // Tela de celular mostra poucos tiles com o zoom de computador: a pessoa via
+    // meia sala. Comeca mais afastado; a pinca aproxima.
+    if (window.innerWidth < 640) {
+      zoomAlvo = zoomDoUsuario = 1.5;
+    }
 
     canvas.addEventListener('mousemove', (e) => {
       const { x, y } = coordsDoEvento(e);
@@ -3612,6 +4443,12 @@
 
     document.getElementById('btn-zoom-mais').addEventListener('click', () => ajustarZoom(0.25));
     document.getElementById('btn-zoom-menos').addEventListener('click', () => ajustarZoom(-0.25));
+
+    // Quem usa o dedo nao tem WASD nem Shift: a dica diz o que funciona ali.
+    const dicaEl = document.getElementById('dica-controles');
+    if (dicaEl && window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      dicaEl.textContent = 'Toque no chao pra andar · dois dedos pra zoom · chegue perto de alguem pra conversar';
+    }
 
     // a dica de controle some sozinha depois dos primeiros segundos (a referencia
     // nao tem nada fixo em cima da barra)
@@ -3684,11 +4521,58 @@
     Network.on('player-moved', (data) => {
       const p = players.get(data.id);
       if (!p) return;
+      const agora = performance.now();
+      // Velocidade estimada entre dois pacotes: e o que deixa o movimento dos
+      // outros liso chegando so 10 vezes por segundo (ver interpolarRemotos).
+      // Parou, ou ficou muito tempo sem pacote (acabou de voltar a andar): zero.
+      const intervalo = (agora - (p.tPacote || 0)) / 1000;
+      if (data.moving && p.tPacote && intervalo > 0 && intervalo < 0.3) {
+        p.vx = (data.x - p.targetX) / intervalo;
+        p.vy = (data.y - p.targetY) / intervalo;
+      } else {
+        p.vx = 0;
+        p.vy = 0;
+      }
+      p.tPacote = agora;
       p.targetX = data.x;
       p.targetY = data.y;
+      // `x`/`y` e a posicao que as REGRAS leem: distancia da chamada, volume,
+      // sala em que a pessoa esta, TV. Ate aqui so o `target` era atualizado, e
+      // essas regras enxergavam o outro parado no ponto onde ele ENTROU na sede:
+      // a chamada abria perto do lugar em que a pessoa nasceu, e nao de onde ela
+      // estava. Estava assim desde a primeira versao.
+      p.x = data.x;
+      p.y = data.y;
       p.dir = data.dir;
       p.moving = data.moving;
       p.sentado = !!data.sentado;
+      // Alvo, e nao valor: o kart dos outros e suavizado em interpolarRemotos
+      // junto com a posicao. Chegando so a cada 45ms, cravar o valor faria o
+      // kart dos outros aparecer aos saltos.
+      p.kartAlvo = typeof data.kart === 'number' ? data.kart : 0;
+      p.kartAngAlvo = typeof data.kartAng === 'number' ? data.kartAng : 0;
+    });
+
+    // Alguem comecou ou parou de apresentar: a TV da sala onde ele esta passa
+    // a espelhar (ou para de espelhar) a tela dele.
+    Network.on('tela-mudou', (data) => {
+      const p = players.get(data.id);
+      if (p) p.dividindoTela = !!data.ligado;
+    });
+
+    // Alguem abriu ou fechou um livro. O objeto vem do servidor ja validado
+    // contra o acervo - aqui e so guardar e deixar a estante e o mapa lerem.
+    Network.on('lendo-mudou', (data) => {
+      const p = players.get(data.id);
+      if (p) p.lendo = data.livro || null;
+    });
+
+    // Alguem entrou ou saiu de uma chamada marcada. O calls.js le isto pra
+    // decidir com quem falar - e e o que faz a chamada funcionar de qualquer
+    // canto do mapa, e nao so perto.
+    Network.on('chamada-mudou', (data) => {
+      const p = players.get(data.id);
+      if (p) p.chamada = data.chamada || null;
     });
 
     Network.on('player-status', (data) => {
@@ -3711,7 +4595,9 @@
     Rooms.init();
     CallGrid.init();
     Chat.init();
+    if (window.Avisos) Avisos.init();
     Calendario.init();
+    if (window.Chamada) Chamada.init();
     Trello.init();
     Estante.iniciar();
     Pessoas.init();
