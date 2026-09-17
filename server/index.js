@@ -830,7 +830,11 @@ app.get('/api/google/conectar', sessao.exigirLogin, (req, res) => {
   res.redirect(google.urlDeConsentimento(req.usuario.id));
 });
 
+// Um endereco de volta so pro Google (menos coisa pra cadastrar no Google Cloud),
+// dividido entre dois fluxos: ENTRAR na sede e CONECTAR a agenda. O `state`
+// assinado diz qual - e cada fluxo confere a assinatura do seu jeito.
 app.get('/api/google/callback', async (req, res) => {
+  if (google.tipoDoEstado(req.query.state) === 'login') return auth.concluirLoginGoogle(req, res);
   const { code, state, error } = req.query;
   if (error) return res.redirect('/?agenda=recusada');
   if (typeof code !== 'string' || typeof state !== 'string') {
@@ -1061,7 +1065,7 @@ server.listen(PORT, () => {
   backup.agendar();
   console.log(`Contas cadastradas: ${usuariosStore.totalDeContas()}`);
   if (google.configurado()) {
-    console.log('Google Agenda: registre este redirect URI no Google Cloud:');
+    console.log('Google (login e agenda): registre este redirect URI no Google Cloud:');
     console.log('  ' + google.REDIRECT_URI);
     if (!process.env.SITE_URL) {
       console.log('  (veio do padrao; defina SITE_URL se o endereco for outro)');
@@ -1079,9 +1083,13 @@ server.listen(PORT, () => {
   // esta com o codigo padrao" - que era o pior tipo de aviso: um log que
   // ninguem le protegendo uma senha escrita num repositorio publico. Agora o
   // padrao nao existe, e o que sobra e informacao util.
-  console.log('Cria conta: e-mail @' + auth.DOMINIOS.join(', @')
-    + (auth.CODIGO_SEDE ? ' (ou o codigo da sede, pra e-mail de fora)' : ' - so isso'));
-  if (usuariosStore.totalDeContas() === 0) {
-    console.log('Nenhuma conta ainda: a PRIMEIRA a ser criada entra como diretoria.');
+  console.log(auth.loginGoogleLigado()
+    ? 'Cria conta: "Entrar com o Google" pra @' + auth.DOMINIOS.join(', @')
+    : 'Cria conta: e-mail @' + auth.DOMINIOS.join(', @') + ' com senha (SEM verificacao: ligue o Google - GOOGLE_CLIENT_ID/SECRET)');
+  if (auth.CODIGO_SEDE) console.log('  e e-mail de fora com o codigo da sede.');
+  if (auth.loginGoogleLigado() && usuariosStore.totalDeDiretoria() === 0) {
+    console.log(auth.DIRETORIA_EMAILS.length
+      ? 'Sem diretoria ainda: vira diretoria quem entrar com o Google sendo de DIRETORIA_EMAILS.'
+      : 'Sem diretoria ainda: a PRIMEIRA pessoa a entrar com o Google vira diretoria (defina DIRETORIA_EMAILS pra escolher).');
   }
 });

@@ -14,14 +14,27 @@
 >
 > O disco e efemero: `server/data/` some, e **todas as contas somem junto**.
 >
-> Criar a sua de novo e so **e-mail @admsolucoes.com.br** - sem codigo nenhum,
-> sem ir no painel. E a **primeira conta da sede nasce diretoria**, entao voce
-> ja volta podendo decorar, convidar e gerenciar contas.
+> Voltar e so clicar **Entrar com o Google da ADM** - a conta e criada de novo
+> na hora, sem senha e sem codigo. Quem esta em `DIRETORIA_EMAILS` (painel do
+> Render, **Environment**) volta como diretoria; sem essa variavel, vira
+> diretoria **a primeira pessoa que entrar com o Google** numa sede sem
+> diretoria. Configure a lista pra nao depender de quem chega primeiro.
 >
-> Isso substituiu o "codigo da sede" como caminho principal. O codigo continua
-> existindo so pra quem NAO tem e-mail da empresa, e ai ele vem de `CODIGO_SEDE`
-> no painel do Render (**Environment**). Sem essa variavel configurada, e-mail de
-> fora simplesmente nao cria conta - nao ha mais valor padrao.
+> **Por que o Google e nao mais "e-mail da ADM com senha":** o cadastro com
+> senha nao confere o e-mail - qualquer um digita fulano@admsolucoes.com.br. Em
+> 15/09/2026 a sede no ar estava com 0 contas e "a primeira conta nasce
+> diretoria": o primeiro estranho a digitar um @admsolucoes mandaria na sede.
+> Com o Google ligado, e-mail da ADM **so** entra pelo Google, e cadastro com
+> senha nunca da diretoria. Ver docs/plano-login.md, secao 10.
+>
+> **Pro login com o Google funcionar no ar**, o endereco de volta tem que estar
+> cadastrado no cliente OAuth (Google Cloud > APIs e servicos > Credenciais >
+> o ID do cliente > URIs de redirecionamento autorizados):
+> `https://escritorio-virtual-adm.onrender.com/api/google/callback` - o mesmo
+> que a Agenda usa. Sem ele, o Google mostra `redirect_uri_mismatch`.
+>
+> O codigo da sede continua existindo so pra quem NAO tem e-mail da empresa
+> (`CODIGO_SEDE` no painel). Sem essa variavel, e-mail de fora nao cria conta.
 >
 > Pra parar de perder conta a cada deploy, ver a secao 3 (disco persistente).
 

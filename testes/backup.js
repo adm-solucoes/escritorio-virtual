@@ -114,9 +114,21 @@ console.log('\nBACKUP');
     conferir('  e nada com mais de 30 dias', ficam.every((n) => agora - backup._quandoDoNome(n) <= 31 * 86400000), true);
 
     // a limpeza de verdade, pelo Drive falso: 35 backups velhos + os novos
+    //
+    // Datados a partir do `agora` do teste, e NAO de `Date.now()`. Com
+    // `Date.now()` este teste APODRECIA COM O CALENDARIO: os backups de verdade
+    // nascem no relogio fixo (14/09/2026) e os "velhos" nasciam relativos ao
+    // dia em que a bateria rodasse. Escrito no dia 15 funcionava - o mais velho
+    // caia no dia 13. Rodando no dia 17, o "velho1" caia no dia 15, virava o
+    // MAIS NOVO do Drive, e a restauracao pegava esse arquivo de 1 byte:
+    // "unexpected end of file" no gunzip, tres dias depois, sem ninguem ter
+    // tocado no codigo.
+    //
+    // Agora eles ficam sempre ATRAS do `agora`, e a conta para de depender de
+    // que dia e hoje.
     for (let d = 1; d <= 35; d++) {
       const id = 'velho' + d;
-      drive.set(id, { name: backup._nomeDoBackup(Date.now() - d * 40 * 86400000 / 35 - 86400000), parents: ['0AAdriveDeBackupTeste'], dados: Buffer.alloc(1) });
+      drive.set(id, { name: backup._nomeDoBackup(agora - d * 40 * 86400000 / 35 - 86400000), parents: ['0AAdriveDeBackupTeste'], dados: Buffer.alloc(1) });
     }
     // -------------------------------------------------------- copia local
     for (let i = 0; i < 55; i++) backup._copiaLocal(arquivos, agora - i * 3600000);

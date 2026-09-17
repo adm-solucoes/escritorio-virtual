@@ -200,3 +200,77 @@ conferencias, com socket de verdade).
 **Gravacao segura.** Chat, mesas, reunioes e conexoes do Google passaram a
 gravar num temporario e renomear (`dados.gravarSeguro`), como contas e mapa ja
 faziam: processo morto no meio da gravacao nao deixa mais JSON cortado.
+
+## 10. Entrar com o Google da ADM (15/09/2026)
+
+### O buraco que isto fecha
+
+Na revisao de 15/09, a sede no ar tinha **0 contas** (o plano free apaga o
+disco a cada deploy) e duas regras juntas:
+
+- e-mail @admsolucoes.com.br cria conta **sem codigo** - e sem conferir nada,
+  porque a sede nao manda e-mail de confirmacao;
+- **a primeira conta da sede nasce diretoria**.
+
+Resultado: o primeiro estranho a digitar um qualquer@admsolucoes.com.br virava
+diretoria, e qualquer um depois dele entrava como membro (chat, quadro do
+Trello, WhatsApp dos colegas, biblioteca). O dominio e publico - esta no
+proprio repositorio.
+
+### O que mudou
+
+| Porta | Antes | Agora |
+|---|---|---|
+| Google da ADM | nao existia | **porta principal**: o Google prova que a pessoa e dona do e-mail |
+| e-mail da ADM + senha | entrava direto | com o Google ligado, **fechada**; sem ele, entra mas nunca vira diretoria |
+| diretoria automatica | a primeira conta, de qualquer jeito | so pelo Google: `DIRETORIA_EMAILS`, ou a 1a pessoa com Google numa sede sem diretoria |
+| e-mail de fora + `CODIGO_SEDE` | igual | igual, e chutar o codigo agora trava o IP (10 erros / 15 min) |
+| contas criadas por IP | sem limite | 20 por hora (a sala sai por um IP so; robo em serie, nao) |
+
+### Como o login confere
+
+`server/google.js` (`urlDeLogin`, `identidadeDoLogin`, `validarIdentidade`) e
+`server/auth.js` (`/api/google/entrar`, `concluirLoginGoogle`, `contaDoGoogle`).
+
+1. **Inicio** (`GET /api/google/entrar`): sorteia um nonce, grava num cookie
+   HttpOnly de 10 min restrito a `/api/google`, e manda pro Google pedindo so
+   `openid email profile` - nada de agenda, Drive ou Gmail.
+2. **Volta** (`/api/google/callback`, o mesmo endereco da Agenda): o `state`
+   assinado diz que e login, e o hash do nonce do cookie tem que bater com o do
+   `state`. Isso barra o **login CSRF** (um site completar o login com a conta
+   do atacante no navegador da vitima, e ler tudo que ela escrever).
+3. O codigo vira token numa conexao direta com o Google, e o `id_token` tem que
+   ter: emissor Google, `aud` = o nosso cliente, nao vencido, o mesmo nonce,
+   e-mail verificado **e `hd` = o dominio do e-mail**. Sem o `hd`, seria uma
+   conta Google comum que alguem abriu usando um endereco da ADM.
+
+### Conta que ja existia com senha
+
+Quando o Google prova o e-mail de uma conta criada antes com senha, a senha
+**e apagada** e todas as sessoes caem (`usuarios.vincularGoogle`). Ninguem
+garante que foi o dono quem criou aquela conta - qualquer um podia ter digitado
+o e-mail dele. O dono continua com avatar, mesa e conversas.
+
+Conta do Google nao tem senha: a tela esconde "Trocar senha", e a diretoria
+**nao** redefine senha dela (seria abrir uma porta que o Google nao confere - e
+poder entrar por ela).
+
+### Pra ligar no Render
+
+- `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` (os mesmos da Agenda);
+- no cliente OAuth do Google Cloud, a URI de redirecionamento
+  `https://escritorio-virtual-adm.onrender.com/api/google/callback`;
+- `DIRETORIA_EMAILS` com quem deve voltar como diretoria depois de cada deploy.
+
+Se a tela de consentimento do Google estiver como **Interna** (Workspace), so
+contas da ADM chegam ao fim do login - uma camada a mais, alem do `hd`.
+
+### Testes
+
+`testes/login-google.js` (44 conferencias): um servidor falso faz o papel do
+endpoint de token do Google (`GOOGLE_TOKEN_URL_TESTE`, ignorada em producao) e
+o resto e o servidor de verdade. Cobre conta nova, conta existente, intruso que
+criou a conta de um colega antes (cai), Gmail comum, conta Google sem Workspace,
+token de outro app, state adulterado, volta sem o cookie, login CSRF, cancelar
+no Google, `DIRETORIA_EMAILS` e sede zerada. `testes/contas.js` ganhou os dois
+freios do cadastro.

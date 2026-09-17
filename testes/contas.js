@@ -29,8 +29,18 @@ function conferir(nome, veio, esperado) {
 }
 
 let servidor = null;
-function derrubar() {
-  if (servidor && !servidor.killed) servidor.kill();
+// Espera o processo morrer de verdade: o segundo servidor sobe na mesma porta.
+function parar() {
+  return new Promise((resolve) => {
+    // morto por sinal (o kill), o exitCode fica null e quem diz e o signalCode
+    if (!servidor || servidor.exitCode !== null || servidor.signalCode !== null) return resolve();
+    servidor.once('exit', () => resolve());
+    servidor.kill();
+  });
+}
+
+async function derrubar() {
+  await parar();
   try { fs.rmSync(PASTA, { recursive: true, force: true }); } catch (e) { /* ja foi */ }
 }
 
@@ -118,12 +128,16 @@ async function registrar(nome, email, admin) {
       metodo: 'POST',
       corpo: { nome: 'Caio', email: 'caio@admsolucoes.com.br', senha: 'senha-original-1' },
     });
-    conferir('e-mail da empresa cria conta SEM codigo', daEmpresa.status, 200);
-    // A primeira conta da sede nasce diretoria: sem isso, sede recem-criada
-    // fica sem ninguem que possa decorar, convidar ou gerenciar - e no plano
-    // free isso acontece a cada publicacao.
-    conferir('  e a PRIMEIRA conta da sede nasce diretoria',
-      daEmpresa.corpo.usuario.isAdmin, true);
+    // (este servidor sobe SEM o Google; com ele ligado, e-mail da ADM nao se
+    // cadastra com senha - ver testes/login-google.js)
+    conferir('e-mail da empresa cria conta SEM codigo (Google desligado)', daEmpresa.status, 200);
+    // Cadastro com senha nao prova quem e: a primeira conta NAO vira diretoria.
+    // Antes virava - e com a sede vazia depois de um deploy, o primeiro estranho
+    // a digitar um @admsolucoes qualquer mandava na sede.
+    conferir('  e nem a PRIMEIRA conta vira diretoria por senha',
+      daEmpresa.corpo.usuario.isAdmin, false);
+    conferir('  conta com senha diz que tem senha (a tela mostra "Trocar senha")',
+      [daEmpresa.corpo.usuario.temSenha, daEmpresa.corpo.usuario.google], [true, false]);
 
     const deForaSemCodigo = await pedir('/api/registrar', {
       metodo: 'POST',
@@ -244,11 +258,49 @@ async function registrar(nome, email, admin) {
 
     // ---------------------------------------- cookie de antes desta mudanca
     conferir('a diretoria segue logada do inicio ao fim', (await pedir('/api/eu', { cookie: chefe.cookie })).status, 200);
+
+    // --------------------------------------------------- freios do cadastro
+    // POR ULTIMO: eles travam o IP 127.0.0.1, e travariam os testes de cima.
+    //
+    // 1. contas criadas por IP. Ate aqui foram 5 (Caio, Bia, Chefe, Ana, Ana de
+    //    novo); o teto e 20 por hora.
+    let criadas = 5;
+    let travouEm = null;
+    for (let i = 0; i < 20 && travouEm === null; i++) {
+      const r = await pedir('/api/registrar', {
+        metodo: 'POST',
+        corpo: { nome: 'Robo ' + i, email: 'robo' + i + '@admsolucoes.com.br', senha: 'senha-original-1' },
+      });
+      if (r.status === 200) criadas++;
+      else travouEm = r.status;
+    }
+    conferir('robo criando conta em serie: para na 20a conta do mesmo IP', [criadas, travouEm], [20, 429]);
   } catch (e) {
     falhou++;
     console.log('  FALHOU ' + (e.stack || e.message));
   } finally {
-    derrubar();
+    await parar();
+  }
+
+  // 2. chutar o codigo da sede. Servidor novo, pra o teto de contas de cima nao
+  //    se misturar com este.
+  try {
+    await subir();
+    const chutes = [];
+    for (let i = 0; i < 11; i++) {
+      chutes.push((await pedir('/api/registrar', {
+        metodo: 'POST',
+        corpo: { nome: 'Fora', email: 'alguem@gmail.com', senha: 'senha-original-1', codigo: 'chute-' + i },
+      })).status);
+    }
+    conferir('chutar o codigo da sede: 10 erros e o IP trava', [chutes[9], chutes[10]], [403, 429]);
+    const certoDepois = await registrar('Fora Certo', 'certo@gmail.com', false);
+    conferir('  travado, nem o codigo certo passa (ate a janela vencer)', certoDepois.status, 429);
+  } catch (e) {
+    falhou++;
+    console.log('  FALHOU ' + (e.stack || e.message));
+  } finally {
+    await derrubar();
   }
   console.log('\n  ' + ok + ' passaram, ' + falhou + ' falharam\n');
   process.exit(falhou ? 1 : 0);

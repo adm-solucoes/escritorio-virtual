@@ -110,6 +110,9 @@ function publico(usuario) {
     appearance: usuario.appearance || null,
     criadoEm: usuario.criadoEm || null,
     senhaTemporaria: !!usuario.senhaTemporaria,
+    // conta que entra pelo Google pode nao ter senha: a tela esconde "Trocar senha"
+    temSenha: !!usuario.senhaHash,
+    google: !!usuario.googleSub,
     // so sai em resposta pra PROPRIA pessoa (/api/eu, login): publico() nao vai
     // na lista de gente do socket
     whatsapp: usuario.whatsapp || null,
@@ -135,6 +138,47 @@ function criar({ nome, email, senha, isAdmin }) {
   usuarios.push(usuario);
   salvar();
   return usuario;
+}
+
+// Conta de quem entrou com o Google da ADM. Nasce SEM senha: quem prova quem ela
+// e e o Google, e uma senha a mais seria so mais uma coisa pra vazar. `googleSub`
+// e o id fixo da pessoa no Google (o e-mail pode ser renomeado; o sub, nao).
+function criarPeloGoogle({ nome, email, sub, isAdmin }) {
+  const usuario = {
+    id: crypto.randomUUID(),
+    nome,
+    email: String(email).trim(),
+    emailChave: chaveEmail(email),
+    salt: null,
+    senhaHash: null,
+    googleSub: String(sub),
+    isAdmin: !!isAdmin,
+    appearance: null,
+    criadoEm: Date.now(),
+    ultimoAcesso: Date.now(),
+  };
+  usuarios.push(usuario);
+  salvar();
+  return usuario;
+}
+
+// O Google acabou de provar que a pessoa e dona deste e-mail, numa conta que ate
+// agora NAO tinha essa prova (criada com senha antes do login com o Google, ou
+// ligada a outra conta Google). Ninguem garante que foi ELA quem criou a conta
+// com senha: qualquer um podia ter digitado o e-mail dela no cadastro. Entao a
+// prova apaga a senha e derruba toda sessao aberta - se era um intruso, ele sai.
+// A pessoa continua com tudo que era da conta (avatar, mesa, conversas).
+function vincularGoogle(id, sub) {
+  const u = porId(id);
+  if (!u || u.convidado) return null;
+  if (u.googleSub === String(sub)) return u;
+  u.googleSub = String(sub);
+  u.salt = null;
+  u.senhaHash = null;
+  u.senhaTemporaria = false;
+  u.versaoSessao = versaoSessao(u) + 1;
+  salvar();
+  return u;
 }
 
 // Conta de visitante, criada quando alguem abre um link de convite.
@@ -278,6 +322,7 @@ function membros() {
       criadoEm: u.criadoEm || null,
       ultimoAcesso: u.ultimoAcesso || null,
       senhaTemporaria: !!u.senhaTemporaria,
+      google: !!u.googleSub,
     }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
@@ -327,6 +372,8 @@ module.exports = {
   porId,
   publico,
   criar,
+  criarPeloGoogle,
+  vincularGoogle,
   criarConvidado,
   senhaConfere,
   marcarAcesso,

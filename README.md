@@ -86,8 +86,10 @@ anonima): duas abas do mesmo navegador dividem o cookie, ou seja, sao a mesma pe
 | Variavel | Padrao | Pra que serve |
 |---|---|---|
 | `PORT` | `3500` | porta do servidor |
-| `CODIGO_SEDE` | `adm-solucoes` | codigo que libera a criacao de conta |
-| `ADMIN_CODE` | `adm-solucoes-2026` | codigo opcional no cadastro que marca a conta como diretoria |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | liga o **Entrar com o Google da ADM** (e a Agenda). Ligado, e-mail da ADM so entra por ele |
+| `DIRETORIA_EMAILS` | — | e-mails que entram com o Google ja como diretoria, separados por virgula |
+| `CODIGO_SEDE` | — (fechado) | codigo pra quem tem e-mail DE FORA criar conta |
+| `ADMIN_CODE` | — (fechado) | codigo opcional no cadastro com senha que marca a conta como diretoria |
 | `NODE_ENV` | — | com `production` o cookie de sessao vai como `Secure` (exige HTTPS) |
 
 As contas ficam em `server/data/usuarios.json` (senhas com hash scrypt + salt) e o
@@ -131,11 +133,10 @@ segredo que assina as sessoes em `server/data/config.json`. A pasta esta no
   — clique e o emoji flutua acima do seu boneco por alguns segundos, pra todo mundo ver.
 - **Minimapa:** no canto inferior direito, mostra o contorno do escritorio e um pontinho
   colorido pra cada pessoa (o seu em ambar).
-- **Papel de administrador:** no cadastro, um campo opcional "Sou da diretoria" aceita
-  um codigo compartilhado (variavel de ambiente `ADMIN_CODE` no servidor, padrao
-  `adm-solucoes-2026` — troque isso em producao). Quem cria a conta com o codigo certo
-  ganha uma coroa 👑 do lado do nome. Por enquanto e so um selo visual; ainda nao da
-  poderes extras (editar mapa, mover gente etc. ficam pra depois).
+- **Papel de administrador (diretoria):** quem esta em `DIRETORIA_EMAILS` e entra com o
+  Google ja chega como diretoria. No cadastro com senha, o campo opcional "Sou da
+  diretoria" aceita o `ADMIN_CODE` - sem valor padrao: sem a variavel, esse caminho fica
+  fechado. Diretoria decora a sede, convida visitantes e gerencia as contas.
 - Tela cheia com vinheta e iluminacao quente ("escritorio ao entardecer"), indicador de
   conexao e menu da conta flutuando como overlay discreto nos cantos.
 - Interface e todo o texto em portugues (pt-BR).

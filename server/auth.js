@@ -1,48 +1,41 @@
 // Rotas de conta: criar, entrar, sair, quem sou eu e salvar o avatar.
 // Ver docs/plano-login.md, secao 5.
+const crypto = require('crypto');
 const express = require('express');
 const usuarios = require('./usuarios');
 const sessao = require('./sessao');
 const convites = require('./convites');
+const google = require('./google');
+const { DOMINIOS, ehEmailDaSede } = require('./dominios');
 
 // ---- quem pode criar conta na sede -----------------------------------------
 //
-// O E-MAIL DA EMPRESA E A CREDENCIAL. Quem tem e-mail @admsolucoes ja e da ADM:
-// nao precisa de codigo nenhum pra entrar no escritorio da propria empresa.
+// Tres portas, da mais forte pra mais fraca:
 //
-// Isso substituiu o "codigo da sede" como caminho principal, e o Caio resumiu
-// bem o motivo: "esse negocio de codigo sede e uma merda". Ele tinha razao, e
-// eram tres defeitos de uma vez:
+//   1. ENTRAR COM O GOOGLE da ADM (quando GOOGLE_CLIENT_ID/SECRET estao
+//      configurados). O Google prova que a pessoa e dona do e-mail
+//      @admsolucoes. Com ele ligado, e-mail da ADM SO entra por aqui.
+//   2. e-mail da ADM + senha, SO enquanto o Google nao esta ligado. Nao prova
+//      nada - qualquer um digita fulano@admsolucoes.com.br -, entao essa porta
+//      nunca da diretoria e tem limite de contas por IP.
+//   3. e-mail de fora + CODIGO_SEDE (estagiario com e-mail pessoal, parceiro).
+//      Sem a variavel configurada, fechada.
 //
-//   1. o codigo vive no painel da hospedagem, mas a conta criada com ele e
-//      apagada a cada deploy (disco efemero do plano free). Ou seja: toda
-//      publicacao mandava todo mundo procurar o codigo de novo;
-//   2. sem a variavel configurada, o valor caia num PADRAO ESCRITO NESTE
-//      ARQUIVO - que esta num repositorio publico. Seguranca que depende de
-//      ninguem esquecer de configurar nao e seguranca;
-//   3. e um segredo que anda em grupo de WhatsApp. Depois de vinte pessoas,
-//      nao e mais segredo.
-//
-// O dominio nao resolve tudo: sem servico de e-mail nao da pra VERIFICAR o
-// endereco, entao alguem poderia digitar o e-mail de um colega. Mas o codigo
-// tinha exatamente a mesma fraqueza depois de vazar - com a diferenca de que
-// tambem dava trabalho.
-const DOMINIOS_PADRAO = ['admsolucoes.com.br', 'admsolucoes.com'];
-const DOMINIOS_SEDE = String(process.env.DOMINIOS_SEDE || '')
-  .split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
-const DOMINIOS = DOMINIOS_SEDE.length ? DOMINIOS_SEDE : DOMINIOS_PADRAO;
-
-function ehEmailDaSede(email) {
-  const arroba = String(email || '').lastIndexOf('@');
-  if (arroba < 0) return false;
-  return DOMINIOS.includes(email.slice(arroba + 1).toLowerCase());
-}
-
-// O codigo CONTINUA existindo, pra quem nao tem e-mail da empresa (estagiario
-// com e-mail pessoal, parceiro). Mas sem valor padrao: se ninguem configurou,
-// esse caminho fica FECHADO em vez de abrir com uma senha publica.
+// Historia, pra ninguem desfazer sem querer: o "codigo da sede" era a porta
+// principal e tinha valor padrao escrito neste arquivo - que vai pra um
+// repositorio publico. Virou "e-mail da ADM entra direto, e a primeira conta
+// nasce diretoria". So que o e-mail nao era conferido: com a sede vazia depois
+// de um deploy, o primeiro estranho que digitasse um @admsolucoes qualquer
+// virava diretoria. Dai o Google.
 const CODIGO_SEDE = String(process.env.CODIGO_SEDE || '').trim();
 const ADMIN_CODE = String(process.env.ADMIN_CODE || '').trim();
+
+// Quem entra com o Google e vira diretoria sozinho. Vazio = a primeira pessoa
+// que entrar com o Google numa sede SEM diretoria. Ver docs/plano-login.md.
+const DIRETORIA_EMAILS = String(process.env.DIRETORIA_EMAILS || '')
+  .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+
+const NOME_NONCE = 'adm_google_nonce';
 
 const MAX_NOME = 18;
 const MIN_SENHA = 8;
@@ -76,6 +69,74 @@ function limparErros(ip) {
   tentativas.delete(ip);
 }
 
+// Contas CRIADAS por IP. O freio de cima conta erro; este conta acerto, porque
+// criar conta nao precisa errar nada. Folgado de proposito: a sala da ADM (ou a
+// UECE) sai pra internet por um IP so, e 20 pessoas se cadastrando no mesmo dia
+// e normal. Robo criando conta em serie, nao.
+const JANELA_CADASTRO_MS = 60 * 60 * 1000;
+const MAX_CADASTROS = 20;
+const cadastros = new Map(); // ip -> { qtd, ate }
+
+function cadastrosDoIp(ip) {
+  const registro = cadastros.get(ip);
+  if (!registro || registro.ate < Date.now()) {
+    const novo = { qtd: 0, ate: Date.now() + JANELA_CADASTRO_MS };
+    cadastros.set(ip, novo);
+    return novo;
+  }
+  return registro;
+}
+
+function loginGoogleLigado() {
+  return google.configurado();
+}
+
+// A conta de quem o Google acabou de confirmar. Cria se nao existe; se existe,
+// vincula (e isso apaga a senha e derruba sessoes - ver usuarios.vincularGoogle).
+function contaDoGoogle({ email, nome, sub }) {
+  let conta = usuarios.porEmail(email);
+  if (!conta) {
+    conta = usuarios.criarPeloGoogle({ nome: nome.slice(0, MAX_NOME) || 'ADM', email, sub, isAdmin: false });
+    console.log('[contas] ' + email + ' criou conta com o Google.');
+  } else {
+    conta = usuarios.vincularGoogle(conta.id, sub);
+  }
+
+  // Diretoria automatica: so aqui, com e-mail provado pelo Google. Com a lista
+  // configurada, vale a lista. Sem ela, vale "a sede nao tem diretoria nenhuma"
+  // - senao a sede recem-publicada (plano free apaga as contas) fica sem ninguem
+  // que possa decorar, convidar ou gerenciar.
+  const naLista = DIRETORIA_EMAILS.includes(email.toLowerCase());
+  const semDiretoria = !DIRETORIA_EMAILS.length && usuarios.totalDeDiretoria() === 0;
+  if (!conta.isAdmin && (naLista || semDiretoria)) {
+    conta = usuarios.definirDiretoria(conta.id, true);
+    console.log('[contas] ' + email + ' virou diretoria ' + (naLista ? '(DIRETORIA_EMAILS).' : '(sede sem diretoria).'));
+  }
+  usuarios.marcarAcesso(conta.id);
+  return conta;
+}
+
+// Fim do login com o Google: chamado pela rota /api/google/callback do
+// index.js, que e dividida com a conexao da agenda.
+async function concluirLoginGoogle(req, res) {
+  const { code, state, error } = req.query;
+  const nonce = sessao.lerCookies(req.headers.cookie)[NOME_NONCE];
+  // o nonce serve pra UMA volta so
+  sessao.definirCookieCurto(res, NOME_NONCE, '', 0, '/api/google');
+
+  if (error) return res.redirect('/?entrar=cancelado');
+  if (typeof code !== 'string' || typeof state !== 'string') return res.redirect('/?entrar=erro');
+
+  const r = await google.identidadeDoLogin(code, state, nonce);
+  if (r.erro) {
+    console.error('[login google] recusado: ' + r.motivo);
+    return res.redirect('/?entrar=' + (r.erro === 'dominio' ? 'dominio' : 'erro'));
+  }
+  const conta = contaDoGoogle(r);
+  sessao.definirCookie(res, conta.id);
+  res.redirect('/');
+}
+
 function texto(valor) {
   return typeof valor === 'string' ? valor.trim() : '';
 }
@@ -89,6 +150,15 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
   const aoEncerrarConta = typeof ganchos.aoEncerrarConta === 'function' ? ganchos.aoEncerrarConta : () => {};
 
   rotas.post('/registrar', (req, res) => {
+    const ip = req.ip || 'desconhecido';
+    // chutar o codigo da sede e forca bruta como chutar senha
+    if (bloqueado(ip)) {
+      return res.status(429).json({ erro: 'Muitas tentativas. Espera uns minutos.' });
+    }
+    if (cadastrosDoIp(ip).qtd >= MAX_CADASTROS) {
+      return res.status(429).json({ erro: 'Muitas contas criadas daqui. Tenta de novo mais tarde.' });
+    }
+
     const corpo = req.body || {};
     const nome = texto(corpo.nome).slice(0, MAX_NOME);
     const email = texto(corpo.email);
@@ -98,15 +168,23 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
     if (!nome) return res.status(400).json({ erro: 'Diz teu nome.' });
     if (!EMAIL_RE.test(email)) return res.status(400).json({ erro: 'E-mail invalido.' });
 
-    // E-mail da empresa entra direto. Quem nao tem precisa do codigo - e se o
-    // codigo nao estiver configurado, esse caminho simplesmente nao existe.
-    if (!ehEmailDaSede(email)) {
+    if (ehEmailDaSede(email)) {
+      // Com o Google ligado, e-mail da ADM so entra provando que e dono dele.
+      if (loginGoogleLigado()) {
+        return res.status(403).json({
+          erro: 'Quem e da ADM entra com o botao "Entrar com o Google" - sem senha nenhuma.',
+        });
+      }
+    } else {
+      // Quem nao tem e-mail da empresa precisa do codigo - e se o codigo nao
+      // estiver configurado, esse caminho simplesmente nao existe.
       if (!CODIGO_SEDE) {
         return res.status(403).json({
           erro: 'A sede so aceita e-mail @' + DOMINIOS[0] + '. Peca um convite pra diretoria.',
         });
       }
       if (codigo !== CODIGO_SEDE) {
+        contarErro(ip);
         return res.status(403).json({
           erro: 'Com e-mail de fora, precisa do codigo da sede. Peca pra diretoria.',
         });
@@ -121,29 +199,35 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
       return res.status(409).json({ erro: 'Ja existe uma conta com esse e-mail.' });
     }
 
-    // A PRIMEIRA CONTA DA SEDE NASCE DIRETORIA.
-    //
-    // Sem isso a sede recem-criada fica sem ninguem que possa decorar, convidar
-    // ou gerenciar contas - e no plano free isso acontece a CADA publicacao,
-    // porque o disco e apagado junto. A saida era ir buscar o ADMIN_CODE no
-    // painel da hospedagem toda vez.
-    //
-    // Nao e um buraco: pra ser a primeira conta a pessoa precisa passar pela
-    // regra de cima, ou seja, ter e-mail da empresa (ou o codigo). O risco real
-    // e a corrida logo depois de um deploy - e ele existia igual antes, so que
-    // com uma senha de diretoria escrita num repositorio publico.
-    const primeira = usuarios.totalDeContas() === 0;
+    // Cadastro com senha NUNCA da diretoria sozinho - nem pra primeira conta.
+    // Aqui ninguem provou quem e: "a primeira conta nasce diretoria" deixava o
+    // primeiro estranho a digitar um @admsolucoes depois de um deploy mandar na
+    // sede. Diretoria automatica so pelo Google (ver contaDoGoogle); por senha,
+    // so com o ADMIN_CODE.
+    cadastrosDoIp(ip).qtd += 1;
     const usuario = usuarios.criar({
       nome,
       email,
       senha,
-      isAdmin: primeira || !!codigoDeAdmin(corpo.codigoAdmin),
+      isAdmin: !!codigoDeAdmin(corpo.codigoAdmin),
     });
-    if (primeira) {
-      console.log('[contas] primeira conta da sede (' + email + '): entrou como diretoria.');
-    }
     sessao.definirCookie(res, usuario.id);
     res.json({ usuario: usuarios.publico(usuario) });
+  });
+
+  // O que a tela de login deve oferecer. Publico: a tela aparece antes de ter
+  // sessao.
+  rotas.get('/login-opcoes', (req, res) => {
+    res.json({ google: loginGoogleLigado(), dominio: DOMINIOS[0] });
+  });
+
+  // Inicio do login com o Google. O fim e o concluirLoginGoogle.
+  rotas.get('/google/entrar', (req, res) => {
+    if (!loginGoogleLigado()) return res.redirect('/?entrar=indisponivel');
+    const nonce = crypto.randomBytes(24).toString('base64url');
+    // 10 min, igual a validade do state; e so o caminho da volta enxerga
+    sessao.definirCookieCurto(res, NOME_NONCE, nonce, 600, '/api/google');
+    res.redirect(google.urlDeLogin(nonce));
   });
 
   rotas.post('/entrar', (req, res) => {
@@ -290,6 +374,11 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
     if (alvo.id === req.usuario.id) {
       return res.status(400).json({ erro: 'Pra sua propria conta, use "Trocar senha".' });
     }
+    // Conta provada pelo Google nao ganha senha pela mao de terceiros: seria a
+    // diretoria abrindo uma porta que o Google nao confere - e entrando nela.
+    if (alvo.googleSub) {
+      return res.status(400).json({ erro: 'Essa pessoa entra com o Google: nao ha senha pra redefinir.' });
+    }
     const senhaTemporaria = usuarios.redefinirSenha(alvo.id);
     aoEncerrarConta(alvo.id, 'senha-redefinida');
     console.log('[membros] ' + req.usuario.email + ' redefiniu a senha de ' + alvo.email);
@@ -346,8 +435,11 @@ function codigoDeAdmin(valor) {
 
 module.exports = {
   criarRotas,
+  concluirLoginGoogle,
+  loginGoogleLigado,
   CODIGO_SEDE,
   DOMINIOS,
+  DIRETORIA_EMAILS,
   // pros testes
   _ehEmailDaSede: ehEmailDaSede,
 };

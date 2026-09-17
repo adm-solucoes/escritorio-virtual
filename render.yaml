@@ -42,12 +42,19 @@ services:
       # repositorio. Deixar em branco nao quebra nada - as duas abas so aparecem
       # com um aviso de "nao configurado".
       #
-      # Calendario (Google Cloud > APIs e servicos > Credenciais > ID do cliente
-      # OAuth, tipo "Aplicativo da Web"). No campo "URIs de redirecionamento
-      # autorizados" ponha:  https://escritorio-virtual-adm.onrender.com/api/google/callback
+      # Google: ENTRAR NA SEDE com a conta da ADM e o CALENDARIO (Google Cloud >
+      # APIs e servicos > Credenciais > ID do cliente OAuth, tipo "Aplicativo da
+      # Web"). No campo "URIs de redirecionamento autorizados" ponha:
+      #   https://escritorio-virtual-adm.onrender.com/api/google/callback
+      # Com as duas preenchidas, e-mail da ADM so entra pelo botao do Google.
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Quem entra com o Google e ja vira diretoria (separados por virgula).
+      # Vazio: vira diretoria a primeira pessoa com Google numa sede sem
+      # diretoria - e no plano free a sede fica sem ninguem a cada deploy.
+      - key: DIRETORIA_EMAILS
         sync: false
       # SITE_URL nao precisa aqui: o codigo usa RENDER_EXTERNAL_URL sozinho.
       # So defina se um dia a sede ganhar dominio proprio.

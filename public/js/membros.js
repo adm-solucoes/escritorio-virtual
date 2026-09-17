@@ -114,14 +114,17 @@
       const meta = document.createElement('span');
       meta.className = 'membro-meta';
       meta.textContent = (m.isAdmin ? 'Diretoria · ' : '') + 'ultimo acesso ' + quando(m.ultimoAcesso)
+        + (m.google ? ' · entra com o Google' : '')
         + (m.senhaTemporaria ? ' · senha provisoria' : '');
       info.append(nome, email, meta);
 
       const acoes = document.createElement('div');
       acoes.className = 'membro-acoes';
       if (m.id !== euId) {
+        // Conta do Google nao tem senha - e dar uma a ela abriria uma porta que
+        // o Google nao confere. Quem esqueceu, entra com o Google de novo.
+        if (!m.google) acoes.append(botao('Redefinir senha', '', () => redefinir(m)));
         acoes.append(
-          botao('Redefinir senha', '', () => redefinir(m)),
           botao(m.isAdmin ? 'Tirar diretoria' : 'Dar diretoria', '', () => diretoria(m, !m.isAdmin)),
           botao('Remover', 'perigo', () => remover(m)),
         );
@@ -221,7 +224,8 @@
   function mostrarPara(usuario) {
     usuarioAtual = usuario;
     const membro = !!usuario && !usuario.convidado;
-    document.getElementById('btn-trocar-senha').classList.toggle('oculto', !membro);
+    // quem entra com o Google nao tem senha pra trocar
+    document.getElementById('btn-trocar-senha').classList.toggle('oculto', !(membro && usuario.temSenha));
     document.getElementById('btn-membros').classList.toggle('oculto', !(membro && usuario.isAdmin));
     if (membro && usuario.senhaTemporaria) abrirSenha({ provisoria: true });
   }

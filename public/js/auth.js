@@ -73,6 +73,10 @@
     return DOMINIOS_SEDE.includes(email.slice(arroba + 1).toLowerCase().trim());
   }
 
+  // O servidor diz se o login com o Google esta ligado (/api/login-opcoes).
+  // Ligado, e-mail da ADM nao se cadastra com senha - entra pelo botao.
+  let googleLigado = false;
+
   function mostrarCampoCodigo() {
     const campo = document.getElementById('campo-codigo');
     if (!campo) return;
@@ -81,6 +85,32 @@
     // caminho: mostrar "precisa do codigo" antes do @ seria assustar a toa.
     const deFora = email.includes('@') && !ehEmailDaSede(email);
     campo.classList.toggle('oculto', modo !== 'criar' || !deFora);
+    // E o contrario: e-mail da ADM no cadastro, com o Google ligado, ganha o
+    // aviso de que o caminho e o botao - antes de a pessoa inventar uma senha
+    // que o servidor vai recusar.
+    const dica = document.getElementById('dica-email-adm');
+    if (dica) dica.classList.toggle('oculto', !(modo === 'criar' && googleLigado && ehEmailDaSede(email)));
+  }
+
+  // Volta do Google com problema: `?entrar=...` (ver server/auth.js).
+  const AVISOS_GOOGLE = {
+    cancelado: 'O login com o Google foi cancelado.',
+    dominio: 'Essa conta Google nao e da ADM. Escolha a conta @admsolucoes.com.br.',
+    erro: 'Nao deu pra entrar com o Google. Tenta de novo.',
+    indisponivel: 'O login com o Google nao esta ligado neste servidor.',
+  };
+  const avisoGoogle = AVISOS_GOOGLE[new URLSearchParams(location.search).get('entrar')] || '';
+  if (avisoGoogle) history.replaceState(null, '', location.pathname);
+
+  function carregarOpcoes() {
+    fetch('/api/login-opcoes', { credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((o) => {
+        googleLigado = !!o.google;
+        document.getElementById('login-google').classList.toggle('oculto', !googleLigado || modo === 'convidado');
+        mostrarCampoCodigo();
+      })
+      .catch(() => { /* sem opcoes: fica so e-mail e senha */ });
   }
 
   function trocarModo(novo) {
@@ -93,6 +123,7 @@
     // No modo visita nao ha o que escolher: quem chegou pelo link nao tem conta
     // e nao pode criar uma sem o codigo da sede.
     document.getElementById('login-abas').classList.toggle('oculto', visita);
+    document.getElementById('login-google').classList.toggle('oculto', visita || !googleLigado);
 
     // O nome aparece no cadastro E na visita; o resto do cadastro, so no cadastro.
     document.querySelectorAll('.campo-cadastro').forEach((el) => {
@@ -188,6 +219,7 @@
       sessionStorage.removeItem('aviso-login');
     } catch (e) { /* sem storage */ }
     if (AVISOS_LOGIN[motivo]) mostrarErro(AVISOS_LOGIN[motivo]);
+    else if (avisoGoogle) mostrarErro(avisoGoogle);
     document.getElementById('login-email').focus();
   }
 
@@ -210,6 +242,7 @@
     document.getElementById('login-email').addEventListener('input', mostrarCampoCodigo);
     form.addEventListener('submit', enviar);
     trocarModo(tokenConvite ? 'convidado' : 'entrar');
+    carregarOpcoes();
   }
 
   window.Auth = { init, eu, sair, salvarPerfil, mostrar, esconder };

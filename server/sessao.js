@@ -94,9 +94,12 @@ function lerCookies(header) {
   return saida;
 }
 
-function atributosCookie(maxAgeSegundos) {
+// Lax, e nao Strict, de proposito: a volta do login com o Google e uma navegacao
+// que CHEGA de accounts.google.com, e com Strict o navegador nao mandaria o
+// cookie do nonce nela.
+function atributosCookie(maxAgeSegundos, caminho) {
   const partes = [
-    'Path=/',
+    'Path=' + (caminho || '/'),
     'HttpOnly',
     'SameSite=Lax',
     'Max-Age=' + maxAgeSegundos,
@@ -106,14 +109,26 @@ function atributosCookie(maxAgeSegundos) {
   return partes.join('; ');
 }
 
+// Acrescenta em vez de sobrescrever: a volta do Google grava a sessao E apaga
+// o cookie do nonce na mesma resposta.
+function anexarCookie(res, valor) {
+  const atual = res.getHeader('Set-Cookie');
+  res.setHeader('Set-Cookie', (atual ? [].concat(atual) : []).concat(valor));
+}
+
 function definirCookie(res, usuarioId, duracaoMs) {
   const dura = Number(duracaoMs) > 0 ? Number(duracaoMs) : DURACAO_MS;
   const token = criarToken(usuarioId, dura);
-  res.setHeader('Set-Cookie', NOME_COOKIE + '=' + token + '; ' + atributosCookie(dura / 1000));
+  anexarCookie(res, NOME_COOKIE + '=' + token + '; ' + atributosCookie(dura / 1000));
 }
 
 function limparCookie(res) {
-  res.setHeader('Set-Cookie', NOME_COOKIE + '=; ' + atributosCookie(0));
+  anexarCookie(res, NOME_COOKIE + '=; ' + atributosCookie(0));
+}
+
+// Cookie de vida curta e caminho restrito (o nonce do login com o Google).
+function definirCookieCurto(res, nome, valor, segundos, caminho) {
+  anexarCookie(res, nome + '=' + encodeURIComponent(valor) + '; ' + atributosCookie(segundos, caminho));
 }
 
 // Usuario da requisicao HTTP (ou null).
@@ -164,6 +179,8 @@ function exigirDiretoria(req, res, next) {
 module.exports = {
   definirCookie,
   limparCookie,
+  definirCookieCurto,
+  lerCookies,
   usuarioDaRequisicao,
   usuarioDoSocket,
   exigirLogin,
