@@ -33,6 +33,71 @@ const io = new Server(server);
 // Atras do proxy do Render/Railway, pra `req.ip` ser o IP de verdade (o freio de
 // forca bruta depende disso) e o cookie Secure funcionar.
 app.set('trust proxy', 1);
+
+// Nao anunciar o que roda aqui. Nao impede nada sozinho, mas "x-powered-by:
+// Express" e a primeira linha de qualquer varredura automatica: e dizer de
+// graca por onde comecar.
+app.disable('x-powered-by');
+
+// ---- cabecalhos de seguranca ------------------------------------------------
+//
+// A sede subiu sem NENHUM deles - conferido no ar com curl. Cada um fecha uma
+// porta diferente, e todos sao barato:
+//
+// CSP e a mais importante, e e cinto de seguranca: hoje o chat escapa o texto
+// direito (`formatar()` escapa & < > " ' ANTES de montar o HTML, e o auto-link
+// so aceita http/https). A CSP e o que segura o dia em que alguem mexer nisso e
+// errar. `script-src` sem 'unsafe-inline' foi o motivo de o unico <script>
+// inline da pagina virar arquivo: com 'unsafe-inline' a CSP para de proteger
+// contra XSS, que e justamente pra isso que ela esta aqui.
+//
+// `style-src` PRECISA de 'unsafe-inline': o painel de salas monta
+// `style="background:..."` e varias telas escrevem `el.style.x`. Tirar isso
+// pediria refatorar meia interface, e estilo inline nao executa codigo - o
+// risco e outra ordem de grandeza.
+//
+// De onde a pagina carrega coisa de fora, conferido no codigo: PDF.js do cdnjs
+// (com worker, que pode nascer de blob:), a fonte do Google (CSS em
+// fonts.googleapis, arquivo em fonts.gstatic). O WhatsApp so aparece como link
+// clicavel, entao nao precisa de diretiva.
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "script-src 'self' https://cdnjs.cloudflare.com",
+  "worker-src 'self' blob:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  // data: e blob: sao as capas que o proprio navegador desenha do PDF, e o
+  // canvas do avatar. media: o video do WebRTC chega como blob.
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  // o socket e o proprio servidor; o Cloudflare TURN e chamado do SERVIDOR,
+  // nunca do navegador
+  "connect-src 'self'",
+  // ninguem coloca a sede dentro de um iframe: com camera, microfone e botao de
+  // diretoria na tela, clickjacking aqui custa caro
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+].join('; ');
+
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', CSP);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // X-Frame-Options e o mesmo que frame-ancestors, pra navegador antigo
+  res.setHeader('X-Frame-Options', 'DENY');
+  // O endereco da sede nao precisa viajar junto pro site que a pessoa clicar
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Camera e microfone so a propria sede pede; o resto fica fechado
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=()');
+  // HSTS so em producao: em desenvolvimento e http, e um HSTS gravado no
+  // navegador do dev gruda e atrapalha depois.
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
+  next();
+});
+
 app.use(express.json({ limit: '32kb' }));
 
 // Estado de presenca em memoria (sem banco de dados)
@@ -460,7 +525,21 @@ io.on('connection', (socket) => {
 
   // Agenda do time, vinda do CRM. Sob demanda (so quem abre o painel pede) e
   // com cache no agenda.js, entao abrir o painel nao vira chamada ao Google.
+  // SO MEMBRO. A agenda aqui nao e a sua: e a de TODO MUNDO que conectou o
+  // Google - titulo, horario e de quem e cada compromisso do time inteiro. E a
+  // lista de reunioes da sede vai junto.
+  //
+  // Faltava a checagem, e visitante tem sessao de verdade: quem abrisse um link
+  // de convite lia a agenda da empresa inteira. A regra do projeto sempre foi
+  // que material interno nao e pra visitante - e por isso que ele ve a capa do
+  // livro e nao abre o livro (docs/plano-convidado.md). Agenda e no minimo tao
+  // interna quanto.
   socket.on('agenda-pedir', async () => {
+    const player = players.get(socket.id);
+    if (!player) return;
+    if (player.convidado) {
+      return socket.emit('agenda', { eventos: [], indisponivel: 'A agenda e so de quem e da sede.' });
+    }
     const dados = await agenda.obter();
     socket.emit('agenda', dados);
     socket.emit('reunioes', dadosDeReunioes());
@@ -600,7 +679,15 @@ io.on('connection', (socket) => {
 
   // Quadro do Trello, sob demanda e com cache no trello.js. O token nunca sai
   // do servidor: o cliente recebe o quadro ja montado.
+  // SO MEMBRO, pelo mesmo motivo da agenda: o quadro tem o nome de cada cartao
+  // do time - cliente, prazo, o que esta atrasado. Nao e coisa que se mostra a
+  // quem entrou por um link de visita.
   socket.on('trello-pedir', async () => {
+    const player = players.get(socket.id);
+    if (!player) return;
+    if (player.convidado) {
+      return socket.emit('trello', { indisponivel: 'O quadro e so de quem e da sede.' });
+    }
     socket.emit('trello', await trello.obter());
   });
 
@@ -924,9 +1011,19 @@ app.get('/api/estante/:id/capa', sessao.exigirLogin, async (req, res) => {
 // mostra), mas nao pega livro.
 app.get('/api/acervo-fisico', sessao.exigirLogin, (req, res) => {
   res.set('Cache-Control', 'no-store');
+  // Visitante ve o CATALOGO e ve que o livro esta emprestado - mas nao ve com
+  // QUEM. O nome e o uid de quem pegou sao informacao sobre as pessoas da sede,
+  // e visitante entrou por um link pra visitar, nao pra saber quem esta com o
+  // que. O uid ainda por cima e o mesmo que identifica a pessoa nas DMs.
+  const visita = !!req.usuario.convidado;
+  const livros = emprestimos.listar().map((l) => (
+    visita && l.emprestimo
+      ? Object.assign({}, l, { emprestimo: { emprestado: true } })
+      : l
+  ));
   res.json({
-    livros: emprestimos.listar(),
-    podePegar: !req.usuario.convidado,
+    livros,
+    podePegar: !visita,
     podeDevolverDeOutros: !!req.usuario.isAdmin,
     eu: req.usuario.id,
   });

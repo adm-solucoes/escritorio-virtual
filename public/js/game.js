@@ -3910,9 +3910,14 @@
     if (emChamada) {
       desenharIconeFone(ctx, cx, cy, '#ffffff');
     } else {
+      // QUADRADINHO arredondado, nao circulo. Ampliando o print da referencia
+      // (referencias/03-site-pods-por-time.png, a etiqueta "You") o marcador e
+      // claramente um quadrado de canto redondo. O codigo original ja fazia
+      // assim e eu troquei por circulo sem conferir - este comentario existe
+      // pra ninguem "consertar" de novo.
       ctx.fillStyle = corStatus;
       ctx.beginPath();
-      ctx.arc(cx, cy, 3.2, 0, Math.PI * 2);
+      ctx.roundRect(cx - 3.2, cy - 3.2, 6.4, 6.4, 2);
       ctx.fill();
     }
 
@@ -4101,7 +4106,14 @@
       // diretoria nao e informacao que alguem precise ler atravessando o
       // escritorio - precisa e na hora de saber quem pode decorar ou convidar.
       // A referencia nao poe cargo nenhum em cima da cabeca.
-      const nomeExibido = p.name + (rotuloStatus ? ' · ' + rotuloStatus : '');
+      // "Voce" no lugar do proprio nome, como a referencia faz (a etiqueta
+      // "You" no print dos pods). Duas razoes praticas: voce acha o seu boneco
+      // de relance numa sala cheia, e a etiqueta encurta - com 32 mesas em
+      // fileira, cada pixel de etiqueta a menos e uma sobreposicao a menos.
+      // Seu proprio nome voce ja sabe.
+      const ehEu = p.id === selfId;
+      const nomeExibido = (ehEu ? 'Voce' : p.name)
+        + (rotuloStatus ? ' · ' + rotuloStatus : '');
       const emChamada = p.id === selfId
         ? (Calls.isCameraAtiva() && Calls.getPeersConectados().length > 0)
         : Calls.temChamadaAtiva(p.id);

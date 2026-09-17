@@ -808,16 +808,8 @@
   <script src="js/avisos.js"></script>
   <script src="js/conteudo.js"></script>
   <script src="js/main.js"></script>
-  <script>
-    // Registra o service worker so em HTTPS (ou localhost): e o que faz o
-    // navegador oferecer "Instalar" e abrir o app em janela propria.
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {
-          /* sem service worker o site continua funcionando normalmente */
-        });
-      });
-    }
-  </script>
+  <!-- Era um <script> inline aqui. Virou arquivo pra a CSP poder recusar script
+       inline sem excecao. Ver js/instalar.js. -->
+  <script src="js/instalar.js"></script>
 </body>
 </html>

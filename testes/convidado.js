@@ -80,6 +80,51 @@ function subir() {
   });
 }
 
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Espera o evento CHEGAR, em vez de dormir um tempo fixo e torcer.
+//
+// Escrevi primeiro com `espera(600)` e a bateria inteira ficou INTERMITENTE:
+// passava sozinha, falhava de vez em quando rodando com as outras (que sobem
+// servidor e disputam a maquina). Teste de seguranca que pisca e pior que teste
+// nenhum - ele ensina a rodar de novo ate ficar verde, e um dia o vermelho de
+// verdade passa batido junto.
+function esperarEvento(soquete, nome, prazoMs = 8000) {
+  const limite = Date.now() + prazoMs;
+  return new Promise((resolve) => {
+    (function olhar() {
+      const achado = soquete.eventos.find((e) => e[0] === nome);
+      if (achado) return resolve(achado);
+      if (Date.now() > limite) return resolve(null);
+      setTimeout(olhar, 50);
+    })();
+  });
+}
+
+// Socket.io "na unha" (o projeto nao tem o cliente de Node): protocolo 4 do
+// engine.io por WebSocket. "40" conecta, "42[...]" e evento, "2" e ping.
+// Mesma tecnica de testes/contas.js - a agenda e o Trello so existem por
+// socket, entao nao da pra conferir esses dois so por HTTP.
+function abrirSocket(cookie) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(BASE.replace('http', 'ws') + '/socket.io/?EIO=4&transport=websocket', { headers: { Cookie: cookie } });
+    const eventos = [];
+    const prazo = setTimeout(() => reject(new Error('socket nao conectou')), 5000);
+    ws.addEventListener('message', (ev) => {
+      const m = String(ev.data);
+      if (m.startsWith('0')) ws.send('40');
+      else if (m === '2') ws.send('3');
+      else if (m.startsWith('40')) {
+        clearTimeout(prazo);
+        ws.send('42' + JSON.stringify(['join', {}]));
+        resolve({ eventos, ws });
+      } else if (m.startsWith('44')) { clearTimeout(prazo); reject(new Error('recusado: ' + m)); }
+      else if (m.startsWith('42')) { try { eventos.push(JSON.parse(m.slice(2))); } catch (e) { /* ignora */ } }
+    });
+    ws.addEventListener('error', () => { clearTimeout(prazo); reject(new Error('erro no socket')); });
+  });
+}
+
 // Guarda o cookie de sessao de cada "pessoa" do teste.
 function pedir(rota, { metodo = 'GET', corpo, cookie } = {}) {
   const cabecalhos = { 'Content-Type': 'application/json' };
@@ -192,6 +237,52 @@ function pedir(rota, { metodo = 'GET', corpo, cookie } = {}) {
       metodo: 'POST', corpo: { token: novo.corpo.token, nome: 'Outro' },
     });
     conferir('e o link novo ja funciona', comNovo.status, 200);
+
+    // --------------------------------------------- o que ele NAO pode LER
+    // Ate aqui o teste so cobria o que o visitante nao pode ESCREVER. Uma
+    // varredura achou tres coisas que ele podia LER e nao devia: a agenda do
+    // time inteiro, o quadro do Trello e o nome de quem pegou cada livro da
+    // estante fisica. Nenhuma delas tinha checagem nenhuma - e visitante tem
+    // sessao de verdade, entao bastava abrir o link.
+    //
+    // A regra do projeto sempre foi essa: ele ve a capa do livro e nao abre o
+    // livro. Estas checagens sao a mesma regra, nos lugares que tinham ficado
+    // de fora.
+    const acervo = await pedir('/api/acervo-fisico', { cookie: visita.cookie });
+    conferir('visitante VE o acervo fisico', acervo.status, 200);
+    const pegos = (acervo.corpo.livros || []).filter((l) => l.emprestimo);
+    conferir('  mas nao pode pegar livro', acervo.corpo.podePegar, false);
+    conferir('  e nao ve QUEM pegou (nem nome, nem uid)',
+      pegos.every((l) => !('nome' in l.emprestimo) && !('uid' in l.emprestimo)), true);
+
+    const socketVisita = await abrirSocket(visita.cookie);
+    // O `join` sai dentro do abrirSocket; o `init` de volta e a prova de que o
+    // servidor ja registrou este socket como player. So depois dele os pedidos
+    // valem - antes, o handler cai no `if (!player) return` e nao responde
+    // nada, o que pareceria "guarda funcionando" pelo motivo errado.
+    await esperarEvento(socketVisita, 'init');
+    socketVisita.ws.send('42' + JSON.stringify(['agenda-pedir']));
+    socketVisita.ws.send('42' + JSON.stringify(['trello-pedir']));
+    const agendaRecebida = await esperarEvento(socketVisita, 'agenda');
+    const trelloRecebido = await esperarEvento(socketVisita, 'trello');
+
+    // A assercao confere a MENSAGEM, e nao so "veio indisponivel".
+    //
+    // Escrevi primeiro do jeito frouxo - "tem indisponivel e a lista esta
+    // vazia" - e ele PASSOU COM A GUARDA REMOVIDA. Motivo: neste teste o Google
+    // nao esta configurado, entao a agenda ja responde "nao configurado" e a
+    // lista ja vem vazia. O teste dava verde pelo motivo errado, e em producao
+    // - com o Google ligado - a agenda vazaria com o teste sorrindo.
+    //
+    // Este texto so pode vir da guarda. Se ela sair, a checagem cai.
+    conferir('visitante NAO recebe a agenda do time',
+      /so de quem e da sede/.test((agendaRecebida && agendaRecebida[1].indisponivel) || ''), true);
+    conferir('visitante NAO recebe o quadro do Trello',
+      /so de quem e da sede/.test((trelloRecebido && trelloRecebido[1].indisponivel) || ''), true);
+    // E a lista de reunioes nem chega: a guarda devolve antes de emitir.
+    conferir('  nem a lista de reunioes da sede',
+      socketVisita.eventos.some((e) => e[0] === 'reunioes'), false);
+    socketVisita.ws.close();
   } catch (e) {
     falhou++;
     console.log('  FALHOU ' + e.message);
