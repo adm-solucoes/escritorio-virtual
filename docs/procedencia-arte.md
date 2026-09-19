@@ -108,8 +108,6 @@ altura)` — os mesmos numeros que estao em [`public/js/sprites.js`](../public/j
 | `PLANTA`, `PLANTA_GRANDE` | 4,1 (1×2) / 2,0 (1×3) | `furniture/planter.png` | `Objects/Furniture/Planter.png` |
 | `BEBEDOURO` | 0,0 (1×2) | `furniture/water-cooler.png` | `Objects/Furniture/Water Cooler.png` |
 | `VASO_FLORES` | 0,0 (1×1) | `small-items/flowers.png` | `Objects/Small Items/Flowers.png` |
-| `tijolo` | 0,0 (1×1) | `structure-floor/tile-a.png` | `Structure/Floor/Tile A.png` |
-| `ladrilho` | 0,0 (2×2) | `structure-floor/tile-c.png` | `Structure/Floor/Tile C.png` |
 | `ARBUSTO` | 2,0 (1×1) | `terrain/plants-summer.png` | `Terrain/plants_summer.png` |
 | `PEDRA` | 3,2 (1×1) | `terrain/rocks-grasslands.png` | `Terrain/Rocks, Grasslands.png` |
 | `ARVORE` | 4,0 (3×4) | `terrain/trees-summer.png` | `Terrain/trees_summer.png` |
@@ -138,8 +136,6 @@ recolorizacoes de arte de 2012.
 | `furniture/planter.png` | Lanea Zimmerman (Sharm) | OGA-BY 3.0 | [lpc-interior-castle-tiles](https://opengameart.org/content/lpc-interior-castle-tiles) |
 | `furniture/water-cooler.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
 | `small-items/flowers.png` | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | [lpc-interior-castle-tiles](https://opengameart.org/content/lpc-interior-castle-tiles) |
-| `structure-floor/tile-a.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
-| `structure-floor/tile-c.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
 | `terrain/plants-summer.png` | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling), Hyptosis | OGA-BY 3.0 | [lots-of-free-2d-tiles-and-sprites-by-hyptosis](https://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis) |
 | `terrain/rocks-grasslands.png` | Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | (original do proprio LPC Revised) |
 | `terrain/trees-summer.png` | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) | OGA-BY 3.0 | [liberated-pixel-cup-lpc-base-assets-sprites-map-tiles](https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles) |

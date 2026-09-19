@@ -167,7 +167,31 @@
           { t: m.LIVRE, nome: 'Apagar (volta o chao)' },
         ],
       },
+      // Nao e grade de objetos: e o editor de AREAS (public/js/areas.js) -
+      // mover e redimensionar o retangulo de cada sala. So diretoria (nao tem
+      // `deMesa`). Ver docs/areas.md.
+      { id: 'areas', nome: 'Areas: mover e mudar o tamanho', icone: '📐', itens: [] },
     ];
+  }
+
+  // A aba de areas esta na tela? (e nao a busca, que mostra objetos)
+  function modoAreas() {
+    return aberto && souAdmin && abaAtual === 'areas' && !filtro.trim() && !!window.EditorAreas;
+  }
+
+  // Liga e desliga o editor de areas junto com a aba. Os dois modos de clique
+  // (pintar objeto e arrastar area) nao convivem.
+  function sincronizarAreas() {
+    if (!window.EditorAreas) return;
+    const quer = modoAreas();
+    if (quer && !EditorAreas.estaAtivo()) {
+      selecionado = null;
+      modoLink = false;
+      atualizarBotaoLink();
+      EditorAreas.ligar(render);
+    } else if (!quer && EditorAreas.estaAtivo()) {
+      EditorAreas.desligar();
+    }
   }
 
   // Montado uma vez so: o item selecionado e comparado por identidade.
@@ -387,6 +411,12 @@
 
   function renderGrade() {
     gradeEl.innerHTML = '';
+    const areas = modoAreas();
+    gradeEl.classList.toggle('decor-grade-areas', areas);
+    if (areas) {
+      EditorAreas.renderPainel(gradeEl);
+      return;
+    }
     const itens = itensVisiveis();
     if (!itens.length) {
       const vazio = document.createElement('p');
@@ -445,9 +475,14 @@
   }
 
   function render() {
+    sincronizarAreas();
     renderAbas();
     renderGrade();
     const dica = document.getElementById('decor-dica');
+    if (modoAreas()) {
+      dica.textContent = EditorAreas.dica();
+      return;
+    }
     // Com um item de apoiar na mao a dica muda: e o unico caso em que existe
     // um lugar certo pra clicar (a malha verde), e nao adianta descobrir isso
     // no erro.
@@ -480,6 +515,7 @@
   function alternarModoLink() {
     modoLink = !modoLink;
     if (modoLink) selecionado = null;   // os dois modos nao convivem
+    if (modoLink && abaAtual === 'areas') abaAtual = 'mesas';
     atualizarBotaoLink();
     render();
   }
@@ -610,6 +646,7 @@
     aberto = false;
     selecionado = null;
     modoLink = false;
+    if (window.EditorAreas && EditorAreas.estaAtivo()) EditorAreas.desligar();
     atualizarBotaoLink();
     painel.classList.add('oculto');
     document.getElementById('btn-decorar').classList.remove('ativo');
@@ -662,6 +699,7 @@
     });
 
     document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && window.EditorAreas && EditorAreas.cancelar()) return;
       if (e.key === 'Escape' && selecionado) {
         selecionado = null;
         render();

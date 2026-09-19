@@ -195,7 +195,7 @@ function salvar() {
   try {
     const dados = Array.from(donos.entries())
       .map(([k, uid]) => ({ chave: k, uid, itens: itens.get(k) || [] }));
-    pastaDados.gravarSeguro(ARQUIVO, JSON.stringify({ mesas: dados }, null, 2));
+    pastaDados.gravarSeguro(ARQUIVO, JSON.stringify({ planta: map.VERSAO_PLANTA, mesas: dados }, null, 2));
   } catch (e) {
     console.error('Nao consegui salvar as mesas:', e.message);
   }
@@ -204,6 +204,13 @@ function salvar() {
 function carregar() {
   try {
     const dados = JSON.parse(fs.readFileSync(ARQUIVO, 'utf8'));
+    // A mesa e guardada pela celula do canto dela: de outra planta, a chave
+    // cairia em outra mesa (ou em lugar nenhum). Recomeca e cada um pega de novo.
+    const versao = Number(dados.planta) || 1;
+    if (versao !== map.VERSAO_PLANTA) {
+      pastaDados.guardarDePlantaAntiga(ARQUIVO, versao);
+      return;
+    }
     (dados.mesas || []).forEach((m) => {
       if (typeof m.chave !== 'string' || typeof m.uid !== 'string') return;
       donos.set(m.chave, m.uid);

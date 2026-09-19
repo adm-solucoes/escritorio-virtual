@@ -323,7 +323,7 @@ Ponta a ponta, no navegador, contra o acervo local de 12 livros:
 A estante ganhou duas abas: **Digitais** (os PDFs) e **Na sala da ADM** (os
 livros de papel). Mesma busca (agora tambem por autor) e mesmo filtro por setor.
 
-- Catalogo: `public/dados/acervo-fisico.json`, **96 livros transcritos das 12
+- Catalogo: `server/acervo-fisico.json` (morava em `public/dados/`; saiu de la em 18/09 pra nao ficar aberto no endereco de outro cliente - ver docs/varias-sedes.md), **96 livros transcritos das 12
   fotos** das estantes. `codigo` e a etiqueta da lombada quando da pra ler;
   `conferir: true` marca os 17 com titulo ou autor lido pela metade (a foto 9
   saiu tremida e ficou de fora). Pra corrigir ou acrescentar livro, e editar o

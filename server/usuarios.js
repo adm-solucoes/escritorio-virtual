@@ -121,7 +121,12 @@ function publico(usuario) {
 
 // ---------- escrita ----------
 
-function criar({ nome, email, senha, isAdmin }) {
+// emailVerificado (ver docs/email.md):
+//   true      - o dono provou o e-mail (link por e-mail, ou o Google);
+//   false     - criada com o e-mail ligado e o link ainda nao foi clicado: NAO entra;
+//   ausente   - criada antes de existir e-mail na sede (ou com ele desligado):
+//               entra como sempre entrou. Ligar o e-mail nao tranca ninguem fora.
+function criar({ nome, email, senha, isAdmin, emailVerificado }) {
   const salt = crypto.randomBytes(16).toString('hex');
   const usuario = {
     id: crypto.randomUUID(),
@@ -135,6 +140,7 @@ function criar({ nome, email, senha, isAdmin }) {
     criadoEm: Date.now(),
     ultimoAcesso: Date.now(),
   };
+  if (emailVerificado !== undefined) usuario.emailVerificado = !!emailVerificado;
   usuarios.push(usuario);
   salvar();
   return usuario;
@@ -152,6 +158,7 @@ function criarPeloGoogle({ nome, email, sub, isAdmin }) {
     salt: null,
     senhaHash: null,
     googleSub: String(sub),
+    emailVerificado: true,     // o Google ja provou
     isAdmin: !!isAdmin,
     appearance: null,
     criadoEm: Date.now(),
@@ -173,6 +180,7 @@ function vincularGoogle(id, sub) {
   if (!u || u.convidado) return null;
   if (u.googleSub === String(sub)) return u;
   u.googleSub = String(sub);
+  u.emailVerificado = true;
   u.salt = null;
   u.senhaHash = null;
   u.senhaTemporaria = false;
@@ -253,6 +261,30 @@ function definirSenha(usuario, senha) {
   usuario.versaoSessao = versaoSessao(usuario) + 1;
 }
 
+// O link do e-mail foi clicado: o dono provou que o e-mail e dele.
+function confirmarEmail(id) {
+  const u = porId(id);
+  if (!u || u.convidado) return null;
+  if (u.emailVerificado !== true) {
+    u.emailVerificado = true;
+    salvar();
+  }
+  return u;
+}
+
+// Senha nova pelo link do e-mail. Quem chegou aqui abriu a caixa de entrada da
+// conta - entao isso tambem confirma o e-mail. Sobe a versao da sessao (dentro
+// de definirSenha): quem estava logado em outro lugar, sai.
+function redefinirPeloEmail(id, novaSenha) {
+  const u = porId(id);
+  if (!u || u.convidado) return null;
+  definirSenha(u, novaSenha);
+  u.senhaTemporaria = false;
+  u.emailVerificado = true;
+  salvar();
+  return u;
+}
+
 function trocarSenha(id, novaSenha) {
   const u = porId(id);
   if (!u || u.convidado) return null;
@@ -285,6 +317,10 @@ function redefinirSenha(id) {
   // a tela pede pra pessoa trocar logo depois de entrar: a provisoria passou
   // pela mao (ou pelo WhatsApp) de outra pessoa
   u.senhaTemporaria = true;
+  // Conta esperando a confirmacao do e-mail: a diretoria entregou a provisoria
+  // pra pessoa que ela conhece - e isso vale a confirmacao. Sem isto, a
+  // provisoria de quem nao recebeu o e-mail (spam, provedor fora) nao entraria.
+  if (u.emailVerificado === false) u.emailVerificado = true;
   salvar();
   return senha;
 }
@@ -322,6 +358,7 @@ function membros() {
       criadoEm: u.criadoEm || null,
       ultimoAcesso: u.ultimoAcesso || null,
       senhaTemporaria: !!u.senhaTemporaria,
+      emailPendente: u.emailVerificado === false,
       google: !!u.googleSub,
     }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -379,6 +416,8 @@ module.exports = {
   marcarAcesso,
   atualizarPerfil,
   trocarSenha,
+  confirmarEmail,
+  redefinirPeloEmail,
   definirWhatsapp,
   _normalizarWhatsapp: normalizarWhatsapp,
   redefinirSenha,

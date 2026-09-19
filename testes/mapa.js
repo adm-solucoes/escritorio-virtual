@@ -48,7 +48,7 @@ const fechadasServidor = servidor.ROOMS.filter((s) => s.privativa).map((s) => s.
 conferir('  e as mesmas salas fechadas',
   JSON.stringify(fechadasCliente), JSON.stringify(fechadasServidor));
 conferir('  com pelo menos as salas de reuniao marcadas',
-  ['reuniao', 'huddle1', 'huddle2', 'cabine1', 'cabine2', 'cabine3']
+  ['reuniao', 'huddle1', 'cabine1', 'cabine2']
     .filter((id) => !fechadasCliente.includes(id)), []);
 
 // Mesma regra pra sala SILENCIOSA: se so uma copia marcar, a biblioteca deixa

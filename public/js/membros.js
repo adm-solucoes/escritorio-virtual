@@ -115,6 +115,7 @@
       meta.className = 'membro-meta';
       meta.textContent = (m.isAdmin ? 'Diretoria · ' : '') + 'ultimo acesso ' + quando(m.ultimoAcesso)
         + (m.google ? ' · entra com o Google' : '')
+        + (m.emailPendente ? ' · e-mail nao confirmado' : '')
         + (m.senhaTemporaria ? ' · senha provisoria' : '');
       info.append(nome, email, meta);
 

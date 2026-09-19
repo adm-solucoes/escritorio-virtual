@@ -6,42 +6,56 @@ quebra.
 
 ## A planta
 
-O andar segue a planta da referencia, levantada tile a tile em
-[planta-referencia.md](planta-referencia.md). O desenho geral e:
+**Planta compacta, desde 18/09/2026.** Mapa de 38x28 tiles com predio de 34x24 e
+**16 mesas** (dois bairros de 8). A anterior tinha 48x32, predio de 44x29 e 32
+mesas: pra quantidade de gente que fica online ao mesmo tempo, a tela mostrava
+corredor e mesa vazia, e atravessar o predio levava ~9 s. No zoom minimo, a
+compacta cabe quase inteira na tela.
 
-- **Faixa norte (linhas 3-7):** quatro pods de 5x5 - Diretoria, Financeiro,
-  Projetos, Marketing - com o patio do lago entre o segundo e o terceiro. Cada
-  pod tem janelao de 3, uma planta no canto, mesa 3x1 e cadeira. So isso.
-- **Colunas laterais (linhas 9-21):** duas salas fechadas de cada lado. Copa e
-  Sala de Reuniao a oeste; Treinamento e Huddle a leste.
-- **Salao (linha 8 pra baixo):** tijolinho creme de ponta a ponta. As areas de
-  trabalho **nao sao salas**: sao ilhas de carpete soltas dentro dele, sem
-  parede e sem porta. Duas baias de 11x6, com tres mesas por fileira.
-- **Faixa sul (linhas 23-28):** lounge, recepcao e a mesa de conferencia, essa
-  tambem solta no salao.
+O desenho, de cima pra baixo:
 
-Duas medidas que valem em tudo, porque sao da referencia:
+- **Faixa norte (linhas 3-9):** 2 cabines de chamada empilhadas (com o
+  corredor 9-10 descendo ate o eixo), Sala de Reuniao (6 lugares), Huddle (4
+  lugares) e a Copa e Lounge, aberta pro eixo. E um gradiente acustico: oeste
+  quieto, leste barulhento.
+- **Eixo (linhas 11-12):** o corredor leste-oeste que liga tudo.
+- **Faixa sul (linhas 13-24):** Recepcao (a porta da rua e de vidro, na parede
+  sul), os bairros **Foco** e **Projetos** em carpete lavanda, e a Biblioteca
+  no canto sudeste, com parede cheia e porta (e sala silenciosa). A coluna 27 e
+  corredor entre os bairros e ela: com a parede colada na ultima mesa, a regra
+  do "movel encostado no muro" lia a mesa como parte da parede.
 
-- **Mesa e 3x1 e a cadeira fica na linha de baixo.** Nao 3x2. A profundidade a
-  mais e o que fazia a baia parecer mesa de refeitorio.
+As medidas que valem em tudo, porque sao da referencia:
+
+- **Mesa e 3x1 e a cadeira fica na linha de baixo**, com uma linha livre antes
+  da proxima fileira.
 - **Reuniao tem duas escalas.** Huddle = mesa redonda de 1 tile com um assento
-  por lado. Conferencia = mesa 3x2 com dez poltronas vermelhas.
+  por lado. Sala de reuniao = mesa 3x2 com poltronas vermelhas dos dois lados.
+
+### Mudou a planta? Suba a versao
+
+O que e salvo por CELULA - decoracao, links, areas mexidas (`mapa.json`) e mesas
+reivindicadas (`mesas.json`) - so faz sentido na planta em que foi feito. Por
+isso `server/map.js` tem `VERSAO_PLANTA`: quando a planta muda de um jeito que
+tira as coisas do lugar, **suba o numero**. No arranque, arquivo salvo com outra
+versao sai do caminho - renomeado pra `mapa.json.planta-N`, e nao apagado - e a
+sede comeca do zero nele. Reuniao marcada numa sala que deixou de existir tambem
+fica de fora.
 
 ## Como decorar sem quebrar
 
 Tres armadilhas ja aconteceram aqui, e as tres eram invisiveis: o servidor sobe,
 o mapa desenha bonito, e so quem tenta andar descobre.
 
-1. **A porta e um vao de DOIS tiles**, nas colunas `c0+2` e `c0+3` de cada pod
-   (11-12, 17-18, 30-31, 36-37) e nas linhas 11-12 e 18-19 das colunas 8 e 39.
-   Dois tiles em vez de um porque com um so, um vaso mal posto selava a sala -
-   ja aconteceu com tres de uma vez.
-2. **A volta em torno do lago tem UM tile de largura.** Peca solida nas duas
-   pontas do corredor de fora fecha um bolso de nove celulas. Aconteceu com dois
-   arbustos; sobrou um so, e no canto.
-3. **A entrada principal e o unico elo com o jardim.** Ela fica na parede sul,
-   colunas 16 e 17. Sem ela o verde de fora inteiro - 356 celulas - fica sem
-   ligacao com o predio.
+1. **Porta e vao sao de UM tile.** Portas: linha 10, colunas 15 (reuniao) e
+   22 (huddle); linha 13, coluna 29 (biblioteca). Vaos: linha 10, colunas 9-10
+   (corredor das cabines), e coluna 8, linhas 4 e 8 (cada cabine). Um vaso na
+   frente de qualquer um deles sela a sala - ja aconteceu, com tres de uma vez.
+2. **A volta em torno do predio e estreita** (2 tiles). Decoracao so na coluna
+   ou linha DE FORA (0, 37, a linha 0 e a 27): sem passo na diagonal, um solido
+   na de fora mais outro na de dentro, na linha seguinte, tranca a faixa.
+3. **A porta da rua e o unico elo com o jardim**: parede sul, colunas 5 e 6.
+   Sem ela o verde de fora inteiro fica sem ligacao com o predio.
 
 `testes/mapa.js` cobre os tres: sala sem chao alcancavel, mesa sem onde sentar e
 area grande ilhada. Rode antes de dizer que esta pronto.

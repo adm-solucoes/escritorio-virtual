@@ -78,6 +78,8 @@ ocupa 3 tiles de largura, e uma mesa de trabalho tem ~1,6 m.
 ```
 
 **1 tile ≈ 0,5 m.** Entao o andar de 48x32 tiles = **24 m x 16 m = 384 m²**.
+(Historico: em 18/09/2026 a planta foi compactada pra 38x28, com 16 mesas - ver
+[mapa.md](mapa.md). O partido de eixo e o gradiente acustico daqui continuam.)
 
 ---
 

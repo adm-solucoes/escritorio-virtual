@@ -5,7 +5,7 @@
 //
 //   1. duas reunioes na mesma sala no mesmo horario. A sala e fisica: as duas
 //      turmas chegam e uma tem que sair. Nao da pra "entrar nas duas".
-//   2. cabine de chamada nao e sala de reuniao. As tres cabines tambem sao
+//   2. cabine de chamada nao e sala de reuniao. As cabines tambem sao
 //      privativas, mas sao pra uma pessoa - marcar "Alinhamento do Comercial"
 //      numa cabine e marcar reuniao onde nao cabe reuniao.
 //
@@ -19,6 +19,18 @@ const path = require('path');
 // server/data de verdade.
 const PASTA = fs.mkdtempSync(path.join(os.tmpdir(), 'adm-reunioes-'));
 process.env.DATA_DIR = PASTA;
+
+// Uma reuniao ja gravada numa sala que SAIU da planta: o segundo huddle, que a
+// planta compacta nao tem. Gravada antes de o modulo carregar, que e quando ele
+// le o arquivo.
+const DAQUI_A_UM_DIA = Date.now() + 24 * 60 * 60 * 1000;
+fs.writeFileSync(path.join(PASTA, 'reunioes.json'), JSON.stringify({
+  reunioes: [{
+    id: 1, titulo: 'No huddle que saiu', sala: 'huddle2',
+    inicio: DAQUI_A_UM_DIA, fim: DAQUI_A_UM_DIA + 30 * 60000, porUid: 'u-caio', porNome: 'Caio',
+  }],
+  proximoId: 2,
+}));
 
 const reunioes = require('../server/reunioes.js');
 
@@ -39,10 +51,12 @@ const ZE = { uid: 'u-ze', nome: 'Ze', isAdmin: false };
 const DAQUI_A_UMA_HORA = Date.now() + 60 * 60 * 1000;
 
 try {
+  conferir('reuniao gravada numa sala que saiu da planta fica de fora', reunioes.listar(), []);
+
   // ------------------------------------------------------- onde cabe marcar
   const salas = reunioes.salasDisponiveis();
   const ids = salas.map((s) => s.id).sort();
-  conferir('as salas de reuniao saem da planta', ids, ['huddle1', 'huddle2', 'reuniao']);
+  conferir('as salas de reuniao saem da planta', ids, ['huddle1', 'reuniao']);
   conferir('cabine de chamada NAO entra', ids.some((i) => i.startsWith('cabine')), false);
   conferir('e cada sala diz quantos lugares tem',
     salas.every((s) => s.lugares > 0), true);
@@ -70,7 +84,7 @@ try {
 
   // ------------------------------------------------------------- o que nao vale
   conferir('sem titulo nao marca',
-    reunioes.criar({ titulo: '   ', inicio: DAQUI_A_UMA_HORA, minutos: 30, sala: 'huddle2' }, CAIO).erro,
+    reunioes.criar({ titulo: '   ', inicio: DAQUI_A_UMA_HORA, minutos: 30, sala: 'huddle1' }, CAIO).erro,
     'Poe um titulo na reuniao.');
   conferir('em cabine nao marca',
     reunioes.criar({ titulo: 'X', inicio: DAQUI_A_UMA_HORA, minutos: 30, sala: 'cabine1' }, CAIO).erro,
@@ -79,18 +93,18 @@ try {
     reunioes.criar({ titulo: 'X', inicio: DAQUI_A_UMA_HORA, minutos: 30, sala: 'sala-secreta' }, CAIO).erro,
     'Escolhe uma sala da sede.');
   conferir('de 5 minutos nao marca',
-    reunioes.criar({ titulo: 'X', inicio: DAQUI_A_UMA_HORA, minutos: 5, sala: 'huddle2' }, CAIO).erro,
+    reunioes.criar({ titulo: 'X', inicio: DAQUI_A_UMA_HORA, minutos: 5, sala: 'huddle1' }, CAIO).erro,
     'A duracao tem que ficar entre 15 minutos e 8 horas.');
   conferir('sem data nao marca',
-    reunioes.criar({ titulo: 'X', inicio: 'ontem', minutos: 30, sala: 'huddle2' }, CAIO).erro,
+    reunioes.criar({ titulo: 'X', inicio: 'ontem', minutos: 30, sala: 'huddle1' }, CAIO).erro,
     'Escolhe a data e a hora.');
   conferir('semana passada nao marca',
-    reunioes.criar({ titulo: 'X', inicio: Date.now() - 7 * 24 * 3600e3, minutos: 30, sala: 'huddle2' }, CAIO).erro,
+    reunioes.criar({ titulo: 'X', inicio: Date.now() - 7 * 24 * 3600e3, minutos: 30, sala: 'huddle1' }, CAIO).erro,
     'Essa data ja passou faz tempo.');
   // Marcar as 14h faltando cinco minutos e caso de verdade, entao um dia pra
   // tras e aceito de proposito.
   conferir('hoje mais cedo AINDA marca',
-    !!reunioes.criar({ titulo: 'A que acabou', inicio: Date.now() - 2 * 3600e3, minutos: 30, sala: 'huddle2' }, CAIO).reuniao,
+    !!reunioes.criar({ titulo: 'A que acabou', inicio: Date.now() - 2 * 3600e3, minutos: 30, sala: 'huddle1' }, CAIO).reuniao,
     true);
 
   // ----------------------------------------------------------- quem desmarca

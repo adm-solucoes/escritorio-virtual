@@ -77,8 +77,12 @@
   let lastSentState = { x: null, y: null, dir: null, moving: null };
 
   const STATUS_ORDEM = ['livre', 'focado', 'reuniao'];
-  const STATUS_LABEL = { livre: 'Livre', focado: 'Focado', reuniao: 'Em reuniao' };
-  const STATUS_COR = { livre: '#63d9c4', focado: '#ffb454', reuniao: '#e0607e' };
+  // 'ligacao' fica FORA do ciclo do botao de status: quem marca e o discador,
+  // enquanto a pessoa fala com um cliente (js/discador.js), e ele mesmo devolve
+  // o status de antes. Pro resto da sede e um status como os outros.
+  const STATUS_VALIDOS = STATUS_ORDEM.concat('ligacao');
+  const STATUS_LABEL = { livre: 'Livre', focado: 'Focado', reuniao: 'Em reuniao', ligacao: 'Em ligacao' };
+  const STATUS_COR = { livre: '#63d9c4', focado: '#ffb454', reuniao: '#e0607e', ligacao: '#8f7cff' };
 
   // Uma mesa e um movel inteiro, com varias celulas - por isso as duas colecoes:
   // `mesas` guarda uma entrada por MESA (pra placa sair uma vez so) e
@@ -417,20 +421,26 @@
         else if (t > alvo) t = Math.max(alvo, t - PORTA_VELOCIDADE);
         aberturaDaPorta.set(chave, t);
 
-        // Vidro na FACHADA, madeira por dentro: porta na casca do predio (linha
-        // 2 ou 30, coluna 2 ou 45) e de vidro. E o que escritorio faz, e de
-        // cima o vidro ainda ajuda - le como passagem mesmo fechado.
-        const deVidro = r === 2 || r === 30 || c === 2 || c === 45;
+        // Vidro na FACHADA, madeira por dentro: porta que da pra fora do predio
+        // (um dos lados e o jardim) e de vidro. E o que escritorio faz, e de
+        // cima o vidro ainda ajuda - le como passagem mesmo fechado. Pela sala
+        // vizinha, e nao por linha fixa: a planta ja mudou de tamanho uma vez.
+        const naRua = (cc, rr) => {
+          const s = M.getRoomAtTile(cc, rr);
+          return !s || s.id === 'jardim';
+        };
+        const deVidro = naRua(c, r - 1) || naRua(c, r + 1) || naRua(c - 1, r) || naRua(c + 1, r);
 
         const jamba = 4;
         const x0 = c * TILE;
         const y0 = r * TILE;
 
         // batente: so no lado que da na parede (entre duas folhas ha vao)
-        ctx.fillStyle = '#3c4354';
+        // Madeira clara, como o batente da referencia (#e8b48e no print).
+        ctx.fillStyle = '#e4a47c';
         if (!parDireita) ctx.fillRect(x0, y0, jamba, TILE);
         if (!parEsquerda) ctx.fillRect(x0 + TILE - jamba, y0, jamba, TILE);
-        ctx.fillStyle = '#5b6376';
+        ctx.fillStyle = '#edc5a8';
         if (!parDireita) ctx.fillRect(x0, y0, jamba, 8);
         if (!parEsquerda) ctx.fillRect(x0 + TILE - jamba, y0, jamba, 8);
 
@@ -658,9 +668,11 @@
       for (let c = 0; c < COLS; c++) drawFloorTile(mctx, c, r, TILE, OfficeMap.pisoEmTile(c, r));
     }
     // moldura fina marcando as areas (o Gather usa isso pra delimitar zonas:
-    // toda ilha de carpete aparece com um contorno claro em volta)
-    OfficeMap.ZONAS_PISO.forEach((z) => {
-      const cor = z.contorno || (String(z.piso).startsWith('carpete') ? 'rgba(255,255,255,0.8)' : null);
+    // toda ilha de carpete aparece com um contorno claro em volta). Vem das
+    // AREAS - que a diretoria pode mover (docs/areas.md) - e das ilhas soltas.
+    OfficeMap.ROOMS.concat(OfficeMap.ZONAS_PISO).forEach((z) => {
+      if (z.id === 'jardim' || z.id === 'hall') return;
+      const cor = z.contorno || (String(z.piso).startsWith('carpete') ? 'rgba(255,255,255,0.18)' : null);
       if (!cor) return;
       mctx.save();
       mctx.strokeStyle = cor;
@@ -734,18 +746,29 @@
 
   // Cada ambiente tem seu proprio chao (duas tonalidades alternadas, em xadrez
   // sutil), no lugar do piso de madeira unico que valia pro escritorio inteiro.
+  //
+  // MEDIDO NO PRINT do Gather (referencias/Captura de tela 2026-09-07 172652.png),
+  // pixel a pixel, e encaixado na paleta do pacote (naPaleta): corredor #efe4d9,
+  // carpete #878dce/#8e9edb, ladrilho claro #d6d8ea, grama #d9efda. A paleta tem
+  // par quase exato pra varias (a grama vira #d9f1d8, o carpete #838ad1); onde
+  // o par da paleta mudaria o tom - a junta do tijolo, o segundo tom do carpete -
+  // a cor vai em rgba(), que passa direto: e sombra/brilho por cima do material,
+  // exatamente o caso que a regra da paleta deixa de fora.
   const CORES_PISO = {
-    tijolo: { base: '#ece0cb', junta: '#dccdb1', luz: '#f2e9d8', sombra: '#e4d7c0' },
+    // O creme do corredor fica FORA da paleta, de proposito e so ele: e o chao
+    // que mais aparece, e a paleta nao tem creme - o mais perto (#faece7) sai
+    // rosado, e o #e3e7d3 que o naPaleta escolheria sai esverdeado. rgb() nao
+    // passa pelo naPaleta (so '#...' passa).
+    tijolo: { base: 'rgb(239,228,217)', junta: 'rgba(240,190,140,0.30)', luz: 'rgba(255,255,255,0.25)' },
     tijolo_quente: { base: '#e6d3b4', junta: '#d3bd9a', luz: '#eeddc2', sombra: '#dcc9a6' },
     cinza: { base: '#d2d6dd', junta: '#adb4c0', luz: '#e4e7ec', sombra: '#c2c7d1' },
-    ladrilho: { base: '#e4e7ee', junta: '#b6bece', luz: '#f2f4f8', sombra: '#d3d8e3' },
-    // Carpete de escritorio, nao tabuleiro: os dois tons da placa ficam PERTO um
-    // do outro. O par antigo (#8b7fd0/#a294de) encaixava na paleta como
-    // #838ad1/#a4b0dc - dois lilases bem diferentes, e de longe o chao virava
-    // xadrez. Estes ja sao cor de paleta, entao passam inteiros.
-    carpete_roxo: { base: '#655789', claro: '#7c6ea6' },
+    ladrilho: { base: '#d2d8ef', junta: 'rgba(70,80,140,0.16)', luz: 'rgba(255,255,255,0.45)' },
+    // Carpete das ilhas de mesa: lavanda com zigue-zague, como o da referencia.
+    // Os dois tons do print caem na MESMA cor da paleta (#838ad1), entao o
+    // desenho do zigue-zague vai por cima, em rgba.
+    carpete_roxo: { base: '#838ad1', claro: 'rgba(170,200,255,0.24)' },
     carpete_azul: { base: '#5d6577', claro: '#6e7789' },
-    grama: { base: '#8ecb7c', claro: 'rgba(58,124,58,0.28)' },
+    grama: { base: '#d9f1d8', claro: 'rgba(80,150,90,0.22)' },
   };
 
   // Piso de tijolinho em fiada alternada (a fiada usa a linha global, senao a
@@ -793,21 +816,27 @@
       return;
     }
 
-    // Mosaico de pecas encaixadas em dois tons, como o carpete da referencia
-    // (`referencias/...154025.png`) - a versao antiga era manchinha aleatoria,
-    // que de longe virava ruido em vez de padrao.
-    const BL = 32; // peca de 1/4 de tile
-    for (let by = 0; by < 128; by += BL) {
-      for (let bx = 0; bx < 128; bx += BL) {
-        // xadrez continuo entre tiles: usa a posicao global da peca
-        const gx = c * 4 + bx / BL;
-        const gy = r * 4 + by / BL;
-        if ((gx + gy) % 2 !== 0) continue;
-        q(ctx, x, y, bx + 1, by + 1, BL - 2, BL - 2, cores.claro);
-        // dente pra cima e encaixe embaixo, que e o que da o ar de quebra-cabeca
-        q(ctx, x, y, bx + 11, by - 5, 10, 6, cores.claro);
-        q(ctx, x, y, bx + 11, by + BL - 6, 10, 6, cores.base);
-        q(ctx, x, y, bx + 1, by + 1, BL - 2, 2, 'rgba(255,255,255,0.10)');
+    // Placas em degrau, como o carpete das ilhas de mesa da referencia (medido
+    // no print em 10x): fileiras de 1/4 de tile com blocos claro/escuro de meio
+    // tile, cada fileira deslocada MEIO BLOCO da anterior - de longe isso vira o
+    // zigue-zague. A borda de cada bloco claro e "penteada" (dente de um pixel de
+    // arte), que e o que da cara de carpete e nao de azulejo. Bloco e fileira
+    // dividem o tile, entao a fase e a mesma em todo tile e o desenho emenda
+    // sozinho com o vizinho.
+    const FILEIRA = 32;
+    const BLOCO = 64;
+    for (let fy = 0; fy < 128; fy += FILEIRA) {
+      const desloc = ((r * 4 + fy / FILEIRA) % 2) * (BLOCO / 2);
+      // ate 128 + BLOCO: o bloco que comeca no tile vizinho ainda poe o dente
+      // da borda esquerda DENTRO deste tile
+      for (let x0 = desloc - 2 * BLOCO; x0 < 128 + BLOCO; x0 += 2 * BLOCO) {
+        const a = Math.max(0, x0);
+        const b = Math.min(128, x0 + BLOCO);
+        if (b > a) q(ctx, x, y, a, fy, b - a, FILEIRA, cores.claro);
+        for (let dy = 0; dy < FILEIRA; dy += 8) {
+          if (x0 - 4 >= 0 && x0 - 4 < 128) q(ctx, x, y, x0 - 4, fy + dy, 4, 4, cores.claro);
+          if (x0 + BLOCO >= 0 && x0 + BLOCO < 128) q(ctx, x, y, x0 + BLOCO, fy + dy + 4, 4, 4, cores.claro);
+        }
       }
     }
   }
@@ -840,13 +869,16 @@
 
     if (piso === 'grama') {
       q(ctx, x, y, 0, 0, 128, 128, cores.base);
-      // tufos estaveis (dependem so de c/r), em dois tons
-      for (let i = 0; i < 5; i++) {
-        const gx = ((c * 29 + r * 53 + i * 37) % 104) + 8;
-        const gy = ((c * 41 + r * 23 + i * 43) % 104) + 8;
-        q(ctx, x, y, gx, gy, 4, 10, cores.claro);
-        q(ctx, x, y, gx + 5, gy + 3, 4, 7, cores.claro);
-        q(ctx, x, y, gx - 4, gy + 4, 3, 6, 'rgba(120,190,110,0.45)');
+      // A grama da referencia e quase lisa: verde-menta claro com um tufinho em
+      // "v" aqui e ali. Cinco tufos por tile, como era, viravam textura de
+      // gramado de futebol. Posicao estavel (depende so de c/r).
+      for (let i = 0; i < 2; i++) {
+        if ((c * 7 + r * 13 + i * 5) % 3 === 0) continue;
+        const gx = ((c * 29 + r * 53 + i * 61) % 88) + 16;
+        const gy = ((c * 41 + r * 23 + i * 47) % 88) + 16;
+        q(ctx, x, y, gx, gy, 4, 8, cores.claro);
+        q(ctx, x, y, gx + 12, gy, 4, 8, cores.claro);
+        q(ctx, x, y, gx + 4, gy + 4, 8, 8, cores.claro);
       }
       return;
     }
@@ -888,6 +920,41 @@
     ctx.fillStyle = '#3c4453';
     ctx.fillText(texto, x + padX + ponto, y + h / 2 + 0.5);
     ctx.restore();
+  }
+
+  // Placa de creditos da arte. A arte e do banco aberto LPC (OGA-BY / CC-BY-SA):
+  // usar e livre, e o credito VISIVEL no produto e a contrapartida - um arquivo
+  // no repositorio sozinho nao conta. O Caio pediu "num canto que ninguem vai":
+  // fica na faixa de fora do predio, no canto de baixo a direita, e clicar abre
+  // a lista inteira (public/creditos.html).
+  let placaCreditos = null; // { x, y, w, h } em coordenadas do mapa, pro clique
+
+  function desenharPlacaCreditos(ctx, TILE) {
+    const texto = 'Arte: LPC (OGA-BY / CC-BY-SA) · creditos';
+    ctx.save();
+    ctx.font = '600 8px Inter, system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    const padX = 6, h = 14;
+    const w = padX * 2 + ctx.measureText(texto).width;
+    const x = OfficeMap.COLS * TILE - w - 6;
+    const y = (OfficeMap.ROWS - 1) * TILE + (TILE - h) / 2;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 6);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(60,50,40,0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#5b6472';
+    ctx.fillText(texto, x + padX, y + h / 2 + 0.5);
+    ctx.restore();
+    placaCreditos = { x, y, w, h };
+  }
+
+  function cliqueNaPlaca(x, y) {
+    const p = placaCreditos;
+    return !!p && x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h;
   }
 
   // Parede e janela formam um muro so: pra decidir a borda, as duas contam como
@@ -972,20 +1039,35 @@
     };
   }
 
+  // As cores do muro. O print do Gather (referencias/...172652.png) tem parede
+  // cinza-esverdeada media: #566368 na face, #809295 no topo. A paleta do pacote
+  // nao tem esse verde-acinzentado (o mais perto, #6f6464, puxa pro marrom);
+  // o par mais proximo que nao muda o tom e este cinza-azulado. O que havia
+  // antes era ardosia quase preta puxada pro roxo (#4b4b60/#726b7e depois da
+  // paleta), e era o que mais pesava o mapa inteiro.
+  const MURO = {
+    corpo: '#6a7587',
+    topo: '#818e97',
+    luz: '#a8b3b8',
+    sombra: '#4b4b60',
+    rodape: '#4b4b60',
+    rodapeLuz: '#818e97',
+  };
+
   // O desenho do muro em si, separado pra poder sair tambem POR BAIXO do movel
   // que ocupa a celula dele.
   function pintarMuro(ctx, x, y, b) {
-    q(ctx, x, y, 0, 0, 128, 128, '#4a5162');
+    q(ctx, x, y, 0, 0, 128, 128, MURO.corpo);
     // A face de cima aparece no topo do muro E ao longo de toda fileira
     // horizontal, pra linha nao quebrar nos encontros em L e em T.
     if (b.cima || b.deitado) {
-      q(ctx, x, y, 0, 0, 128, 30, '#5b6376');
-      q(ctx, x, y, 0, 0, 128, 3, '#6f7889'); // luz na quina
-      q(ctx, x, y, 0, 30, 128, 2, '#3c4354'); // sombra sob a face de cima
+      q(ctx, x, y, 0, 0, 128, 30, MURO.topo);
+      q(ctx, x, y, 0, 0, 128, 3, MURO.luz); // luz na quina
+      q(ctx, x, y, 0, 30, 128, 2, MURO.sombra); // sombra sob a face de cima
     }
     if (b.baixo) {
-      q(ctx, x, y, 0, 104, 128, 24, '#343a48'); // rodape
-      q(ctx, x, y, 0, 104, 128, 2, '#59617a'); // fio de luz
+      q(ctx, x, y, 0, 104, 128, 24, MURO.rodape); // rodape
+      q(ctx, x, y, 0, 104, 128, 2, MURO.rodapeLuz); // fio de luz
     }
     // emenda de painel: vertical no muro deitado, horizontal no muro em pe
     if (b.cima || b.baixo) q(ctx, x, y, 63, 34, 2, 68, 'rgba(38,43,56,0.35)');
@@ -1004,9 +1086,9 @@
   // o corredor continuava parecendo aberto.
   function faceDoMuro(ctx, x, y, b) {
     if (b.cima || b.deitado) {
-      q(ctx, x, y, 0, 0, 128, 30, '#5b6376');
-      q(ctx, x, y, 0, 0, 128, 3, '#6f7889');
-      q(ctx, x, y, 0, 30, 128, 2, '#3c4354');
+      q(ctx, x, y, 0, 0, 128, 30, MURO.topo);
+      q(ctx, x, y, 0, 0, 128, 3, MURO.luz);
+      q(ctx, x, y, 0, 30, 128, 2, MURO.sombra);
       // O contorno de cima so no topo DE VERDADE: na emenda com uma parede
       // vertical ele cortaria a parede que segue pra cima.
       if (b.cima) q(ctx, x, y, 0, 0, 128, 2, TRACO);
@@ -1864,28 +1946,28 @@
       q(ctx, x, y, 90, 108, 28, 6, 'rgba(60,66,82,0.18)');
 
     } else if (type === M.JANELA) {
-      // janelao: mesma parede, com vidro, caixilho branco e reflexo em diagonal
+      // Janelao como o da referencia: caixilho ESCURO (azul-marinho quase
+      // preto) e vidro verde-agua em painel grande - #a9e1d6 medido no print,
+      // #a4dddb na paleta. O caixilho branco com vidro azul-bebe que havia lia
+      // como janela de casa; o escuro com verde-agua e o de predio comercial.
       const b = bordasParede(tiles, r, c);
-      q(ctx, x, y, 0, 0, 128, 128, '#4a5162');
+      q(ctx, x, y, 0, 0, 128, 128, MURO.corpo);
       if (b.cima) {
-        q(ctx, x, y, 0, 0, 128, 24, '#5b6376');
-        q(ctx, x, y, 0, 0, 128, 3, '#6f7889');
+        q(ctx, x, y, 0, 0, 128, 24, MURO.topo);
+        q(ctx, x, y, 0, 0, 128, 3, MURO.luz);
       }
-      q(ctx, x, y, 0, 26, 128, 76, '#eef2f5'); // caixilho
-      q(ctx, x, y, 0, 26, 128, 3, '#ffffff');
-      q(ctx, x, y, 6, 32, 116, 64, '#8fcdd8'); // vidro
-      q(ctx, x, y, 6, 32, 116, 22, '#b3e0e7'); // ceu refletido no alto
+      q(ctx, x, y, 0, 24, 128, 80, '#343043'); // caixilho
+      q(ctx, x, y, 8, 32, 112, 64, '#a4dddb'); // vidro
+      q(ctx, x, y, 8, 32, 112, 16, '#bde6e5'); // ceu refletido no alto
       // reflexo diagonal, em degraus
-      for (let i = 0; i < 14; i++) {
-        q(ctx, x, y, 18 + i * 4, 88 - i * 4, 10, 4, 'rgba(255,255,255,0.30)');
-        q(ctx, x, y, 44 + i * 4, 88 - i * 4, 5, 4, 'rgba(255,255,255,0.20)');
+      for (let i = 0; i < 10; i++) {
+        q(ctx, x, y, 20 + i * 4, 88 - i * 4, 8, 4, 'rgba(255,255,255,0.28)');
       }
-      q(ctx, x, y, 60, 32, 6, 64, '#eef2f5'); // montante
-      q(ctx, x, y, 6, 60, 116, 5, '#eef2f5'); // travessa
-      q(ctx, x, y, 6, 92, 116, 4, '#c9d2da'); // sombra do peitoril
+      q(ctx, x, y, 60, 32, 8, 64, '#343043'); // montante
+      q(ctx, x, y, 8, 60, 112, 4, '#343043'); // travessa
       if (b.baixo) {
-        q(ctx, x, y, 0, 104, 128, 24, '#343a48');
-        q(ctx, x, y, 0, 104, 128, 2, '#59617a');
+        q(ctx, x, y, 0, 104, 128, 24, MURO.rodape);
+        q(ctx, x, y, 0, 104, 128, 2, MURO.rodapeLuz);
       }
 
     } else if (type === M.AGUA) {
@@ -3208,6 +3290,12 @@
     zoomAlvo = zoomDoUsuario;
   }
 
+  // Centraliza a camera num ponto sem mexer no zoom (editor de areas: escolher
+  // uma area da lista leva a vista ate ela). Solta com soltarFoco.
+  function olharPara(x, y) {
+    focoCamera = { x, y };
+  }
+
   // Aproximacao exponencial, independente da taxa de quadros: num monitor de
   // 144Hz o movimento e o mesmo que num de 60Hz.
   function perseguir(atual, alvo, dt, velocidade) {
@@ -3309,7 +3397,7 @@
       dir: data.dir || 'down',
       moving: !!data.moving,
       sentado: !!data.sentado,
-      status: STATUS_ORDEM.includes(data.status) ? data.status : 'livre',
+      status: STATUS_VALIDOS.includes(data.status) ? data.status : 'livre',
       dividindoTela: !!data.dividindoTela,
       isAdmin: !!data.isAdmin,
       // Chamada marcada e livro aberto vem junto no `init`: quem chega depois
@@ -3323,9 +3411,23 @@
 
   function ajustarBotaoStatus(status) {
     const btn = document.getElementById('btn-status');
-    STATUS_ORDEM.forEach((s) => btn.classList.remove('status-' + s));
+    STATUS_VALIDOS.forEach((s) => btn.classList.remove('status-' + s));
     btn.classList.add('status-' + status);
     btn.querySelector('.texto-status').textContent = STATUS_LABEL[status];
+  }
+
+  // O discador marca "Em ligacao" enquanto a pessoa fala com um cliente, e
+  // devolve o status de antes quando a sessao pausa ou acaba. Devolve o status
+  // que estava, pra ele saber o que restaurar.
+  function definirStatusProprio(status) {
+    const self = players.get(selfId);
+    if (!self || !STATUS_VALIDOS.includes(status)) return null;
+    const antes = self.status;
+    if (antes === status) return antes;
+    self.status = status;
+    ajustarBotaoStatus(status);
+    Network.sendStatus(status);
+    return antes;
   }
 
   function setIndicador(estado) {
@@ -3355,6 +3457,30 @@
     if (el) el.textContent = nome;
   }
 
+  // Diz ao servidor o tamanho da tela em pixels do mapa. E com isso que ele
+  // separa quem esta na tela desta pessoa (posicao 20x por segundo) de quem esta
+  // longe (2x) - ver o ciclo de repasse em server/index.js.
+  //
+  // Usa o MENOR zoom entre o atual e o alvo: durante um zoom-out a tela ja vai
+  // ficar maior, e e melhor receber um pouco a mais do que ver alguem entrar na
+  // borda aos saltos. Manda so quando muda de verdade (mais de 8%).
+  let vistaEnviada = null;
+  let proximaChecagemVista = 0;
+  function talvezEnviarVista(now) {
+    if (!selfId || now < proximaChecagemVista) return;
+    proximaChecagemVista = now + 400;
+    const z = Math.min(ZOOM, zoomAlvo);
+    const w = Math.round(canvas.clientWidth / z);
+    const h = Math.round(canvas.clientHeight / z);
+    if (!w || !h) return;
+    const mudou = !vistaEnviada
+      || Math.abs(w - vistaEnviada.w) / vistaEnviada.w > 0.08
+      || Math.abs(h - vistaEnviada.h) / vistaEnviada.h > 0.08;
+    if (!mudou) return;
+    vistaEnviada = { w, h };
+    Network.enviarVista(vistaEnviada);
+  }
+
   function loop(now) {
     const dt = Math.min((now - lastFrameTime) / 1000, 0.1);
     lastFrameTime = now;
@@ -3365,6 +3491,7 @@
     Calls.updateProximity(players);
     atualizarBadgeSala();
     animarCamera(dt);
+    talvezEnviarVista(now);
     render(now, dt);
   }
 
@@ -3998,11 +4125,16 @@
     ctx.clearRect(camX, camY, vista.w, vista.h);
     ctx.drawImage(mapCanvas, 0, 0, OfficeMap.COLS * OfficeMap.TILE, OfficeMap.ROWS * OfficeMap.TILE);
 
-    // Nome das salas, por cima do mapa e em resolucao de tela.
-    OfficeMap.ROOMS.forEach((sala) => {
-      if (sala.id === 'jardim') return;
-      desenharEtiquetaSala(ctx, sala, OfficeMap.TILE);
-    });
+    // Nome das salas, por cima do mapa e em resolucao de tela. Editando areas,
+    // quem mostra o nome e o proprio editor (com o tamanho junto).
+    const editandoAreas = !!(window.EditorAreas && EditorAreas.estaAtivo());
+    if (!editandoAreas) {
+      OfficeMap.ROOMS.forEach((sala) => {
+        if (sala.id === 'jardim') return;
+        desenharEtiquetaSala(ctx, sala, OfficeMap.TILE);
+      });
+    }
+    desenharPlacaCreditos(ctx, OfficeMap.TILE);
 
     const self = players.get(selfId);
     if (self && self.destinoFinal) {
@@ -4142,6 +4274,10 @@
       }
     });
 
+    // Editor de areas por cima de tudo: as alcas nao podem sumir atras de quem
+    // esta em pe na borda da sala.
+    if (editandoAreas) EditorAreas.desenhar(ctx, ZOOM);
+
     desenharMinimapa();
   }
 
@@ -4222,6 +4358,10 @@
     if (performance.now() - pincaFimEm < 450) return;
     const { x: clickX, y: clickY } = coordsDoEvento(e);
 
+    // Editando areas, clicar e arrastar e o gesto do editor (mousedown/mouseup
+    // la embaixo) - o boneco nao sai andando atras do mouse.
+    if (window.EditorAreas && EditorAreas.estaAtivo()) return;
+
     // Decorador no modo link: o clique pendura conteudo no movel, nao anda.
     // Ver docs/plano-conteudo.md.
     if (Decorador.noModoLink && Decorador.noModoLink()) {
@@ -4235,6 +4375,12 @@
       const tx = clickX / OfficeMap.TILE;
       const ty = clickY / OfficeMap.TILE;
       Decorador.pintarEm(Math.floor(tx), Math.floor(ty), tx, ty);
+      return;
+    }
+
+    // A placa de creditos abre a lista completa numa aba nova (a sede continua).
+    if (cliqueNaPlaca(clickX, clickY)) {
+      window.open('/creditos.html', '_blank', 'noopener');
       return;
     }
 
@@ -4403,6 +4549,13 @@
       const col = Math.floor(x / TILE);
       const row = Math.floor(y / TILE);
 
+      if (window.EditorAreas && EditorAreas.estaAtivo()) {
+        celulaAlvo = null;
+        mesaHover = null;
+        canvas.style.cursor = EditorAreas.cursorEm(x, y, ZOOM);
+        return;
+      }
+
       if (Decorador.estaPintando()) {
         celulaAlvo = { col, row, x: x / TILE, y: y / TILE };
         mesaHover = null;
@@ -4427,6 +4580,23 @@
       canvas.style.cursor = (ehMesa || jogadorEm(x, y)) ? 'pointer' : 'default';
     });
     canvas.addEventListener('mouseleave', () => { mesaHover = null; celulaAlvo = null; });
+
+    // Editor de areas (docs/areas.md): o gesto e apertar, arrastar e soltar. O
+    // arrasto e seguido pela JANELA, nao so pelo mapa - a pessoa que passa com
+    // o mouse por cima do painel no meio do gesto nao perde a area.
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || !window.EditorAreas || !EditorAreas.estaAtivo()) return;
+      const { x, y } = coordsDoEvento(e);
+      if (EditorAreas.pressionar(x, y, ZOOM)) e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!window.EditorAreas || !EditorAreas.arrastando()) return;
+      const { x, y } = coordsDoEvento(e);
+      EditorAreas.arrastar(x, y);
+    });
+    window.addEventListener('mouseup', () => {
+      if (window.EditorAreas && EditorAreas.arrastando()) EditorAreas.soltar();
+    });
 
     document.getElementById('btn-status').addEventListener('click', () => {
       const self = players.get(selfId);
@@ -4474,6 +4644,10 @@
     Network.on('init', (data) => {
       selfId = data.selfId;
       selfUid = data.selfUid || null;
+      // Conexao nova (inclusive reconexao) = servidor sem o tamanho da tela
+      // desta aba: manda de novo no proximo quadro.
+      vistaEnviada = null;
+      proximaChecagemVista = 0;
       players.clear();
       data.players.forEach((p) => {
         players.set(p.id, p.id === selfId ? criarJogadorLocal(p) : criarJogadorRemoto(p));
@@ -4488,7 +4662,9 @@
       (data.objetosMapa || []).forEach((o) => {
         if (OfficeMap.objetos[o.r]) OfficeMap.objetos[o.r][o.c] = o.o;
       });
-      if (temDecoracao) prerenderMap();
+      // Areas movidas pela diretoria (docs/areas.md): o piso de cada uma vai junto.
+      (data.areasMapa || []).forEach((a) => OfficeMap.aplicarArea(a.id, a));
+      if (temDecoracao || (data.areasMapa && data.areasMapa.length)) prerenderMap();
       Conteudo.carregar(data.conteudosMapa);
       Conteudo.init(players.get(selfId).isAdmin);
       Decorador.init(players.get(selfId).isAdmin);
@@ -4510,6 +4686,17 @@
       if (!OfficeMap.objetos[m.r]) return;
       OfficeMap.objetos[m.r][m.c] = m.o;
       prerenderMap();
+    });
+
+    // Uma area mudou de lugar ou de tamanho: o retangulo (que decide chamada,
+    // sala silenciosa e Visao de salas na hora) e o piso dela.
+    Network.on('mapa-area-atualizada', (a) => {
+      if (!a || !OfficeMap.aplicarArea(a.id, a)) return;
+      prerenderMap();
+      if (window.EditorAreas) EditorAreas.aceita(a);
+    });
+    Network.on('mapa-area-recusada', (m) => {
+      if (window.EditorAreas) EditorAreas.recusada(m);
     });
 
     // Conteudo nao entra no pre-render: a marca e desenhada a cada quadro, em
@@ -4589,7 +4776,7 @@
 
     Network.on('player-status', (data) => {
       const p = players.get(data.id);
-      if (!p || !STATUS_ORDEM.includes(data.status)) return;
+      if (!p || !STATUS_VALIDOS.includes(data.status)) return;
       p.status = data.status;
       if (data.id === selfId) ajustarBotaoStatus(data.status);
     });
@@ -4611,6 +4798,7 @@
     Calendario.init();
     if (window.Chamada) Chamada.init();
     Trello.init();
+    if (window.Discador) Discador.init();
     Estante.iniciar();
     Pessoas.init();
     Network.connect(profile);
@@ -4628,6 +4816,7 @@
     minhaMesa,
     focarNaMesa,
     soltarFoco,
+    olharPara,
     pontoNaTela,
     celulaEhMinha,
     itemPertoDe,
@@ -4646,6 +4835,7 @@
     escalaDoMapa: () => escalaDoMapa,
     STATUS_COR,
     STATUS_LABEL,
+    definirStatusProprio,
     corDoId,
     irAte,
     moverPara,

@@ -53,6 +53,11 @@
     socket.on('player-joined', (data) => emitLocal('player-joined', data));
     socket.on('player-left', (data) => emitLocal('player-left', data));
     socket.on('player-moved', (data) => emitLocal('player-moved', data));
+    // O servidor novo manda as posicoes em pacote (uma mensagem por ciclo, com
+    // quem mudou). Cada uma segue pelo mesmo caminho da mensagem avulsa.
+    socket.on('players-moved', (lista) => {
+      if (Array.isArray(lista)) lista.forEach((data) => emitLocal('player-moved', data));
+    });
     socket.on('player-status', (data) => emitLocal('player-status', data));
     socket.on('reacao', (data) => emitLocal('reacao', data));
     socket.on('rtc-signal', (data) => emitLocal('rtc-signal', data));
@@ -62,6 +67,8 @@
     socket.on('mesas-atualizadas', (data) => emitLocal('mesas-atualizadas', data));
     socket.on('mapa-atualizado', (data) => emitLocal('mapa-atualizado', data));
     socket.on('mapa-objeto-atualizado', (data) => emitLocal('mapa-objeto-atualizado', data));
+    socket.on('mapa-area-atualizada', (data) => emitLocal('mapa-area-atualizada', data));
+    socket.on('mapa-area-recusada', (data) => emitLocal('mapa-area-recusada', data));
     socket.on('tela-mudou', (data) => emitLocal('tela-mudou', data));
     socket.on('lendo-mudou', (data) => emitLocal('lendo-mudou', data));
     socket.on('mapa-conteudo-atualizado', (data) => emitLocal('mapa-conteudo-atualizado', data));
@@ -77,6 +84,12 @@
 
   function sendMove(state) {
     if (socket && socket.connected) socket.emit('move', state);
+  }
+
+  // Tamanho da tela em pixels do mapa: o servidor usa pra mandar a posicao de
+  // quem esta na tela com frequencia, e a de quem esta longe devagar.
+  function enviarVista(vista) {
+    if (socket && socket.connected) socket.emit('vista', vista);
   }
 
   function sendStatus(status) {
@@ -183,15 +196,28 @@
     if (socket && socket.connected) socket.emit('mapa-objeto', { c, r, o });
   }
 
+  // Area movida ou redimensionada (docs/areas.md). false = sem conexao.
+  function editarArea(id, a) {
+    if (!socket || !socket.connected) return false;
+    socket.emit('mapa-area', { id, r0: a.r0, c0: a.c0, r1: a.r1, c1: a.c1 });
+    return true;
+  }
+
+  function restaurarArea(id) {
+    if (!socket || !socket.connected) return false;
+    socket.emit('mapa-area', { id, restaurar: true });
+    return true;
+  }
+
   // Pendura (ou tira, com url vazia) um link num movel. Ver docs/plano-conteudo.md.
   function porConteudoNoMapa(c, r, titulo, url) {
     if (socket && socket.connected) socket.emit('mapa-conteudo', { c, r, titulo, url });
   }
 
   window.Network = {
-    connect, on, sendMove, sendStatus, dividirTela, estouLendo, marcarReuniao, desmarcarReuniao, entrarNaChamada, sairDaChamada, ligarProGrupo, sendReaction, sendRtcSignal, sendChatMessage,
+    connect, on, sendMove, enviarVista, sendStatus, dividirTela, estouLendo, marcarReuniao, desmarcarReuniao, entrarNaChamada, sairDaChamada, ligarProGrupo, sendReaction, sendRtcSignal, sendChatMessage,
     pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, moverItemDaMesa, tirarItemDaMesa,
-    editarMapa, editarObjetoMapa, porConteudoNoMapa,
+    editarMapa, editarObjetoMapa, porConteudoNoMapa, editarArea, restaurarArea,
     pedirAgenda, pedirTrello,
   };
 })();

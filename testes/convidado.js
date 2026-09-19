@@ -61,6 +61,7 @@ function subir() {
         GOOGLE_CONTA_SERVICO: '',
         CLOUDFLARE_TURN_KEY_ID: '',
         CLOUDFLARE_TURN_TOKEN: '',
+        EMAIL_PROVEDOR: '',
       }),
       stdio: ['ignore', 'pipe', 'pipe'],
     });

@@ -92,6 +92,14 @@ function carregar() {
     if (!fs.existsSync(ARQUIVO)) return;
     const bruto = JSON.parse(fs.readFileSync(ARQUIVO, 'utf8'));
     reunioes = Array.isArray(bruto.reunioes) ? bruto.reunioes : [];
+    // Reuniao marcada numa sala que saiu da planta (o segundo huddle, na planta
+    // compacta) nao tem onde acontecer.
+    const existentes = new Set((map.ROOMS || []).map((s) => s.id));
+    const antes = reunioes.length;
+    reunioes = reunioes.filter((x) => existentes.has(x.sala));
+    if (reunioes.length < antes) {
+      console.log('[reunioes] ' + (antes - reunioes.length) + ' reuniao(oes) numa sala que nao existe mais ficaram de fora.');
+    }
     proximoId = Number(bruto.proximoId) || (reunioes.length + 1);
     limpar();
   } catch (e) {

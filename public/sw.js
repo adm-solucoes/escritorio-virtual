@@ -4,7 +4,10 @@
 // Socket.io ao vivo e um cache velho serviria a versao antiga do jogo depois de
 // um deploy - o bug classico de PWA. Aqui a rede sempre manda; o cache existe
 // so pra mostrar um aviso decente quando a pessoa esta sem internet.
-const CACHE = 'sede-offline-v1';
+// Trocar o numero quando o offline.html mudar: o navegador so reinstala o
+// service worker (e so ai pega a pagina nova) quando ESTE arquivo muda. Sem
+// isso, quem ja tem o app instalado ficaria com a pagina velha pra sempre.
+const CACHE = 'sede-offline-v2';
 const PAGINA_OFFLINE = '/offline.html';
 
 self.addEventListener('install', (evento) => {

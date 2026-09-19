@@ -42,4 +42,20 @@ function gravarSeguro(caminho, texto) {
   fs.renameSync(tmp, caminho);
 }
 
-module.exports = { PASTA, arquivo, garantirPasta, gravarSeguro };
+// A PLANTA do mapa mudou (server/map.js, VERSAO_PLANTA): o que foi salvo por
+// CELULA - decoracao, mesa reivindicada, area mexida - aponta pra lugares que
+// nao existem mais, ou que agora sao outra coisa. Nao apaga: tira do caminho,
+// com a versao no nome, pra ainda dar pra consultar a mao se precisar.
+function guardarDePlantaAntiga(caminho, versao) {
+  let destino = caminho + '.planta-' + versao;
+  if (fs.existsSync(destino)) destino += '-' + Date.now();
+  try {
+    fs.renameSync(caminho, destino);
+    console.log('[dados] a planta do mapa mudou: ' + path.basename(caminho) + ' foi guardado como '
+      + path.basename(destino) + ', e a sede comeca do zero nele.');
+  } catch (e) {
+    console.error('[dados] nao consegui guardar ' + caminho + ': ' + e.message);
+  }
+}
+
+module.exports = { PASTA, arquivo, garantirPasta, gravarSeguro, guardarDePlantaAntiga };

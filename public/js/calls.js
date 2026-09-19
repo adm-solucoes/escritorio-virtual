@@ -49,6 +49,9 @@
   let cameraAtiva = false;
   let temVideo = false;
   let micAtivo = true;
+  // discador em ligacao: ver abafarParaLigacao()
+  let abafado = false;
+  let micAntesDeAbafar = true;
   let videoAtivo = true;
   let streamPendente = null; // camera aberta na tela de entrada, esperando o init
   let telaStream = null; // o que o navegador devolveu do getDisplayMedia
@@ -82,6 +85,8 @@
     const v = document.createElement('video');
     v.autoplay = true;
     v.playsInline = true;
+    // quem chega no meio de uma ligacao do discador ja nasce sem som
+    v.muted = abafado;
     v.dataset.peerId = id;
     palco().appendChild(v);
     return v;
@@ -609,8 +614,37 @@
     }
   }
 
+  // ---- discador: a sede nao ouve nem e ouvida durante a ligacao ----------
+  //
+  // O status "Em ligacao" barra conversa NOVA (ver ocupado()), mas de proposito
+  // nao derruba a que ja esta acontecendo - e e justamente essa que vazaria:
+  // o colega do lado ouvindo a ligacao com o cliente, e a voz dele entrando
+  // nela. Quem liga pelo computador com o "Vincular ao Celular" fala pelo
+  // MESMO microfone e ouve pelo MESMO alto-falante que a sede usa.
+  //
+  // Entao, enquanto o discador estiver ligando: microfone da sede desligado e
+  // o som dos outros mudo. Ao sair, o microfone volta como estava - se a pessoa
+  // ja estava muda antes, continua muda.
+  function abafarParaLigacao(sim) {
+    sim = !!sim;
+    if (sim === abafado) return;
+    abafado = sim;
+    if (sim) micAntesDeAbafar = micAtivo;
+    micAtivo = sim ? false : micAntesDeAbafar;
+    if (localStream) localStream.getAudioTracks().forEach((t) => { t.enabled = micAtivo; });
+    const btn = document.getElementById('btn-mic');
+    if (btn) btn.classList.toggle('desativado', !micAtivo);
+    peers.forEach((p) => { if (p.videoEl) p.videoEl.muted = sim; });
+  }
+
   function alternarMic() {
     if (!localStream) return;
+    // No meio de uma ligacao do discador o microfone da sede fica preso em
+    // desligado: um clique sem querer aqui poria o cliente no ar pro corredor.
+    if (abafado) {
+      mostrarAviso('Microfone da sede desligado durante a ligacao do discador.');
+      return;
+    }
     micAtivo = !micAtivo;
     localStream.getAudioTracks().forEach((t) => { t.enabled = micAtivo; });
     document.getElementById('btn-mic').classList.toggle('desativado', !micAtivo);
@@ -638,6 +672,10 @@
     temVideo = stream.getVideoTracks().length > 0;
     cameraAtiva = true;
     micAtivo = prefs.micAtivo !== false;
+    if (abafado) {
+      micAntesDeAbafar = micAtivo;
+      micAtivo = false;
+    }
     videoAtivo = temVideo && prefs.videoAtivo !== false;
     localStream.getAudioTracks().forEach((t) => { t.enabled = micAtivo; });
     localStream.getVideoTracks().forEach((t) => { t.enabled = videoAtivo; });
@@ -727,6 +765,8 @@
     // conseguir exercita-las sem navegador. Mesma ideia do `canvasDoMapa` do
     // game.js: e caro demais so conferir isso a olho, numa chamada de verdade.
     deveFalarCom, deveContinuarCom,
+    abafarParaLigacao,
+    estaAbafado: () => abafado,
     emChamadaGrande: () => soVoz,
     _ajustarChamadaGrande: ajustarChamadaGrande,
     _peers: peers,

@@ -1,4 +1,4 @@
-| `top_regata.png` | `torso/clothes/sleeveless/sleeveless2/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 || `top_social.png` | `torso/clothes/longsleeve/longsleeve2_buttoned/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 || `top_manga.png` | `torso/clothes/longsleeve/longsleeve2/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |# Creditos dos sprites (LPC - Liberated Pixel Cup)
+# Creditos dos sprites (LPC - Liberated Pixel Cup)
 
 Os sprites do boneco usados neste projeto (`public/assets/lpc/*.png`) vem do banco de
 assets aberto **LPC (Liberated Pixel Cup)**, obtidos via o repositorio
@@ -36,9 +36,9 @@ teste de proposito.
 |---|---|---|---|
 | `top_vneck.png` | `torso/clothes/shortsleeve/tshirt_vneck/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
 | `top_polo.png` | `torso/clothes/shortsleeve/shortsleeve_polo/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
-| `top_regata.png` | `torso/clothes/sleeveless/sleeveless/male/walk/white.png` | bluecarrot16, Matthew Krohn (makrohn), JaidynReiman, Marcel van de Steeg (MadMarcel), Nila122, Johannes Sjölund (wulax), Stephen Challener (Redshrike) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
-| `top_manga.png` | `torso/clothes/longsleeve/longsleeve/male/walk.png` | JaidynReiman, Johannes Sjölund (wulax) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
-| `top_social.png` | `torso/clothes/longsleeve/formal/male/walk.png` | bluecarrot16, Thane Brimhall (pennomi), laetissima, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | CC-BY-SA 3.0, GPL 3.0 |
+| `top_regata.png` | `torso/clothes/sleeveless/sleeveless2/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
+| `top_manga.png` | `torso/clothes/longsleeve/longsleeve2/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
+| `top_social.png` | `torso/clothes/longsleeve/longsleeve2_buttoned/male/walk.png` | ElizaWy, JaidynReiman, Stephen Challener (Redshrike), Johannes Sjölund (wulax) | OGA-BY 3.0 |
 | `jaqueta_blazer.png` | `torso/jacket/collared/male/walk/white.png` | bluecarrot16 | CC-BY-SA 3.0, GPL 3.0 |
 | `baixo_social.png` | `legs/formal/male/walk.png` | bluecarrot16, JaidynReiman, ElizaWy, Johannes Sjölund (wulax), Stephen Challener (Redshrike) | OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 |
 | `baixo_bermuda.png` | `legs/shorts/shorts/male/walk.png` | JaidynReiman, ElizaWy, bluecarrot16, Johannes Sjölund (wulax), Stephen Challener (Redshrike) | OGA-BY 3.0, GPL 3.0 |

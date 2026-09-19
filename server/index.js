@@ -12,11 +12,14 @@ const mapaEditado = require('./mapa-editado');
 const usuariosStore = require('./usuarios');
 const sessao = require('./sessao');
 const auth = require('./auth');
+const marcaDaSede = require('./marca');
 const google = require('./google');
 const agenda = require('./agenda');
 const trello = require('./trello');
+const discador = require('./discador');
 const acervo = require('./acervo');
 const turn = require('./turn');
+const correio = require('./email');
 const emprestimos = require('./emprestimos');
 const mesasStore = require('./mesas');
 const reunioes = require('./reunioes');
@@ -118,7 +121,7 @@ const MAX_MSG_LEN = 500;
 const EMOJIS_REACAO = ['👍', '😂', '❤️', '🎉', '👏'];
 
 const CANAIS = [
-  { id: 'geral', nome: 'geral', descricao: 'Avisos e assuntos gerais da ADM Solucoes' },
+  { id: 'geral', nome: 'geral', descricao: 'Avisos e assuntos gerais da ' + marcaDaSede.marca.nome },
   { id: 'social', nome: 'social', descricao: 'Conversa fiada, memes e combinados' },
   { id: 'projetos', nome: 'projetos', descricao: 'Andamento dos projetos e clientes' },
 ];
@@ -311,7 +314,9 @@ function alguemNoTile(col, row) {
 
 
 const MAX_NAME_LEN = 18;
-const STATUS_VALIDOS = ['livre', 'focado', 'reuniao'];
+// 'ligacao' nao e escolhido no botao de status: e o discador que marca,
+// enquanto a pessoa esta numa ligacao com cliente (ver public/js/discador.js).
+const STATUS_VALIDOS = ['livre', 'focado', 'reuniao', 'ligacao'];
 const EMOJIS_VALIDOS = ['👋', '👍', '🎉', '😂', '❤️', '👏'];
 // O `uid` do player e o id da conta (uuid), entregue pelo cookie assinado - nao
 // vem mais do cliente. Ver server/auth.js e docs/plano-login.md.
@@ -362,6 +367,87 @@ io.use((socket, next) => {
   next();
 });
 
+// ---- repasse de movimento: cada um recebe so o que precisa ver ----------------
+//
+// ANTES: cada passo de cada pessoa saia NA HORA pra todas as outras. Isso cresce
+// ao quadrado - 60 pessoas davam ~35 mil envios por segundo, e o teste de carga
+// (scripts/medir-carga.js) mostrou o servidor enchendo um nucleo inteiro ali e o
+// boneco dos outros comecando a teleportar.
+//
+// AGORA, a cada CICLO_MS, cada pessoa recebe UM pacote com quem mudou:
+//   - quem esta NA TELA dela (+ uma margem): todo ciclo, 20 vezes por segundo;
+//   - quem esta FORA da tela: um ciclo a cada LONGE_A_CADA (2 vezes por segundo).
+//     Ninguem some: o minimapa, a lista de pessoas e "seguir alguem" continuam
+//     certos, so atualizam mais devagar - e ninguem ve esse boneco andar.
+//
+// "Na tela" e calculado aqui do mesmo jeito que a camera do cliente enquadra
+// (centralizada na pessoa, travando na borda do mapa - ver atualizarCamera no
+// game.js), com o tamanho da tela que o cliente manda no evento 'vista'.
+//
+// Cliente que nao mandou 'vista' (versao antiga no cache do navegador) continua
+// recebendo do jeito antigo: tudo, e uma mensagem 'player-moved' por posicao.
+//
+// O estado fica FORA do objeto do player de proposito: o player vai inteiro no
+// `init` e no `player-joined`, e isto vazaria pra todo mundo junto.
+const CICLO_MS = 50;
+const LONGE_A_CADA = 10;
+const MARGEM_VISTA = 3 * map.TILE;   // quem esta quase entrando na tela ja chega liso
+const repasse = new Map();           // socket.id -> { seq, pacote, vista, vistos }
+let cicloDeRepasse = 0;
+let ultimoCicloComMovimento = -Infinity;
+
+function estadoDeRepasse(id) {
+  let r = repasse.get(id);
+  if (!r) {
+    // seq: quantas vezes a pessoa andou; vistos: outroId -> ultimo seq ja entregue
+    r = { seq: 0, pacote: null, vista: null, vistos: new Map() };
+    repasse.set(id, r);
+  }
+  return r;
+}
+
+// O retangulo que a pessoa esta vendo, com a margem. null = ve tudo.
+function areaDaTela(pessoa, vista) {
+  if (!vista) return null;
+  const W = map.COLS * map.TILE;
+  const H = map.ROWS * map.TILE;
+  const x = vista.w >= W ? 0 : Math.max(0, Math.min(W - vista.w, pessoa.x - vista.w / 2));
+  const y = vista.h >= H ? 0 : Math.max(0, Math.min(H - vista.h, pessoa.y - vista.h / 2));
+  return {
+    x0: x - MARGEM_VISTA, y0: y - MARGEM_VISTA,
+    x1: x + vista.w + MARGEM_VISTA, y1: y + vista.h + MARGEM_VISTA,
+  };
+}
+
+function cicloDoRepasse() {
+  cicloDeRepasse += 1;
+  // Sede parada: ninguem andou e todo atrasado (quem estava longe) ja foi
+  // entregue. E o caso mais comum - a sede aberta com todo mundo sentado.
+  if (cicloDeRepasse - ultimoCicloComMovimento > LONGE_A_CADA) return;
+  const vezDeQuemEstaLonge = cicloDeRepasse % LONGE_A_CADA === 0;
+
+  players.forEach((receptor, id) => {
+    const sock = io.sockets.sockets.get(id);
+    if (!sock) return;
+    const meu = estadoDeRepasse(id);
+    const tela = areaDaTela(receptor, meu.vista);
+    const lote = [];
+    repasse.forEach((r, outroId) => {
+      if (outroId === id || !r.pacote) return;
+      if (meu.vistos.get(outroId) === r.seq) return; // nada novo desse
+      const p = r.pacote;
+      const naTela = !tela || (p.x >= tela.x0 && p.x <= tela.x1 && p.y >= tela.y0 && p.y <= tela.y1);
+      if (!naTela && !vezDeQuemEstaLonge) return;
+      lote.push(p);
+      meu.vistos.set(outroId, r.seq);
+    });
+    if (!lote.length) return;
+    if (meu.vista) sock.emit('players-moved', lote);
+    else lote.forEach((p) => sock.emit('player-moved', p)); // cliente antigo
+  });
+}
+setInterval(cicloDoRepasse, CICLO_MS);
+
 io.on('connection', (socket) => {
   socket.on('join', (payload) => {
     if (players.has(socket.id)) return; // ja entrou
@@ -405,6 +491,14 @@ io.on('connection', (socket) => {
     players.set(socket.id, player);
     nomesPorUid.set(player.uid, player.name);
 
+    // O `init` logo abaixo ja leva a posicao atual de todo mundo: quem chega
+    // comeca "em dia" com cada um, e o ciclo de repasse so manda o que mudar
+    // daqui pra frente (senao o primeiro ciclo repetiria a sede inteira).
+    const meuRepasse = estadoDeRepasse(socket.id);
+    repasse.forEach((r, outroId) => {
+      if (outroId !== socket.id) meuRepasse.vistos.set(outroId, r.seq);
+    });
+
     socket.emit('init', {
       selfId: socket.id,
       selfUid: player.uid,
@@ -418,6 +512,7 @@ io.on('connection', (socket) => {
       mudancasMapa: mapaEditado.paraEnvio(),
       objetosMapa: mapaEditado.objetosParaEnvio(),
       conteudosMapa: mapaEditado.conteudosParaEnvio(),
+      areasMapa: mapaEditado.areasParaEnvio(),
     });
 
     socket.broadcast.emit('player-joined', player);
@@ -452,14 +547,29 @@ io.on('connection', (socket) => {
     player.kart = Number.isFinite(kart) ? Math.max(0, Math.min(1, kart)) : 0;
     player.kartAng = Number.isFinite(kartAng) ? kartAng : 0;
 
-    // Pacote enxuto: sai pra todo mundo online, ate 10 vezes por segundo por
-    // pessoa andando, e e o que mais gasta trafego na hospedagem. Campo no valor
+    // Pacote enxuto: e o que mais gasta trafego na hospedagem. Campo no valor
     // padrao nao vai (o cliente ja trata ausente como falso/zero).
     const pacote = { id: socket.id, x: Math.round(player.x), y: Math.round(player.y), dir: player.dir };
     if (player.moving) pacote.moving = true;
     if (player.sentado) pacote.sentado = true;
     if (player.kart) { pacote.kart = player.kart; pacote.kartAng = player.kartAng; }
-    socket.broadcast.emit('player-moved', pacote);
+    // Nao sai daqui: fica guardado, e o ciclo de repasse (mais abaixo) entrega
+    // a cada um so o que ele precisa ver.
+    const r = estadoDeRepasse(socket.id);
+    r.seq += 1;
+    r.pacote = pacote;
+    ultimoCicloComMovimento = cicloDeRepasse;
+  });
+
+  // Tamanho da tela da pessoa, em pixels do mapa (largura/zoom). E o que diz ao
+  // ciclo de repasse quem esta na tela dela. Mentir aqui so muda o que a PROPRIA
+  // pessoa recebe - no maximo, todo mundo a toda hora, que e o que ja era antes.
+  socket.on('vista', (data) => {
+    if (!data) return;
+    const w = Number(data.w);
+    const h = Number(data.h);
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 64 || h < 64) return;
+    estadoDeRepasse(socket.id).vista = { w: Math.min(w, 8192), h: Math.min(h, 8192) };
   });
 
   socket.on('status', (data) => {
@@ -764,6 +874,23 @@ io.on('connection', (socket) => {
     if (resultado.linkCaiu) io.emit('mapa-conteudo-atualizado', { c, r, conteudo: null });
   });
 
+  // Mover e redimensionar uma AREA (docs/areas.md). So a diretoria, como o resto
+  // do decorador. A recusa volta so pra quem tentou, com o motivo: a tela dele
+  // ja esta mostrando o retangulo novo e precisa desfazer.
+  socket.on('mapa-area', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !player.isAdmin || !data || typeof data.id !== 'string') return;
+    const r = data.restaurar ? mapaEditado.restaurarArea(data.id) : mapaEditado.editarArea(data.id, data);
+    if (r.erro) {
+      socket.emit('mapa-area-recusada', { id: data.id, erro: r.erro });
+      return;
+    }
+    const area = Object.assign({ id: data.id }, r.area);
+    // Nada mudou: responde so pra ele, que esta esperando a resposta.
+    if (!r.mudou) socket.emit('mapa-area-atualizada', area);
+    else io.emit('mapa-area-atualizada', area);
+  });
+
   // Camada de cima: monitor, caneca, papelada... apoiados numa celula.
   socket.on('mapa-objeto', (data) => {
     const player = players.get(socket.id);
@@ -888,6 +1015,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    repasse.delete(socket.id);
+    repasse.forEach((r) => r.vistos.delete(socket.id));
     if (players.has(socket.id)) {
       const saiu = players.get(socket.id);
       players.delete(socket.id);
@@ -1022,6 +1151,8 @@ app.get('/api/acervo-fisico', sessao.exigirLogin, (req, res) => {
       : l
   ));
   res.json({
+    // false = sede sem acervo fisico (ACERVO_FISICO=nenhum): a tela esconde a aba
+    ativo: emprestimos.ativo(),
     livros,
     podePegar: !visita,
     podeDevolverDeOutros: !!req.usuario.isAdmin,
@@ -1041,6 +1172,27 @@ app.get('/api/acervo-fisico', sessao.exigirLogin, (req, res) => {
 
 // Servidores da chamada de video (STUN, e TURN da Cloudflare se configurado).
 // So logado: a credencial do TURN e banda paga por nos. Ver server/turn.js.
+// Discador do CRM, dentro da sede. Ver docs/discador.md e server/discador.js:
+// a sede so faz a ponte, sempre em nome da conta LOGADA e de e-mail provado.
+app.get('/api/discador/estado', sessao.exigirLogin, (req, res) => {
+  const r = discador.recusa(req.usuario);
+  res.json({ ligado: discador.configurado(), pode: !r, motivo: r ? r.erro : null });
+});
+
+app.post('/api/discador/fila', sessao.exigirLogin, async (req, res) => {
+  const r = discador.recusa(req.usuario);
+  if (r) return res.status(r.status).json({ erro: r.erro });
+  const resposta = await discador.fila(req.usuario, req.body && req.body.filtros);
+  res.status(resposta.status).json(resposta.corpo);
+});
+
+app.post('/api/discador/ligacao', sessao.exigirLogin, async (req, res) => {
+  const r = discador.recusa(req.usuario);
+  if (r) return res.status(r.status).json({ erro: r.erro });
+  const resposta = await discador.registrar(req.usuario, req.body && req.body.ligacao);
+  res.status(resposta.status).json(resposta.corpo);
+});
+
 app.get('/api/ice', sessao.exigirLogin, async (req, res) => {
   const { iceServers, turn: comTurn } = await turn.obter();
   res.set('Cache-Control', 'no-store');
@@ -1105,6 +1257,18 @@ if (sessao.SEM_LOGIN) {
     proximo();
   });
 }
+// A pagina e o manifesto saem com a MARCA da sede (server/marca.js): com uma sede
+// por cliente, a tela nao pode dizer "ADM Solucoes" pra outra empresa. Vem ANTES
+// da pasta estatica, senao ela entregaria o index.html cru, com os marcadores.
+app.get(['/', '/index.html'], (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.type('html').send(marcaDaSede.paginaInicial({ dominio: auth.DOMINIOS[0] }));
+});
+app.get('/manifest.webmanifest', (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.type('application/manifest+json').send(JSON.stringify(marcaDaSede.manifesto()));
+});
+
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // SEM_LOGIN=1: entra direto numa conta de desenvolvimento, sem a tela de login.
@@ -1171,6 +1335,7 @@ server.listen(PORT, () => {
   console.log(turn.configurado()
     ? 'Chamada: TURN da Cloudflare ligado.'
     : 'Chamada: so STUN (defina CLOUDFLARE_TURN_KEY_ID e CLOUDFLARE_TURN_TOKEN pra redes restritas).');
+  console.log(correio.situacao());
   if (sessao.SEM_LOGIN) {
     const dev = prepararContaDev();
     console.log(`SEM_LOGIN=1: tela de login desativada, entrando como "${dev.nome}".`);
@@ -1180,9 +1345,15 @@ server.listen(PORT, () => {
   // esta com o codigo padrao" - que era o pior tipo de aviso: um log que
   // ninguem le protegendo uma senha escrita num repositorio publico. Agora o
   // padrao nao existe, e o que sobra e informacao util.
-  console.log(auth.loginGoogleLigado()
-    ? 'Cria conta: "Entrar com o Google" pra @' + auth.DOMINIOS.join(', @')
-    : 'Cria conta: e-mail @' + auth.DOMINIOS.join(', @') + ' com senha (SEM verificacao: ligue o Google - GOOGLE_CLIENT_ID/SECRET)');
+  if (!auth.DOMINIOS.length) {
+    console.log('Cria conta: ninguem pelo dominio do e-mail (DOMINIOS_SEDE vazio).');
+  } else if (auth.loginGoogleLigado()) {
+    console.log('Cria conta: "Entrar com o Google" pra @' + auth.DOMINIOS.join(', @'));
+  } else {
+    console.log('Cria conta: e-mail @' + auth.DOMINIOS.join(', @') + ' com senha ' + (correio.ligado()
+      ? '(conferido pelo link que chega no e-mail)'
+      : '(SEM verificacao: ligue o Google - GOOGLE_CLIENT_ID/SECRET - ou o e-mail - docs/email.md)'));
+  }
   if (auth.CODIGO_SEDE) console.log('  e e-mail de fora com o codigo da sede.');
   if (auth.loginGoogleLigado() && usuariosStore.totalDeDiretoria() === 0) {
     console.log(auth.DIRETORIA_EMAILS.length

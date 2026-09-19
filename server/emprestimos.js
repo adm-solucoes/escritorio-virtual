@@ -1,10 +1,16 @@
 // Acervo FISICO da sala da ADM e quem esta com cada livro. Ver docs/estante.md.
 //
-// O catalogo (public/dados/acervo-fisico.json) foi transcrito das fotos das
-// estantes. Ele mora em public/ porque nao tem nada de secreto - e a lista de
-// livros da sala - e o navegador pode ler direto. O que o servidor guarda e so
-// o EMPRESTIMO: quem pegou e desde quando (DATA_DIR/emprestimos.json, que entra
-// no backup).
+// O catalogo (server/acervo-fisico.json) foi transcrito das fotos das estantes
+// da ADM. O que o servidor guarda e so o EMPRESTIMO: quem pegou e desde quando
+// (DATA_DIR/emprestimos.json, que entra no backup).
+//
+// VARIAS SEDES (docs/varias-sedes.md): o catalogo da ADM e da ADM. Ele morava em
+// public/ - e ai ficava aberto em /dados/acervo-fisico.json em TODO endereco,
+// inclusive no de outra empresa. Agora fica fora do que o navegador alcanca, e
+// cada sede escolhe o dela em ACERVO_FISICO:
+//   - ausente    -> o da ADM (esta pasta), como sempre foi;
+//   - um caminho -> o catalogo daquele cliente;
+//   - nenhum     -> sede sem acervo fisico: a aba "Na sala" nem aparece.
 //
 // A REGRA
 // Pega quem e da sede (visitante nao leva livro da sala). Livro com alguem nao
@@ -17,7 +23,9 @@ const fs = require('fs');
 const path = require('path');
 const pastaDados = require('./dados');
 
-const CATALOGO = path.join(__dirname, '..', 'public', 'dados', 'acervo-fisico.json');
+const ESCOLHA = String(process.env.ACERVO_FISICO || '').trim();
+const CATALOGO = ESCOLHA === 'nenhum' ? null
+  : (ESCOLHA ? path.resolve(ESCOLHA) : path.join(__dirname, 'acervo-fisico.json'));
 const ARQUIVO = pastaDados.arquivo('emprestimos.json');
 
 // Id estavel sem depender da etiqueta (metade dos livros nao tem codigo legivel):
@@ -29,6 +37,7 @@ function idDe(l) {
 
 let catalogo = [];
 function carregarCatalogo() {
+  if (!CATALOGO) { catalogo = []; return; }
   try {
     const bruto = JSON.parse(fs.readFileSync(CATALOGO, 'utf8'));
     catalogo = (bruto.livros || []).map((l) => Object.assign({ id: idDe(l) }, l));
@@ -87,4 +96,9 @@ function devolver(id, usuario) {
 carregarCatalogo();
 carregar();
 
-module.exports = { listar, pegar, devolver, _idDe: idDe, _recarregar: () => { carregarCatalogo(); carregar(); } };
+// Sede com acervo fisico? (a tela esconde a aba quando nao tem)
+function ativo() {
+  return !!CATALOGO;
+}
+
+module.exports = { listar, pegar, devolver, ativo, _idDe: idDe, _recarregar: () => { carregarCatalogo(); carregar(); } };

@@ -81,9 +81,22 @@
     biblioteca:  4,   // madeira: cadeira de sala de leitura, sem estofado colorido
   };
 
+  // Cadeira de frente pra MESA DE TRABALHO e sempre a de escritorio, em qualquer
+  // sala. Na planta de fabrica isso nunca acontecia fora dos bairros (la a
+  // cadeira comum so olha pra mesa redonda e de reuniao). Mas as areas andam
+  // (docs/areas.md): diminuindo o Foco A, as mesas que sobravam no corredor
+  // ganhavam cadeira de copa. O mesmo com mesa de trabalho posta na copa.
+  const OLHA_PRA = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  function deFrentePraMesa(M, c, r, direcao) {
+    const [dc, dr] = OLHA_PRA[direcao] || [0, 0];
+    const t = M.tiles[r + dr] && M.tiles[r + dr][c + dc];
+    return M.MESAS_DIRECIONAIS.has(t) || t === M.MESA_DUPLA || t === M.MESA_NOTEBOOK;
+  }
+
   function cadeiraDaSala(direcao) {
     return (c, r) => {
       const M = window.OfficeMap;
+      if (M && M.tiles && deFrentePraMesa(M, c, r, direcao)) return null;
       const sala = M && M.getRoomAtTile && M.getRoomAtTile(c, r);
       const linha = sala && CADEIRA_DA_SALA[sala.id];
       if (linha === undefined) return null;   // salao e salas privativas: a de escritorio
@@ -381,26 +394,31 @@
   // (borda, quina, transicao pra terra), que e outro problema — o desenho a
   // mao continua ate isso ser resolvido.
   const PISOS = {
-    // O salao da referencia e tijolinho creme em fiada alternada, nao tabua.
-    // A folha `tile-a` e a que chega mais perto: creme claro e de junta miuda.
-    tijolo:        { f: 'structure-floor/tile-a.png', c: 0, r: 0, w: 1, h: 1 },
-    ladrilho:      { f: 'structure-floor/tile-c.png', c: 0, r: 0, w: 2, h: 2 },
+    // `tijolo` e `ladrilho` NAO saem do pacote (sairam em 18/09/2026). O
+    // `tile-a` era um quadriculado miudo, de azulejo de banheiro, e o `tile-c`
+    // um piso de pedra bege com ponto escuro na quina: lado a lado com o print
+    // do Gather, eram o que mais afastava o salao da referencia (tijolo creme
+    // GRANDE em fiada alternada, e ladrilho claro lilas-acinzentado). Os dois
+    // voltaram ao desenho a mao (`pisoTijolo` e o ladrilho do game.js), agora
+    // com as cores MEDIDAS no print.
 
     // --- madeira e espinha de peixe ------------------------------------------
-    // A direcao de interiores de 2026 e "resimercial": funcionalidade de
-    // escritorio com a materialidade de casa - madeira natural, neutro quente
-    // (taupe, creme), forma arredondada. Carpete roxo com parede cinza e
-    // escritorio de 2010, e e o que a nossa sede tinha.
+    // Madeira ficou so onde ela e o material certo: a biblioteca (tabaco) e a
+    // recepcao (bege claro). As ilhas de mesa voltaram ao carpete lavanda da
+    // referencia, e as salas de reuniao ao ladrilho claro - a madeira quase
+    // preta (coluna 0) e a laranja (coluna 2) eram o que mais escurecia e
+    // afastava o mapa do print do Gather. (Ja houve uma direcao "resimercial",
+    // toda em madeira; comparada lado a lado com a referencia, perdeu.)
     //
     // Nas folhas do pacote CADA COLUNA E UMA COR e as linhas sao o desencontro
     // da tabua. Por isso o bloco e 1 de largura por 3 de altura: pegar w maior
     // misturaria duas cores no mesmo chao.
     madeira:       { f: 'structure-floor/wood-floor-a.png', c: 4, r: 0, w: 1, h: 3 },
-    madeira_mel:   { f: 'structure-floor/wood-floor-a.png', c: 2, r: 0, w: 1, h: 3 },
-    madeira_escura:{ f: 'structure-floor/wood-floor-a.png', c: 0, r: 0, w: 1, h: 3 },
     madeira_clara: { f: 'structure-floor/wood-floor-a.png', c: 3, r: 3, w: 1, h: 3 },
-    espinha:       { f: 'structure-floor/herringbone-a.png', c: 2, r: 0, w: 1, h: 3 },
-    espinha_fria:  { f: 'structure-floor/herringbone-a.png', c: 0, r: 0, w: 1, h: 3 },
+    // So a primeira linha da folha: as tres linhas desta coluna sao o MESMO
+    // desenho em tres tons (do claro pro escuro), e alternar por linha pintava
+    // listras horizontais na sala.
+    espinha_fria:  { f: 'structure-floor/herringbone-a.png', c: 0, r: 0, w: 1, h: 1 },
 
     // Tapete como PISO. A folha traz blocos de 3x3 com borda, e repetidos eles
     // leem como PLACA DE CARPETE - que e acabamento de chao de escritorio de

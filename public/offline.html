@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sem conexao - Sede ADM</title>
+  <title>Sem conexao - Escritorio virtual</title>
   <style>
     body {
       margin: 0; min-height: 100vh; display: flex; align-items: center;
@@ -17,10 +17,11 @@
     }
     h1 { font-size: 20px; margin: 0 0 8px; }
     p { font-size: 14px; line-height: 1.5; color: #6b7280; margin: 0 0 20px; }
-    button {
-      padding: 11px 22px; border: none; border-radius: 10px; background: #4f46e5;
-      color: #fff; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    .botao {
+      display: inline-block; padding: 11px 22px; border-radius: 10px; background: #4f46e5;
+      color: #fff; font-size: 14px; font-weight: 700; text-decoration: none;
     }
+    .botao:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
   </style>
 </head>
 <body>
@@ -33,7 +34,13 @@
     </div>
     <h1>Sem conexao com a sede</h1>
     <p>O escritorio precisa de internet pra mostrar quem esta online e abrir as chamadas. Confira a conexao e tente de novo.</p>
-    <button type="button" onclick="location.reload()">Tentar de novo</button>
+    <!-- Link, e nao botao com script. A CSP recusa onclick="..." (e recusava:
+         o botao ficou morto desde o commit 7fd97a6), e um script em arquivo
+         tambem nao serviria - sem internet, o service worker so tem ESTA pagina
+         no cache, entao o .js nem carregaria. href="" navega pro proprio
+         endereco, com a query junto (um link de convite continua valendo), e o
+         service worker tenta a rede de novo. -->
+    <a class="botao" href="">Tentar de novo</a>
   </div>
 </body>
 </html>

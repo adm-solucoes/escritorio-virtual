@@ -376,7 +376,7 @@ async function identidadeDoLogin(code, state, nonceDoCookie) {
   }
 
   const r = validarIdentidade(lerIdToken(dados.id_token), { clientId: CLIENT_ID, nonce: valor, agora: Date.now() });
-  if (r.erro) r.motivo = r.erro === 'dominio' ? 'conta Google fora da ADM' : 'id_token nao confere';
+  if (r.erro) r.motivo = r.erro === 'dominio' ? 'conta Google fora do dominio da sede' : 'id_token nao confere';
   return r;
 }
 

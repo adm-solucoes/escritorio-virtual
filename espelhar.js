@@ -68,7 +68,12 @@ function passo(texto) {
 // `server/data-backup-<data>/`, que o restaurar.js cria antes de sobrescrever:
 // eles sao copias de server/data, ou seja, tem hash de senha e o segredo das
 // sessoes dentro. Nome com data no fim nao cabe numa lista de nomes exatos.
-const PREFIXOS_DE_FORA = ['data-backup-'];
+//
+// `CONTINUAR-` esta aqui pelo mesmo motivo: os dois handoffs de hoje estao
+// nomeados um a um la em cima, mas o proximo ainda nao existe - e quem escreve
+// um handoff no fim de uma sessao longa e justamente quem nao vai lembrar de
+// vir editar esta lista. Com o prefixo, ele nasce de fora do espelho.
+const PREFIXOS_DE_FORA = ['data-backup-', 'CONTINUAR-'];
 
 function copiar(origem, destino, relativo) {
   fs.mkdirSync(destino, { recursive: true });

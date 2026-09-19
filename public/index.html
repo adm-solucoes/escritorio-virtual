@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Escritorio Virtual - ADM Solucoes</title>
+  <title>Escritorio Virtual - {{NOME_SEDE}}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/icones/favicon-32.png" />
   <link rel="apple-touch-icon" href="/icones/icone-192.png" />
   <meta name="theme-color" content="#4f46e5" />
-  <meta name="description" content="Escritorio virtual 2D da ADM Solucoes: presenca, chat e chamada por proximidade." />
+  <meta name="description" content="Escritorio virtual 2D da {{NOME_SEDE}}: presenca, chat e chamada por proximidade." />
 </head>
 <body>
 
@@ -30,11 +30,11 @@
             <circle cx="16" cy="16" r="2.6" fill="currentColor"/>
           </svg>
         </div>
-        <h1>ADM Solucoes</h1>
-        <p id="login-sub">Escritorio virtual da empresa junior</p>
+        <h1>{{NOME_SEDE}}</h1>
+        <p id="login-sub">{{SUBTITULO_SEDE}}</p>
       </header>
 
-      <!-- Porta principal de quem e da ADM: o Google prova que a pessoa e dona do
+      <!-- Porta principal de quem e da empresa: o Google prova que a pessoa e dona do
            e-mail. So aparece quando o servidor tem o Google configurado - ver
            /api/login-opcoes e docs/plano-login.md. -->
       <div id="login-google" class="login-google oculto">
@@ -45,7 +45,7 @@
             <path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.13.76-4.59l-7.98-6.19A23.94 23.94 0 0 0 0 24c0 3.87.92 7.53 2.56 10.78l7.97-6.19z"/>
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           </svg>
-          <span>Entrar com o Google da ADM</span>
+          <span>Entrar com o Google da {{SIGLA_SEDE}}</span>
         </a>
         <p class="login-dica login-dica-google">Primeira vez? A conta e criada na hora, sem senha.</p>
         <div class="login-ou"><span>ou com e-mail e senha</span></div>
@@ -64,7 +64,7 @@
 
         <label class="login-campo campo-conta">
           <span>E-mail</span>
-          <input id="login-email" type="email" placeholder="voce@admsolucoes.com" autocomplete="email" required />
+          <input id="login-email" type="email" placeholder="voce@{{DOMINIO_EXEMPLO}}" autocomplete="email" required />
         </label>
 
         <label class="login-campo campo-conta">
@@ -73,17 +73,17 @@
         </label>
 
         <!-- O codigo da sede so aparece pra quem digitou um e-mail DE FORA.
-             Quem tem @admsolucoes entra direto, e nem fica sabendo que existe
+             Quem tem e-mail da empresa entra direto, e nem fica sabendo que existe
              um codigo - ver o `mostrarCampoCodigo` em js/auth.js. -->
         <p id="dica-email-adm" class="login-dica login-dica-aviso oculto">
-          E-mail da ADM nao precisa de cadastro: use o botao
-          <strong>Entrar com o Google da ADM</strong>, la em cima.
+          E-mail da {{SIGLA_SEDE}} nao precisa de cadastro: use o botao
+          <strong>Entrar com o Google da {{SIGLA_SEDE}}</strong>, la em cima.
         </p>
 
         <label id="campo-codigo" class="login-campo campo-cadastro oculto">
           <span>Codigo da sede</span>
           <input id="login-codigo" type="text" placeholder="Peca pra diretoria" autocomplete="off" />
-          <small class="login-dica">Seu e-mail nao e da ADM, entao a diretoria
+          <small class="login-dica">Seu e-mail nao e da {{SIGLA_SEDE}}, entao a diretoria
             precisa te passar o codigo.</small>
         </label>
 
@@ -97,12 +97,31 @@
         <button id="btn-login" class="btn btn-primario login-enviar" type="submit">Entrar</button>
         <details id="login-esqueci" class="login-esqueci">
           <summary>Esqueci minha senha</summary>
-          <p>
+          <!-- Com e-mail ligado (docs/email.md): link pro e-mail digitado acima. -->
+          <div id="esqueci-por-email" class="oculto">
+            <p>Digite seu e-mail no campo de cima e mande o link: ele chega em
+              alguns minutos e vale por 1 hora.</p>
+            <button id="btn-esqueci" class="btn btn-secundario" type="button">Mandar link de senha nova</button>
+          </div>
+          <!-- Sem e-mail: a diretoria gera uma senha provisoria. -->
+          <p id="esqueci-pela-diretoria">
             Peca pra alguem da <strong>diretoria</strong> abrir
             <em>Sua conta &rarr; Membros da sede &rarr; Redefinir senha</em>.
             Voce recebe uma senha provisoria e troca por uma sua no primeiro acesso.
           </p>
         </details>
+      </form>
+
+      <!-- Senha nova pelo link do e-mail (?redefinir=...). Ver docs/email.md. -->
+      <form id="form-nova-senha" class="login-form oculto" novalidate>
+        <p class="login-dica">Escolha a sua senha nova. Quem estiver logado com a
+          senha antiga em outro lugar sai na hora.</p>
+        <label class="login-campo">
+          <span>Senha nova</span>
+          <input id="nova-senha" type="password" placeholder="Pelo menos 8 caracteres" autocomplete="new-password" required />
+        </label>
+        <p id="nova-senha-erro" class="login-erro oculto" role="alert"></p>
+        <button class="btn btn-primario login-enviar" type="submit">Salvar e entrar</button>
       </form>
     </div>
   </section>
@@ -119,7 +138,7 @@
             <circle cx="16" cy="16" r="2.6" fill="currentColor"/>
           </svg>
         </span>
-        <strong>ADM Solucoes Office</strong>
+        <strong>{{NOME_SEDE}} Office</strong>
       </div>
       <div class="entrada-conta">
         <span id="entrada-inicial" class="entrada-inicial"></span>
@@ -145,7 +164,7 @@
       </div>
 
       <form id="form-entrada" class="entrada-lado">
-        <h2>Bem-vindo a ADM Solucoes</h2>
+        <h2>Bem-vindo a {{NOME_SEDE}}</h2>
         <input id="entrada-nome" type="text" maxlength="18" placeholder="Seu nome na sede" autocomplete="off" required />
         <button id="btn-entrar-sede" class="btn btn-primario entrada-enviar" type="submit">Entrar</button>
         <button id="btn-entrada-avatar" class="entrada-link" type="button">Editar avatar</button>
@@ -158,7 +177,7 @@
     <div class="editor-card">
       <header class="editor-topo">
         <h1>Editar avatar</h1>
-        <span class="editor-espaco-nome">ADM Solucoes · Escritorio Virtual</span>
+        <span class="editor-espaco-nome">{{NOME_SEDE}} · Escritorio Virtual</span>
       </header>
 
       <div class="editor-corpo">
@@ -205,7 +224,7 @@
 
       <!-- trilho de icones a esquerda, como o Gather -->
       <nav class="trilho">
-        <div class="trilho-logo" title="ADM Solucoes">
+        <div class="trilho-logo" title="{{NOME_SEDE}}">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <circle cx="8" cy="8" r="2.6" fill="currentColor"/>
             <circle cx="16" cy="8" r="2.6" fill="currentColor"/>
@@ -232,6 +251,11 @@
         </button>
         <button id="btn-whatsapp" class="trilho-btn" type="button" title="Abrir o seu WhatsApp numa janela ao lado">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4.5 19.5l1.2-3.6A8 8 0 1 1 8.6 18.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.2 8.6c.3 2.6 2.4 4.9 5.2 5.4l1-1.2-1.8-.9-.8.8c-.9-.4-1.7-1.2-2.1-2.1l.8-.8-.9-1.8z" fill="currentColor"/></svg>
+        </button>
+        <!-- Discador do CRM. Nasce escondido: so aparece onde o discador esta
+             ligado (a sede que tem CRM) - ver js/discador.js e docs/discador.md. -->
+        <button id="btn-discador" class="trilho-btn oculto" type="button" title="Discador: uma ligacao atras da outra">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6.6 3.8l2.3-.4 1.6 3.8-1.6 1.2a10.5 10.5 0 0 0 4.7 4.7l1.2-1.6 3.8 1.6-.4 2.3a2.2 2.2 0 0 1-2.4 1.8A14.6 14.6 0 0 1 4.8 6.2a2.2 2.2 0 0 1 1.8-2.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15 3.5h5.5M17.75 1.5v4M15 8h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
         <button id="btn-estante" class="trilho-btn" type="button" title="Estante: o acervo de livros da sede">
           <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9h17M3.5 15h17" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 5.5v3M9 5.5v3M6.5 11.5v3M9 11.5v3M6.5 17.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -517,6 +541,14 @@
         <div id="trello-colunas" class="trello-colunas"></div>
       </aside>
 
+      <aside id="painel-discador" class="painel-discador oculto" aria-labelledby="discador-titulo">
+        <div class="discador-topo">
+          <h2 id="discador-titulo">Discador</h2>
+          <button id="btn-fechar-discador" class="btn-fechar-painel" type="button" title="Fechar">&#10005;</button>
+        </div>
+        <div id="discador-corpo" class="discador-corpo"></div>
+      </aside>
+
       <aside id="painel-estante" class="painel-estante oculto">
         <header class="estante-topo">
           <div class="estante-titulo-bloco">
@@ -527,7 +559,7 @@
         </header>
         <div id="estante-abas" class="estante-abas" role="tablist" aria-label="Acervo">
           <button type="button" class="estante-aba ativa" data-aba="digital" role="tab" aria-selected="true">Digitais <span class="estante-aba-n"></span></button>
-          <button type="button" class="estante-aba" data-aba="sala" role="tab" aria-selected="false">Na sala da ADM <span class="estante-aba-n"></span></button>
+          <button type="button" class="estante-aba" data-aba="sala" role="tab" aria-selected="false">Na sala da {{SIGLA_SEDE}} <span class="estante-aba-n"></span></button>
         </div>
         <div id="estante-aviso" class="estante-aviso oculto"></div>
         <div id="estante-busca-linha" class="estante-busca-linha oculto">
@@ -649,6 +681,7 @@
   </div>
 
   <script src="js/trello.js"></script>
+  <script src="js/discador.js"></script>
   <!-- Objeto que abre conteudo. Ver docs/plano-conteudo.md. -->
   <div id="painel-conteudo" class="painel-convite oculto" role="dialog" aria-modal="true" aria-labelledby="conteudo-titulo">
     <div class="convite-card">
@@ -775,7 +808,7 @@
         <span id="membros-conta" class="membros-conta"></span>
       </div>
       <p class="convite-ajuda">
-        Quem saiu da ADM: <strong>remova</strong> - a pessoa sai da sede na hora e a
+        Quem saiu da {{SIGLA_SEDE}}: <strong>remova</strong> - a pessoa sai da sede na hora e a
         mesa dela fica livre. Quem esqueceu a senha: <strong>redefina</strong> e passe
         a senha provisoria pra ela.
       </p>
@@ -797,6 +830,7 @@
 
   <script src="js/leitor.js"></script>
   <script src="js/estante.js"></script>
+  <script src="js/areas.js"></script>
   <script src="js/decorador.js"></script>
   <script src="js/cartaomesa.js"></script>
   <script src="js/itemmesa.js"></script>

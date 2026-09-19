@@ -42,8 +42,6 @@ Estas sao as folhas que o `public/js/sprites.js` realmente desenha. Todas sob
 | `furniture/water-cooler.png` | Water Cooler | Eliza Wyatt (DeathsDarling) |
 | `small-items/flowers.png` | Flowers | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
 | `structure-floor/herringbone-a.png` | Herringbone | Eliza Wyatt (DeathsDarling) |
-| `structure-floor/tile-a.png` | Tile A | Eliza Wyatt (DeathsDarling) |
-| `structure-floor/tile-c.png` | Tile C | Eliza Wyatt (DeathsDarling) |
 | `structure-floor/wood-floor-a.png` | Wood Floor A | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
 | `structure-misc/pool-a.png` | Pool A | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |
 | `structure-signs/sign-backgrounds-a.png` | Sign Backgrounds A | Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) |

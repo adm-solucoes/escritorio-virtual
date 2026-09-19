@@ -39,6 +39,18 @@ const conteudos = new Map();
 const MAX_TITULO = 40;
 const MAX_URL = 500;
 
+// ---- areas: onde fica e de que tamanho e cada sala (docs/areas.md) ----------
+//
+// A diretoria move e redimensiona o RETANGULO de cada area - o que decide
+// chamada fechada, sala silenciosa, piso e etiqueta -, como a "area" do Gather.
+// Parede e movel nao andam junto: sao as camadas de cima (mudancas/objetos).
+// `hall` e `jardim` sao o fundo que pega o que sobra, e nao se editam.
+const AREAS_FIXAS = new Set(['hall', 'jardim']);
+const AREA_MIN = 2;
+const BASE_AREAS = new Map(map.ROOMS.map((s) => [s.id, { r0: s.r0, c0: s.c0, r1: s.r1, c1: s.c1 }]));
+// id -> { r0, c0, r1, c1 }: so as que sairam do lugar de fabrica.
+const areas = new Map();
+
 function chave(c, r) {
   return c + ',' + r;
 }
@@ -57,9 +69,11 @@ function comoLista(mapa, campo) {
 function salvar() {
   garantirPasta();
   const dados = {
+    planta: map.VERSAO_PLANTA,
     mudancas: comoLista(mudancas, 't'),
     objetos: comoLista(objetos, 'o'),
     conteudos: conteudosParaEnvio(),
+    areas: areasParaEnvio(),
   };
   const tmp = ARQUIVO + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(dados, null, 2), 'utf8');
@@ -70,6 +84,13 @@ function carregar() {
   try {
     if (!fs.existsSync(ARQUIVO)) return;
     const dados = JSON.parse(fs.readFileSync(ARQUIVO, 'utf8'));
+    // Feito em outra planta: cada celula dali aponta pro lugar errado desta.
+    // (Sem o campo, e da planta 1 - a que existia antes de ele existir.)
+    const versao = Number(dados.planta) || 1;
+    if (versao !== map.VERSAO_PLANTA) {
+      pastaDados.guardarDePlantaAntiga(ARQUIVO, versao);
+      return;
+    }
     (dados.mudancas || []).forEach((m) => {
       if (!posicaoValida(m.c, m.r) || !tileValido(m.t)) return;
       mudancas.set(chave(m.c, m.r), m.t);
@@ -92,6 +113,7 @@ function carregar() {
         titulo, url, porUid: x.porUid || null, em: x.em || null,
       });
     });
+    carregarAreas(dados.areas);
   } catch (e) {
     console.error('[mapa] nao consegui ler a decoracao:', e.message);
   }
@@ -214,6 +236,88 @@ function limparObjeto(c, r) {
   return true;
 }
 
+// ---------------------------------------------------------------- areas
+
+function areaEditavel(id) {
+  return typeof id === 'string' && BASE_AREAS.has(id) && !AREAS_FIXAS.has(id);
+}
+
+function sobrepoe(a, s) {
+  return a.r0 <= s.r1 && s.r0 <= a.r1 && a.c0 <= s.c1 && s.c0 <= a.c1;
+}
+
+// null quando pode; senao o motivo, que volta pra tela de quem tentou. Mesma
+// regra do cliente (public/js/map.js, problemaDaArea).
+function problemaDaArea(id, a, outras) {
+  if (!areaEditavel(id)) return 'Essa area nao se edita.';
+  const inteiros = !!a && [a.r0, a.c0, a.r1, a.c1].every(Number.isInteger);
+  if (!inteiros || a.r0 < 0 || a.c0 < 0 || a.r1 >= map.ROWS || a.c1 >= map.COLS || a.r0 > a.r1 || a.c0 > a.c1) {
+    return 'Fora do mapa.';
+  }
+  if (a.r1 - a.r0 + 1 < AREA_MIN || a.c1 - a.c0 + 1 < AREA_MIN) return 'A area minima e 2 por 2.';
+  // Uma em cima da outra, a pessoa estaria em duas salas ao mesmo tempo - e a
+  // chamada fechada de uma vazaria pra outra.
+  const vizinha = (outras || map.ROOMS).find((s) => s.id !== id && areaEditavel(s.id) && sobrepoe(a, s));
+  if (vizinha) return 'Ia ficar em cima de "' + vizinha.nome + '".';
+  return null;
+}
+
+function aplicarArea(id, a) {
+  const sala = map.ROOMS.find((s) => s.id === id);
+  sala.r0 = a.r0; sala.c0 = a.c0; sala.r1 = a.r1; sala.c1 = a.c1;
+  const base = BASE_AREAS.get(id);
+  const deFabrica = base.r0 === a.r0 && base.c0 === a.c0 && base.r1 === a.r1 && base.c1 === a.c1;
+  if (deFabrica) areas.delete(id);
+  else areas.set(id, { r0: a.r0, c0: a.c0, r1: a.r1, c1: a.c1 });
+}
+
+// O arquivo e conferido INTEIRO, e nao area por area: a Recepcao pode ter ido
+// pro lugar onde o Foco A ficava porque o Foco A saiu antes - lendo uma de
+// cada vez, a primeira bateria na posicao velha da outra. Se o conjunto final
+// nao fecha (arquivo editado a mao), fica tudo na planta de fabrica.
+function carregarAreas(lista) {
+  if (!Array.isArray(lista) || !lista.length) return;
+  const finais = map.ROOMS.map((s) => {
+    const salva = lista.find((x) => x && x.id === s.id);
+    return salva && areaEditavel(s.id)
+      ? { id: s.id, nome: s.nome, r0: salva.r0, c0: salva.c0, r1: salva.r1, c1: salva.c1 }
+      : { id: s.id, nome: s.nome, r0: s.r0, c0: s.c0, r1: s.r1, c1: s.c1 };
+  });
+  const errada = finais.find((a) => areaEditavel(a.id) && problemaDaArea(a.id, a, finais));
+  if (errada) {
+    console.error('[mapa] areas do mapa.json nao fecham (' + errada.id + '): fica a planta de fabrica.');
+    return;
+  }
+  finais.forEach((a) => { if (areaEditavel(a.id)) aplicarArea(a.id, a); });
+}
+
+// { area, mudou } ou { erro }.
+function editarArea(id, dados) {
+  const a = dados && {
+    r0: Number(dados.r0), c0: Number(dados.c0), r1: Number(dados.r1), c1: Number(dados.c1),
+  };
+  const problema = problemaDaArea(id, a);
+  if (problema) return { erro: problema };
+  const sala = map.ROOMS.find((s) => s.id === id);
+  if (sala.r0 === a.r0 && sala.c0 === a.c0 && sala.r1 === a.r1 && sala.c1 === a.c1) {
+    return { area: a, mudou: false };
+  }
+  aplicarArea(id, a);
+  salvar();
+  return { area: a, mudou: true };
+}
+
+// De volta pro retangulo de fabrica - que pode estar ocupado por outra area que
+// andou pra la; ai recusa com o nome dela, como qualquer outra edicao.
+function restaurarArea(id) {
+  if (!areaEditavel(id)) return { erro: 'Essa area nao se edita.' };
+  return editarArea(id, BASE_AREAS.get(id));
+}
+
+function areasParaEnvio() {
+  return Array.from(areas.entries()).map(([id, a]) => ({ id, r0: a.r0, c0: a.c0, r1: a.r1, c1: a.c1 }));
+}
+
 function paraEnvio() {
   return comoLista(mudancas, 't');
 }
@@ -226,6 +330,7 @@ carregar();
 
 module.exports = {
   editar, editarObjeto, limparObjeto, paraEnvio, objetosParaEnvio,
+  editarArea, restaurarArea, areasParaEnvio, areaEditavel,
   definirConteudo, tirarConteudo, conteudosParaEnvio, podeTerConteudo,
   tileValido, objetoValido, posicaoValida, urlValida, TILES_DO_CATALOGO,
 };

@@ -104,11 +104,11 @@ function subir(env) {
     servidor = spawn(process.execPath, [path.join(raiz, 'server', 'index.js')], {
       env: Object.assign({}, process.env, {
         PORT: String(PORTA), SESSION_SECRET: 'segredo-de-teste-bem-comprido', SEM_LOGIN: '', NODE_ENV: 'test',
-        CODIGO_SEDE: '', ADMIN_CODE: '', DIRETORIA_EMAILS: '', DOMINIOS_SEDE: '',
+        CODIGO_SEDE: '', ADMIN_CODE: '', DIRETORIA_EMAILS: '', DOMINIOS_SEDE: 'admsolucoes.com.br,admsolucoes.com',
         GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', SITE_URL: BASE,
         GOOGLE_TOKEN_URL_TESTE: 'http://127.0.0.1:' + PORTA_GOOGLE + '/token',
         TRELLO_API_KEY: '', TRELLO_TOKEN: '', TRELLO_BOARD_ID: '', GOOGLE_DRIVE_PASTA: '',
-        GOOGLE_CONTA_SERVICO: '', CLOUDFLARE_TURN_KEY_ID: '', CLOUDFLARE_TURN_TOKEN: '',
+        GOOGLE_CONTA_SERVICO: '', CLOUDFLARE_TURN_KEY_ID: '', CLOUDFLARE_TURN_TOKEN: '', EMAIL_PROVEDOR: '',
       }, env),
       stdio: ['ignore', 'pipe', 'pipe'],
     });

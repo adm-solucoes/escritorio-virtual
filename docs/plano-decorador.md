@@ -5,7 +5,7 @@ abas de categoria e uma grade de objetos pra colocar no mapa.
 
 ## 1. A ideia central
 
-O escritorio ja e uma **grade de tiles** (48x32), e cada tipo de tile ja sabe se
+O escritorio ja e uma **grade de tiles** (38x28 desde a planta compacta), e cada tipo de tile ja sabe se
 bloqueia passagem (`SOLID_TILES`) e como se desenha (`drawObstacleTile`). Entao
 decorar = **escrever um tile numa celula**. Nao precisa de sistema de objetos novo,
 de camada nova nem de assets novos: colisao, pathfinding e render vem de graca.
@@ -69,7 +69,9 @@ Gather tem varias versoes do mesmo movel, nao uma so):
 | Estrutura | parede, janela, cerca |
 | Area externa | arvore, arbusto, pedra, agua |
 
-Mais a **borracha**, que escreve `LIVRE` e devolve o chao.
+Mais a **borracha**, que escreve `LIVRE` e devolve o chao, e a aba **📐 Areas**, que
+nao e objeto: e o editor que move e redimensiona o retangulo de cada sala
+(chamada fechada, piso, etiqueta). Ver [areas.md](areas.md).
 
 Cada item tem nome em pt-BR (a busca filtra por ele) e a miniatura e um
 `<canvas>` 32x32 desenhado com `drawObstacleTile`.

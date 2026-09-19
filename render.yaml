@@ -95,6 +95,19 @@ services:
         sync: false
       - key: BACKUP_CHAVE
         sync: false
+      #
+      # E-mail: confirmar o e-mail de quem se cadastra com senha e o "esqueci
+      # minha senha" por link (docs/email.md). Os tres, ou nenhum: em branco, o
+      # cadastro entra na hora e quem esquece a senha pede pra diretoria.
+      #   EMAIL_PROVEDOR  - resend ou brevo
+      #   EMAIL_CHAVE     - a API key do provedor
+      #   EMAIL_REMETENTE - endereco num dominio verificado no provedor
+      - key: EMAIL_PROVEDOR
+        sync: false
+      - key: EMAIL_CHAVE
+        sync: false
+      - key: EMAIL_REMETENTE
+        sync: false
 
       # DISCO PERSISTENTE - descomente as tres linhas abaixo JUNTO com o bloco
       # `disk` do fim do arquivo e com `plan: starter`. Sem isso, server/data/

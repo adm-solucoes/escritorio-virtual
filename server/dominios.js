@@ -4,10 +4,17 @@
 // ATENCAO: o dominio sozinho NAO prova nada. Qualquer um digita
 // fulano@admsolucoes.com.br num formulario. So o login com o Google prova que a
 // pessoa e dona do endereco - ver "Entrar com o Google" em docs/plano-login.md.
+//
+// VARIAS SEDES (scripts/sedes.sh): DOMINIOS_SEDE AUSENTE cai no padrao da ADM,
+// como sempre foi. Mas DOMINIOS_SEDE PRESENTE E VAZIO quer dizer "nenhum
+// dominio": ninguem cria conta por e-mail. Antes, vazio tambem caia no padrao -
+// e a sede de um cliente criado sem dominio aceitaria cadastro de qualquer
+// @admsolucoes. Com varias empresas no mesmo servidor, isso e vazamento.
 const DOMINIOS_PADRAO = ['admsolucoes.com.br', 'admsolucoes.com'];
-const DOMINIOS_SEDE = String(process.env.DOMINIOS_SEDE || '')
-  .split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
-const DOMINIOS = DOMINIOS_SEDE.length ? DOMINIOS_SEDE : DOMINIOS_PADRAO;
+const bruto = process.env.DOMINIOS_SEDE;
+const DOMINIOS = bruto === undefined
+  ? DOMINIOS_PADRAO
+  : String(bruto).split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
 
 function dominioDe(email) {
   const texto = String(email || '').trim();

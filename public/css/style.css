@@ -188,6 +188,10 @@ button { font-family: inherit; }
   font-size: 12.5px;
 }
 
+/* O mesmo lugar do erro, pra aviso bom ("mandamos o link pro seu e-mail"). */
+.login-erro.login-info { background: #ecfdf3; color: #067647; }
+#esqueci-por-email p { margin: 6px 0 8px; }
+
 .login-enviar { justify-content: center; margin-top: 4px; }
 .login-enviar:disabled { opacity: 0.6; cursor: default; }
 
@@ -1343,6 +1347,34 @@ video.mostrando-tela {
 .decor-vazio { grid-column: 1 / -1; margin: 12px 0; color: var(--texto-fraco); font-size: 13px; text-align: center; }
 
 .decor-dica { margin: 0; font-size: 11px; color: var(--texto-fraco); line-height: 1.4; }
+
+/* Aba "Areas" do decorador (public/js/areas.js, docs/areas.md): no lugar da
+   grade de objetos, a lista das areas - cor, nome e tamanho em tiles. */
+.decor-grade.decor-grade-areas { display: flex; flex-direction: column; gap: 6px; }
+.areas-lista { display: flex; flex-direction: column; gap: 2px; }
+.area-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.area-item:hover { background: var(--painel-alt); }
+.area-item.ativa { border-color: var(--indigo); background: rgba(79, 70, 229, 0.07); }
+.area-ponto { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.area-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.area-tamanho { flex: none; color: var(--texto-fraco); font-size: 12px; font-variant-numeric: tabular-nums; }
+.area-restaurar { width: 100%; justify-content: center; font-size: 12.5px; }
+.area-status { margin: 0; font-size: 12px; color: var(--texto-fraco); }
+.area-aviso { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fef3f2; color: #b42318; font-size: 12.5px; line-height: 1.4; }
 .decor-rodape { display: flex; gap: 6px; padding-top: 10px; border-top: 1px solid var(--borda); }
 .decor-historico {
   width: 34px;
@@ -3249,3 +3281,259 @@ video.mostrando-tela {
 .cartao-acoes { flex-wrap: wrap; }
 .cartao-whatsapp { color: #14803c; }
 .whatsapp-acoes-direita { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+/* ============ Discador ============ Ver js/discador.js e docs/discador.md.
+   Painel colado no trilho, como o chat: o mapa continua a vista, e da pra ver
+   quem esta perto enquanto liga. */
+.status-ligacao { color: #6d4fd6; }
+.status-ligacao .bolinha { background: var(--roxo); }
+
+.painel-discador {
+  position: absolute;
+  top: 0;
+  left: 62px;
+  bottom: 0;
+  width: min(480px, calc(100vw - 62px));
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  background: var(--painel);
+  border-right: 1px solid var(--borda);
+  box-shadow: var(--sombra-painel);
+}
+.discador-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--borda);
+}
+.discador-topo h2 { margin: 0; font-size: 17px; font-weight: 800; }
+.discador-corpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.painel-discador.em-sessao .discador-corpo { padding-bottom: 0; }
+
+.disc-sub { margin: 0; color: var(--texto-fraco); }
+.disc-nota { margin: 0; font-size: 12px; color: var(--texto-fraco); }
+.disc-bloco {
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.disc-bloco h3 {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+.disc-bloco h3:first-child { margin-top: 0; }
+.disc-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.disc-grade label, .disc-rotulo { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--texto-fraco); }
+.discador-corpo select,
+.discador-corpo input[type="number"],
+.discador-corpo input[type="date"],
+.discador-corpo input[type="time"],
+.discador-corpo textarea {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--texto);
+  padding: 8px 10px;
+  border: 1px solid var(--borda-forte);
+  border-radius: 8px;
+  background: var(--painel);
+}
+.discador-corpo textarea { resize: vertical; min-height: 54px; }
+.disc-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--texto-fraco); }
+.disc-check b { color: var(--texto); }
+.disc-check input { margin-top: 3px; }
+.disc-total { margin: 0; font-size: 14px; }
+.disc-total b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.disc-total span { color: var(--texto-fraco); font-size: 12px; }
+.disc-previa { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; }
+.disc-previa li span { font-weight: 600; }
+.disc-previa li em { font-style: normal; color: var(--texto-fraco); margin-left: 6px; font-size: 12px; }
+.disc-fora { border-top: 1px solid var(--borda); padding-top: 8px; color: var(--texto-fraco); font-size: 12.5px; }
+.disc-fora ul { margin: 4px 0 0; padding-left: 18px; }
+.disc-comecar { padding: 11px; font-size: 14px; }
+.disc-aviso-grande { padding: 14px; border-radius: 12px; background: var(--indigo-claro); display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.disc-aviso-grande p { margin: 0; }
+
+/* ---- o lead ---- */
+.disc-lead h2 { margin: 0; font-size: 19px; line-height: 1.2; font-weight: 800; overflow-wrap: anywhere; }
+.disc-sobre { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-fraco); }
+.disc-sobre span { color: var(--indigo); }
+.disc-onde { margin: 0; color: var(--texto-fraco); }
+.disc-temp { font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; vertical-align: 3px; margin-left: 4px; }
+.disc-temp-quente { background: #fef3f2; color: #b42318; }
+.disc-temp-morno { background: #fffaeb; color: #93370d; }
+.disc-temp-frio { background: var(--indigo-claro); color: var(--indigo-escuro); }
+.disc-dados { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.disc-dados .largo { grid-column: 1 / -1; }
+.disc-dados dt { font-size: 11px; color: var(--texto-fraco); }
+.disc-dados dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.disc-dados dd span { font-weight: 400; color: var(--texto-fraco); }
+.disc-citacao { display: block; font-weight: 400; color: var(--texto-fraco); }
+.disc-contagem { margin: 0; font-weight: 700; color: var(--indigo); }
+/* Verde escuro: o verde da sede com letra branca nao passa de 2,3 pra 1. */
+.disc-ligar {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  padding: 14px;
+  border-radius: 12px;
+  background: #15803d;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(21, 128, 61, .25);
+}
+.disc-ligar:hover { background: #166534; }
+.disc-ligar:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
+.disc-ligar.desligado { opacity: .45; pointer-events: none; }
+
+/* ---- resultado ---- */
+.disc-ligando { border: 2px solid #c7c3fb; }
+.disc-ligando-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.disc-ligando-topo h3 { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--texto); }
+.disc-ligando-topo span { font-size: 12.5px; color: var(--texto-fraco); font-variant-numeric: tabular-nums; }
+.disc-resultados { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.disc-res {
+  text-align: left;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 8px 10px;
+  min-height: 52px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font: inherit;
+}
+.disc-res:hover { filter: brightness(.97); }
+.disc-res:focus-visible { outline: 2px solid var(--indigo); outline-offset: 1px; }
+.disc-res-nome { font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
+.disc-res-nome kbd { font-family: ui-monospace, Consolas, monospace; font-size: 10px; opacity: .55; }
+.disc-res-efeito { font-size: 11.5px; opacity: .8; }
+.disc-tom-success { background: #ecfdf3; color: #067647; border-color: #abefc6; }
+.disc-tom-info { background: var(--indigo-claro); color: var(--indigo-escuro); border-color: #c7c3fb; }
+.disc-tom-neutral { background: var(--painel-alt); color: var(--texto); border-color: var(--borda); }
+.disc-tom-warning { background: #fffaeb; color: #93370d; border-color: #fedf89; }
+.disc-tom-danger { background: #fef3f2; color: #b42318; border-color: #fecdca; }
+.disc-data { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--borda); border-radius: 10px; padding: 10px; }
+.disc-data > div { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---- roteiro ---- */
+.disc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.disc-chip {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--borda-forte);
+  background: var(--painel);
+  color: var(--texto-fraco);
+  cursor: pointer;
+}
+.disc-chip.ativo { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+.disc-abertura { margin: 0; padding-left: 10px; border-left: 3px solid #c7c3fb; font-size: 14px; }
+.disc-spin { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.disc-spin li { display: flex; gap: 8px; align-items: flex-start; }
+.disc-spin small { display: block; color: var(--texto-fraco); font-size: 11.5px; }
+.disc-letra {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--indigo-claro);
+  color: var(--indigo);
+}
+.disc-letra.forte { background: var(--indigo); color: #fff; }
+.disc-valor { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; }
+.disc-valor dt { font-weight: 700; color: var(--texto-fraco); }
+.disc-valor dd { margin: 0; }
+.disc-prova { margin: 0; color: var(--texto-fraco); }
+.disc-objecoes { border: 1px solid var(--borda); border-radius: 10px; }
+.disc-objecoes summary { cursor: pointer; padding: 8px 10px; font-weight: 700; }
+.disc-objecoes ul { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--borda); }
+.disc-objecoes li { padding: 8px 10px; border-top: 1px solid var(--borda); display: flex; flex-direction: column; gap: 2px; }
+.disc-objecoes li:first-child { border-top: none; }
+.disc-objecoes li span { color: var(--texto-fraco); }
+
+/* ---- avisos da sessao ---- */
+.disc-alerta { border: 1px solid #fecdca; background: #fef3f2; color: #b42318; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.disc-alerta-linha { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.disc-atencao { border: 1px solid #fedf89; background: #fffaeb; color: #93370d; border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 10px; }
+.disc-atencao ul { margin: 0; padding-left: 16px; }
+.disc-atencao button { background: none; border: none; color: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.disc-pausa { margin: 0; padding: 9px 12px; border-radius: 10px; background: var(--painel-alt); text-align: center; }
+.disc-meta { margin: 0; padding: 9px 12px; border-radius: 10px; background: #ecfdf3; color: #067647; font-weight: 700; }
+.disc-fim { align-items: flex-start; }
+
+/* ---- rodape fixo da sessao: progresso e os controles sempre a mao ---- */
+.disc-rodape {
+  position: sticky;
+  bottom: 0;
+  margin: 0 -18px;
+  padding: 10px 18px 12px;
+  background: var(--painel);
+  border-top: 1px solid var(--borda);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.disc-rodape-linha { display: flex; justify-content: space-between; font-size: 12px; color: var(--texto-fraco); font-variant-numeric: tabular-nums; }
+.disc-rodape-linha b { color: var(--texto); }
+.disc-barra { height: 6px; border-radius: 999px; background: var(--painel-alt); overflow: hidden; }
+.disc-barra div { height: 100%; background: #15803d; transition: width .3s; }
+.disc-rodape-botoes { display: flex; gap: 6px; }
+.disc-rodape-botoes .btn { flex: 1; }
+
+/* ---- resumo ---- */
+.disc-numeros { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.disc-numeros div { border: 1px solid var(--borda); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; }
+.disc-numeros b { font-size: 24px; font-variant-numeric: tabular-nums; }
+.disc-numeros span { color: var(--texto-fraco); font-size: 12px; }
+.disc-lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.disc-lista li { display: flex; justify-content: space-between; gap: 8px; }
+.disc-lista em { font-style: normal; color: var(--texto-fraco); }
+
+@media (prefers-reduced-motion: reduce) {
+  .disc-barra div { transition: none; }
+}
+
+@media (max-width: 640px) {
+  .painel-discador {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: var(--abas-altura);
+    width: auto;
+    border: none;
+    box-shadow: none;
+    z-index: 30;
+  }
+  .disc-grade { grid-template-columns: 1fr; }
+  /* Com o discador a barra de abas passa de 8 pra 9 botoes: 9 x 44 px nao cabe
+     num celular de 360 px. Os botoes encolhem pra caber, em vez de a barra
+     vazar pra fora da tela. */
+  .trilho-btn { flex: 1 1 0; width: auto; min-width: 34px; max-width: 48px; }
+}

@@ -93,6 +93,12 @@
       if (!r.ok) throw new Error(json.erro || 'acervo indisponivel');
       fisico = json;
       carregadoFisico = true;
+      // Sede sem acervo fisico (sede de cliente, ACERVO_FISICO=nenhum): a aba
+      // "Na sala" some, e com ela a barra de abas - sobra so a estante digital.
+      if (json.ativo === false && abasEl) {
+        abasEl.classList.add('oculto');
+        if (aba === 'sala') aba = 'digital';
+      }
       if (aba === 'sala') avisar('');
     } catch (e) {
       if (aba === 'sala') avisar('Nao consegui abrir o acervo da sala agora.');
@@ -353,7 +359,7 @@
     const onde = document.createElement('p');
     onde.className = 'estante-detalhe-onde';
     if (!l.emprestimo) {
-      onde.textContent = 'Esta na estante da sala da ADM.';
+      onde.textContent = 'Esta na estante da sala.';
     } else {
       const quem = l.emprestimo.uid === fisico.eu ? 'voce' : l.emprestimo.nome;
       onde.textContent = 'Esta com ' + quem + ' desde ' + quandoFoi(l.emprestimo.desde) + '.';

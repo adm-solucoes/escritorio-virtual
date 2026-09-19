@@ -97,6 +97,13 @@ conferir('se EU estou focado, tambem nao abre',
 conferir('os dois ocupados, nao abre',
   Calls.deveFalarCom(em(A[0], A[1], 'reuniao'), em(B[0], B[1], 'focado')), false);
 
+// "Em ligacao" e o discador marcando: a pessoa esta no telefone com um cliente.
+// Conversa de corredor aberta ali poria o cliente no ar pro colega.
+conferir('se o OUTRO esta em ligacao (discador), nao abre',
+  Calls.deveFalarCom(em(A[0], A[1], 'livre'), em(B[0], B[1], 'ligacao')), false);
+conferir('se EU estou em ligacao, tambem nao abre',
+  Calls.deveFalarCom(em(A[0], A[1], 'ligacao'), em(B[0], B[1], 'livre')), false);
+
 // Bot e cliente antigo chegam sem status. Tratar isso como "ocupado" deixaria
 // gente muda no mapa sem ninguem entender por que.
 conferir('sem status nenhum vale como livre',
