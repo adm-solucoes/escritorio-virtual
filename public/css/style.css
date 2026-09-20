@@ -3369,6 +3369,12 @@ video.mostrando-tela {
 .disc-fora { border-top: 1px solid var(--borda); padding-top: 8px; color: var(--texto-fraco); font-size: 12.5px; }
 .disc-fora ul { margin: 4px 0 0; padding-left: 18px; }
 .disc-comecar { padding: 11px; font-size: 14px; }
+/* O passo a passo de vincular o celular ao Windows: so pra quem usa mouse. */
+.disc-pc { border-top: 1px solid var(--borda); padding-top: 8px; font-size: 12px; color: var(--texto-fraco); }
+.disc-pc summary { cursor: pointer; font-weight: 700; color: var(--texto); }
+.disc-pc ol { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.disc-pc p { margin: 8px 0 0; }
+@media (pointer: coarse) { .disc-pc { display: none; } }
 .disc-aviso-grande { padding: 14px; border-radius: 12px; background: var(--indigo-claro); display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .disc-aviso-grande p { margin: 0; }
 

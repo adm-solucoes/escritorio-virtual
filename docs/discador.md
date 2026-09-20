@@ -62,6 +62,23 @@ Fica ligado a sessão inteira, e não ligação a ligação: nos 3 s entre uma e
 outra o status piscaria pra "Livre" no mapa, e dava tempo de uma conversa de
 corredor abrir.
 
+## Vincular o celular ao computador
+
+Na sede quase todo mundo está no computador, e lá o botão "Ligar" (um link
+`tel:`) não abre nada até o Windows ter um aplicativo pra esse tipo de link. O
+painel mostra, na tela de montar a fila, o passo a passo de vincular o celular
+pelo **Vincular ao Celular** do Windows - de graça, sem instalar nada como
+administrador, e a ligação continua saindo do chip da pessoa.
+
+O passo a passo é o mesmo da tela Discador do CRM
+(`crm-adm/docs/discador-no-computador.md`, que tem também as alternativas pra
+computador sem Bluetooth). Aqui ele some em quem toca a tela (`pointer: coarse`),
+onde não serviria pra nada.
+
+Com o "sempre permitir" marcado no navegador, a cadência de 3 s passa a discar
+sozinha de verdade no computador - o que no celular quase nunca emenda, porque
+o navegador exige um toque recente a cada ligação.
+
 ## Atalhos
 
 Só os números de **1 a 8** (o resultado), e só com a ligação em andamento.

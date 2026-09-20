@@ -360,7 +360,23 @@
       + (d.fora.length ? '<div class="disc-fora"><b>Ficaram de fora:</b><ul>' + d.fora.map((m) => '<li>' + m.n + ' ' + esc(m.rotulo) + '</li>').join('') + '</ul></div>' : '')
       + '<button type="button" class="btn btn-primario disc-comecar" data-acao="comecar"' + (fila.length ? '' : ' disabled') + '>Comecar a ligar</button>'
       + '<p class="disc-nota">No celular: cada ligacao sai do seu chip, e no iPhone o sistema sempre pergunta "Ligar?". No computador: com o celular pareado pelo "Vincular ao Celular" do Windows. Enquanto voce liga, a sede te mostra "Em ligacao" e desliga o seu microfone e o som dos outros.</p>'
+      + dicaDoComputador()
       + '</section>';
+  }
+
+  // O mesmo passo a passo da tela Discador do CRM. O CSS esconde em quem toca a
+  // tela (celular), onde nao serve pra nada - mas a sede, na pratica, e quase
+  // sempre computador, e sem isto o "Ligar" daqui nao abre nada.
+  function dicaDoComputador() {
+    return '<details class="disc-pc"><summary>Ligando pelo computador? Vincule o celular uma vez (~5 min)</summary>'
+      + '<ol>'
+      + '<li>No celular: abrir o app <b>Vincular ao Windows</b> e entrar com a mesma conta Microsoft do computador.</li>'
+      + '<li>No computador: abrir o <b>Vincular ao Celular</b>, aba <b>Chamadas</b>, e aceitar no celular o que ele pedir (usa Bluetooth).</li>'
+      + '<li>Configuracoes do Windows, Aplicativos, Aplicativos padrao, "Vincular ao Celular": apontar o tipo de link <b>TEL</b> pra ele.</li>'
+      + '<li>Na primeira ligacao o navegador pergunta "Abrir Vincular ao Celular?" - marque <b>Sempre permitir</b>.</li>'
+      + '</ol>'
+      + '<p>Ai o botao Ligar disca pelo seu numero e voce fala pelo fone do computador. E, com o "sempre permitir" marcado, a proxima ligacao sai sozinha depois da contagem.</p>'
+      + '</details>';
   }
 
   function htmlResultados() {
