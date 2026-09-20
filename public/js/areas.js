@@ -17,6 +17,7 @@
   let selecionada = null;   // id da area
   let arraste = null;       // { id, modo, x0, y0, inicial, atual }
   let pendente = null;      // { id, area, prazo } - mandada, esperando o servidor
+  let criando = false;      // { prazo } - area nova pedida, esperando o id
   let aviso = '';
   let aoMudar = () => {};   // o painel do decorador redesenha
 
@@ -60,8 +61,10 @@
   // Chamada a cada quadro (desenhar), e nao de dentro do retanguloAtual: de la,
   // o aviso redesenharia o painel no meio do proprio desenho do painel.
   function conferirPrazo() {
-    if (!pendente || Date.now() < pendente.prazo) return;
+    const esperando = pendente || criando;
+    if (!esperando || Date.now() < esperando.prazo) return;
     pendente = null;
+    criando = false;
     aviso = 'O servidor nao respondeu. Confira a conexao e tente de novo.';
     avisar();
   }
@@ -202,8 +205,94 @@
   }
 
   function recusada(m) {
-    if (pendente && m && pendente.id === m.id) pendente = null;
+    if (pendente && (!m || m.id === null || pendente.id === m.id)) pendente = null;
+    if (m && m.id === null) criando = false;
     aviso = (m && m.erro) || 'O servidor nao aceitou essa mudanca.';
+    if (ativo) avisar();
+  }
+
+  // ---- criar e apagar area (docs/areas.md) --------------------------------
+  // O quadrado livre MAIS PERTO de quem esta criando, do maior pro menor (4x4,
+  // 3x3, 2x2). A diretoria arrasta dali pro lugar que quiser - e o mesmo gesto
+  // de sempre, sem modo novo de desenhar retangulo.
+  //
+  // Perto da pessoa, e nao "o primeiro da lista": varrendo do canto de cima, a
+  // area nascia no jardim, em cima da parede, fora do que ela estava olhando.
+  function lugarLivre() {
+    const T = M().TILE;
+    const eu = window.Game && Game.getPlayers && Game.getPlayers().get(Game.getSelfId());
+    const ref = eu ? { r: eu.y / T, c: eu.x / T } : { r: 0, c: 0 };
+    for (const lado of [4, 3, 2]) {
+      let melhor = null;
+      for (let r = 0; r + lado - 1 < M().ROWS; r++) {
+        for (let c = 0; c + lado - 1 < M().COLS; c++) {
+          const a = { r0: r, c0: c, r1: r + lado - 1, c1: c + lado - 1 };
+          if (M().problemaDaArea(null, a)) continue;
+          const d = Math.hypot(r + (lado - 1) / 2 - ref.r, c + (lado - 1) / 2 - ref.c);
+          if (!melhor || d < melhor.d) melhor = { a, d };
+        }
+      }
+      if (melhor) return melhor.a;
+    }
+    return null;
+  }
+
+  function criar() {
+    if (pendente || criando) return;
+    if (M().ROOMS.length >= M().AREAS_MAX) {
+      aviso = 'A sede ja tem ' + M().AREAS_MAX + ' areas. Apague uma antes de criar outra.';
+      avisar();
+      return;
+    }
+    const onde = lugarLivre();
+    if (!onde) {
+      aviso = 'Nao ha espaco livre pra uma area nova. Diminua alguma antes.';
+      avisar();
+      return;
+    }
+    aviso = '';
+    if (!window.Network || !Network.criarArea(Object.assign({ nome: 'Area nova', piso: 'tijolo' }, onde))) {
+      aviso = 'Sem conexao com o servidor agora.';
+      avisar();
+      return;
+    }
+    criando = { prazo: Date.now() + ESPERA_MS };
+    avisar();
+  }
+
+  // Chegou do servidor: a area ja entrou no mapa (game.js). Aqui so seleciona,
+  // pra pessoa ja sair arrastando a que acabou de criar.
+  function criada(a) {
+    if (criando) {
+      criando = false;
+      if (a && a.id) {
+        selecionada = a.id;
+        if (window.Game && Game.olharPara) {
+          const T = M().TILE;
+          Game.olharPara(((a.c0 + a.c1 + 1) / 2) * T, ((a.r0 + a.r1 + 1) / 2) * T);
+        }
+      }
+    }
+    if (ativo) avisar();
+  }
+
+  function apagar(id) {
+    if (pendente || criando || !M().areaCriada(id)) return;
+    const s = sala(id);
+    if (!confirm('Apagar a area "' + (s ? s.nome : id) + '"? O chao dela volta a ser o que era antes (corredor ou jardim).')) return;
+    aviso = '';
+    if (!window.Network || !Network.apagarArea(id)) {
+      aviso = 'Sem conexao com o servidor agora.';
+      avisar();
+      return;
+    }
+    pendente = { id, area: retanguloAtual(s), prazo: Date.now() + ESPERA_MS };
+    avisar();
+  }
+
+  function apagada(id) {
+    if (pendente && pendente.id === id) pendente = null;
+    if (selecionada === id) selecionada = null;
     if (ativo) avisar();
   }
 
@@ -291,7 +380,143 @@
 
   function dica() {
     return 'Arraste o meio de uma area pra mudar de lugar, e a borda ou a quina pra mudar o tamanho. '
+      + 'Com a area escolhida, da pra mudar tambem como se ouve dentro dela. '
       + 'Parede e movel ficam onde estao (use as outras abas).';
+  }
+
+  // ---- a regra de som da area (docs/areas.md) -----------------------------
+  // Cada area diz de que jeito se ouve dentro dela. E aqui que a sala de
+  // reuniao vira "a sala toda" e o Foco vira "so quem senta do lado" - antes
+  // isso era marca fixa no codigo, em quatro salas escolhidas a dedo.
+  const ROTULO_SOM = {
+    perto: 'So quem esta perto',
+    sala: 'A sala toda',
+    silencio: 'Ninguem (silencio)',
+  };
+  const EXPLICA_SOM = {
+    perto: 'Conversa quem chega a ate o alcance abaixo, sem parede no meio.',
+    sala: 'Quem esta dentro conversa com quem esta dentro, em qualquer canto dela - e ninguem de fora entra, nem colado na porta. E o tamanho da area que vale.',
+    silencio: 'Aqui a chamada por proximidade nao abre. E a regra da biblioteca.',
+  };
+
+  function mandarSom(s, som) {
+    if (pendente) return;
+    const area = Object.assign(retanguloAtual(s), { som: som });
+    const problema = M().problemaDaArea(s.id, area);
+    if (problema) { aviso = problema; avisar(); return; }
+    mandar(s.id, area, () => Network.editarArea(s.id, area));
+  }
+
+  // Nome e piso da area. Mudam pelo mesmo caminho do tamanho e da regra de som:
+  // manda pro servidor, que confere e devolve pra todo mundo.
+  function controleDeNome(s) {
+    const bloco = document.createElement('div');
+    bloco.className = 'area-identidade';
+
+    const linhaNome = document.createElement('label');
+    linhaNome.className = 'area-campo';
+    const rotulo = document.createElement('span');
+    rotulo.textContent = 'Nome';
+    const campo = document.createElement('input');
+    campo.type = 'text';
+    campo.value = s.nome;
+    campo.maxLength = M().NOME_MAX;
+    campo.disabled = !!pendente;
+    campo.addEventListener('change', () => {
+      const novo = campo.value.trim();
+      if (!novo || novo === s.nome) { campo.value = s.nome; return; }
+      mandarCampo(s, { nome: novo });
+    });
+    linhaNome.append(rotulo, campo);
+
+    const linhaPiso = document.createElement('label');
+    linhaPiso.className = 'area-campo';
+    const rotuloPiso = document.createElement('span');
+    rotuloPiso.textContent = 'Piso';
+    const lista = document.createElement('select');
+    lista.disabled = !!pendente;
+    M().PISOS_DE_AREA.forEach((p) => {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = p.nome;
+      if (p.id === s.piso) o.selected = true;
+      lista.appendChild(o);
+    });
+    lista.addEventListener('change', () => {
+      if (lista.value !== s.piso) mandarCampo(s, { piso: lista.value });
+    });
+    linhaPiso.append(rotuloPiso, lista);
+
+    bloco.append(linhaNome, linhaPiso);
+    return bloco;
+  }
+
+  function mandarCampo(s, campos) {
+    if (pendente) return;
+    const area = Object.assign(retanguloAtual(s), campos);
+    const problema = M().problemaDaArea(s.id, area);
+    if (problema) { aviso = problema; avisar(); return; }
+    mandar(s.id, area, () => Network.editarArea(s.id, area));
+  }
+
+  function controleDeSom(s) {
+    const som = M().somDaArea(s.som);
+    const bloco = document.createElement('div');
+    bloco.className = 'area-som';
+
+    const titulo = document.createElement('h4');
+    titulo.textContent = 'Como se ouve na ' + s.nome;
+    bloco.appendChild(titulo);
+
+    const modos = document.createElement('div');
+    modos.className = 'area-som-modos';
+    modos.setAttribute('role', 'group');
+    M().SOM_MODOS.forEach((modo) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'area-som-modo' + (modo === som.modo ? ' ativo' : '');
+      b.setAttribute('aria-pressed', modo === som.modo ? 'true' : 'false');
+      b.textContent = ROTULO_SOM[modo];
+      b.disabled = !!pendente;
+      b.addEventListener('click', () => {
+        if (modo === som.modo) return;
+        mandarSom(s, { modo: modo, alcance: som.alcance });
+      });
+      modos.appendChild(b);
+    });
+    bloco.appendChild(modos);
+
+    if (som.modo === 'perto') {
+      const linha = document.createElement('label');
+      linha.className = 'area-som-alcance';
+      const texto = document.createElement('span');
+      texto.textContent = 'Alcance';
+      const campo = document.createElement('input');
+      campo.type = 'number';
+      campo.min = String(M().ALCANCE_MIN);
+      campo.max = String(M().ALCANCE_MAX);
+      campo.step = '1';
+      campo.value = String(som.alcance);
+      campo.disabled = !!pendente;
+      // 'change', e nao 'input': digitar "1" pra chegar em "12" mandaria duas
+      // vezes, e a primeira ja teria mudado a area pra todo mundo.
+      campo.addEventListener('change', () => {
+        const n = limitar(Math.round(Number(campo.value) || 0), M().ALCANCE_MIN, M().ALCANCE_MAX);
+        campo.value = String(n);
+        if (n !== som.alcance) mandarSom(s, { modo: 'perto', alcance: n });
+      });
+      const unidade = document.createElement('span');
+      unidade.className = 'area-som-unidade';
+      unidade.textContent = 'tiles (' + M().ALCANCE_MIN + ' a ' + M().ALCANCE_MAX + ')';
+      linha.append(texto, campo, unidade);
+      bloco.appendChild(linha);
+    }
+
+    const explica = document.createElement('p');
+    explica.className = 'area-som-explica';
+    explica.textContent = EXPLICA_SOM[som.modo];
+    bloco.appendChild(explica);
+    return bloco;
   }
 
   function renderPainel(el) {
@@ -327,17 +552,40 @@
     });
     el.appendChild(lista);
 
+    const nova = document.createElement('button');
+    nova.type = 'button';
+    nova.className = 'btn btn-secundario area-nova';
+    nova.textContent = '+ Area nova';
+    nova.disabled = !!pendente || !!criando || M().ROOMS.length >= M().AREAS_MAX;
+    nova.addEventListener('click', criar);
+    el.appendChild(nova);
+
     const s = selecionada ? sala(selecionada) : null;
     if (s) {
-      const original = M().areaOriginal(s.id);
-      const mexida = original && !igual(original, retanguloAtual(s));
-      const volta = document.createElement('button');
-      volta.type = 'button';
-      volta.className = 'btn btn-secundario area-restaurar';
-      volta.textContent = mexida ? 'Voltar "' + s.nome + '" ao tamanho original' : '"' + s.nome + '" esta no tamanho original';
-      volta.disabled = !mexida || !!pendente;
-      volta.addEventListener('click', () => restaurar(s.id));
-      el.appendChild(volta);
+      el.appendChild(controleDeNome(s));
+      el.appendChild(controleDeSom(s));
+      if (M().areaCriada(s.id)) {
+        const apaga = document.createElement('button');
+        apaga.type = 'button';
+        apaga.className = 'btn btn-secundario area-apagar';
+        apaga.textContent = 'Apagar "' + s.nome + '"';
+        apaga.disabled = !!pendente || !!criando;
+        apaga.addEventListener('click', () => apagar(s.id));
+        el.appendChild(apaga);
+      } else {
+        const original = M().areaOriginal(s.id);
+        const mexida = original && (!igual(original, retanguloAtual(s)) || !M().somIgual(original.som, s.som)
+          || original.nome !== s.nome || original.piso !== s.piso);
+        const volta = document.createElement('button');
+        volta.type = 'button';
+        volta.className = 'btn btn-secundario area-restaurar';
+        // "ao original", e nao "ao tamanho original": o botao devolve tambem o
+        // nome, o piso e a regra de som de fabrica.
+        volta.textContent = mexida ? 'Voltar "' + s.nome + '" ao original' : '"' + s.nome + '" esta como veio de fabrica';
+        volta.disabled = !mexida || !!pendente;
+        volta.addEventListener('click', () => restaurar(s.id));
+        el.appendChild(volta);
+      }
     }
     if (pendente) {
       const p = document.createElement('p');
@@ -356,6 +604,6 @@
   window.EditorAreas = {
     ligar, desligar, estaAtivo, arrastando,
     pressionar, arrastar, soltar, cancelar, restaurar,
-    aceita, recusada, cursorEm, desenhar, renderPainel, dica,
+    aceita, recusada, criada, apagada, cursorEm, desenhar, renderPainel, dica,
   };
 })();

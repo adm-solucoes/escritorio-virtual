@@ -202,27 +202,66 @@
   // Colunas da banda norte: cabines 3-7 | corredor 9-10 | reuniao 12-18 |
   // huddle 20-25 | copa 27-34. Da faixa sul: recepcao 3-9 | corredor 10 |
   // bairros 11-26 | corredor 27 | biblioteca 29-34.
+  // ---- a regra de som de cada area (docs/areas.md) ------------------------
+  //
+  // Cada area diz de que jeito se ouve dentro dela. Antes eram duas marcas
+  // soltas (`privativa`, `silenciosa`) escritas aqui no codigo, em quatro salas
+  // escolhidas a dedo; agora e um campo so, que a diretoria muda no editor de
+  // areas - area nova ja nasce com regra propria.
+  //
+  //   sala      quem esta dentro conversa com quem esta dentro, nao importa a
+  //             distancia, e ninguem de fora entra. E o tamanho da SALA que
+  //             manda: reuniao de 7x7, cabine de 5x3, cada uma a sua.
+  //   perto     o de sempre: conversa quem esta a ate `alcance` tiles, sem
+  //             parede no meio. O alcance e por area - a copa e uma mesa
+  //             grande onde todo mundo se ouve; o Foco e onde nao se atrapalha
+  //             quem esta trabalhando.
+  //   silencio  ali nao abre chamada nenhuma (a biblioteca).
+  const SOM_MODOS = ['perto', 'sala', 'silencio'];
+  const ALCANCE_MIN = 1;
+  const ALCANCE_MAX = 12;
+  const ALCANCE_PADRAO = 3;
+  const perto = (alcance) => ({ modo: 'perto', alcance: alcance });
+  const salaToda = { modo: 'sala', alcance: ALCANCE_PADRAO };
+  const silencio = { modo: 'silencio', alcance: ALCANCE_PADRAO };
+
   const ROOMS = [
     // --- banda norte, de oeste (silencio) para leste (barulho) ---
-    { id: 'cabine1', nome: 'Cabine 1', r0: 3, c0: 3, r1: 5, c1: 7, piso: 'espinha_fria', cor: '#4d8fa0', labelR: 3, labelC: 3, privativa: true },
-    { id: 'cabine2', nome: 'Cabine 2', r0: 7, c0: 3, r1: 9, c1: 7, piso: 'espinha_fria', cor: '#4d8fa0', labelR: 7, labelC: 3, privativa: true },
-    { id: 'reuniao', nome: 'Sala de Reuniao', r0: 3, c0: 12, r1: 9, c1: 18, piso: 'ladrilho', cor: '#cf4a41', labelR: 3, labelC: 11, privativa: true },
-    { id: 'huddle1', nome: 'Huddle', r0: 3, c0: 20, r1: 9, c1: 25, piso: 'ladrilho', cor: '#e0607e', labelR: 3, labelC: 20, privativa: true },
-    { id: 'copa', nome: 'Copa e Lounge', r0: 3, c0: 27, r1: 9, c1: 34, piso: 'ladrilho', cor: '#c08a3e', labelR: 4, labelC: 27 },
+    { id: 'cabine1', nome: 'Cabine 1', r0: 3, c0: 3, r1: 5, c1: 7, piso: 'espinha_fria', cor: '#4d8fa0', labelR: 3, labelC: 3, som: salaToda },
+    { id: 'cabine2', nome: 'Cabine 2', r0: 7, c0: 3, r1: 9, c1: 7, piso: 'espinha_fria', cor: '#4d8fa0', labelR: 7, labelC: 3, som: salaToda },
+    { id: 'reuniao', nome: 'Sala de Reuniao', r0: 3, c0: 12, r1: 9, c1: 18, piso: 'ladrilho', cor: '#cf4a41', labelR: 3, labelC: 11, som: salaToda },
+    { id: 'huddle1', nome: 'Huddle', r0: 3, c0: 20, r1: 9, c1: 25, piso: 'ladrilho', cor: '#e0607e', labelR: 3, labelC: 20, som: salaToda },
+    // Mesa comprida de copa: quem senta numa ponta ouve quem senta na outra.
+    { id: 'copa', nome: 'Copa e Lounge', r0: 3, c0: 27, r1: 9, c1: 34, piso: 'ladrilho', cor: '#c08a3e', labelR: 4, labelC: 27, som: perto(6) },
 
     // --- sul: recepcao, os dois bairros e a biblioteca ---
-    { id: 'recepcao', nome: 'Recepcao', r0: 13, c0: 3, r1: 24, c1: 9, piso: 'madeira_clara', cor: '#8b98a8', labelR: 13, labelC: 3 },
-    { id: 'bairro_a', nome: 'Foco', r0: 13, c0: 11, r1: 18, c1: 26, piso: 'carpete_roxo', cor: '#7a5cd0', labelR: 13, labelC: 11 },
-    { id: 'bairro_b', nome: 'Projetos', r0: 19, c0: 11, r1: 24, c1: 26, piso: 'carpete_roxo', cor: '#c25a3f', labelR: 19, labelC: 11 },
-    // Silenciosa: dentro dela a chamada por proximidade nao abre (calls.js).
-    { id: 'biblioteca', nome: 'Biblioteca', r0: 14, c0: 29, r1: 24, c1: 34, silenciosa: true, piso: 'madeira', cor: '#3f7a5a', labelR: 19, labelC: 29 },
+    { id: 'recepcao', nome: 'Recepcao', r0: 13, c0: 3, r1: 24, c1: 9, piso: 'madeira_clara', cor: '#8b98a8', labelR: 13, labelC: 3, som: perto(3) },
+    // Foco e onde se trabalha calado: so quem senta do lado.
+    { id: 'bairro_a', nome: 'Foco', r0: 13, c0: 11, r1: 18, c1: 26, piso: 'carpete_roxo', cor: '#7a5cd0', labelR: 13, labelC: 11, som: perto(2) },
+    { id: 'bairro_b', nome: 'Projetos', r0: 19, c0: 11, r1: 24, c1: 26, piso: 'carpete_roxo', cor: '#c25a3f', labelR: 19, labelC: 11, som: perto(3) },
+    { id: 'biblioteca', nome: 'Biblioteca', r0: 14, c0: 29, r1: 24, c1: 34, piso: 'madeira', cor: '#3f7a5a', labelR: 19, labelC: 29, som: silencio },
 
     // Pega o RESTO do predio inteiro, nao so o eixo: os corredores da banda
     // norte nao cabem em nenhuma sala nomeada, e sem isto caem no piso padrao,
     // que e grama - chao de jardim brotando dentro do escritorio.
-    { id: 'hall', nome: 'Hall', r0: 3, c0: 3, r1: 24, c1: 34, piso: 'tijolo', cor: '#8b98a8', labelR: 11, labelC: 17 },
-    { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 27, c1: 37, piso: 'grama', cor: '#3f9e57', labelR: 1, labelC: 1 },
+    { id: 'hall', nome: 'Hall', r0: 3, c0: 3, r1: 24, c1: 34, piso: 'tijolo', cor: '#8b98a8', labelR: 11, labelC: 17, som: perto(3) },
+    { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 27, c1: 37, piso: 'grama', cor: '#3f9e57', labelR: 1, labelC: 1, som: perto(3) },
   ];
+
+  // O som que vale pra uma area, com o que veio torto arredondado pro padrao -
+  // vale pro que chega do servidor, do mapa.json ou da tela.
+  function somDaArea(som) {
+    const modo = som && SOM_MODOS.indexOf(som.modo) >= 0 ? som.modo : 'perto';
+    const n = Math.round(Number(som && som.alcance));
+    const alcance = Number.isFinite(n) ? Math.min(Math.max(n, ALCANCE_MIN), ALCANCE_MAX) : ALCANCE_PADRAO;
+    return { modo: modo, alcance: alcance };
+  }
+
+  function somIgual(a, b) {
+    const x = somDaArea(a);
+    const y = somDaArea(b);
+    return x.modo === y.modo && x.alcance === y.alcance;
+  }
 
   // Ilhas de piso que NAO sao area: tapete e soleira, que sao como movel - ficam
   // onde foram postas.
@@ -440,18 +479,72 @@
   // decide - aqui ela so avisa antes de mandar.
   const AREAS_FIXAS = new Set(['hall', 'jardim']);
   const AREA_MIN = 2;
+  const NOME_MAX = 24;
+  // Quantas areas a sede aguenta. Nao e limite de memoria: com muito mais que
+  // isso a Visao de salas e o minimapa viram sopa de etiqueta, e getRoomAtTile
+  // (que roda a cada quadro, por pessoa) passa a varrer uma lista comprida.
+  const AREAS_MAX = 24;
+  // Os pisos que uma area pode ter. Sao os que o desenho conhece (game.js e
+  // sprites.js); qualquer outro nome cairia no tijolo calado.
+  const PISOS_DE_AREA = [
+    { id: 'tijolo', nome: 'Corredor (tijolinho)' },
+    { id: 'ladrilho', nome: 'Ladrilho' },
+    { id: 'carpete_roxo', nome: 'Carpete roxo' },
+    { id: 'carpete_azul', nome: 'Carpete azul' },
+    { id: 'madeira', nome: 'Madeira' },
+    { id: 'madeira_clara', nome: 'Madeira clara' },
+    { id: 'espinha_fria', nome: 'Espinha de peixe' },
+    { id: 'cinza', nome: 'Cimento' },
+    { id: 'grama', nome: 'Grama' },
+  ];
+  // Cores da etiqueta e do pontinho, pra area nova sair com uma que nao seja a
+  // de nenhuma vizinha.
+  const CORES_DE_AREA = ['#4d8fa0', '#cf4a41', '#e0607e', '#c08a3e', '#7a5cd0', '#c25a3f', '#3f7a5a', '#8b98a8'];
+
   const BASE_AREAS = {};
   ROOMS.forEach((s) => {
-    BASE_AREAS[s.id] = { r0: s.r0, c0: s.c0, r1: s.r1, c1: s.c1, labelR: s.labelR, labelC: s.labelC };
+    BASE_AREAS[s.id] = {
+      r0: s.r0, c0: s.c0, r1: s.r1, c1: s.c1, labelR: s.labelR, labelC: s.labelC,
+      som: somDaArea(s.som), nome: s.nome, piso: s.piso,
+    };
+    s.som = somDaArea(s.som); // copia propria: as de fabrica sao compartilhadas
   });
 
-  function areaEditavel(id) {
-    return Object.prototype.hasOwnProperty.call(BASE_AREAS, id) && !AREAS_FIXAS.has(id);
+  // Area criada pela diretoria (nao veio na planta de fabrica). So essa se
+  // apaga: apagar uma de fabrica levaria junto o piso e o movel que foram
+  // desenhados pra ela.
+  function areaCriada(id) {
+    return !Object.prototype.hasOwnProperty.call(BASE_AREAS, id) && !!ROOMS.find((s) => s.id === id);
   }
 
-  // null quando pode; senao o motivo, pra mostrar pra pessoa.
+  function areaEditavel(id) {
+    if (AREAS_FIXAS.has(id)) return false;
+    return Object.prototype.hasOwnProperty.call(BASE_AREAS, id) || areaCriada(id);
+  }
+
+  // Entra ANTES do hall e do jardim: quem procura a sala de um tile pega a
+  // primeira que cobre, e esses dois sao o fundo que pega o resto.
+  function adicionarArea(a) {
+    if (!a || !a.id || ROOMS.find((s) => s.id === a.id)) return false;
+    const fundo = ROOMS.findIndex((s) => AREAS_FIXAS.has(s.id));
+    const nova = {
+      id: a.id, nome: a.nome, r0: a.r0, c0: a.c0, r1: a.r1, c1: a.c1,
+      piso: a.piso, cor: a.cor || CORES_DE_AREA[0], labelR: a.r0, labelC: a.c0, som: somDaArea(a.som),
+    };
+    ROOMS.splice(fundo < 0 ? ROOMS.length : fundo, 0, nova);
+    return true;
+  }
+
+  function removerArea(id) {
+    if (!areaCriada(id)) return false;
+    ROOMS.splice(ROOMS.findIndex((s) => s.id === id), 1);
+    return true;
+  }
+
+  // null quando pode; senao o motivo, pra mostrar pra pessoa. `id` null e area
+  // que ainda vai nascer: confere tudo menos "essa area nao se edita".
   function problemaDaArea(id, a) {
-    if (!areaEditavel(id)) return 'Essa area nao se edita.';
+    if (id !== null && !areaEditavel(id)) return 'Essa area nao se edita.';
     const inteiros = !!a && [a.r0, a.c0, a.r1, a.c1].every(Number.isInteger);
     if (!inteiros || a.r0 < 0 || a.c0 < 0 || a.r1 >= ROWS || a.c1 >= COLS || a.r0 > a.r1 || a.c0 > a.c1) {
       return 'Fora do mapa.';
@@ -462,6 +555,33 @@
     const vizinha = ROOMS.find((s) => s.id !== id && areaEditavel(s.id)
       && a.r0 <= s.r1 && s.r0 <= a.r1 && a.c0 <= s.c1 && s.c0 <= a.c1);
     if (vizinha) return 'Ia ficar em cima de "' + vizinha.nome + '".';
+    return problemaDoSom(a.som) || problemaDoNome(a.nome) || problemaDoPiso(a.piso);
+  }
+
+  // Nome e piso, como o som, so vem quando a tela mexeu neles.
+  function problemaDoNome(nome) {
+    if (nome === undefined || nome === null) return null;
+    const limpo = String(nome).trim();
+    if (!limpo) return 'A area precisa de um nome.';
+    if (limpo.length > NOME_MAX) return 'O nome vai ate ' + NOME_MAX + ' letras.';
+    return null;
+  }
+
+  function problemaDoPiso(piso) {
+    if (piso === undefined || piso === null) return null;
+    return PISOS_DE_AREA.some((p) => p.id === piso) ? null : 'Esse piso nao existe.';
+  }
+
+  // O som so vem junto quando a tela mexeu nele; vazio quer dizer "deixa como
+  // esta". Numero fora da conta e recusado em vez de arredondado calado: quem
+  // mandou um alcance de 40 tiles precisa saber que nao foi aceito.
+  function problemaDoSom(som) {
+    if (som === undefined || som === null) return null;
+    if (SOM_MODOS.indexOf(som.modo) < 0) return 'Regra de som que nao existe.';
+    const n = Number(som.alcance);
+    if (!Number.isInteger(n) || n < ALCANCE_MIN || n > ALCANCE_MAX) {
+      return 'O alcance vai de ' + ALCANCE_MIN + ' a ' + ALCANCE_MAX + ' tiles.';
+    }
     return null;
   }
 
@@ -470,17 +590,21 @@
   // uma celula pra fora), e nunca fica longe dela.
   function aplicarArea(id, a) {
     const sala = ROOMS.find((s) => s.id === id);
-    const base = BASE_AREAS[id];
-    if (!sala || !base || !a) return false;
+    if (!sala || !a) return false;
+    // Area criada pela diretoria nao tem "de fabrica": a etiqueta mora na quina.
+    const base = BASE_AREAS[id] || { labelR: sala.r0, labelC: sala.c0, r0: sala.r0, c0: sala.c0 };
     sala.r0 = a.r0; sala.c0 = a.c0; sala.r1 = a.r1; sala.c1 = a.c1;
     if (base.labelR != null) sala.labelR = Math.min(a.r1, Math.max(a.r0 - 1, a.r0 + (base.labelR - base.r0)));
     if (base.labelC != null) sala.labelC = Math.min(a.c1, Math.max(a.c0 - 1, a.c0 + (base.labelC - base.c0)));
+    if (a.som) sala.som = somDaArea(a.som);
+    if (a.nome) sala.nome = String(a.nome);
+    if (a.piso) sala.piso = a.piso;
     return true;
   }
 
   function areaOriginal(id) {
     const b = BASE_AREAS[id];
-    return b ? { r0: b.r0, c0: b.c0, r1: b.r1, c1: b.c1 } : null;
+    return b ? { r0: b.r0, c0: b.c0, r1: b.r1, c1: b.c1, som: somDaArea(b.som), nome: b.nome, piso: b.piso } : null;
   }
 
   function getRoomAt(x, y) {
@@ -603,6 +727,17 @@
     problemaDaArea,
     aplicarArea,
     areaOriginal,
+    SOM_MODOS,
+    PISOS_DE_AREA,
+    NOME_MAX,
+    AREAS_MAX,
+    areaCriada,
+    adicionarArea,
+    removerArea,
+    ALCANCE_MIN,
+    ALCANCE_MAX,
+    somDaArea,
+    somIgual,
     isWalkable,
     isTileWalkable: isWalkableTile,
     celulasDaMesa,

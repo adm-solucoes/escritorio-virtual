@@ -119,20 +119,35 @@ const temAdm = (s) => /\bADM\b|admsolucoes|empresa junior/.test(s);
     const acervo = await fetch(acme.base + '/api/acervo-fisico', { headers: { Cookie: cookie } }).then((r) => r.json());
     conferir('sem acervo fisico: a estante esconde a aba e nao mostra os livros da ADM', [acervo.ativo, acervo.livros.length], [false, 0]);
     conferir('o catalogo da ADM nao esta mais aberto no endereco do cliente', (await texto(acme, '/dados/acervo-fisico.json')).status, 404);
+    conferir('o logotipo da ADM nao e servido na sede do cliente, nem pra quem adivinha o endereco',
+      [(await texto(acme, '/marca/icone-branco.png')).status, (await texto(acme, '/marca/icone-vermelho.png')).status], [404, 404]);
+    conferir('  e a tela do cliente nao aponta pra marca nenhuma da ADM', pagina.corpo.includes('/marca/'), false);
 
     // ------------------------------------------------------ a ADM, sem nada
     const adm = await sede(3752);
     const paginaAdm = (await texto(adm, '/')).corpo;
     conferir('a sede da ADM sem configurar nada fica como era',
-      [paginaAdm.includes('<title>Escritorio Virtual - ADM Solucoes</title>'), paginaAdm.includes('<h1>ADM Solucoes</h1>'),
-        paginaAdm.includes('Escritorio virtual da empresa junior'), paginaAdm.includes('Entrar com o Google da ADM'),
+      [paginaAdm.includes('<title>Escritorio Virtual - ADM Soluções</title>'), paginaAdm.includes('<h1>ADM Soluções</h1>'),
+        paginaAdm.includes('Escritório virtual da empresa júnior'), paginaAdm.includes('Entrar com o Google da ADM'),
         paginaAdm.includes('voce@admsolucoes.com.br')],
       [true, true, true, true, true]);
     conferir('  o app instalado continua "Sede ADM"', JSON.parse((await texto(adm, '/manifest.webmanifest')).corpo).short_name, 'Sede ADM');
+    // O logotipo e o ARQUIVO do BrandingBook, o mesmo do CRM - nao um desenho
+    // parecido feito aqui. Se um dia alguem trocar por SVG "na mao", quebra.
+    conferir('  o logotipo sai como arquivo nos dois lugares (painel escuro e barra clara)',
+      [paginaAdm.includes('<span class="login-marca"><img src="/marca/icone-branco.png"'),
+        paginaAdm.includes('<span class="entrada-logo"><img src="/marca/icone-vermelho.png"')], [true, true]);
+    const icone = await fetch(adm.base + '/marca/icone-branco.png');
+    const bytes = Buffer.from(await icone.arrayBuffer());
+    const original = fs.readFileSync(path.join(raiz, 'server/marca-arquivos/marca-icone-branco.png'));
+    conferir('  e o arquivo entregue e byte a byte o do BrandingBook',
+      [icone.status, icone.headers.get('content-type'), bytes.equals(original)], [200, 'image/png', true]);
+    conferir('  nome fora da lista (inclusive subindo pasta) nao serve arquivo nenhum',
+      [(await texto(adm, '/marca/qualquer.png')).status, (await texto(adm, '/marca/..%2F..%2Fserver%2Fauth.js')).status], [404, 404]);
     const admLogada = await contaEEntrar(adm, 'ana@admsolucoes.com.br');
     const acervoAdm = await fetch(adm.base + '/api/acervo-fisico', { headers: { Cookie: admLogada.cookie } }).then((r) => r.json());
     conferir('  e o acervo fisico da sala continua la (96 livros)', [acervoAdm.ativo, acervoAdm.livros.length], [true, 96]);
-    conferir('  o canal geral ainda fala da ADM Solucoes', admLogada.init.canais[0].descricao, 'Avisos e assuntos gerais da ADM Solucoes');
+    conferir('  o canal geral ainda fala da ADM Soluções', admLogada.init.canais[0].descricao, 'Avisos e assuntos gerais da ADM Soluções');
   } catch (e) {
     falhou++;
     console.log('  FALHOU ' + (e.stack || e.message));

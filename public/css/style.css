@@ -1372,6 +1372,69 @@ video.mostrando-tela {
 .area-ponto { flex: none; width: 10px; height: 10px; border-radius: 50%; }
 .area-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .area-tamanho { flex: none; color: var(--texto-fraco); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* Nome e piso da area selecionada (docs/areas.md). */
+.area-identidade { display: flex; flex-direction: column; gap: 8px; }
+.area-campo { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.area-campo > span { flex: none; width: 42px; color: var(--texto-fraco); }
+.area-campo input, .area-campo select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12.5px;
+  background: var(--painel);
+}
+.area-nova { width: 100%; justify-content: center; font-size: 12.5px; }
+.area-apagar { width: 100%; justify-content: center; font-size: 12.5px; color: #b42318; border-color: #f0c6c2; }
+.area-apagar:hover:not(:disabled) { background: #fef3f2; }
+
+/* A regra de som da area selecionada (docs/areas.md). */
+.area-som {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--painel-alt);
+}
+.area-som h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+.area-som-modos { display: flex; gap: 4px; }
+.area-som-modo {
+  flex: 1;
+  padding: 7px 4px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--painel);
+  color: var(--texto-fraco);
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.area-som-modo:hover:not(:disabled) { border-color: var(--indigo); color: var(--texto); }
+.area-som-modo.ativo { border-color: var(--indigo); background: rgba(79, 70, 229, 0.1); color: var(--indigo); font-weight: 700; }
+.area-som-modo:disabled { opacity: .6; cursor: default; }
+.area-som-alcance { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.area-som-alcance input {
+  width: 62px;
+  padding: 6px 8px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.area-som-unidade { color: var(--texto-fraco); font-size: 12px; }
+.area-som-explica { margin: 0; font-size: 12px; line-height: 1.45; color: var(--texto-fraco); }
 .area-restaurar { width: 100%; justify-content: center; font-size: 12.5px; }
 .area-status { margin: 0; font-size: 12px; color: var(--texto-fraco); }
 .area-aviso { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fef3f2; color: #b42318; font-size: 12.5px; line-height: 1.4; }
@@ -3542,4 +3605,203 @@ video.mostrando-tela {
      num celular de 360 px. Os botoes encolhem pra caber, em vez de a barra
      vazar pra fora da tela. */
   .trilho-btn { flex: 1 1 0; width: auto; min-width: 34px; max-width: 48px; }
+}
+
+/* ============ Login: tela dividida, com a identidade da sede ============
+   Esquerda: a marca, com o que a sede oferece. Direita: o formulario, direto
+   na superficie - sem cartao solto no meio da tela.
+
+   As cores, as fontes e o logotipo saem do server/marca.js, que decide por
+   sede. Por isso todo `var()` aqui tem um segundo argumento: sem identidade
+   configurada, a tela cai nos tons de sempre. */
+#tela-login {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+}
+
+.login-marca-painel {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 30px;
+  padding: clamp(28px, 4vw, 52px);
+  background: var(--marca-fundo, #262b36);
+  color: var(--marca-card, #fff);
+}
+.login-marca-alto { display: flex; align-items: center; gap: 12px; }
+.login-marca-painel h1 {
+  margin: 0;
+  font-family: var(--marca-titulo, inherit);
+  font-weight: var(--marca-titulo-peso, 800);
+  font-size: 16px;
+  text-transform: var(--marca-titulo-caixa, none);
+  letter-spacing: 0.06em;
+}
+.login-marca-meio { align-self: center; display: flex; flex-direction: column; gap: 22px; }
+
+/* O mote da sede vira a manchete do painel: e a frase que a marca escolheu
+   pra se apresentar, entao e ela que fala mais alto aqui. */
+.login-mote {
+  margin: 0;
+  max-width: 12ch;
+  font-family: var(--marca-titulo, inherit);
+  font-weight: var(--marca-titulo-peso, 800);
+  font-size: clamp(30px, 3.6vw, 46px);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  text-transform: none;
+  text-wrap: balance;
+}
+.login-dentro {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 34ch;
+  font-size: 14.5px;
+  line-height: 1.5;
+  opacity: 0.84;
+}
+/* Marcador com a forma do logotipo (quadrado de canto arredondado), e nao um
+   ponto qualquer. */
+.login-dentro li { position: relative; padding-left: 22px; }
+.login-dentro li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--marca-acao, currentColor);
+}
+.login-marca-pe {
+  margin: 0;
+  font-family: var(--marca-sub, inherit);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  opacity: 0.78;
+}
+.login-marca {
+  flex-shrink: 0;
+  width: var(--marca-logo-tam, 44px);
+  height: var(--marca-logo-tam, 44px);
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--marca-logo-fundo-escuro, transparent);
+  color: var(--marca-logo-tinta-escuro, #fff);
+}
+.login-marca svg, .entrada-logo svg { width: 100%; height: 100%; }
+/* O logotipo de arquivo (sede da ADM) entra como <img> no mesmo lugar do svg. */
+.login-marca img, .entrada-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.entrada-logo {
+  background: var(--marca-logo-fundo, var(--marca-acao, var(--indigo)));
+  color: var(--marca-logo-tinta, #fff);
+}
+
+/* ---- o lado do formulario ---- */
+.login-coluna {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: clamp(28px, 4vw, 56px) 24px;
+  background: var(--marca-card, var(--painel));
+}
+/* O formulario e o servico desta tela: e a unica coisa aqui que ganha cartao,
+   borda e sombra. O fundo creme da marca fica de moldura, e o branco levanta. */
+.login-card {
+  background: var(--painel);
+  border: 1px solid var(--marca-anel, var(--borda));
+  border-radius: 18px;
+  box-shadow: 0 20px 44px -30px rgba(17, 0, 58, 0.5);
+  padding: clamp(22px, 2.6vw, 30px);
+  width: 100%;
+  max-width: 392px;
+  font-family: var(--marca-texto, inherit);
+}
+.login-topo { display: none; }
+.login-entrada-topo { margin-bottom: 20px; }
+.login-entrada-topo h2 {
+  margin: 0;
+  font-family: var(--marca-titulo, inherit);
+  font-weight: var(--marca-titulo-peso, 800);
+  font-size: clamp(23px, 2.2vw, 27px);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--marca-tinta, var(--texto));
+}
+.login-entrada-topo p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--texto-fraco); }
+
+/* Rotulo de campo como etiqueta: miudo, em caixa alta, longe do valor que a
+   pessoa digita - assim o olho separa o que e pergunta do que e resposta. */
+.login-campo span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--texto-fraco);
+}
+.login-aba.ativa { color: var(--marca-tinta, var(--texto)); box-shadow: 0 1px 3px rgba(17, 0, 58, 0.13); }
+.login-abas { background: var(--marca-trilho, var(--painel-alt)); }
+.login-campo input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+.login-campo input:focus {
+  border-color: var(--marca-apoio, var(--indigo));
+  box-shadow: 0 0 0 3px var(--marca-anel, rgba(79, 70, 229, 0.14));
+}
+/* A porta principal de quem tem e-mail da empresa: e o primeiro caminho da
+   tela, entao tem peso de botao - nao de link discreto. */
+.login-btn-google {
+  border-radius: 10px;
+  padding: 13px 16px;
+  font-size: 14.5px;
+  font-weight: 600;
+  border-color: var(--marca-anel, var(--borda));
+  box-shadow: 0 1px 2px rgba(17, 0, 58, 0.07);
+}
+.login-btn-google:focus-visible,
+.login-aba:focus-visible { outline-color: var(--marca-apoio, var(--indigo)); }
+.login-google { gap: 10px; margin-bottom: 16px; }
+.login-ou { color: var(--texto-fraco); font-size: 11.5px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* O botao que conclui: na sede da ADM ele e o vermelho de acao, que o
+   BrandingBook reserva pra "destacar e guiar a atencao". So o do login e o da
+   entrada - o resto do escritorio segue com o indigo de sempre. */
+.login-enviar,
+.entrada-enviar { background: var(--marca-acao, var(--indigo)); border-radius: 10px; }
+.login-enviar { padding: 12px; }
+.login-enviar:hover,
+.entrada-enviar:hover { background: var(--marca-acao, var(--indigo)); filter: brightness(0.92); }
+.entrada-marca strong { font-family: var(--marca-titulo, inherit); font-weight: var(--marca-titulo-peso, 700); }
+
+@media (max-width: 860px) {
+  /* Celular: a marca vira uma faixa curta em cima, e o formulario fica com o
+     resto da tela. */
+  #tela-login { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .login-marca-painel {
+    grid-template-rows: auto;
+    grid-auto-flow: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px calc(18px + env(safe-area-inset-top, 0px));
+  }
+  .login-marca-meio, .login-marca-pe { display: none; }
+  .login-marca { width: 36px; height: 36px; }
+  /* Comeca logo abaixo da faixa: centralizado, o cartao descia demais na tela
+     alta do celular e a pessoa abria o login olhando pra um vazio creme. */
+  .login-coluna { align-items: flex-start; padding: 24px 20px 32px; }
 }

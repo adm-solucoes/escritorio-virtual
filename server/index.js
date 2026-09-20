@@ -877,6 +877,44 @@ io.on('connection', (socket) => {
   // Mover e redimensionar uma AREA (docs/areas.md). So a diretoria, como o resto
   // do decorador. A recusa volta so pra quem tentou, com o motivo: a tela dele
   // ja esta mostrando o retangulo novo e precisa desfazer.
+  // Area NOVA: nasce aqui (o id tambem), e todo mundo recebe pra desenhar.
+  socket.on('mapa-area-nova', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !player.isAdmin || !data) return;
+    const r = mapaEditado.criarArea(data);
+    if (r.erro) {
+      socket.emit('mapa-area-recusada', { id: null, erro: r.erro });
+      return;
+    }
+    io.emit('mapa-area-criada', r.area);
+  });
+
+  // Apagar: so area que a diretoria criou. A de fabrica tem piso e movel
+  // desenhados pra ela - pra "sumir" com ela, a diretoria diminui.
+  socket.on('mapa-area-apagar', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !player.isAdmin || !data || typeof data.id !== 'string') return;
+    // Reuniao marcada la dentro ficaria apontando pra uma sala que nao existe
+    // mais. Em vez de sumir com ela calado (ou deixar orfa ate o proximo
+    // reinicio), a diretoria e avisada e desmarca - ou decide que nao apaga.
+    const marcadas = reunioes.listar().filter((x) => x.sala === data.id && x.fim > Date.now()).length;
+    if (marcadas) {
+      socket.emit('mapa-area-recusada', {
+        id: data.id,
+        erro: marcadas === 1
+          ? 'Tem 1 reuniao marcada nessa area. Desmarque antes de apagar.'
+          : 'Tem ' + marcadas + ' reunioes marcadas nessa area. Desmarque antes de apagar.',
+      });
+      return;
+    }
+    const r = mapaEditado.apagarArea(data.id);
+    if (r.erro) {
+      socket.emit('mapa-area-recusada', { id: data.id, erro: r.erro });
+      return;
+    }
+    io.emit('mapa-area-apagada', { id: r.id });
+  });
+
   socket.on('mapa-area', (data) => {
     const player = players.get(socket.id);
     if (!player || !player.isAdmin || !data || typeof data.id !== 'string') return;
@@ -1267,6 +1305,15 @@ app.get(['/', '/index.html'], (req, res) => {
 app.get('/manifest.webmanifest', (req, res) => {
   res.set('Cache-Control', 'no-cache');
   res.type('application/manifest+json').send(JSON.stringify(marcaDaSede.manifesto()));
+});
+// Os arquivos do logotipo. Ficam fora de public/ pra sede de cliente nao
+// servir a marca da ADM nem pra quem adivinhar o endereco: aqui so responde
+// quem e a sede da ADM, e so os nomes que o marca.js conhece.
+app.get('/marca/:arquivo', (req, res) => {
+  const caminho = marcaDaSede.caminhoDeArquivo(req.params.arquivo);
+  if (!caminho) return res.status(404).end();
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.sendFile(caminho);
 });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));

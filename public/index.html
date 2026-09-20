@@ -6,8 +6,12 @@
   <title>Escritorio Virtual - {{NOME_SEDE}}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;700&family=Bree+Serif&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <!-- A identidade desta sede (cores, fontes e o desenho do fundo). Vem do
+       server/marca.js, e DEPOIS do style.css de proposito: e ela que troca por
+       cima. Sem sede configurada, nao vem nada e a tela fica como era. -->
+  {{ESTILO_SEDE}}
 
   <!-- App instalavel no computador (PWA). Ver docs/app-computador.md. -->
   <link rel="manifest" href="/manifest.webmanifest" />
@@ -20,18 +24,31 @@
 
   <!-- Tela 0: login -->
   <section id="tela-login" class="tela oculto">
-    <div class="login-card">
-      <header class="login-topo">
-        <div class="login-marca">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <circle cx="8" cy="8" r="2.6" fill="currentColor"/>
-            <circle cx="16" cy="8" r="2.6" fill="currentColor"/>
-            <circle cx="8" cy="16" r="2.6" fill="currentColor"/>
-            <circle cx="16" cy="16" r="2.6" fill="currentColor"/>
-          </svg>
-        </div>
+    <!-- Tela dividida: a marca de um lado, o formulario do outro. No celular
+         a marca vira uma faixa em cima. -->
+    <aside class="login-marca-painel">
+      <div class="login-marca-alto">
+        <span class="login-marca">{{LOGO_SEDE_CLARO}}</span>
         <h1>{{NOME_SEDE}}</h1>
-        <p id="login-sub">{{SUBTITULO_SEDE}}</p>
+      </div>
+
+      <div class="login-marca-meio">
+        {{MOTE_SEDE}}
+        <ul class="login-dentro">
+          <li>Você anda pela sede e conversa com quem está perto</li>
+          <li>Chat, agenda e quadro do time no mesmo lugar</li>
+          <li>Estante com o acervo da empresa, aberta pra ler</li>
+        </ul>
+      </div>
+
+      <p id="login-sub" class="login-marca-pe">{{SUBTITULO_SEDE}}</p>
+    </aside>
+
+    <div class="login-coluna">
+    <div class="login-card">
+      <header class="login-entrada-topo">
+        <h2>Entrar na sede</h2>
+        <p>Use a conta da empresa. Leva dez segundos.</p>
       </header>
 
       <!-- Porta principal de quem e da empresa: o Google prova que a pessoa e dona do
@@ -47,7 +64,7 @@
           </svg>
           <span>Entrar com o Google da {{SIGLA_SEDE}}</span>
         </a>
-        <p class="login-dica login-dica-google">Primeira vez? A conta e criada na hora, sem senha.</p>
+        <p class="login-dica login-dica-google">Primeira vez? A conta é criada na hora, sem senha.</p>
         <div class="login-ou"><span>ou com e-mail e senha</span></div>
       </div>
 
@@ -76,20 +93,20 @@
              Quem tem e-mail da empresa entra direto, e nem fica sabendo que existe
              um codigo - ver o `mostrarCampoCodigo` em js/auth.js. -->
         <p id="dica-email-adm" class="login-dica login-dica-aviso oculto">
-          E-mail da {{SIGLA_SEDE}} nao precisa de cadastro: use o botao
-          <strong>Entrar com o Google da {{SIGLA_SEDE}}</strong>, la em cima.
+          E-mail da {{SIGLA_SEDE}} não precisa de cadastro: use o botão
+          <strong>Entrar com o Google da {{SIGLA_SEDE}}</strong>, ali em cima.
         </p>
 
         <label id="campo-codigo" class="login-campo campo-cadastro oculto">
-          <span>Codigo da sede</span>
-          <input id="login-codigo" type="text" placeholder="Peca pra diretoria" autocomplete="off" />
-          <small class="login-dica">Seu e-mail nao e da {{SIGLA_SEDE}}, entao a diretoria
-            precisa te passar o codigo.</small>
+          <span>Código da sede</span>
+          <input id="login-codigo" type="text" placeholder="Peça pra diretoria" autocomplete="off" />
+          <small class="login-dica">Seu e-mail não é da {{SIGLA_SEDE}}, então a diretoria
+            precisa te passar o código.</small>
         </label>
 
         <details class="campo-admin campo-cadastro oculto">
           <summary>Sou da diretoria</summary>
-          <input id="login-admin" type="password" placeholder="Codigo da diretoria" autocomplete="off" />
+          <input id="login-admin" type="password" placeholder="Código da diretoria" autocomplete="off" />
         </details>
 
         <p id="login-erro" class="login-erro oculto" role="alert"></p>
@@ -105,9 +122,9 @@
           </div>
           <!-- Sem e-mail: a diretoria gera uma senha provisoria. -->
           <p id="esqueci-pela-diretoria">
-            Peca pra alguem da <strong>diretoria</strong> abrir
+            Peça pra alguém da <strong>diretoria</strong> abrir
             <em>Sua conta &rarr; Membros da sede &rarr; Redefinir senha</em>.
-            Voce recebe uma senha provisoria e troca por uma sua no primeiro acesso.
+            Você recebe uma senha provisória e troca por uma sua no primeiro acesso.
           </p>
         </details>
       </form>
@@ -124,20 +141,14 @@
         <button class="btn btn-primario login-enviar" type="submit">Salvar e entrar</button>
       </form>
     </div>
+    </div>
   </section>
 
   <!-- Tela 1: entrada (checagem de camera/microfone antes de entrar na sede) -->
   <section id="tela-entrada" class="tela oculto">
     <div class="entrada-topo">
       <div class="entrada-marca">
-        <span class="entrada-logo">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <circle cx="8" cy="8" r="2.6" fill="currentColor"/>
-            <circle cx="16" cy="8" r="2.6" fill="currentColor"/>
-            <circle cx="8" cy="16" r="2.6" fill="currentColor"/>
-            <circle cx="16" cy="16" r="2.6" fill="currentColor"/>
-          </svg>
-        </span>
+        <span class="entrada-logo">{{LOGO_SEDE}}</span>
         <strong>{{NOME_SEDE}} Office</strong>
       </div>
       <div class="entrada-conta">

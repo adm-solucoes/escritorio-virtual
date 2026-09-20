@@ -209,26 +209,63 @@ const OBJETO_MAX = 37;
 // Colunas da banda norte: cabines 3-7 | corredor 9-10 | reuniao 12-18 |
 // huddle 20-25 | copa 27-34. Da faixa sul: recepcao 3-9 | corredor 10 |
 // bairros 11-26 | corredor 27 | biblioteca 29-34.
+// A regra de som de cada area. Igualzinha a do cliente (public/js/map.js), que
+// e quem usa pra decidir a chamada - aqui ela existe pra guardar e conferir o
+// que a diretoria muda no editor. Ver docs/areas.md.
+//
+//   sala      dentro conversa com dentro, e so; o tamanho da sala e o alcance
+//   perto     ate `alcance` tiles, sem parede no meio
+//   silencio  nao abre chamada
+const SOM_MODOS = ['perto', 'sala', 'silencio'];
+const ALCANCE_MIN = 1;
+const ALCANCE_MAX = 12;
+const ALCANCE_PADRAO = 3;
+
+function somDaArea(som) {
+  const modo = som && SOM_MODOS.includes(som.modo) ? som.modo : 'perto';
+  const n = Math.round(Number(som && som.alcance));
+  const alcance = Number.isFinite(n) ? Math.min(Math.max(n, ALCANCE_MIN), ALCANCE_MAX) : ALCANCE_PADRAO;
+  return { modo, alcance };
+}
+
+function somIgual(a, b) {
+  const x = somDaArea(a);
+  const y = somDaArea(b);
+  return x.modo === y.modo && x.alcance === y.alcance;
+}
+
+const salaToda = () => ({ modo: 'sala', alcance: ALCANCE_PADRAO });
+const perto = (alcance) => ({ modo: 'perto', alcance });
+
+// Area criada pela diretoria (docs/areas.md): nome, piso e quantas cabem.
+// A lista de pisos e a mesma do cliente - piso de nome desconhecido sairia
+// como tijolo, calado.
+const NOME_MAX = 24;
+const AREAS_MAX = 24;
+const PISOS_DE_AREA = [
+  'tijolo', 'ladrilho', 'carpete_roxo', 'carpete_azul',
+  'madeira', 'madeira_clara', 'espinha_fria', 'cinza', 'grama',
+];
+
 const ROOMS = [
   // --- banda norte, de oeste (silencio) para leste (barulho) ---
-  { id: 'cabine1', nome: 'Cabine 1', r0: 3, c0: 3, r1: 5, c1: 7, privativa: true },
-  { id: 'cabine2', nome: 'Cabine 2', r0: 7, c0: 3, r1: 9, c1: 7, privativa: true },
-  { id: 'reuniao', nome: 'Sala de Reuniao', r0: 3, c0: 12, r1: 9, c1: 18, privativa: true },
-  { id: 'huddle1', nome: 'Huddle', r0: 3, c0: 20, r1: 9, c1: 25, privativa: true },
-  { id: 'copa', nome: 'Copa e Lounge', r0: 3, c0: 27, r1: 9, c1: 34 },
+  { id: 'cabine1', nome: 'Cabine 1', r0: 3, c0: 3, r1: 5, c1: 7, piso: 'espinha_fria', som: salaToda() },
+  { id: 'cabine2', nome: 'Cabine 2', r0: 7, c0: 3, r1: 9, c1: 7, piso: 'espinha_fria', som: salaToda() },
+  { id: 'reuniao', nome: 'Sala de Reuniao', r0: 3, c0: 12, r1: 9, c1: 18, piso: 'ladrilho', som: salaToda() },
+  { id: 'huddle1', nome: 'Huddle', r0: 3, c0: 20, r1: 9, c1: 25, piso: 'ladrilho', som: salaToda() },
+  { id: 'copa', nome: 'Copa e Lounge', r0: 3, c0: 27, r1: 9, c1: 34, piso: 'ladrilho', som: perto(6) },
 
   // --- sul: recepcao, os dois bairros e a biblioteca ---
-  { id: 'recepcao', nome: 'Recepcao', r0: 13, c0: 3, r1: 24, c1: 9 },
-  { id: 'bairro_a', nome: 'Foco', r0: 13, c0: 11, r1: 18, c1: 26 },
-  { id: 'bairro_b', nome: 'Projetos', r0: 19, c0: 11, r1: 24, c1: 26 },
-  // Silenciosa: dentro dela a chamada por proximidade nao abre (calls.js).
-  { id: 'biblioteca', nome: 'Biblioteca', r0: 14, c0: 29, r1: 24, c1: 34, silenciosa: true },
+  { id: 'recepcao', nome: 'Recepcao', r0: 13, c0: 3, r1: 24, c1: 9, piso: 'madeira_clara', som: perto(3) },
+  { id: 'bairro_a', nome: 'Foco', r0: 13, c0: 11, r1: 18, c1: 26, piso: 'carpete_roxo', som: perto(2) },
+  { id: 'bairro_b', nome: 'Projetos', r0: 19, c0: 11, r1: 24, c1: 26, piso: 'carpete_roxo', som: perto(3) },
+  { id: 'biblioteca', nome: 'Biblioteca', r0: 14, c0: 29, r1: 24, c1: 34, piso: 'madeira', som: { modo: 'silencio', alcance: ALCANCE_PADRAO } },
 
   // Pega o RESTO do predio inteiro, nao so o eixo: os corredores da banda
   // norte nao cabem em nenhuma sala nomeada, e sem isto caem no piso padrao,
   // que e grama - chao de jardim brotando dentro do escritorio.
-  { id: 'hall', nome: 'Hall', r0: 3, c0: 3, r1: 24, c1: 34 },
-  { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 27, c1: 37 },
+  { id: 'hall', nome: 'Hall', r0: 3, c0: 3, r1: 24, c1: 34, piso: 'tijolo', som: perto(3) },
+  { id: 'jardim', nome: 'Jardim', r0: 0, c0: 0, r1: 27, c1: 37, piso: 'grama', som: perto(3) },
 ];
 
 function buildMap() {
@@ -516,6 +553,14 @@ const objetos = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 
 module.exports = {
   TILE,
+  SOM_MODOS,
+  PISOS_DE_AREA,
+  NOME_MAX,
+  AREAS_MAX,
+  ALCANCE_MIN,
+  ALCANCE_MAX,
+  somDaArea,
+  somIgual,
   COLS,
   ROWS,
   VERSAO_PLANTA,

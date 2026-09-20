@@ -70,7 +70,8 @@ for (let r = 1; r < M.ROWS - 1 && !abertos; r++) {
     if (!livre(c, r) || !livre(c + 1, r)) continue;
     const s1 = sala(c, r);
     const s2 = sala(c + 1, r);
-    if ((s1 && (s1.privativa || s1.silenciosa)) || (s2 && (s2.privativa || s2.silenciosa))) continue;
+    const aberta = (s) => !s || M.somDaArea(s.som).modo === 'perto';
+    if (!aberta(s1) || !aberta(s2)) continue;
     abertos = [[c, r], [c + 1, r]];
     break;
   }
@@ -138,7 +139,7 @@ if (comParede) {
 // ------------------------------------------------------------ sala fechada
 // Dentro da sala fechada o status NAO barra: entrar ali e ato deliberado, e
 // travar a chamada deixaria a sala de reuniao muda.
-const fechada = (M.ROOMS || []).find((s) => s.privativa && (s.c1 - s.c0) >= 2);
+const fechada = (M.ROOMS || []).find((s) => M.somDaArea(s.som).modo === 'sala' && (s.c1 - s.c0) >= 2);
 if (fechada) {
   const dentro = [];
   for (let r = fechada.r0; r <= fechada.r1 && dentro.length < 2; r++) {
@@ -153,13 +154,83 @@ if (fechada) {
         em(dentro[1][0], dentro[1][1], 'reuniao')), true);
   }
 } else {
-  console.log('  (pulei o teste de sala fechada: nenhuma sala privativa larga o bastante)');
+  console.log('  (pulei o teste de sala fechada: nenhuma area de som "sala" larga o bastante)');
 }
+
+// --------------------------------------------- o alcance e de cada area
+// O pedido que deu origem a isto: "a distancia tem que ser o tamanho da sala -
+// na sala de reuniao o tamanho dela, na cabine o tamanho dela". Area de som
+// 'sala' e exatamente isso; area 'perto' tem o alcance dela, em tiles.
+console.log('\nCADA AREA COM SEU ALCANCE');
+
+const areaPorId = (id) => (M.ROOMS || []).find((s) => s.id === id);
+const tiles = (a, b) => Math.hypot(b.x - a.x, b.y - a.y) / TILE;
+
+(M.ROOMS || []).filter((s) => M.somDaArea(s.som).modo === 'sala').forEach((s) => {
+  const a = em(s.c0, s.r0);
+  const b = em(s.c1, s.r1);
+  conferir(s.nome + ': cantos opostos (' + tiles(a, b).toFixed(1) + ' tiles) conversam',
+    Calls.deveFalarCom(a, b), true);
+  conferir('  e nao cai por distancia', Calls.deveContinuarCom(a, b), true);
+  // Dois tiles pra fora da quina: perto o bastante pra valer a regra de
+  // corredor, e fora da sala.
+  const fora = em(s.c0 - 2, s.r0);
+  if (!M.getRoomAtTile(s.c0 - 2, s.r0) || M.getRoomAtTile(s.c0 - 2, s.r0).id !== s.id) {
+    conferir('  um dentro e um a 2 tiles, do lado de fora, NAO conversam',
+      Calls.deveFalarCom(em(s.c0, s.r0), fora), false);
+  }
+});
+
+// A copa tem alcance 6 (mesa comprida); o Foco, 2 (quem trabalha nao e
+// interrompido). Os dois casos sao medidos no proprio mapa.
+const copa = areaPorId('copa');
+const foco = areaPorId('bairro_a');
+if (copa && foco) {
+  conferir('a copa tem alcance proprio, maior que o de corredor', M.somDaArea(copa.som).alcance > 3, true);
+  conferir('o Foco tem alcance proprio, menor', M.somDaArea(foco.som).alcance < 3, true);
+
+  const alcanceCopa = M.somDaArea(copa.som).alcance;
+  const perto = em(copa.c0, copa.r0);
+  const longe = em(copa.c0 + alcanceCopa - 1, copa.r0);
+  conferir('na copa, ' + (alcanceCopa - 1) + ' tiles ainda conversa (no corredor nao conversaria)',
+    Calls.deveFalarCom(perto, longe), true);
+
+  // Mesma distancia, no Foco: nao conversa, porque la o alcance e 2.
+  const fa = em(foco.c0, foco.r0);
+  const fb = em(foco.c0 + alcanceCopa - 1, foco.r0);
+  conferir('a mesma distancia no Foco NAO conversa', Calls.deveFalarCom(fa, fb), false);
+
+  // Vizinhos no Foco continuam conversando: alcance curto nao e mudez.
+  conferir('mas dois colados no Foco conversam', Calls.deveFalarCom(em(foco.c0, foco.r0), em(foco.c0 + 1, foco.r0)), true);
+}
+
+// O MENOR dos dois alcances manda: quem esta no Foco leva o silencio do Foco
+// pra conversa, mesmo que o outro esteja num lugar de alcance maior.
+if (foco) {
+  const dentroDoFoco = em(foco.c0 + 1, foco.r0);
+  const foraDoFoco = em(foco.c0 + 1, foco.r0 - 3);
+  const sala = M.getRoomAtTile(foco.c0 + 1, foco.r0 - 3);
+  const alcanceLaFora = M.somDaArea(sala && sala.som).alcance;
+  if (alcanceLaFora > M.somDaArea(foco.som).alcance) {
+    conferir('3 tiles do Foco pra fora: vale o alcance MENOR, entao nao conversa',
+      Calls.deveFalarCom(dentroDoFoco, foraDoFoco), false);
+  }
+}
+
+// Numero de alcance fora da conta e recusado - nao arredondado calado.
+conferir('alcance de 40 tiles nao passa',
+  typeof M.problemaDaArea('copa', { r0: copa.r0, c0: copa.c0, r1: copa.r1, c1: copa.c1, som: { modo: 'perto', alcance: 40 } }), 'string');
+conferir('regra de som inventada nao passa',
+  typeof M.problemaDaArea('copa', { r0: copa.r0, c0: copa.c0, r1: copa.r1, c1: copa.c1, som: { modo: 'gritaria', alcance: 3 } }), 'string');
+conferir('sem mexer no som, a edicao passa igual',
+  M.problemaDaArea('copa', { r0: copa.r0, c0: copa.c0, r1: copa.r1, c1: copa.c1 }), null);
+conferir('som torto vindo de fora vira o padrao, sem quebrar',
+  JSON.stringify(M.somDaArea({ modo: 'x', alcance: 'oi' })), JSON.stringify({ modo: 'perto', alcance: 3 }));
 
 // ------------------------------------------------------- sala silenciosa
 // Na biblioteca ninguem conversa - nem colado, nem os dois livres. E quem ja
 // estava em chamada e entra nela sai da chamada.
-const silenciosa = (M.ROOMS || []).find((s) => s.silenciosa);
+const silenciosa = (M.ROOMS || []).find((s) => M.somDaArea(s.som).modo === 'silencio');
 if (silenciosa) {
   const dentro = [];
   for (let r = silenciosa.r0; r <= silenciosa.r1 && dentro.length < 2; r++) {

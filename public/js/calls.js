@@ -9,9 +9,11 @@
   // e a chamada abria com gente que voce mal via.
   const TILE = 32;
   const TILES_ENTRAR = 3;
-  const TILES_SAIR = 4.5; // a folga evita a chamada piscar quando voce anda na borda
+  // Sair tem folga: sem ela a chamada pisca com a pessoa andando na borda. E
+  // proporcao, e nao numero fixo, porque agora cada area tem o seu alcance
+  // (docs/areas.md) - 1,5x de 2 tiles e 3; de 6 tiles, 9.
+  const FOLGA_SAIR = 1.5;
   const RAIO_ENTRAR = TILES_ENTRAR * TILE;
-  const RAIO_SAIR = TILES_SAIR * TILE;
 
   // De onde o som ja comeca a cair. Perto e volume cheio; dai pra fora vai
   // sumindo ate zero no raio de saida, como no Gather - o corte seco fazia a
@@ -286,13 +288,31 @@
   }
 
   // ----------------------------------------------------- salas de conversa
-  // Em que sala FECHADA a pessoa esta, se estiver em alguma. Sao as de reuniao
-  // e as privativas de uma pessoa so - marcadas com `privativa: true` no mapa.
-  function salaFechadaDe(p) {
+  // A regra de som do lugar onde a pessoa esta: quem decide e a AREA, e cada
+  // area tem a sua (a diretoria muda no editor - ver docs/areas.md).
+  //
+  //   { id, modo: 'perto'|'sala'|'silencio', alcance: <tiles, so no 'perto'> }
+  //
+  // Fora de qualquer area, vale o padrao de corredor.
+  function regraDe(p) {
     const M = window.OfficeMap;
-    if (!M || !M.getRoomAtTile) return null;
-    const sala = M.getRoomAtTile(Math.floor(p.x / TILE), Math.floor(p.y / TILE));
-    return sala && sala.privativa ? sala.id : null;
+    const sala = M && M.getRoomAtTile ? M.getRoomAtTile(Math.floor(p.x / TILE), Math.floor(p.y / TILE)) : null;
+    const som = M && M.somDaArea ? M.somDaArea(sala && sala.som) : { modo: 'perto', alcance: TILES_ENTRAR };
+    return { id: sala ? sala.id : null, modo: som.modo, alcance: som.alcance };
+  }
+
+  // Em que sala FECHADA a pessoa esta, se estiver em alguma (`modo: 'sala'`).
+  function salaFechadaDe(p) {
+    const r = regraDe(p);
+    return r.modo === 'sala' ? r.id : null;
+  }
+
+  // Quantos tiles de alcance valem entre duas pessoas: o MENOR dos dois lados.
+  // Quem esta no Foco leva o silencio do Foco pra conversa - senao alguem
+  // parado no corredor, com alcance maior, puxaria pra chamada quem foi pro
+  // Foco justamente pra nao ser puxado.
+  function alcanceEntre(a, b) {
+    return Math.min(a.alcance, b.alcance) * TILE;
   }
 
   // Sala SILENCIOSA (`silenciosa: true` no mapa): a biblioteca. E a "library
@@ -301,10 +321,7 @@
   // pessoas se sentarem na mesma mesa pra chamada abrir. Ver
   // docs/plano-biblioteca.md.
   function salaSilenciosaDe(p) {
-    const M = window.OfficeMap;
-    if (!M || !M.getRoomAtTile) return false;
-    const sala = M.getRoomAtTile(Math.floor(p.x / TILE), Math.floor(p.y / TILE));
-    return !!(sala && sala.silenciosa);
+    return regraDe(p).modo === 'silencio';
   }
 
   // Status que a pessoa escolheu na barra de cima. 'livre' e o unico que aceita
@@ -349,11 +366,11 @@
   function deveFalarCom(self, outro) {
     if (naMesmaChamada(self, outro)) return true;
 
-    // Sala silenciosa manda mais que tudo, inclusive sala fechada.
-    if (salaSilenciosaDe(self) || salaSilenciosaDe(outro)) return false;
-    const minha = salaFechadaDe(self);
-    const dele = salaFechadaDe(outro);
-    if (minha || dele) return minha === dele;
+    const aqui = regraDe(self);
+    const la = regraDe(outro);
+    // Silencio manda mais que tudo, inclusive sala fechada.
+    if (aqui.modo === 'silencio' || la.modo === 'silencio') return false;
+    if (aqui.modo === 'sala' || la.modo === 'sala') return aqui.id === la.id;
 
     // Status barra a conversa de corredor - mas so DEPOIS da sala fechada, e de
     // proposito. Entrar numa sala de reuniao e um ato deliberado: quem cruza
@@ -364,7 +381,7 @@
     if (ocupado(self) || ocupado(outro)) return false;
 
     const dist = Math.hypot(outro.x - self.x, outro.y - self.y);
-    return dist < RAIO_ENTRAR && !paredeEntre(self, outro);
+    return dist < alcanceEntre(aqui, la) && !paredeEntre(self, outro);
   }
 
   // Sair tem folga maior que entrar, senao a chamada pisca com a pessoa andando
@@ -378,22 +395,26 @@
   function deveContinuarCom(self, outro) {
     if (naMesmaChamada(self, outro)) return true;
 
+    const aqui = regraDe(self);
+    const la = regraDe(outro);
     // Entrou na biblioteca em chamada? A chamada acaba ali. E o contrario da sala
     // fechada: la dentro todo mundo conversa; aqui ninguem conversa.
-    if (salaSilenciosaDe(self) || salaSilenciosaDe(outro)) return false;
-    const minha = salaFechadaDe(self);
-    const dele = salaFechadaDe(outro);
-    if (minha || dele) return minha === dele;
+    if (aqui.modo === 'silencio' || la.modo === 'silencio') return false;
+    if (aqui.modo === 'sala' || la.modo === 'sala') return aqui.id === la.id;
     const dist = Math.hypot(outro.x - self.x, outro.y - self.y);
-    return dist <= RAIO_SAIR && !paredeEntre(self, outro);
+    return dist <= alcanceEntre(aqui, la) * FOLGA_SAIR && !paredeEntre(self, outro);
   }
 
   // Volume pela distancia: cheio pertinho, sumindo ate zero no raio de saida.
-  function volumePara(dist) {
-    const cheio = TILES_VOLUME_CHEIO * TILE;
+  // O raio e o da conversa (que muda com a area), e nao um numero fixo: numa
+  // area de alcance curto o som tem que sumir mais cedo, senao a pessoa sai do
+  // alcance ainda ouvindo alto e a chamada cai de uma vez.
+  function volumePara(dist, alcance) {
+    const sair = (alcance || RAIO_ENTRAR) * FOLGA_SAIR;
+    const cheio = Math.min(TILES_VOLUME_CHEIO * TILE, sair / 2);
     if (dist <= cheio) return 1;
-    if (dist >= RAIO_SAIR) return 0;
-    return 1 - (dist - cheio) / (RAIO_SAIR - cheio);
+    if (dist >= sair) return 0;
+    return 1 - (dist - cheio) / (sair - cheio);
   }
 
   // Conexao que nasceu e nunca chegou a conectar vira lixo que BLOQUEIA: como
@@ -454,7 +475,7 @@
         // marcada continua no lugar onde estava.
         par.videoEl.volume = (naMesmaChamada(self, p) || salaFechadaDe(self))
           ? 1
-          : volumePara(Math.hypot(p.x - self.x, p.y - self.y));
+          : volumePara(Math.hypot(p.x - self.x, p.y - self.y), alcanceEntre(regraDe(self), regraDe(p)));
       }
     });
 

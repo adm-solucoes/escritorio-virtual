@@ -37,27 +37,36 @@ conferir('cliente e servidor tem o mesmo mapa', diferentes, 0);
 conferir('  e o mesmo enum de objetos',
   JSON.stringify(cliente.OBJETOS), JSON.stringify(servidor.OBJETOS));
 
-// ---- salas fechadas ----
-// Sala com `privativa: true` e sala onde a conversa nao vaza: quem esta dentro
-// se ouve inteiro, quem esta fora nao ouve nada (ver docs/plano-proximidade.md).
-// A marca fica nas DUAS copias do mapa, e as duas tem que concordar - se o
-// cliente achar que a sala e fechada e o servidor nao, ninguem quebra: a
-// reuniao so passa a vazar pro corredor, calada.
-const fechadasCliente = cliente.ROOMS.filter((s) => s.privativa).map((s) => s.id).sort();
-const fechadasServidor = servidor.ROOMS.filter((s) => s.privativa).map((s) => s.id).sort();
-conferir('  e as mesmas salas fechadas',
-  JSON.stringify(fechadasCliente), JSON.stringify(fechadasServidor));
-conferir('  com pelo menos as salas de reuniao marcadas',
-  ['reuniao', 'huddle1', 'cabine1', 'cabine2']
-    .filter((id) => !fechadasCliente.includes(id)), []);
+// ---- a regra de som de cada area (docs/areas.md) ----
+// Cada area diz de que jeito se ouve dentro dela: 'sala' (a area inteira, e
+// ninguem de fora), 'perto' (ate N tiles) ou 'silencio'. A regra fica nas DUAS
+// copias do mapa, e as duas tem que concordar - se o cliente achar que a sala
+// e fechada e o servidor nao, ninguem quebra: a reuniao so passa a vazar pro
+// corredor, calada, e a sala some da lista de marcar reuniao.
+const somPorId = (m) => JSON.stringify(m.ROOMS.map((s) => [s.id, m.somDaArea(s.som)]).sort());
+conferir('  e a MESMA regra de som em cada area', somPorId(cliente), somPorId(servidor));
 
-// Mesma regra pra sala SILENCIOSA: se so uma copia marcar, a biblioteca deixa
-// de ser silenciosa pra metade do sistema e ninguem percebe.
-const silenciosasCliente = cliente.ROOMS.filter((s) => s.silenciosa).map((s) => s.id).sort();
-const silenciosasServidor = servidor.ROOMS.filter((s) => s.silenciosa).map((s) => s.id).sort();
-conferir('  e as mesmas salas silenciosas',
-  JSON.stringify(silenciosasCliente), JSON.stringify(silenciosasServidor));
-conferir('  com a biblioteca marcada', silenciosasCliente.includes('biblioteca'), true);
+const modoDe = (id) => cliente.somDaArea((cliente.ROOMS.find((s) => s.id === id) || {}).som).modo;
+conferir('  com as salas de reuniao e as cabines fechadas',
+  ['reuniao', 'huddle1', 'cabine1', 'cabine2'].filter((id) => modoDe(id) !== 'sala'), []);
+conferir('  a biblioteca em silencio', modoDe('biblioteca'), 'silencio');
+conferir('  e as areas abertas com alcance proprio (copa maior, Foco menor)',
+  [cliente.somDaArea(cliente.ROOMS.find((s) => s.id === 'copa').som).alcance
+    > cliente.somDaArea(cliente.ROOMS.find((s) => s.id === 'bairro_a').som).alcance], [true]);
+
+// ---- criar e renomear area (docs/areas.md) ----
+// Piso, nome e o teto de areas sao conferidos nas duas copias: o cliente avisa
+// antes de mandar, o servidor decide. Se as listas divergirem, a tela deixaria
+// escolher um piso que o servidor recusa - ou o servidor aceitaria um que o
+// cliente nao sabe desenhar, e ele cairia no tijolo, calado.
+conferir('  os pisos que uma area pode ter sao os mesmos nas duas copias',
+  cliente.PISOS_DE_AREA.map((p) => p.id), servidor.PISOS_DE_AREA);
+conferir('  o mesmo tamanho maximo de nome e o mesmo teto de areas',
+  [cliente.NOME_MAX, cliente.AREAS_MAX], [servidor.NOME_MAX, servidor.AREAS_MAX]);
+const nomeEPiso = (m) => JSON.stringify(m.ROOMS.map((s) => [s.id, s.nome, s.piso]).sort());
+conferir('  e o mesmo nome e piso de fabrica em cada area', nomeEPiso(cliente), nomeEPiso(servidor));
+conferir('  todo piso de fabrica esta entre os que a diretoria pode escolher',
+  servidor.ROOMS.filter((s) => !servidor.PISOS_DE_AREA.includes(s.piso)).map((s) => s.id), []);
 
 // ---- da pra chegar em tudo? ----
 const m = servidor;

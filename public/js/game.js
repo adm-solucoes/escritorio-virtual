@@ -4662,7 +4662,9 @@
       (data.objetosMapa || []).forEach((o) => {
         if (OfficeMap.objetos[o.r]) OfficeMap.objetos[o.r][o.c] = o.o;
       });
-      // Areas movidas pela diretoria (docs/areas.md): o piso de cada uma vai junto.
+      // Areas da diretoria (docs/areas.md): o piso de cada uma vai junto. As
+      // criadas por ela nem existem na planta - entram antes de serem aplicadas.
+      (data.areasMapa || []).forEach((a) => { if (a.criada) OfficeMap.adicionarArea(a); });
       (data.areasMapa || []).forEach((a) => OfficeMap.aplicarArea(a.id, a));
       if (temDecoracao || (data.areasMapa && data.areasMapa.length)) prerenderMap();
       Conteudo.carregar(data.conteudosMapa);
@@ -4688,12 +4690,24 @@
       prerenderMap();
     });
 
-    // Uma area mudou de lugar ou de tamanho: o retangulo (que decide chamada,
-    // sala silenciosa e Visao de salas na hora) e o piso dela.
+    // Uma area mudou de lugar, de tamanho ou de regra de som: o retangulo (que
+    // decide com quem se conversa e a Visao de salas na hora) e o piso dela.
     Network.on('mapa-area-atualizada', (a) => {
       if (!a || !OfficeMap.aplicarArea(a.id, a)) return;
       prerenderMap();
       if (window.EditorAreas) EditorAreas.aceita(a);
+    });
+    // Area nova, criada pela diretoria: entra na lista antes do hall/jardim e
+    // o mapa e redesenhado com o piso dela.
+    Network.on('mapa-area-criada', (a) => {
+      if (!a || !OfficeMap.adicionarArea(a)) return;
+      prerenderMap();
+      if (window.EditorAreas) EditorAreas.criada(a);
+    });
+    Network.on('mapa-area-apagada', (m) => {
+      if (!m || !OfficeMap.removerArea(m.id)) return;
+      prerenderMap();
+      if (window.EditorAreas) EditorAreas.apagada(m.id);
     });
     Network.on('mapa-area-recusada', (m) => {
       if (window.EditorAreas) EditorAreas.recusada(m);

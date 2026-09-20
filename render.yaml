@@ -59,6 +59,15 @@ services:
       # SITE_URL nao precisa aqui: o codigo usa RENDER_EXTERNAL_URL sozinho.
       # So defina se um dia a sede ganhar dominio proprio.
       #
+      # Discador do CRM dentro da sede (docs/discador.md). CRM_URL e o endereco
+      # do CRM, sem barra no fim; CRM_CHAVE_DISCADOR e a MESMA chave que o CRM
+      # guarda em DISCADOR_CHAVE_ESCRITORIO. Em branco, o botao do discador nem
+      # aparece - e o que acontece nas sedes de cliente.
+      - key: CRM_URL
+        sync: false
+      - key: CRM_CHAVE_DISCADOR
+        sync: false
+      #
       # Trello (https://trello.com/power-ups/admin - key e token) e o id do
       # quadro (abra o quadro e acrescente .json na URL: o "id" do topo).
       - key: TRELLO_API_KEY

@@ -68,6 +68,8 @@
     socket.on('mapa-atualizado', (data) => emitLocal('mapa-atualizado', data));
     socket.on('mapa-objeto-atualizado', (data) => emitLocal('mapa-objeto-atualizado', data));
     socket.on('mapa-area-atualizada', (data) => emitLocal('mapa-area-atualizada', data));
+    socket.on('mapa-area-criada', (data) => emitLocal('mapa-area-criada', data));
+    socket.on('mapa-area-apagada', (data) => emitLocal('mapa-area-apagada', data));
     socket.on('mapa-area-recusada', (data) => emitLocal('mapa-area-recusada', data));
     socket.on('tela-mudou', (data) => emitLocal('tela-mudou', data));
     socket.on('lendo-mudou', (data) => emitLocal('lendo-mudou', data));
@@ -196,16 +198,38 @@
     if (socket && socket.connected) socket.emit('mapa-objeto', { c, r, o });
   }
 
-  // Area movida ou redimensionada (docs/areas.md). false = sem conexao.
+  // Area movida, redimensionada ou com outra regra de som (docs/areas.md).
+  // false = sem conexao. `som` so vai quando mudou - sem ele, o servidor
+  // mantem o que ja estava.
   function editarArea(id, a) {
     if (!socket || !socket.connected) return false;
-    socket.emit('mapa-area', { id, r0: a.r0, c0: a.c0, r1: a.r1, c1: a.c1 });
+    const dados = { id, r0: a.r0, c0: a.c0, r1: a.r1, c1: a.c1 };
+    if (a.som) dados.som = { modo: a.som.modo, alcance: a.som.alcance };
+    if (a.nome !== undefined) dados.nome = a.nome;
+    if (a.piso) dados.piso = a.piso;
+    socket.emit('mapa-area', dados);
     return true;
   }
 
   function restaurarArea(id) {
     if (!socket || !socket.connected) return false;
     socket.emit('mapa-area', { id, restaurar: true });
+    return true;
+  }
+
+  // Area nova: o id nasce no servidor (dois navegadores criando ao mesmo tempo
+  // mandariam o mesmo, e a segunda viraria edicao da primeira).
+  function criarArea(a) {
+    if (!socket || !socket.connected) return false;
+    socket.emit('mapa-area-nova', {
+      r0: a.r0, c0: a.c0, r1: a.r1, c1: a.c1, nome: a.nome, piso: a.piso, som: a.som,
+    });
+    return true;
+  }
+
+  function apagarArea(id) {
+    if (!socket || !socket.connected) return false;
+    socket.emit('mapa-area-apagar', { id });
     return true;
   }
 
@@ -217,7 +241,7 @@
   window.Network = {
     connect, on, sendMove, enviarVista, sendStatus, dividirTela, estouLendo, marcarReuniao, desmarcarReuniao, entrarNaChamada, sairDaChamada, ligarProGrupo, sendReaction, sendRtcSignal, sendChatMessage,
     pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, moverItemDaMesa, tirarItemDaMesa,
-    editarMapa, editarObjetoMapa, porConteudoNoMapa, editarArea, restaurarArea,
+    editarMapa, editarObjetoMapa, porConteudoNoMapa, editarArea, restaurarArea, criarArea, apagarArea,
     pedirAgenda, pedirTrello,
   };
 })();

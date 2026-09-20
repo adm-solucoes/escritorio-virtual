@@ -17,6 +17,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const vm = require('vm');
+// Tabelas puras do servidor (sem efeito colateral): so pra ler as constantes.
+const mapaServidor = require('../server/map.js');
 
 const raiz = path.join(__dirname, '..');
 const PASTA = fs.mkdtempSync(path.join(os.tmpdir(), 'adm-areas-'));
@@ -185,7 +187,7 @@ function mapaDoCliente() {
     conferir('cliente: a etiqueta anda junto, guardando a distancia do canto',
       [reuniao.labelR, reuniao.labelC], [4, 12]);
     conferir('cliente: o original fica guardado pra voltar',
-      M.areaOriginal('bairro_a'), { r0: 13, c0: 11, r1: 18, c1: 26 });
+      M.areaOriginal('bairro_a'), { r0: 13, c0: 11, r1: 18, c1: 26, som: { modo: 'perto', alcance: 2 }, nome: 'Foco', piso: 'carpete_roxo' });
     conferir('cliente: e a sala mexida nao muda o original (copia, nao referencia)', focoA.r1, 16);
 
     // ------------------------------------------------------------- servidor
@@ -217,7 +219,7 @@ function mapaDoCliente() {
     conferir('  e TODO MUNDO recebe na hora (o membro tambem)',
       await esperarEvento(membro, 'mapa-area-atualizada', desdeMembro), { id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20 });
     conferir('  gravado no mapa.json (so a que mudou)',
-      arquivoDeAreas(), [{ id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20 }]);
+      arquivoDeAreas(), [{ id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20, som: { modo: 'perto', alcance: 2 }, nome: 'Foco', piso: 'carpete_roxo' }]);
 
     // O que e recusado, e o motivo que volta.
     const casos = [
@@ -233,7 +235,30 @@ function mapaDoCliente() {
       conferir('recusa ' + nome + ', com o motivo', [r.tipo, r.dados && r.dados.erro], ['recusada', motivo]);
     }
     conferir('  e o arquivo nao mudou com nenhuma delas',
-      arquivoDeAreas(), [{ id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20 }]);
+      arquivoDeAreas(), [{ id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20, som: { modo: 'perto', alcance: 2 }, nome: 'Foco', piso: 'carpete_roxo' }]);
+
+    // ------------------------------------------- a regra de som de cada area
+    // Cada area diz de que jeito se ouve dentro dela, e isso muda sem mexer no
+    // tamanho: o Foco vira sala fechada ("a sala toda se ouve, e ninguem de
+    // fora entra") so trocando a regra. Ver docs/areas.md.
+    const somFoco = await editar(chefe, { id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20, som: { modo: 'sala', alcance: 3 } });
+    conferir('diretoria transforma o Foco em sala fechada: aceito',
+      [somFoco.tipo, somFoco.dados && somFoco.dados.som], ['aceita', { modo: 'sala', alcance: 3 }]);
+    conferir('  e a regra vai junto no arquivo',
+      arquivoDeAreas(), [{ id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20, som: { modo: 'sala', alcance: 3 }, nome: 'Foco', piso: 'carpete_roxo' }]);
+
+    const somCasos = [
+      ['alcance de 40 tiles', { modo: 'perto', alcance: 40 }, 'O alcance vai de 1 a 12 tiles.'],
+      ['alcance quebrado (2,5)', { modo: 'perto', alcance: 2.5 }, 'O alcance vai de 1 a 12 tiles.'],
+      ['alcance que nao e numero', { modo: 'perto', alcance: 'muito' }, 'O alcance vai de 1 a 12 tiles.'],
+      ['regra de som que nao existe', { modo: 'gritaria', alcance: 3 }, 'Regra de som que nao existe.'],
+    ];
+    for (const [nome, som, motivo] of somCasos) {
+      const r = await editar(chefe, { id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20, som });
+      conferir('recusa ' + nome + ', com o motivo', [r.tipo, r.dados && r.dados.erro], ['recusada', motivo]);
+    }
+    conferir('  e nenhuma delas mexeu no que estava gravado',
+      arquivoDeAreas(), [{ id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20, som: { modo: 'sala', alcance: 3 }, nome: 'Foco', piso: 'carpete_roxo' }]);
 
     // Uma area vai pro lugar que a outra deixou livre.
     const cabine = await editar(chefe, { id: 'cabine1', r0: 17, c0: 21, r1: 18, c1: 25 });
@@ -242,6 +267,147 @@ function mapaDoCliente() {
     conferir('voltar o Foco ao original agora bate na Cabine 1: recusado com o nome dela',
       [voltarFoco.tipo, voltarFoco.dados && voltarFoco.dados.erro], ['recusada', 'Ia ficar em cima de "Cabine 1".']);
 
+    // ------------------------------------------- criar e apagar area (nova)
+    // A lista de areas deixou de ser so a do codigo: a diretoria cria a dela,
+    // com nome, piso e regra de som proprios, e so essa se apaga.
+    async function criar(sock, dados) {
+      const desde = sock.eventos.length;
+      sock.mandar('mapa-area-nova', dados);
+      const prazo = Date.now() + 2000;
+      while (Date.now() < prazo) {
+        const r = sock.eventos.slice(desde).find((e) => e[0] === 'mapa-area-criada' || e[0] === 'mapa-area-recusada');
+        if (r) return { tipo: r[0] === 'mapa-area-criada' ? 'criada' : 'recusada', dados: r[1] };
+        await espera(20);
+      }
+      return { tipo: 'nada' };
+    }
+    async function apagar(sock, id) {
+      const desde = sock.eventos.length;
+      sock.mandar('mapa-area-apagar', { id });
+      const prazo = Date.now() + 2000;
+      while (Date.now() < prazo) {
+        const r = sock.eventos.slice(desde).find((e) => e[0] === 'mapa-area-apagada' || e[0] === 'mapa-area-recusada');
+        if (r) return { tipo: r[0] === 'mapa-area-apagada' ? 'apagada' : 'recusada', dados: r[1] };
+        await espera(20);
+      }
+      return { tipo: 'nada' };
+    }
+
+    const desdeMembro2 = membro.eventos.length;
+    const nova = await criar(chefe, { r0: 0, c0: 0, r1: 2, c1: 5, nome: 'Sala do Cafe', piso: 'ladrilho', som: { modo: 'sala', alcance: 3 } });
+    conferir('diretoria cria uma area nova: aceita, com id do servidor',
+      [nova.tipo, nova.dados && typeof nova.dados.id, nova.dados && nova.dados.nome], ['criada', 'string', 'Sala do Cafe']);
+    conferir('  e todo mundo recebe a area inteira (nome, piso, cor e regra)',
+      (await esperarEvento(membro, 'mapa-area-criada', desdeMembro2)).piso, 'ladrilho');
+    const idNovo = nova.dados.id;
+    conferir('  gravada no arquivo, marcada como criada',
+      (arquivoDeAreas().find((a) => a.id === idNovo) || {}).criada, true);
+
+    const membroCria = await criar(membro, { r0: 3, c0: 3, r1: 4, c1: 4 });
+    conferir('membro (nao diretoria) nao cria', membroCria.tipo, 'nada');
+
+    const casosNovos = [
+      ['em cima de outra area', { r0: 13, c0: 11, r1: 15, c1: 15 }, 'Ia ficar em cima de "Foco".'],
+      ['menor que 2x2', { r0: 20, c0: 20, r1: 20, c1: 22 }, 'A area minima e 2 por 2.'],
+      ['nome vazio', { r0: 26, c0: 3, r1: 27, c1: 6, nome: '   ' }, 'A area precisa de um nome.'],
+      ['nome comprido demais', { r0: 26, c0: 3, r1: 27, c1: 6, nome: 'a'.repeat(25) }, 'O nome vai ate 24 letras.'],
+      ['piso que nao existe', { r0: 26, c0: 3, r1: 27, c1: 6, piso: 'lava' }, 'Esse piso nao existe.'],
+    ];
+    for (const [nome, dados, motivo] of casosNovos) {
+      const r = await criar(chefe, dados);
+      conferir('recusa area nova ' + nome, [r.tipo, r.dados && r.dados.erro], ['recusada', motivo]);
+    }
+
+    // O nome vai pra etiqueta do mapa, pra Visao de salas e pro minimapa. O que
+    // volta pra TODOS os navegadores tem que ser o nome ja limpo: se so o
+    // arquivo ficasse limpo, quem estivesse com o mapa aberto veria a etiqueta
+    // torta ate recarregar.
+    const desdeRenome = membro.eventos.length;
+    const renomeia = await editar(chefe, { id: idNovo, r0: 0, c0: 0, r1: 2, c1: 5, nome: ' Cafe \n do   time ' });
+    conferir('renomear: aceito, com o nome limpo (sem quebra de linha nem espaco em fila)',
+      [renomeia.tipo, renomeia.dados && renomeia.dados.nome], ['aceita', 'Cafe do time']);
+    conferir('  o membro recebe o nome limpo tambem',
+      (await esperarEvento(membro, 'mapa-area-atualizada', desdeRenome) || {}).nome, 'Cafe do time');
+    conferir('  e o que ficou gravado e o mesmo',
+      (arquivoDeAreas().find((a) => a.id === idNovo) || {}).nome, 'Cafe do time');
+
+    const trocaPiso = await editar(chefe, { id: idNovo, r0: 0, c0: 0, r1: 2, c1: 5, piso: 'madeira' });
+    conferir('trocar o piso: aceito, e vai no arquivo',
+      [trocaPiso.tipo, (arquivoDeAreas().find((a) => a.id === idNovo) || {}).piso], ['aceita', 'madeira']);
+    const pisoFalso = await editar(chefe, { id: idNovo, r0: 0, c0: 0, r1: 2, c1: 5, piso: 'lava' });
+    conferir('piso que nao existe e recusado, com o motivo',
+      [pisoFalso.tipo, pisoFalso.dados && pisoFalso.dados.erro], ['recusada', 'Esse piso nao existe.']);
+
+    // Area de fabrica tambem muda de nome - e "voltar ao original" devolve o
+    // nome e deixa o arquivo como estava.
+    const antesDoRename = JSON.stringify(arquivoDeAreas());
+    const renomeiaFabrica = await editar(chefe, { id: 'bairro_b', r0: 19, c0: 11, r1: 24, c1: 26, nome: 'Squad' });
+    conferir('area de fabrica tambem renomeia, e vai no arquivo',
+      [renomeiaFabrica.tipo, (arquivoDeAreas().find((a) => a.id === 'bairro_b') || {}).nome], ['aceita', 'Squad']);
+    const voltaFabrica = await editar(chefe, { id: 'bairro_b', restaurar: true });
+    conferir('  "voltar ao original" devolve o nome e limpa o arquivo',
+      [voltaFabrica.dados && voltaFabrica.dados.nome, JSON.stringify(arquivoDeAreas()) === antesDoRename], ['Projetos', true]);
+
+    // ---- apagar area que tem reuniao marcada: recusa, com o motivo
+    // Area "sala" com mesa de reuniao passa a poder receber reuniao (docs/areas.md).
+    // Apagar com reuniao marcada deixaria ela apontando pra uma sala que nao
+    // existe - por isso a diretoria e avisada, e desmarca antes.
+    chefe.mandar('mapa-editar', { c: 2, r: 1, t: mapaServidor.MESA_REUNIAO });
+    await espera(150);
+    const desdeMarca = chefe.eventos.length;
+    chefe.mandar('reuniao-marcar', {
+      titulo: 'Reuniao do time', inicio: Date.now() + 3600 * 1000, minutos: 30, sala: idNovo,
+    });
+    const marcadas = await esperarEvento(chefe, 'reunioes', desdeMarca);
+    conferir('area criada como sala fechada, com mesa de reuniao, ja recebe reuniao',
+      marcadas && marcadas.reunioes.filter((r) => r.sala === idNovo).length, 1);
+    const apagaComReuniao = await apagar(chefe, idNovo);
+    conferir('area com reuniao marcada NAO se apaga, e o motivo diz o que fazer',
+      [apagaComReuniao.tipo, apagaComReuniao.dados && apagaComReuniao.dados.erro],
+      ['recusada', 'Tem 1 reuniao marcada nessa area. Desmarque antes de apagar.']);
+    conferir('  e a area continua la',
+      (arquivoDeAreas() || []).some((a) => a.id === idNovo), true);
+    const idReuniao = marcadas.reunioes.find((r) => r.sala === idNovo).id;
+    const desdeDesmarca = chefe.eventos.length;
+    chefe.mandar('reuniao-desmarcar', { id: idReuniao });
+    await esperarEvento(chefe, 'reunioes', desdeDesmarca);
+    chefe.mandar('mapa-editar', { c: 2, r: 1, t: 0 });   // devolve a celula como estava
+    await espera(150);
+
+    // ---- o limite de areas
+    // Nao e limite de memoria: com muito mais que isso a Visao de salas e o
+    // minimapa viram sopa de etiqueta. Cria ate o teto na faixa de baixo do
+    // jardim (fora de qualquer area editavel) e confere que a proxima e recusada.
+    const deFabrica = mapaServidor.ROOMS.length;
+    const lugares = [];
+    for (let c0 = 0; c0 + 1 <= mapaServidor.COLS - 1; c0 += 3) lugares.push({ r0: 25, c0, r1: 26, c1: c0 + 1 });
+    const paraOLimite = [];
+    let recusadaPeloLimite = null;
+    for (const lugar of lugares) {
+      const r = await criar(chefe, lugar);
+      if (r.tipo === 'criada') paraOLimite.push(r.dados.id);
+      else { recusadaPeloLimite = r; break; }
+    }
+    conferir('criou ate o teto de ' + mapaServidor.AREAS_MAX + ' areas (as de fabrica contam)',
+      paraOLimite.length, mapaServidor.AREAS_MAX - (deFabrica + 1));
+    conferir('  e a seguinte e recusada, dizendo o teto',
+      [recusadaPeloLimite && recusadaPeloLimite.tipo, recusadaPeloLimite && recusadaPeloLimite.dados && recusadaPeloLimite.dados.erro],
+      ['recusada', 'A sede ja tem ' + mapaServidor.AREAS_MAX + ' areas. Apague uma antes de criar outra.']);
+    let apagadasDoLimite = 0;
+    for (const id of paraOLimite) {
+      if ((await apagar(chefe, id)).tipo === 'apagada') apagadasDoLimite++;
+    }
+    conferir('  apagando essas, sobra so a que a diretoria queria',
+      [apagadasDoLimite, (arquivoDeAreas() || []).filter((a) => a.criada).map((a) => a.id)],
+      [paraOLimite.length, [idNovo]]);
+
+    const apagaFabrica = await apagar(chefe, 'bairro_a');
+    conferir('area de fabrica NAO se apaga',
+      [apagaFabrica.tipo, apagaFabrica.dados && apagaFabrica.dados.erro],
+      ['recusada', 'So da pra apagar area que a diretoria criou.']);
+    const membroApaga = await apagar(membro, idNovo);
+    conferir('membro tambem nao apaga', membroApaga.tipo, 'nada');
+
     chefe.fechar(); membro.fechar();
     await parar();
 
@@ -249,17 +415,28 @@ function mapaDoCliente() {
     await subir();
     ({ chefe, membro, initChefe } = await conectarOsDois());
     const areasNoInit = (initChefe.areasMapa || []).slice().sort((a, b) => a.id.localeCompare(b.id));
+    conferir('reiniciou: a area que a diretoria criou volta inteira (nome, piso, regra e cor)',
+      areasNoInit.filter((a) => a.criada).map((a) => [a.id, a.nome, a.piso, a.som, typeof a.cor]),
+      [[idNovo, 'Cafe do time', 'madeira', { modo: 'sala', alcance: 3 }, 'string']]);
     conferir('reiniciou: as duas mudancas voltam - inclusive a que depende da outra ter saido',
-      areasNoInit, [
-        { id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20 },
-        { id: 'cabine1', r0: 17, c0: 21, r1: 18, c1: 25 },
+      areasNoInit.filter((a) => !a.criada), [
+        { id: 'bairro_a', r0: 13, c0: 11, r1: 16, c1: 20, som: { modo: 'sala', alcance: 3 }, nome: 'Foco', piso: 'carpete_roxo' },
+        { id: 'cabine1', r0: 17, c0: 21, r1: 18, c1: 25, som: { modo: 'sala', alcance: 3 }, nome: 'Cabine 1', piso: 'espinha_fria' },
       ]);
+
+    // Apagar a que a diretoria criou: sai pra todo mundo e do arquivo.
+    const desdeApaga = membro.eventos.length;
+    const apagouNova = await apagar(chefe, idNovo);
+    conferir('diretoria apaga a area que criou: aceito', [apagouNova.tipo, apagouNova.dados], ['apagada', { id: idNovo }]);
+    conferir('  e todo mundo recebe (o membro tambem)',
+      await esperarEvento(membro, 'mapa-area-apagada', desdeApaga), { id: idNovo });
+    conferir('  e sai do arquivo', (arquivoDeAreas() || []).some((a) => a.id === idNovo), false);
 
     // Restaurar, na ordem que da.
     const volta1 = await editar(chefe, { id: 'cabine1', restaurar: true });
-    conferir('Cabine 1 volta ao original', [volta1.tipo, volta1.dados], ['aceita', { id: 'cabine1', r0: 3, c0: 3, r1: 5, c1: 7 }]);
+    conferir('Cabine 1 volta ao original', [volta1.tipo, volta1.dados], ['aceita', { id: 'cabine1', r0: 3, c0: 3, r1: 5, c1: 7, som: { modo: 'sala', alcance: 3 }, nome: 'Cabine 1', piso: 'espinha_fria' }]);
     const volta2 = await editar(chefe, { id: 'bairro_a', restaurar: true });
-    conferir('  e ai o Foco tambem volta', [volta2.tipo, volta2.dados], ['aceita', { id: 'bairro_a', r0: 13, c0: 11, r1: 18, c1: 26 }]);
+    conferir('  e ai o Foco tambem volta', [volta2.tipo, volta2.dados], ['aceita', { id: 'bairro_a', r0: 13, c0: 11, r1: 18, c1: 26, som: { modo: 'perto', alcance: 2 }, nome: 'Foco', piso: 'carpete_roxo' }]);
     conferir('  e o arquivo fica sem area nenhuma (tudo de fabrica)', arquivoDeAreas(), []);
     const deNovo = await editar(chefe, { id: 'bairro_a', r0: 13, c0: 11, r1: 18, c1: 26 });
     conferir('mandar o retangulo que ja esta la: responde (pra tela destravar) sem gravar nada',
@@ -282,6 +459,41 @@ function mapaDoCliente() {
     conferir('mapa.json editado a mao com uma area em cima da outra: fica a planta de fabrica',
       initChefe.areasMapa, []);
     conferir('  e o log diz por que', /areas do mapa\.json nao fecham/.test(saida), true);
+    chefe.fechar(); membro.fechar();
+    await parar();
+
+    // O mesmo arquivo que nao fecha, mas agora com uma area CRIADA dentro (em
+    // lugar livre). A criada entra no mapa ANTES de o arquivo ser conferido
+    // (as de fabrica podem ter saido do lugar pra caber ao lado dela) - entao,
+    // se o arquivo nao fecha, ela tem que SAIR junto. Se ficasse, a sede
+    // subiria com uma sala fantasma que ninguem pode apagar.
+    const comCriada = JSON.parse(fs.readFileSync(ARQUIVO, 'utf8'));
+    comCriada.areas = [
+      { id: 'area-abc123-1', criada: true, nome: 'Fantasma', piso: 'tijolo', cor: '#4d8fa0',
+        r0: 25, c0: 3, r1: 26, c1: 6, som: { modo: 'perto', alcance: 3 } },
+      { id: 'bairro_a', r0: 13, c0: 11, r1: 21, c1: 26 },   // em cima do Projetos: o arquivo nao fecha
+    ];
+    fs.writeFileSync(ARQUIVO, JSON.stringify(comCriada));
+    await subir();
+    ({ chefe, membro, initChefe } = await conectarOsDois());
+    conferir('arquivo que nao fecha, com area criada dentro: nada dele entra', initChefe.areasMapa, []);
+    const naOndeEstava = await criar(chefe, { r0: 25, c0: 3, r1: 26, c1: 6 });
+    conferir('  e a area criada nao ficou como fantasma: da pra criar outra no mesmo lugar',
+      naOndeEstava.tipo, 'criada');
+    chefe.fechar(); membro.fechar();
+    await parar();
+
+    // Id fora do formato que o servidor gera: o arquivo pode ter sido editado a
+    // mao, e o id viaja pra todos os navegadores.
+    const idEstranho = JSON.parse(fs.readFileSync(ARQUIVO, 'utf8'));
+    idEstranho.areas = [
+      { id: '<img src=x onerror=alert(1)>', criada: true, nome: 'Estranha', piso: 'tijolo',
+        r0: 25, c0: 3, r1: 26, c1: 6, som: { modo: 'perto', alcance: 3 } },
+    ];
+    fs.writeFileSync(ARQUIVO, JSON.stringify(idEstranho));
+    await subir();
+    ({ chefe, membro, initChefe } = await conectarOsDois());
+    conferir('area criada com id fora do formato do servidor nao entra', initChefe.areasMapa, []);
     chefe.fechar(); membro.fechar();
     await parar();
 

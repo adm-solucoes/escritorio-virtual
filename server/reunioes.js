@@ -38,7 +38,8 @@ let proximoId = 1;
 //
 // Duas condicoes, e as duas sao sobre a sala de verdade:
 //
-//   1. PRIVATIVA - e onde a chamada nao vaza pra quem passa do lado de fora.
+//   1. SALA FECHADA (`som.modo === 'sala'`) - e onde a chamada nao vaza pra
+//      quem passa do lado de fora.
 //   2. tem MESA DE REUNIAO ou MESA REDONDA, ou seja, uma mesa em volta da qual
 //      se senta.
 //
@@ -75,7 +76,11 @@ function lugaresDaSala(s) {
 
 function salasDisponiveis() {
   return (map.ROOMS || [])
-    .filter((s) => s.privativa)
+    // Area de som "sala": a conversa fica dentro dela e nao vaza pra quem
+    // passa do lado de fora. A diretoria muda isso no editor de areas
+    // (docs/areas.md) - marcou uma area como sala fechada, ela passa a poder
+    // receber reuniao, desde que tenha mesa de se sentar em volta.
+    .filter((s) => map.somDaArea(s.som).modo === 'sala')
     .filter((s) => {
       const moveis = moveisDaSala(s);
       return MESAS_DE_REUNIAO.some((t) => moveis.has(t));

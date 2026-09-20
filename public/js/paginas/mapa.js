@@ -99,7 +99,9 @@
       var alt = s.r1 - s.r0 + 1;
       var mx = (s.c0 + larg / 2) * P;
       var my = (s.r0 + alt / 2) * P;
-      var rotulo = s.nome + (s.privativa ? ' • fechada' : '');
+      var som = (s.som && s.som.modo) || 'perto';
+      var regra = som === 'sala' ? ' • fechada' : som === 'silencio' ? ' • silencio' : '';
+      var rotulo = s.nome + regra;
       var medida = larg + '×' + alt + ' tiles';
 
       ctx.font = '600 12px Inter, system-ui, sans-serif';
