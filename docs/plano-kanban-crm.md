@@ -98,7 +98,8 @@ do CRM ja tinha corrigido. Cartao com prazo cumprido nao aparece como "atrasado"
 3. **No CRM (Vercel)**: `KANBAN_CHAVE_ESCRITORIO` = a chave, e publicar de novo.
 4. **Na sede** (`escritorio-virtual/.env` local, e o painel do Render): `CRM_URL` = o
    endereco do CRM, sem barra no fim (o mesmo do discador), e `CRM_CHAVE_KANBAN` = a
-   MESMA chave. No Render, junte com as outras variaveis numa vez so: cada "salvar"
+   MESMA chave. A sede aceita tambem o nome do CRM, `KANBAN_CHAVE_ESCRITORIO` (e a mesma
+   chave, e o nome e facil de trocar no painel); se os dois existirem, vale o `CRM_CHAVE_KANBAN`. No Render, junte com as outras variaveis numa vez so: cada "salvar"
    reinicia o site, e no plano free isso zera `server/data/` (ver [deploy.md](deploy.md)).
 5. **Conferir**: o arranque diz `Kanban do CRM: ligado`; o `/api/diagnostico` diz
    `integracoes.kanban: true`; e a aba abre com os quadros.

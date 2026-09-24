@@ -38,7 +38,10 @@ const DIA = /^\d{4}-\d{2}-\d{2}$/;
 function ambiente() {
   return {
     url: String(process.env.CRM_URL || '').trim().replace(/\/+$/, ''),
-    chave: String(process.env.CRM_CHAVE_KANBAN || '').trim(),
+    // O nome daqui e CRM_CHAVE_KANBAN; o CRM guarda a MESMA chave como KANBAN_CHAVE_ESCRITORIO, e e
+    // facil copiar o nome de la pro painel da hospedagem. Os dois ligam o Kanban; se os dois
+    // estiverem definidos, vale o daqui.
+    chave: String(process.env.CRM_CHAVE_KANBAN || process.env.KANBAN_CHAVE_ESCRITORIO || '').trim(),
     timeoutMs: Number(process.env.KANBAN_TIMEOUT_MS) || TEMPO_MAXIMO_MS,
   };
 }

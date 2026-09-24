@@ -140,12 +140,12 @@ function novoTrello() {
 // ---------------------------------------------------------------- variaveis
 function ambiente(crmUrl, extra) {
   const base = {
-    CRM_URL: crmUrl, CRM_CHAVE_KANBAN: CHAVE, KANBAN_TIMEOUT_MS: '600',
+    CRM_URL: crmUrl, CRM_CHAVE_KANBAN: CHAVE, KANBAN_CHAVE_ESCRITORIO: '', KANBAN_TIMEOUT_MS: '600',
     TRELLO_API_URL: '', TRELLO_API_KEY: '', TRELLO_TOKEN: '', TRELLO_QUADROS: '', TRELLO_BOARD_ID: '', TRELLO_TIMEOUT_MS: '600',
   };
   Object.assign(process.env, base, extra || {});
 }
-const semCrm = () => { delete process.env.CRM_URL; delete process.env.CRM_CHAVE_KANBAN; };
+const semCrm = () => { delete process.env.CRM_URL; delete process.env.CRM_CHAVE_KANBAN; delete process.env.KANBAN_CHAVE_ESCRITORIO; };
 
 // ------------------------------------------------------------ socket "na unha"
 function abrirSocket(base, cookie) {
@@ -206,6 +206,27 @@ const cartoesDe = (r) => (r.listas || []).map((l) => l.cartoes.map((c) => c.nome
     process.env.CRM_URL = 'crm.exemplo.com.br';
     conferir('  endereco sem http(s): desligado', K.configurado(), false);
     process.env.CRM_URL = crm.url;
+
+    // O nome que o CRM usa pra mesma chave (KANBAN_CHAVE_ESCRITORIO) tambem liga a sede: copiar o nome
+    // de um lado pro outro e o erro mais facil de cometer no painel da hospedagem.
+    delete process.env.CRM_CHAVE_KANBAN;
+    process.env.KANBAN_CHAVE_ESCRITORIO = CHAVE;
+    conferir('so com o nome do CRM (KANBAN_CHAVE_ESCRITORIO): ligado tambem', K.configurado(), true);
+    zerar();
+    const pelaOutra = await K.quadrosDe('provada@adm.com');
+    conferir('  e e essa chave que vai pro CRM', [pelaOutra.ok, CRM.pedidos.length ? CRM.pedidos[0].auth : null], [true, 'Bearer ' + CHAVE]);
+    process.env.CRM_CHAVE_KANBAN = CHAVE;
+    process.env.KANBAN_CHAVE_ESCRITORIO = 'y'.repeat(40);
+    zerar();
+    await K.quadrosDe('provada@adm.com');
+    conferir('  com os dois nomes, vale o da sede (CRM_CHAVE_KANBAN)', CRM.pedidos.length ? CRM.pedidos[0].auth : null, 'Bearer ' + CHAVE);
+    process.env.KANBAN_CHAVE_ESCRITORIO = CHAVE.slice(0, 31);
+    delete process.env.CRM_CHAVE_KANBAN;
+    conferir('  e a regra dos 32 caracteres vale pro nome do CRM tambem', K.configurado(), false);
+    delete process.env.KANBAN_CHAVE_ESCRITORIO;
+    process.env.CRM_CHAVE_KANBAN = CHAVE;
+    zerar();
+
     semCrm();
     conferir('  sem nada: desligado, e "quadrosDe" diz isso sem chamar ninguem', [K.configurado(), (await K.quadrosDe('a@adm.com')).ok, CRM.pedidos.length], [false, false, 0]);
     ambiente(crm.url);
