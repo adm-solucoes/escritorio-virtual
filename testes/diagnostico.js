@@ -43,7 +43,7 @@ function subir(env) {
         SESSION_SECRET: 'segredo-de-teste-bem-comprido',
         CODIGO_SEDE: '', ADMIN_CODE: '', DIRETORIA_EMAILS: '',
         GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', GOOGLE_DRIVE_PASTA: '',
-        GOOGLE_CONTA_SERVICO: '', TRELLO_API_KEY: '', TRELLO_TOKEN: '', TRELLO_BOARD_ID: '',
+        GOOGLE_CONTA_SERVICO: '', GOOGLE_CONTA_SERVICO_ARQUIVO: '', TRELLO_API_KEY: '', TRELLO_TOKEN: '', TRELLO_BOARD_ID: '',
         CLOUDFLARE_TURN_KEY_ID: '', CLOUDFLARE_TURN_TOKEN: '',
         BACKUP_DRIVE_PASTA: '', BACKUP_CHAVE: '', EMAIL_PROVEDOR: '', EMAIL_CHAVE: '', EMAIL_REMETENTE: '', SITE_URL: '',
         CRM_URL: '', CRM_CHAVE_DISCADOR: '',
@@ -103,7 +103,7 @@ function pedir(cabecalhos) {
     // ------------------------------------------- tudo configurado: nao vaza
     const segredos = {
       GOOGLE_CLIENT_ID: 'id-secreto-do-cliente', GOOGLE_CLIENT_SECRET: 'senha-do-cliente',
-      GOOGLE_DRIVE_PASTA: '0ABCpastaDoDrive', GOOGLE_CONTA_SERVICO: '{"client_email":"robo@projeto.iam.gserviceaccount.com"}',
+      GOOGLE_DRIVE_PASTA: '0ABCpastaDoDrive', GOOGLE_CONTA_SERVICO: '{"client_email":"robo@projeto.iam.gserviceaccount.com","private_key":"chave-falsa-so-pro-teste"}',
       TRELLO_API_KEY: 'chave-do-trello', TRELLO_TOKEN: 'token-do-trello', TRELLO_BOARD_ID: 'quadro123',
       CLOUDFLARE_TURN_KEY_ID: 'turn-id', CLOUDFLARE_TURN_TOKEN: 'turn-token',
       BACKUP_DRIVE_PASTA: '0ABCpastaDoBackup', BACKUP_CHAVE: 'chave-do-backup-bem-comprida',
@@ -130,6 +130,17 @@ function pedir(cabecalhos) {
     conferir('  nem e-mail nenhum', /@/.test(cheio.texto), false);
     conferir('  so os campos combinados', Object.keys(cheio.corpo).sort(),
       ['atrasDeProxy', 'contas', 'dadosGravavel', 'diretoria', 'integracoes', 'ipPorPessoa', 'node', 'nodeSuficiente', 'producao']);
+    await parar();
+
+    // A chave do Drive SO no arquivo secreto (o "Secret File" do Render): o diagnostico tem que
+    // dizer que o Drive esta ligado - e por ele que se confere se o arquivo foi posto certo.
+    const arquivoChave = path.join(novaPasta(), 'conta-servico.json');
+    fs.writeFileSync(arquivoChave, JSON.stringify({ client_email: 'robo@projeto.iam.gserviceaccount.com', private_key: 'chave-falsa-so-pro-teste' }));
+    await subir({ GOOGLE_DRIVE_PASTA: '0ABCpastaDoDrive', GOOGLE_CONTA_SERVICO_ARQUIVO: arquivoChave });
+    const soArquivo = await pedir();
+    conferir('chave do Drive so no arquivo secreto (Secret File do Render): drive ligado', soArquivo.corpo.integracoes.drive, true);
+    conferir('  e nem o caminho nem o conteudo do arquivo aparecem no diagnostico',
+      /conta-servico|chave-falsa|@/.test(soArquivo.texto), false);
   } catch (e) {
     falhou++;
     console.log('  FALHOU ' + (e.stack || e.message));

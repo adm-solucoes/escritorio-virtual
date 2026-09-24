@@ -139,6 +139,29 @@ console.log('\nACERVO');
     process.env.GOOGLE_CONTA_SERVICO = '{nao e json';
     conferir('chave invalida nao derruba nada: volta pra pasta local', acervo.origem(), 'local');
 
+    // A chave num ARQUIVO: o "Secret File" do Render, pra quando o painel nao comporta os mais
+    // de 3 mil caracteres da variavel (foi o que aconteceu em 24/09).
+    conferir('o arquivo secreto padrao e o do Render: /etc/secrets/conta-servico.json',
+      acervo.ARQUIVO_CONTA_PADRAO, '/etc/secrets/conta-servico.json');
+    const arqConta = path.join(tmp, 'conta-servico.json');
+    fs.writeFileSync(arqConta, JSON.stringify(conta, null, 2));
+    process.env.GOOGLE_CONTA_SERVICO_ARQUIVO = arqConta;
+    delete process.env.GOOGLE_CONTA_SERVICO;
+    conferir('so com a chave num arquivo (Secret File do Render), a origem vira o Drive', acervo.origem(), 'drive');
+    fs.writeFileSync(arqConta, Buffer.from(JSON.stringify(conta)).toString('base64'));
+    conferir('  e o arquivo tambem vale em base64', acervo.origem(), 'drive');
+    process.env.GOOGLE_CONTA_SERVICO = JSON.stringify(conta).slice(0, 900);
+    conferir('variavel colada pela metade nao esconde o arquivo: vale o arquivo',
+      (acervo.contaDeServico() || {}).client_email, 'robo@adm.iam.gserviceaccount.com');
+    process.env.GOOGLE_CONTA_SERVICO = JSON.stringify({ client_email: 'outro@adm.iam.gserviceaccount.com', private_key: privateKey });
+    conferir('com as duas validas, vale a variavel', (acervo.contaDeServico() || {}).client_email, 'outro@adm.iam.gserviceaccount.com');
+    delete process.env.GOOGLE_CONTA_SERVICO;
+    fs.writeFileSync(arqConta, '{nao e json');
+    conferir('arquivo invalido nao derruba nada: volta pra pasta local', acervo.origem(), 'local');
+    process.env.GOOGLE_CONTA_SERVICO_ARQUIVO = path.join(tmp, 'nao-existe.json');
+    conferir('arquivo que nao existe: pasta local, sem erro', acervo.origem(), 'local');
+    delete process.env.GOOGLE_CONTA_SERVICO_ARQUIVO;
+
     // ------------------------------------------------------- capa guardada
     // A capa vem do navegador de uma pessoa e passa a ser servida pra sede
     // inteira. Entao ela e entrada de fora, e o que decide o tipo sao os BYTES,

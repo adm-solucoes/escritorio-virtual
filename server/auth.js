@@ -12,6 +12,7 @@ const { marca } = require('./marca');
 const pastaDados = require('./dados');
 const discador = require('./discador');
 const quadros = require('./quadros');
+const acervo = require('./acervo');
 // `correio` e nao `email`: dentro das rotas, `email` e o endereco digitado.
 const correio = require('./email');
 const links = require('./links');
@@ -488,7 +489,8 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
       diretoria: usuarios.totalDeDiretoria(),
       integracoes: {
         google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-        drive: !!(process.env.GOOGLE_DRIVE_PASTA && process.env.GOOGLE_CONTA_SERVICO),
+        // A mesma regra da estante: a chave pode estar na variavel ou no arquivo secreto.
+        drive: acervo.origem() === 'drive',
         trello: quadros.situacao().trello,
         kanban: quadros.situacao().kanban,
         turn: !!(process.env.CLOUDFLARE_TURN_KEY_ID && process.env.CLOUDFLARE_TURN_TOKEN),

@@ -218,6 +218,16 @@ pelo nosso servidor: ninguem ve link do Drive, ninguem sai da sede.
      quebras de linha da chave, cole em base64
      (`base64 -w0 chave.json` no Git Bash) - o servidor aceita os dois.
 
+   **No Render, a chave vai como arquivo, e nao como variavel.** Ela tem mais de
+   3 mil caracteres em base64, e em 24/09/2026 nao coube no campo de variavel do
+   painel. O Render tem lugar proprio pra isso: *Environment > Secret Files >
+   Add Secret File*, com o nome **`conta-servico.json`** e o JSON colado inteiro
+   como conteudo. O Render poe o arquivo em `/etc/secrets/conta-servico.json`, e
+   o servidor le dali sozinho (outro caminho: `GOOGLE_CONTA_SERVICO_ARQUIVO`).
+   Vale a primeira chave de verdade, nesta ordem: a variavel, depois o arquivo -
+   uma variavel colada pela metade nao esconde o arquivo. O `GOOGLE_DRIVE_PASTA`,
+   curto, continua sendo variavel.
+
 Pronto: todo PDF dessa pasta vira livro na estante. Pra por livro, poe o PDF na
 pasta; pra tirar, tira. O nome do arquivo vira o titulo
 (`Gestao_de_Processos.pdf` -> "Gestao de Processos"). A lista fica 1 minuto em

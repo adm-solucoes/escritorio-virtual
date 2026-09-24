@@ -193,7 +193,7 @@ arquivo.
 | `TRELLO_API_KEY` e `TRELLO_TOKEN` | https://trello.com/power-ups/admin - a chave aparece na pagina e o token sai do link "Token" ao lado dela |
 | `CRM_URL` e `CRM_CHAVE_KANBAN` | os **quadros das diretorias** vem do Kanban do CRM, que e onde o time trabalha hoje. `CRM_URL` e o endereco do CRM (sem barra no fim) e `CRM_CHAVE_KANBAN` e uma chave de 32+ caracteres, a MESMA que o CRM guarda como `KANBAN_CHAVE_ESCRITORIO`. Passo a passo em [plano-kanban-crm.md](plano-kanban-crm.md#6-como-ligar) |
 | `TRELLO_QUADROS` | os quadros, **um por setor**: `Comercial=AbCdEfGh; Direx=QrStUvWx\|diretoria`. O codigo de cada quadro esta na URL dele (`trello.com/b/`**`AbCdEfGh`**`/nome`). Formato completo, etiquetas e quadro so da diretoria em [plano-trello.md](plano-trello.md#3-variaveis). O antigo `TRELLO_BOARD_ID` (um quadro so, de todos) continua valendo se este ficar vazio |
-| `GOOGLE_DRIVE_PASTA` e `GOOGLE_CONTA_SERVICO` | a pasta de livros da biblioteca e a chave JSON de uma conta de servico com acesso de Leitor a ela. Passo a passo em [estante.md](estante.md#1-a-pasta-do-drive-o-jeito-de-producao). Em branco, a estante le `DATA_DIR/livros` |
+| `GOOGLE_DRIVE_PASTA` e `GOOGLE_CONTA_SERVICO` (no Render, a chave vai como **Secret File** `conta-servico.json`: nao cabe no campo de variavel) | a pasta de livros da biblioteca e a chave JSON de uma conta de servico com acesso de Leitor a ela. Passo a passo em [estante.md](estante.md#1-a-pasta-do-drive-o-jeito-de-producao). Em branco, a estante le `DATA_DIR/livros` |
 
 **Trello: a conta dona do token precisa estar em cada quadro.** O token e de
 uma conta so (a que criou a chave), e a API so mostra o que essa conta enxerga. Quadro

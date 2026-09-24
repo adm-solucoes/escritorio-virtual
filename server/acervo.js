@@ -161,20 +161,48 @@ function ordenar(livros) {
 
 // ----------------------------------------------------------- origem: Drive
 
-function contaDeServico() {
-  const bruto = String(process.env.GOOGLE_CONTA_SERVICO || '').trim();
-  if (!bruto) return null;
+// A chave da conta de servico vem, nesta ordem:
+//   1. de GOOGLE_CONTA_SERVICO (o JSON, puro ou em base64);
+//   2. de um ARQUIVO: o de GOOGLE_CONTA_SERVICO_ARQUIVO ou, sem ela, o "Secret File" do Render
+//      chamado conta-servico.json (o Render poe em /etc/secrets/). A chave tem mais de 3 mil
+//      caracteres em base64, e em 24/09 nao coube no campo de variavel do painel do Render:
+//      arquivo secreto e o lugar que o Render tem pra credencial desse tamanho.
+// Vale a primeira que for uma chave de verdade: uma variavel colada pela metade nao esconde
+// o arquivo.
+const ARQUIVO_CONTA_PADRAO = '/etc/secrets/conta-servico.json';
+const fontesAvisadas = new Set();
+
+function lerChave(texto) {
   try {
     // Aceita o JSON puro ou em base64 - painel de hospedagem as vezes estraga
     // quebra de linha, e a chave privada tem varias.
-    const texto = bruto.startsWith('{') ? bruto : Buffer.from(bruto, 'base64').toString('utf8');
-    const conta = JSON.parse(texto);
-    if (!conta.client_email || !conta.private_key) return null;
-    return conta;
+    const puro = texto.startsWith('{') ? texto : Buffer.from(texto, 'base64').toString('utf8');
+    const conta = JSON.parse(puro);
+    return conta && conta.client_email && conta.private_key ? conta : null;
   } catch (e) {
-    console.error('[acervo] GOOGLE_CONTA_SERVICO invalido: nao e um JSON de conta de servico');
     return null;
   }
+}
+
+function contaDeServico() {
+  const arquivo = String(process.env.GOOGLE_CONTA_SERVICO_ARQUIVO || '').trim() || ARQUIVO_CONTA_PADRAO;
+  const fontes = [
+    { de: 'GOOGLE_CONTA_SERVICO', ler: () => String(process.env.GOOGLE_CONTA_SERVICO || '').trim() },
+    // Arquivo que nao existe e o normal fora do Render: nao e erro, so nao ha chave ali.
+    { de: arquivo, ler: () => { try { return fs.readFileSync(arquivo, 'utf8').trim(); } catch (e) { return ''; } } },
+  ];
+  for (const fonte of fontes) {
+    const texto = fonte.ler();
+    if (!texto) continue;
+    const conta = lerChave(texto);
+    if (conta) return conta;
+    // Uma vez por fonte: isto roda a cada listagem da estante, e o log nao pode virar ruido.
+    if (!fontesAvisadas.has(fonte.de)) {
+      fontesAvisadas.add(fonte.de);
+      console.error('[acervo] ' + fonte.de + ' invalido: nao e um JSON de conta de servico');
+    }
+  }
+  return null;
 }
 
 function pastaDoDrive() {
@@ -483,6 +511,7 @@ module.exports = {
   PASTA_LOCAL,
   PASTA_CAPAS,
   contaDeServico,
+  ARQUIVO_CONTA_PADRAO,
   montarJwt,
   // expostos pro testes/acervo.js
   _temCapaGuardada: temCapaGuardada,
