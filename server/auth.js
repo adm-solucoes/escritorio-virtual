@@ -6,12 +6,12 @@ const path = require('path');
 const express = require('express');
 const usuarios = require('./usuarios');
 const sessao = require('./sessao');
-const convites = require('./convites');
 const google = require('./google');
 const { DOMINIOS, ehEmailDaSede } = require('./dominios');
 const { marca } = require('./marca');
 const pastaDados = require('./dados');
 const discador = require('./discador');
+const quadros = require('./quadros');
 // `correio` e nao `email`: dentro das rotas, `email` e o endereco digitado.
 const correio = require('./email');
 const links = require('./links');
@@ -323,8 +323,8 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
     if (!EMAIL_RE.test(digitado)) return res.status(400).json({ erro: 'E-mail invalido.' });
 
     const conta = usuarios.porEmail(digitado);
-    // Conta do Google nao tem senha pra trocar; visitante nao tem e-mail.
-    if (conta && !conta.convidado && conta.senhaHash && podeMandarPara(conta.id, 'senha')) {
+    // Conta do Google nao tem senha pra trocar.
+    if (conta && conta.senhaHash && podeMandarPara(conta.id, 'senha')) {
       setImmediate(() => {
         mandarNovaSenha(conta).catch((e) => console.error('[email] senha nova nao saiu: ' + e.message));
       });
@@ -341,7 +341,7 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
     const corpo = req.body || {};
     const lido = links.ler(texto(corpo.token), 'senha');
     const conta = lido && usuarios.porId(lido.uid);
-    if (!conta || conta.convidado || !conta.senhaHash || lido.marca !== impressaoDaSenha(conta)) {
+    if (!conta || !conta.senhaHash || lido.marca !== impressaoDaSenha(conta)) {
       contarErro(ip);
       return res.status(400).json({ erro: 'Esse link nao vale mais: ele vence em 1 hora e serve uma vez so. Peca outro em "Esqueci minha senha".' });
     }
@@ -432,40 +432,6 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
     res.json({ usuario: usuarios.publico(usuario) });
   });
 
-  // ---------------------------------------------------------------- convite
-  // Ver docs/plano-convidado.md.
-  rotas.post('/convite', sessao.exigirDiretoria, (req, res) => {
-    const horas = Number((req.body || {}).horas) || convites.HORAS_PADRAO;
-    const { token, expiraEm } = convites.criar({ quemCriou: req.usuario.id, horas });
-    res.json({ token, expiraEm, caminho: '/?convite=' + encodeURIComponent(token) });
-  });
-
-  rotas.post('/convite/revogar', sessao.exigirDiretoria, (req, res) => {
-    res.json({ geracao: convites.revogarTodos() });
-  });
-
-  rotas.post('/convite/entrar', (req, res) => {
-    const ip = req.ip || 'desconhecido';
-    // O mesmo freio do login: sem ele daria pra ficar chutando assinatura.
-    if (bloqueado(ip)) {
-      return res.status(429).json({ erro: 'Muitas tentativas. Espera uns minutos.' });
-    }
-
-    const corpo = req.body || {};
-    if (!convites.ler(texto(corpo.token))) {
-      contarErro(ip);
-      return res.status(403).json({ erro: 'Esse link de convite nao vale mais. Peca outro.' });
-    }
-
-    const nome = texto(corpo.nome).slice(0, MAX_NOME);
-    if (!nome) return res.status(400).json({ erro: 'Diz teu nome.' });
-
-    limparErros(ip);
-    const usuario = usuarios.criarConvidado({ nome });
-    sessao.definirCookie(res, usuario.id, sessao.DURACAO_CONVIDADO_MS);
-    res.json({ usuario: usuarios.publico(usuario) });
-  });
-
   rotas.post('/sair', (req, res) => {
     sessao.limparCookie(res);
     res.json({ ok: true });
@@ -523,7 +489,8 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
       integracoes: {
         google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
         drive: !!(process.env.GOOGLE_DRIVE_PASTA && process.env.GOOGLE_CONTA_SERVICO),
-        trello: !!(process.env.TRELLO_API_KEY && process.env.TRELLO_TOKEN && process.env.TRELLO_BOARD_ID),
+        trello: quadros.situacao().trello,
+        kanban: quadros.situacao().kanban,
         turn: !!(process.env.CLOUDFLARE_TURN_KEY_ID && process.env.CLOUDFLARE_TURN_TOKEN),
         backup: !!(process.env.BACKUP_DRIVE_PASTA && process.env.BACKUP_CHAVE),
         email: correio.ligado(),
@@ -541,7 +508,7 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
   // ------------------------------------------------------------------- senha
   // Trocar a propria senha. Pede a atual: sessao aberta num PC emprestado nao
   // pode virar conta tomada. Visitante nao tem senha.
-  rotas.put('/senha', sessao.exigirMembro, (req, res) => {
+  rotas.put('/senha', sessao.exigirLogin, (req, res) => {
     const ip = req.ip || 'desconhecido';
     if (bloqueado(ip)) {
       return res.status(429).json({ erro: 'Muitas tentativas. Espera uns minutos.' });
@@ -571,18 +538,17 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
 
   // -------------------------------------------------------------- WhatsApp
   // O proprio numero (vazio apaga).
-  rotas.put('/perfil/whatsapp', sessao.exigirMembro, (req, res) => {
+  rotas.put('/perfil/whatsapp', sessao.exigirLogin, (req, res) => {
     const r = usuarios.definirWhatsapp(req.usuario.id, (req.body || {}).numero);
     if (r.erro) return res.status(400).json({ erro: r.erro });
     res.json(r);
   });
 
   // O numero de um colega, pro botao do cartao. Um por vez e so pra membro: o
-  // numero nao vai na lista de pessoas que o socket manda pra todo mundo -
-  // visitante incluso.
-  rotas.get('/pessoas/:uid/whatsapp', sessao.exigirMembro, (req, res) => {
+  // numero nao vai na lista de pessoas que o socket manda pra todo mundo.
+  rotas.get('/pessoas/:uid/whatsapp', sessao.exigirLogin, (req, res) => {
     const u = usuarios.porId(req.params.uid);
-    if (!u || u.convidado) return res.json({ whatsapp: null });
+    if (!u) return res.json({ whatsapp: null });
     res.set('Cache-Control', 'no-store');
     res.json({ whatsapp: u.whatsapp || null });
   });
@@ -596,7 +562,7 @@ function criarRotas(sanitizeAppearance, ganchos = {}) {
 
   function alvoDe(req, res) {
     const alvo = usuarios.porId(req.params.id);
-    if (!alvo || alvo.convidado) {
+    if (!alvo) {
       res.status(404).json({ erro: 'Essa conta nao existe mais.' });
       return null;
     }

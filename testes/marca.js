@@ -107,6 +107,16 @@ const temAdm = (s) => /\bADM\b|admsolucoes|empresa junior/.test(s);
     conferir('  nenhum marcador sobrando ({{...}})', /\{\{[A-Z_]+\}\}/.test(pagina.corpo), false);
     conferir('/index.html sai igual a /', (await texto(acme, '/index.html')).corpo === pagina.corpo, true);
 
+    // A pagina de quem entra numa reuniao pelo link (public/reuniao.html) sai com a
+    // marca da sede, pelo mesmo motivo do index: e o cliente de UMA sede que a abre.
+    const paginaReuniao = await texto(acme, '/r/qualquer-token');
+    conferir('a pagina da reuniao (link) do cliente abre e leva o nome dele, ESCAPADO',
+      [paginaReuniao.status, paginaReuniao.corpo.includes('<title>Reuni')
+        && paginaReuniao.corpo.includes('Acme &lt;Consultoria&gt;</title>')], [200, true]);
+    conferir('  sem "ADM" em lugar nenhum, sem marcador sobrando e sem apontar pra marca da ADM',
+      [temAdm(paginaReuniao.corpo), /\{\{[A-Z_]+\}\}/.test(paginaReuniao.corpo), paginaReuniao.corpo.includes('/marca/')], [false, false, false]);
+    conferir('  e /reuniao.html (direto) sai igual', (await texto(acme, '/reuniao.html')).corpo === paginaReuniao.corpo, true);
+
     const manifesto = JSON.parse((await texto(acme, '/manifest.webmanifest')).corpo);
     conferir('o app instalado leva o nome do cliente', [manifesto.name, manifesto.short_name], ['Escritorio Virtual - Acme <Consultoria>', 'Sede Acme']);
     conferir('  e nada de ADM no manifesto', temAdm(JSON.stringify(manifesto)), false);
@@ -137,6 +147,9 @@ const temAdm = (s) => /\bADM\b|admsolucoes|empresa junior/.test(s);
     conferir('  o logotipo sai como arquivo nos dois lugares (painel escuro e barra clara)',
       [paginaAdm.includes('<span class="login-marca"><img src="/marca/icone-branco.png"'),
         paginaAdm.includes('<span class="entrada-logo"><img src="/marca/icone-vermelho.png"')], [true, true]);
+    const reuniaoAdm = (await texto(adm, '/r/qualquer-token')).corpo;
+    conferir('  e a pagina da reuniao (link) leva o logotipo da ADM em arquivo, como o resto',
+      [reuniaoAdm.includes('<span class="entrada-logo"><img src="/marca/icone-vermelho.png"'), reuniaoAdm.includes('ADM Soluções')], [true, true]);
     const icone = await fetch(adm.base + '/marca/icone-branco.png');
     const bytes = Buffer.from(await icone.arrayBuffer());
     const original = fs.readFileSync(path.join(raiz, 'server/marca-arquivos/marca-icone-branco.png'));

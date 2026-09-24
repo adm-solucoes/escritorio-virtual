@@ -24,6 +24,16 @@
   // perdida. Ver `podarConexoesPresas`.
   const PACIENCIA_MS = 12000;
 
+  // Quem nunca atende. A conexao que nasce e nao conecta (o outro esta com a aba
+  // parada, sem camera, ou atras de uma rede que nao passa) era derrubada depois da
+  // paciencia e refeita NO QUADRO SEGUINTE, pra sempre: medido, ~30 tentativas em
+  // ~7 minutos pra dois bonecos que nunca respondiam - cada uma com oferta,
+  // candidatos ICE e uma conexao nova. Agora cada falha seguida com a MESMA pessoa
+  // dobra a espera (15 s, 30 s, 60 s... ate 5 min); conectar, ou a pessoa sair do
+  // mapa, zera.
+  const ESPERA_BASE_MS = 15000;
+  const ESPERA_MAX_MS = 5 * 60 * 1000;
+
   // Servidores ICE vem do servidor (/api/ice): STUN, e o TURN da Cloudflare
   // quando configurado - sem TURN a chamada nao fecha em rede de faculdade,
   // empresa e parte do 4G. Comeca com o STUN de sempre: se a busca falhar, a
@@ -34,8 +44,13 @@
   const RENOVAR_ICE_MS = 6 * 60 * 60 * 1000; // a credencial do TURN vence em 24h
 
   function buscarIce() {
-    const busca = fetch('/api/ice', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
+    // Quem entra pelo link de uma reuniao nao tem cookie, entao /api/ice o
+    // barraria: a pagina dele diz de onde vem a lista (o socket da reuniao) por
+    // `Network.pedirIce`. Ver public/js/paginas/reuniao-rede.js.
+    const origem = window.Network && window.Network.pedirIce
+      ? Promise.resolve(window.Network.pedirIce())
+      : fetch('/api/ice', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null));
+    const busca = origem
       .then((j) => {
         if (j && Array.isArray(j.iceServers) && j.iceServers.length) iceServers = j.iceServers;
       })
@@ -78,6 +93,36 @@
   let soVoz = false;
 
   const peers = new Map(); // id do outro jogador -> { pc, videoEl, videoSender, remoteDescDefinida, candidatosPendentes }
+  const desistencias = new Map(); // id -> { falhas, ateQuando }: quem nunca atende (ver ESPERA_BASE_MS)
+
+  function registrarFalha(id) {
+    const d = desistencias.get(id) || { falhas: 0, ateQuando: 0 };
+    d.falhas += 1;
+    d.ateQuando = Date.now() + Math.min(ESPERA_MAX_MS, ESPERA_BASE_MS * Math.pow(2, d.falhas - 1));
+    desistencias.set(id, d);
+  }
+
+  function emEspera(id) {
+    const d = desistencias.get(id);
+    return !!d && Date.now() < d.ateQuando;
+  }
+
+  // Quem entrou na reuniao pelo LINK dela (visitante). Nao tem boneco nem posicao,
+  // entao nao vem no mapa de jogadores que o jogo entrega: quem sabe deles e o
+  // visitantes.js, que os passa pra ca. So contam enquanto EU estou na mesma
+  // chamada - ela e a unica coisa que liga um visitante a mim. Ver
+  // docs/plano-reuniao-por-link.md.
+  let visitantes = new Map(); // id 'v-...' -> { id, name, chamada, appearance, dividindoTela }
+
+  function definirVisitantes(mapa) {
+    visitantes = mapa && typeof mapa.forEach === 'function' ? mapa : new Map();
+  }
+
+  // Quem e esse id: um jogador do mapa ou, na chamada, um visitante.
+  function jogadorDe(id) {
+    const G = window.Game;
+    return (G && G.getPlayers && G.getPlayers().get(id)) || visitantes.get(id) || null;
+  }
 
   function palco() {
     return document.getElementById('palco-remoto');
@@ -196,11 +241,20 @@
       if (ev.candidate) Network.sendRtcSignal(id, { type: 'candidate', candidate: ev.candidate.toJSON() });
     };
     pc.onconnectionstatechange = () => {
-      if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) fecharPeer(id);
+      // Um evento tardio de uma conexao que ja foi trocada nao pode derrubar a nova
+      // (o id e o mesmo).
+      if (peers.get(id) !== p) return;
+      if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) {
+        // Nunca chegou a conectar: conta como tentativa perdida (ver registrarFalha)
+        if (!p.avisouConexao) registrarFalha(id);
+        fecharPeer(id);
+        return;
+      }
       // A chamada ABRIU de fato (audio passando). O avisos.js usa isto pra chamar
       // quem esta com a sede numa aba escondida quando alguem chega perto.
       if (pc.connectionState === 'connected' && !p.avisouConexao) {
         p.avisouConexao = true;
+        desistencias.delete(id);
         window.dispatchEvent(new CustomEvent('sede:chamada-conectou', { detail: { id } }));
       }
     };
@@ -429,15 +483,27 @@
     peers.forEach((p, id) => {
       if (p.pc.connectionState === 'connected') return;
       if (agora - p.nascidoEm < PACIENCIA_MS) return;
+      registrarFalha(id);
       fecharPeer(id);
     });
   }
 
   // Chamado a cada frame do jogo com o mapa atual de jogadores (id -> {x,y,...}).
-  function updateProximity(playersMap) {
+  function updateProximity(mapaDoJogo) {
     if (!selfId) return;
-    const self = playersMap.get(selfId);
+    const self = mapaDoJogo.get(selfId);
     if (!self) return;
+
+    // Os visitantes da MINHA chamada entram na conta como se fossem jogadores:
+    // `naMesmaChamada` os liga a mim, e o resto do mapa (posicao, sala, parede) nem
+    // chega a ser consultado.
+    let playersMap = mapaDoJogo;
+    if (self.chamada && visitantes.size) {
+      playersMap = new Map(mapaDoJogo);
+      visitantes.forEach((v, id) => {
+        if (v.chamada && v.chamada.id === self.chamada.id) playersMap.set(id, v);
+      });
+    }
 
     podarConexoesPresas();
 
@@ -457,7 +523,7 @@
         // Os dois propondo ao mesmo tempo nao e problema: o `tratarSinal` ja
         // resolve a colisao de ofertas - o de id maior desfaz a propria e aceita
         // a do outro. Essa regra continua sendo a que decide quem cede.
-        if (cameraAtiva && deveFalarCom(self, p)) iniciarChamada(id);
+        if (cameraAtiva && !emEspera(id) && deveFalarCom(self, p)) iniciarChamada(id);
         return;
       }
 
@@ -480,6 +546,8 @@
     });
 
     peers.forEach((_, id) => { if (!playersMap.has(id)) fecharPeer(id); });
+    // quem saiu do mapa (ou trocou de id) leva a fila de espera junto
+    desistencias.forEach((_, id) => { if (!playersMap.has(id)) desistencias.delete(id); });
     ajustarChamadaGrande();
   }
 
@@ -703,8 +771,17 @@
     aplicarUiCamera();
   }
 
+  // O `init` do jogo chega DE NOVO a cada reconexao (servidor reiniciado, rede que
+  // caiu e voltou): a pessoa ganha outro id de socket. Sem esta guarda, cada
+  // reconexao empilhava mais um ouvinte de sinalizacao e mais um clique em cada
+  // botao - o botao de microfone, por exemplo, passava a "desligar e ligar" a cada
+  // toque e parecia morto. Na volta so o id muda; o resto ja esta ligado.
+  let iniciado = false;
+
   function init(idJogadorLocal) {
     selfId = idJogadorLocal;
+    if (iniciado) return;
+    iniciado = true;
     buscarIce();
     setInterval(buscarIce, RENOVAR_ICE_MS);
     Network.on('rtc-signal', tratarSinal);
@@ -739,8 +816,7 @@
   }
 
   function apresentando(id) {
-    const G = window.Game;
-    const outro = G && G.getPlayers && G.getPlayers().get(id);
+    const outro = jogadorDe(id);
     return !!(outro && outro.dividindoTela);
   }
 
@@ -764,6 +840,14 @@
     return lista;
   }
 
+  // Derruba todas as conexoes. A pagina de visitante chama isto ao voltar de uma
+  // queda de rede: o id dele mudou e os membros abrem conexao NOVA com o id novo -
+  // uma oferta nova, com outra impressao digital, nao pode ser aplicada por cima
+  // da conexao velha. Sem elas, a proximidade refaz cada uma no quadro seguinte.
+  function fecharConexoes() {
+    peers.forEach((_, id) => fecharPeer(id));
+  }
+
   function getLocalStream() { return localStream; }
   function isCameraAtiva() { return cameraAtiva; }
   // Na chamada grande a propria camera tambem sai da grade: mostrar o proprio
@@ -781,6 +865,7 @@
   window.Calls = {
     init, updateProximity, temChamadaAtiva, temVideoRemoto, getVideoRemoto,
     getPeersConectados, getLocalStream, isCameraAtiva, temVideoLocal,
+    definirVisitantes, jogadorDe, fecharConexoes,
     usarStreamDaEntrada, alternarTela, estaDividindoTela, videoDaTelaLocal,
     // As duas regras de decisao saem expostas pra `testes/proximidade.js`
     // conseguir exercita-las sem navegador. Mesma ideia do `canvasDoMapa` do

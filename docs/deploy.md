@@ -191,8 +191,15 @@ arquivo.
 |---|---|
 | `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` | Google Cloud > APIs e servicos > Credenciais > **Criar credenciais > ID do cliente OAuth**, tipo "Aplicativo da Web". Sao as mesmas credenciais que o CRM ja usa. |
 | `TRELLO_API_KEY` e `TRELLO_TOKEN` | https://trello.com/power-ups/admin - a chave aparece na pagina e o token sai do link "Token" ao lado dela |
-| `TRELLO_BOARD_ID` | abra o quadro no Trello e acrescente `.json` no fim da URL: o campo `id` do topo do arquivo |
+| `CRM_URL` e `CRM_CHAVE_KANBAN` | os **quadros das diretorias** vem do Kanban do CRM, que e onde o time trabalha hoje. `CRM_URL` e o endereco do CRM (sem barra no fim) e `CRM_CHAVE_KANBAN` e uma chave de 32+ caracteres, a MESMA que o CRM guarda como `KANBAN_CHAVE_ESCRITORIO`. Passo a passo em [plano-kanban-crm.md](plano-kanban-crm.md#6-como-ligar) |
+| `TRELLO_QUADROS` | os quadros, **um por setor**: `Comercial=AbCdEfGh; Direx=QrStUvWx\|diretoria`. O codigo de cada quadro esta na URL dele (`trello.com/b/`**`AbCdEfGh`**`/nome`). Formato completo, etiquetas e quadro so da diretoria em [plano-trello.md](plano-trello.md#3-variaveis). O antigo `TRELLO_BOARD_ID` (um quadro so, de todos) continua valendo se este ficar vazio |
 | `GOOGLE_DRIVE_PASTA` e `GOOGLE_CONTA_SERVICO` | a pasta de livros da biblioteca e a chave JSON de uma conta de servico com acesso de Leitor a ela. Passo a passo em [estante.md](estante.md#1-a-pasta-do-drive-o-jeito-de-producao). Em branco, a estante le `DATA_DIR/livros` |
+
+**Trello: a conta dona do token precisa estar em cada quadro.** O token e de
+uma conta so (a que criou a chave), e a API so mostra o que essa conta enxerga. Quadro
+de setor que ela nao integra aparece na aba com o aviso "a conta dona do token nao
+enxerga o quadro X" - a saida e convidar essa conta pro quadro no Trello, nao mexer na
+sede.
 
 No Google Cloud, em **URIs de redirecionamento autorizados**, cadastre:
 
@@ -284,7 +291,7 @@ Enquanto nao tiver TURN, vale avisar o time: "se a chamada nao abrir, e a rede".
 ## 5. Antes do primeiro deploy
 
 - [ ] Apagar `server/data/usuarios.json` local, ou pelo menos saber que as
-      contas de teste (`dev@local`, `bot@local` e as de visitante) **nao** vao
+      contas de teste (`dev@local` e `bot@local`) **nao** vao
       junto - elas nao estao no git, entao o servidor novo comeca vazio.
       `dev@local` e `bot@local` so nascem com `npm run dev`; em producao
       (`NODE_ENV=production`) o `SEM_LOGIN` e ignorado e elas nao sao criadas.

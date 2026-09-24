@@ -224,7 +224,7 @@
   // Chamado pelo main.js quando a conta carrega.
   function mostrarPara(usuario) {
     usuarioAtual = usuario;
-    const membro = !!usuario && !usuario.convidado;
+    const membro = !!usuario;
     // quem entra com o Google nao tem senha pra trocar
     document.getElementById('btn-trocar-senha').classList.toggle('oculto', !(membro && usuario.temSenha));
     document.getElementById('btn-membros').classList.toggle('oculto', !(membro && usuario.isAdmin));

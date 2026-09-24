@@ -252,6 +252,7 @@ cmd_criar() {
     echo "# Integracoes do proprio cliente (vazias = desligadas)."
     echo "TRELLO_API_KEY="
     echo "TRELLO_TOKEN="
+    echo "TRELLO_QUADROS="
     echo "TRELLO_BOARD_ID="
     echo "GOOGLE_DRIVE_PASTA="
     echo "GOOGLE_CONTA_SERVICO="

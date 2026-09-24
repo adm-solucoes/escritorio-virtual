@@ -31,7 +31,7 @@
 
   let painel, gradeEl, avisoEl, contaEl, filtrosEl, buscaEl, buscaLinhaEl, limparEl, abasEl, detalheEl;
   let aberto = false;
-  let dados = { origem: 'local', podeLer: false, livros: [] };
+  let dados = { origem: 'local', livros: [] };
   let carregado = false;
 
   // DUAS ABAS: os PDFs (Digitais) e os livros de papel da sala da ADM (Na sala).
@@ -39,7 +39,7 @@
   // clique faz: o digital abre no leitor, o de papel mostra com quem esta e deixa
   // pegar emprestado. Ver server/emprestimos.js.
   let aba = 'digital';
-  let fisico = { livros: [], podePegar: false, podeDevolverDeOutros: false, eu: null };
+  let fisico = { livros: [], podeDevolverDeOutros: false, eu: null };
   let carregadoFisico = false;
   let filtro = '';             // '' = todos os setores
   let busca = '';              // texto digitado na busca
@@ -244,14 +244,14 @@
   function cartaoDeLivro(l) {
     const el = document.createElement('button');
     el.type = 'button';
-    el.className = 'estante-capa' + (dados.podeLer ? '' : ' so-membros');
-    el.title = dados.podeLer ? l.titulo : l.titulo + ' - so quem e da sede abre';
+    el.className = 'estante-capa';
+    el.title = l.titulo;
     el.setAttribute('aria-label', 'Ler ' + l.titulo);
 
     el.appendChild(capaFalsa(l));
     if (l.temCapa) {
       porImagem(el, '/api/estante/' + encodeURIComponent(l.id) + '/capa', l);
-    } else if (dados.podeLer && window.Leitor) {
+    } else if (window.Leitor) {
       capaDaPagina(el, l);
     }
 
@@ -264,10 +264,6 @@
     if (selo) el.appendChild(selo);
 
     el.addEventListener('click', () => {
-      if (!dados.podeLer) {
-        avisar('So quem e da sede abre os livros da biblioteca.');
-        return;
-      }
       if (window.Leitor) Leitor.abrir(l);
     });
     return el;
@@ -376,17 +372,15 @@
     const acoes = document.createElement('div');
     acoes.className = 'estante-detalhe-acoes';
     const digital = digitalDe(l);
-    if (digital && dados.podeLer && window.Leitor) {
+    if (digital && window.Leitor) {
       acoes.appendChild(botaoDetalhe('Ler o PDF', 'btn-secundario', () => Leitor.abrir(digital)));
     }
-    if (fisico.podePegar) {
-      if (!l.emprestimo) {
-        acoes.appendChild(botaoDetalhe('Peguei este livro', 'btn-primario', () => emprestar(l, 'pegar')));
-      } else if (l.emprestimo.uid === fisico.eu) {
-        acoes.appendChild(botaoDetalhe('Devolvi na estante', 'btn-primario', () => emprestar(l, 'devolver')));
-      } else if (fisico.podeDevolverDeOutros) {
-        acoes.appendChild(botaoDetalhe('Marcar como devolvido', 'btn-secundario', () => emprestar(l, 'devolver')));
-      }
+    if (!l.emprestimo) {
+      acoes.appendChild(botaoDetalhe('Peguei este livro', 'btn-primario', () => emprestar(l, 'pegar')));
+    } else if (l.emprestimo.uid === fisico.eu) {
+      acoes.appendChild(botaoDetalhe('Devolvi na estante', 'btn-primario', () => emprestar(l, 'devolver')));
+    } else if (fisico.podeDevolverDeOutros) {
+      acoes.appendChild(botaoDetalhe('Marcar como devolvido', 'btn-secundario', () => emprestar(l, 'devolver')));
     }
     if (acoes.children.length) detalheEl.appendChild(acoes);
     detalheEl.classList.remove('oculto');

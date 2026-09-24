@@ -80,6 +80,7 @@
     socket.on('reuniao-recusada', (data) => emitLocal('reuniao-recusada', data));
     socket.on('chamada-mudou', (data) => emitLocal('chamada-mudou', data));
     socket.on('chamadas', (data) => emitLocal('chamadas', data));
+    socket.on('visitantes-mudou', (data) => emitLocal('visitantes-mudou', data));
     socket.on('trello', (data) => emitLocal('trello', data));
     socket.on('acervo-fisico-mudou', (data) => emitLocal('acervo-fisico-mudou', data));
   }
@@ -122,6 +123,22 @@
     if (socket && socket.connected) socket.emit('reuniao-desmarcar', { id });
   }
 
+  // O link que vazou para de abrir e um novo vale no lugar. So quem marcou ou a
+  // diretoria; o servidor confere.
+  function novoLinkDaReuniao(id) {
+    if (socket && socket.connected) socket.emit('reuniao-novo-link', { id });
+  }
+
+  // Quem de fora pediu pra entrar na reuniao: quem esta na chamada admite ou
+  // recusa, e pode tirar quem ja entrou. Ver public/js/visitantes.js.
+  function decidirVisitante(id, admitir) {
+    if (socket && socket.connected) socket.emit('visitante-decidir', { id, admitir: !!admitir });
+  }
+
+  function removerVisitante(id) {
+    if (socket && socket.connected) socket.emit('visitante-remover', { id });
+  }
+
   // Chamada com hora marcada: entra de qualquer canto do mapa, ao contrario da
   // chamada de corredor, que e por proximidade. Ver server/index.js.
   function entrarNaChamada(id) {
@@ -145,8 +162,14 @@
     if (socket && socket.connected) socket.emit('rtc-signal', { to, signal });
   }
 
-  function sendChatMessage(conversa, texto) {
-    if (socket && socket.connected) socket.emit('chat-mensagem', { conversa, texto });
+  // Devolve false se nao saiu (sem conexao). `aoResponder` recebe a resposta do
+  // servidor: { ok: true } ou { erro: 'ritmo', esperarMs } quando mandou rapido
+  // demais (server/freio.js).
+  function sendChatMessage(conversa, texto, aoResponder) {
+    if (!socket || !socket.connected) return false;
+    if (typeof aoResponder === 'function') socket.emit('chat-mensagem', { conversa, texto }, aoResponder);
+    else socket.emit('chat-mensagem', { conversa, texto });
+    return true;
   }
 
   function pedirHistorico(conversa) {
@@ -186,8 +209,10 @@
     if (socket && socket.connected) socket.emit('agenda-pedir');
   }
 
-  function pedirTrello() {
-    if (socket && socket.connected) socket.emit('trello-pedir');
+  // { quadro: chave do setor, forcar: true no "Atualizar" }. Sem opcoes, o servidor
+  // manda o primeiro setor que a pessoa pode ver.
+  function pedirTrello(opcoes) {
+    if (socket && socket.connected) socket.emit('trello-pedir', opcoes || {});
   }
 
   function editarMapa(c, r, t) {
@@ -239,7 +264,7 @@
   }
 
   window.Network = {
-    connect, on, sendMove, enviarVista, sendStatus, dividirTela, estouLendo, marcarReuniao, desmarcarReuniao, entrarNaChamada, sairDaChamada, ligarProGrupo, sendReaction, sendRtcSignal, sendChatMessage,
+    connect, on, sendMove, enviarVista, sendStatus, dividirTela, estouLendo, marcarReuniao, desmarcarReuniao, novoLinkDaReuniao, decidirVisitante, removerVisitante, entrarNaChamada, sairDaChamada, ligarProGrupo, sendReaction, sendRtcSignal, sendChatMessage,
     pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, moverItemDaMesa, tirarItemDaMesa,
     editarMapa, editarObjetoMapa, porConteudoNoMapa, editarArea, restaurarArea, criarArea, apagarArea,
     pedirAgenda, pedirTrello,

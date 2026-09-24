@@ -24,7 +24,6 @@ const emprestimos = require('../server/emprestimos');
 const ana = { id: 'u-ana', nome: 'Ana Clara', isAdmin: false };
 const bia = { id: 'u-bia', nome: 'Bia', isAdmin: false };
 const chefe = { id: 'u-chefe', nome: 'Chefe', isAdmin: true };
-const visita = { id: 'u-visita', nome: 'Cliente', convidado: true };
 
 console.log('\nACERVO FISICO E EMPRESTIMO');
 
@@ -38,7 +37,6 @@ try {
   const livro = lista.find((l) => /Fundos de Investimento/.test(l.titulo));
   conferir('comeca na sala', livro.emprestimo, null);
 
-  conferir('visitante nao leva livro da sala', emprestimos.pegar(livro.id, visita).status, 403);
   conferir('Ana pega', emprestimos.pegar(livro.id, ana), { ok: true });
   const agora = emprestimos.listar().find((l) => l.id === livro.id).emprestimo;
   conferir('  e o livro fica com ela', [agora.uid, agora.nome], ['u-ana', 'Ana Clara']);

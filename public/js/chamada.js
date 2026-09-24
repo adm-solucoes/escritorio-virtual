@@ -65,6 +65,18 @@
       (lista || []).forEach((c) => { porChamada[c.id] = c; });
       pintar();
     });
+
+    // Conexao nova (servidor reiniciado, rede que caiu e voltou): o servidor nao
+    // guarda a chamada de quem desconecta, entao a barra nao pode continuar dizendo
+    // "voce e mais 1" de uma chamada que ja nao existe. Foi visto de verdade: depois
+    // de reiniciar o servidor a barra ficava no ar com o dado velho e a pessoa achava
+    // que ainda estava na reuniao. So a barra volta ao zero; entrar de novo e um
+    // gesto dela, pela agenda.
+    Network.on('init', () => {
+      minha = null;
+      porChamada = {};
+      pintar();
+    });
   }
 
   window.Chamada = { init, entrar, sair, estouEm };

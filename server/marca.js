@@ -189,15 +189,26 @@ function aplicar(html, { dominio } = {}) {
     .replace(/\{\{(ESTILO_SEDE|LOGO_SEDE_CLARO|LOGO_SEDE|MOTE_SEDE)\}\}/g, (_, chave) => brutos[chave]);
 }
 
-// O index.html com a marca aplicada. Em producao e lido uma vez; em
-// desenvolvimento, a cada pedido - senao mexer no HTML pedia reiniciar.
-const INDEX = path.join(__dirname, '..', 'public', 'index.html');
-let emCache = null;
-function paginaInicial(opcoes) {
-  if (emCache && process.env.NODE_ENV === 'production') return emCache;
-  const html = aplicar(fs.readFileSync(INDEX, 'utf8'), opcoes);
-  if (process.env.NODE_ENV === 'production') emCache = html;
+// A pagina com a marca aplicada. Em producao e lida uma vez; em desenvolvimento,
+// a cada pedido - senao mexer no HTML pedia reiniciar.
+const emCache = new Map();
+function paginaComMarca(nome, opcoes) {
+  const producao = process.env.NODE_ENV === 'production';
+  if (producao && emCache.has(nome)) return emCache.get(nome);
+  const html = aplicar(fs.readFileSync(path.join(__dirname, '..', 'public', nome), 'utf8'), opcoes);
+  if (producao) emCache.set(nome, html);
   return html;
+}
+
+function paginaInicial(opcoes) {
+  return paginaComMarca('index.html', opcoes);
+}
+
+// A pagina de quem entra numa reuniao pelo link (public/reuniao.html). Sai com a
+// marca da sede pelo mesmo motivo do index: numa sede de cliente, ela nao pode
+// dizer "ADM Solucoes".
+function paginaDeReuniao(opcoes) {
+  return paginaComMarca('reuniao.html', opcoes);
 }
 
 // O manifesto do app instalavel: o nome que aparece no icone da area de
@@ -225,4 +236,4 @@ function manifesto() {
   };
 }
 
-module.exports = { marca, escaparHtml, aplicar, paginaInicial, manifesto, cores, mote, corValida, caminhoDeArquivo };
+module.exports = { marca, escaparHtml, aplicar, paginaInicial, paginaDeReuniao, manifesto, cores, mote, corValida, caminhoDeArquivo };

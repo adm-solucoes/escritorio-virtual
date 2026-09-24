@@ -68,11 +68,22 @@ services:
       - key: CRM_CHAVE_DISCADOR
         sync: false
       #
-      # Trello (https://trello.com/power-ups/admin - key e token) e o id do
-      # quadro (abra o quadro e acrescente .json na URL: o "id" do topo).
+      # Kanban do CRM na aba de quadros (docs/plano-kanban-crm.md): usa o mesmo CRM_URL e uma
+      # chave propria, a MESMA que o CRM guarda em KANBAN_CHAVE_ESCRITORIO. Em branco, a aba
+      # mostra so os quadros do Trello listados em TRELLO_QUADROS.
+      - key: CRM_CHAVE_KANBAN
+        sync: false
+      #
+      # Trello (https://trello.com/power-ups/admin - key e token) e os quadros, UM POR
+      # SETOR: TRELLO_QUADROS="Comercial=AbCdEfGh; Direx=QrStUvWx|diretoria" (o
+      # codigo curto ta na URL do quadro: trello.com/b/AbCdEfGh/...). Detalhes e as
+      # opcoes em docs/plano-trello.md. TRELLO_BOARD_ID (um quadro so, de todos)
+      # continua valendo se TRELLO_QUADROS ficar vazio.
       - key: TRELLO_API_KEY
         sync: false
       - key: TRELLO_TOKEN
+        sync: false
+      - key: TRELLO_QUADROS
         sync: false
       - key: TRELLO_BOARD_ID
         sync: false

@@ -3,16 +3,12 @@
 (function () {
   let tela, form, erroEl, botao;
   let abaEntrar, abaCriar;
-  let modo = 'entrar'; // 'entrar' | 'criar' | 'convidado'
+  let modo = 'entrar'; // 'entrar' | 'criar'
   let aoEntrar = null;
-
-  // Link de visitante: `?convite=TOKEN`. Ver docs/plano-convidado.md.
-  const tokenConvite = new URLSearchParams(location.search).get('convite');
 
   const ROTULO = {
     entrar: 'Entrar',
     criar: 'Criar conta e entrar',
-    convidado: 'Entrar como visitante',
   };
 
   async function pedir(rota, opcoes) {
@@ -30,10 +26,7 @@
   }
 
   function eu() {
-    return pedir('/eu', { method: 'GET' }).then((d) => {
-      if (tokenConvite) history.replaceState(null, '', location.pathname);
-      return d.usuario;
-    });
+    return pedir('/eu', { method: 'GET' }).then((d) => d.usuario);
   }
 
   function salvarPerfil(dados) {
@@ -135,47 +128,25 @@
           avisoGoogle = 'Essa conta Google nao e da ' + o.sigla + '. Escolha a conta @' + o.dominio + '.';
           if (erroEl && erroEl.textContent === antes) mostrarErro(avisoGoogle);
         }
-        document.getElementById('login-google').classList.toggle('oculto', !googleLigado || modo === 'convidado' || !!tokenRedefinir);
+        document.getElementById('login-google').classList.toggle('oculto', !googleLigado || !!tokenRedefinir);
         mostrarCampoCodigo();
       })
       .catch(() => { /* sem opcoes: fica so e-mail e senha */ });
   }
 
-  // O subtitulo vem no HTML, ja com a marca da sede (server/marca.js). Guarda
-  // pra voltar a ele depois do modo visita.
-  let subtituloDaSede = '';
-
   function trocarModo(novo) {
     modo = novo;
     limparErro();
-    const visita = modo === 'convidado';
 
     abaEntrar.classList.toggle('ativa', modo === 'entrar');
     abaCriar.classList.toggle('ativa', modo === 'criar');
-    // No modo visita nao ha o que escolher: quem chegou pelo link nao tem conta
-    // e nao pode criar uma sem o codigo da sede.
-    document.getElementById('login-abas').classList.toggle('oculto', visita);
-    document.getElementById('login-google').classList.toggle('oculto', visita || !googleLigado);
 
-    // O nome aparece no cadastro E na visita; o resto do cadastro, so no cadastro.
+    // O nome so aparece no cadastro.
     document.querySelectorAll('.campo-cadastro').forEach((el) => {
       el.classList.toggle('oculto', modo !== 'criar');
     });
-    if (visita) document.getElementById('campo-nome').classList.remove('oculto');
     // O campo do codigo tem regra propria: ele so existe pra e-mail de fora.
     mostrarCampoCodigo();
-
-    // E-mail e senha somem na visita - e param de ser obrigatorios, senao o
-    // navegador barra o envio de um campo que nem esta na tela.
-    document.querySelectorAll('.campo-conta').forEach((el) => {
-      el.classList.toggle('oculto', visita);
-      const campo = el.querySelector('input');
-      if (campo) campo.required = !visita;
-    });
-
-    document.getElementById('login-sub').textContent = visita
-      ? 'Voce foi convidado pra visitar a sede'
-      : subtituloDaSede;
 
     botao.textContent = ROTULO[modo];
     document.getElementById('login-senha').setAttribute(
@@ -198,19 +169,7 @@
 
     try {
       let usuario;
-      if (modo === 'convidado') {
-        usuario = (await pedir('/convite/entrar', {
-          method: 'POST',
-          body: JSON.stringify({
-            token: tokenConvite,
-            nome: document.getElementById('login-nome').value.trim(),
-          }),
-        })).usuario;
-        // Tira o `?convite=` da barra de endereco. Sem isto, um F5 gastaria o
-        // link de novo e criaria uma SEGUNDA conta de visitante pra mesma
-        // pessoa - ela perderia a conversa e o nome na lista duplicaria.
-        history.replaceState(null, '', location.pathname);
-      } else if (modo === 'entrar') {
+      if (modo === 'entrar') {
         usuario = (await pedir('/entrar', {
           method: 'POST',
           body: JSON.stringify({ email, senha, confirmar: tokenConfirmar || undefined }),
@@ -333,7 +292,6 @@
     botao = document.getElementById('btn-login');
     abaEntrar = document.getElementById('aba-entrar');
     abaCriar = document.getElementById('aba-criar');
-    subtituloDaSede = document.getElementById('login-sub').textContent;
 
     abaEntrar.addEventListener('click', () => trocarModo('entrar'));
     abaCriar.addEventListener('click', () => trocarModo('criar'));
@@ -341,7 +299,7 @@
     document.getElementById('login-email').addEventListener('input', mostrarCampoCodigo);
     form.addEventListener('submit', enviar);
     document.getElementById('btn-esqueci').addEventListener('click', pedirSenhaNova);
-    trocarModo(tokenConvite ? 'convidado' : 'entrar');
+    trocarModo('entrar');
     if (tokenRedefinir) abrirSenhaNova();
     carregarOpcoes();
   }

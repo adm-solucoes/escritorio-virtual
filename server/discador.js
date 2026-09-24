@@ -25,7 +25,6 @@ function configurado() {
 // Quem pode usar - e, se nao pode, a frase que explica o que fazer.
 function recusa(usuario) {
   if (!usuario) return { status: 401, erro: 'Faca login pra continuar.' };
-  if (usuario.convidado) return { status: 403, erro: 'Visitante nao usa o discador.' };
   // "Nao ligado" antes de tudo: numa sede de cliente o discador nao existe, e a
   // frase de baixo (que fala do Google da ADM) nao tem nada que aparecer la.
   if (!configurado()) return { status: 503, erro: 'O discador ainda nao foi ligado nesta sede.' };

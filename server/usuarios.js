@@ -74,8 +74,8 @@ function hashSenha(senha, salt) {
 }
 
 function senhaConfere(senha, usuario) {
-  // Conta de convidado nasce SEM senha (senhaHash null). Sem esta linha, uma
-  // conta sem hash seria uma conta em que qualquer um entra pelo formulario.
+  // Conta do Google nasce SEM senha (senhaHash null). Sem esta linha, uma conta
+  // sem hash seria uma conta em que qualquer um entra pelo formulario.
   if (!usuario || !usuario.senhaHash || !usuario.salt) return false;
   const tentativa = Buffer.from(hashSenha(senha, usuario.salt), 'hex');
   const guardado = Buffer.from(usuario.senhaHash, 'hex');
@@ -106,7 +106,6 @@ function publico(usuario) {
     nome: usuario.nome,
     email: usuario.email,
     isAdmin: !!usuario.isAdmin,
-    convidado: !!usuario.convidado,
     appearance: usuario.appearance || null,
     criadoEm: usuario.criadoEm || null,
     senhaTemporaria: !!usuario.senhaTemporaria,
@@ -177,7 +176,7 @@ function criarPeloGoogle({ nome, email, sub, isAdmin }) {
 // A pessoa continua com tudo que era da conta (avatar, mesa, conversas).
 function vincularGoogle(id, sub) {
   const u = porId(id);
-  if (!u || u.convidado) return null;
+  if (!u) return null;
   if (u.googleSub === String(sub)) return u;
   u.googleSub = String(sub);
   u.emailVerificado = true;
@@ -189,46 +188,16 @@ function vincularGoogle(id, sub) {
   return u;
 }
 
-// Conta de visitante, criada quando alguem abre um link de convite.
-// Ver docs/plano-convidado.md.
-//
-// E conta de verdade (tem uid proprio) porque o chat, a DM e a presenca todos
-// dependem de um id estavel. O que ela nao tem e senha: ninguem entra nela pelo
-// formulario de login, so pelo link, e so enquanto o cookie durar.
-function criarConvidado({ nome }) {
-  const usuario = {
-    id: crypto.randomUUID(),
-    nome,
-    // e-mail sintetico: preenche o campo que o resto do codigo espera sem
-    // colidir com e-mail de gente de verdade.
-    email: 'convidado@local',
-    emailChave: '',            // string vazia nunca casa com porEmail()
-    salt: null,
-    senhaHash: null,
-    isAdmin: false,            // visitante nao decora a sede
-    convidado: true,
-    appearance: null,
-    criadoEm: Date.now(),
-    ultimoAcesso: Date.now(),
-  };
-  usuario.emailChave = 'convidado-' + usuario.id + '@local';
-  usuario.email = usuario.emailChave;
-  usuarios.push(usuario);
-  salvar();
-  return usuario;
-}
-
-// Convidado nao acumula: sem isto o usuarios.json ganharia uma conta por
-// visitante, pra sempre. 7 dias e bem mais que a sessao de 12 horas dele, entao
-// nao ha risco de apagar alguem que ainda esta na sede.
-const VALIDADE_CONVIDADO_MS = 7 * 24 * 60 * 60 * 1000;
-
-function limparConvidadosVelhos() {
-  const corte = Date.now() - VALIDADE_CONVIDADO_MS;
+// Contas de VISITANTE do fluxo antigo (um link de convite que dava acesso a sede
+// inteira) nao existem mais: quem e de fora entra so numa reuniao, pelo link dela,
+// e sem conta (server/visitantes.js). Sobra o que ficou gravado em disco - e conta
+// sem senha e sem dono nao pode ficar la, entao sai no arranque. Roda uma vez e
+// depois nao acha nada.
+function removerContasDeConvidado() {
   const antes = usuarios.length;
-  usuarios = usuarios.filter((u) => !u.convidado || (u.ultimoAcesso || u.criadoEm || 0) > corte);
+  usuarios = usuarios.filter((u) => !u.convidado);
   if (usuarios.length !== antes) {
-    console.log('[usuarios] ' + (antes - usuarios.length) + ' conta(s) de convidado expirada(s) removida(s)');
+    console.log('[usuarios] ' + (antes - usuarios.length) + ' conta(s) de visitante do modelo antigo removida(s)');
     salvar();
   }
 }
@@ -264,7 +233,7 @@ function definirSenha(usuario, senha) {
 // O link do e-mail foi clicado: o dono provou que o e-mail e dele.
 function confirmarEmail(id) {
   const u = porId(id);
-  if (!u || u.convidado) return null;
+  if (!u) return null;
   if (u.emailVerificado !== true) {
     u.emailVerificado = true;
     salvar();
@@ -277,7 +246,7 @@ function confirmarEmail(id) {
 // de definirSenha): quem estava logado em outro lugar, sai.
 function redefinirPeloEmail(id, novaSenha) {
   const u = porId(id);
-  if (!u || u.convidado) return null;
+  if (!u) return null;
   definirSenha(u, novaSenha);
   u.senhaTemporaria = false;
   u.emailVerificado = true;
@@ -287,7 +256,7 @@ function redefinirPeloEmail(id, novaSenha) {
 
 function trocarSenha(id, novaSenha) {
   const u = porId(id);
-  if (!u || u.convidado) return null;
+  if (!u) return null;
   definirSenha(u, novaSenha);
   u.senhaTemporaria = false;
   salvar();
@@ -311,7 +280,7 @@ function gerarSenhaTemporaria() {
 
 function redefinirSenha(id) {
   const u = porId(id);
-  if (!u || u.convidado) return null;
+  if (!u) return null;
   const senha = gerarSenhaTemporaria();
   definirSenha(u, senha);
   // a tela pede pra pessoa trocar logo depois de entrar: a provisoria passou
@@ -335,21 +304,19 @@ function remover(id) {
 
 function definirDiretoria(id, isAdmin) {
   const u = porId(id);
-  if (!u || u.convidado) return null;
+  if (!u) return null;
   u.isAdmin = !!isAdmin;
   salvar();
   return u;
 }
 
 function totalDeDiretoria() {
-  return usuarios.filter((u) => u.isAdmin && !u.convidado).length;
+  return usuarios.filter((u) => u.isAdmin).length;
 }
 
-// Lista pra tela de membros da diretoria. Visitante fica de fora: ele some
-// sozinho em 7 dias e nao tem senha pra redefinir.
+// Lista pra tela de membros da diretoria.
 function membros() {
   return usuarios
-    .filter((u) => !u.convidado)
     .map((u) => ({
       id: u.id,
       nome: u.nome,
@@ -384,7 +351,7 @@ function normalizarWhatsapp(bruto) {
 
 function definirWhatsapp(id, bruto) {
   const u = porId(id);
-  if (!u || u.convidado) return { erro: 'Visitante nao cadastra WhatsApp.' };
+  if (!u) return { erro: 'Essa conta nao existe mais.' };
   const numero = normalizarWhatsapp(bruto);
   if (numero === null) return { erro: 'Numero invalido. Use DDD + numero, ex.: (85) 99999-9999.' };
   u.whatsapp = numero || null;
@@ -402,7 +369,7 @@ function atualizarPerfil(id, { nome, appearance }) {
 }
 
 carregar();
-limparConvidadosVelhos();
+removerContasDeConvidado();
 
 module.exports = {
   porEmail,
@@ -411,7 +378,6 @@ module.exports = {
   criar,
   criarPeloGoogle,
   vincularGoogle,
-  criarConvidado,
   senhaConfere,
   marcarAcesso,
   atualizarPerfil,

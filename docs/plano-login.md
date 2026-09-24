@@ -17,7 +17,9 @@ Hoje qualquer pessoa com o link digita um nome e entra. Isso cria tres problemas
 Decisoes tomadas com o Caio antes de comecar:
 - Cadastro **aberto, mas com codigo da sede** — a pessoa se cadastra sozinha, so
   precisa do codigo que a diretoria compartilha.
-- **Sem entrada de visitante**: login obrigatorio.
+- **Sem entrada de visitante na sede**: login obrigatorio. (Em 11/09 entrou um link de
+  visitante, e em 20/09/2026 saiu: quem e de fora entra so na chamada de UMA reuniao,
+  pelo link dela - `docs/plano-reuniao-por-link.md`.)
 
 ## 2. O que muda de conceito
 
@@ -188,8 +190,7 @@ isso ninguem foi deslogado no deploy.
 socket da pessoa e desconecta; a tela de login diz o motivo.
 
 **Travas:** a diretoria nao remove, nao redefine e nao tira a diretoria da
-propria conta (evita trancar a sede sem ninguem que administre). Visitante nao
-tem senha e nao aparece na lista. Trocar senha usa o mesmo freio de tentativas
+propria conta (evita trancar a sede sem ninguem que administre). Trocar senha usa o mesmo freio de tentativas
 do login.
 
 Rotas: `PUT /api/senha`, `GET /api/membros`,

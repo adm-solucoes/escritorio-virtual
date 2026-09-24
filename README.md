@@ -109,7 +109,13 @@ segredo que assina as sessoes em `server/data/config.json`. A pasta esta no
 - **Chat da sede:** canais `#geral`, `#social` e `#projetos` mais mensagens diretas,
   com nao lidas, reacoes e formatacao (`**negrito**`, `_italico_`, `` `codigo` ``).
   As DMs sao identificadas pela conta, entao sobrevivem a recarregar a pagina e
-  continuam na lista mesmo com a outra pessoa offline.
+  continuam na lista mesmo com a outra pessoa offline. Tem freio de ritmo (5 mensagens em
+  3 segundos por conta) e contador perto do limite de 500 caracteres (`docs/plano-chat.md`).
+- **Reunioes da sede:** marcadas na Agenda (sala, dia, hora, duracao), com chamada que
+  funciona de qualquer canto do mapa e **lembrete** 5 minutos antes (`docs/plano-reunioes.md`).
+  Quem e de fora (cliente, candidato) entra pelo **link da reuniao**: so na chamada dela,
+  sem conta, numa sala de espera ate um membro deixar entrar
+  (`docs/plano-reuniao-por-link.md`).
 - Boneco com sprites reais estilo RPG (banco de assets aberto LPC - Liberated Pixel
   Cup), compostos em camadas (corpo, roupa, cabelo) e recoloridos no navegador conforme
   as escolhas da criacao de avatar — ver creditos em `public/assets/lpc/CREDITS.md`.
@@ -136,7 +142,8 @@ segredo que assina as sessoes em `server/data/config.json`. A pasta esta no
 - **Papel de administrador (diretoria):** quem esta em `DIRETORIA_EMAILS` e entra com o
   Google ja chega como diretoria. No cadastro com senha, o campo opcional "Sou da
   diretoria" aceita o `ADMIN_CODE` - sem valor padrao: sem a variavel, esse caminho fica
-  fechado. Diretoria decora a sede, convida visitantes e gerencia as contas.
+  fechado. Diretoria decora a sede e gerencia as contas. Quem e de fora (cliente, candidato) entra
+  so na chamada de UMA reuniao, pelo link dela, sem conta - ver `docs/plano-reuniao-por-link.md`.
 - Tela cheia com vinheta e iluminacao quente ("escritorio ao entardecer"), indicador de
   conexao e menu da conta flutuando como overlay discreto nos cantos.
 - Interface e todo o texto em portugues (pt-BR).

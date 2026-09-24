@@ -1140,6 +1140,9 @@ video.mostrando-tela {
 }
 .chamada-nome {
   position: absolute;
+  /* Acima do video: no quadro de VOCE o <video> entra na grade depois do nome (e
+     tem transform), e cobria o proprio nome - a pessoa nao via como aparece. */
+  z-index: 2;
   left: 10px;
   bottom: 10px;
   padding: 4px 10px;
@@ -1533,7 +1536,8 @@ video.mostrando-tela {
 .cal-reuniao.agora { border-color: #2f5d4a; box-shadow: inset 3px 0 0 #2f5d4a; }
 .cal-reuniao-titulo { font-size: 13px; font-weight: 650; }
 .cal-reuniao-quando { margin-top: 2px; font-size: 12px; color: var(--texto-fraco); }
-.cal-reuniao-acoes { margin-top: 8px; display: flex; gap: 8px; }
+/* Quebra linha: com "Copiar link" e "Novo link" sao ate quatro botoes numa lateral estreita */
+.cal-reuniao-acoes { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 8px; }
 .cal-reuniao-entrar {
   border: 0;
   border-radius: 7px;
@@ -1546,7 +1550,8 @@ video.mostrando-tela {
   cursor: pointer;
 }
 .cal-reuniao-entrar:hover { background: #264c3c; }
-.cal-reuniao-desmarcar {
+.cal-reuniao-desmarcar,
+.cal-reuniao-link {
   border: 0;
   border-radius: 7px;
   padding: 5px 8px;
@@ -1556,8 +1561,66 @@ video.mostrando-tela {
   font-size: 12px;
   cursor: pointer;
 }
-.cal-reuniao-desmarcar:hover { background: var(--painel-alt); color: var(--texto); }
+.cal-reuniao-desmarcar:hover,
+.cal-reuniao-link:hover { background: var(--painel-alt); color: var(--texto); }
 .cal-vazio { margin: 0; font-size: 12.5px; color: var(--texto-fraco); }
+.cal-reuniao-sino.ligado { color: #2f5d4a; font-weight: 650; }
+
+/* ---- lembrete de reuniao: por cima do escritorio, com a agenda fechada ----
+   Embaixo e no meio, acima da barra de controle: e onde o olho ja esta na hora de
+   entrar numa chamada, e nao briga com a barra "no ar" nem com o painel de
+   visitantes, que moram no alto. */
+.lembretes-reuniao {
+  position: absolute;
+  bottom: 86px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 29;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(460px, calc(100% - 28px));
+  pointer-events: none;
+}
+.lembretes-reuniao:empty { display: none; }
+.lembrete {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 14px;
+  background: rgba(24, 34, 29, 0.96);
+  color: #eaf3ee;
+  font-size: 12.5px;
+  box-shadow: 0 6px 20px rgba(12, 18, 15, 0.3);
+}
+.lembrete-titulo { font-weight: 650; overflow-wrap: anywhere; }
+.lembrete-quando { opacity: 0.78; flex: 1; min-width: 0; }
+.lembrete-entrar {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: #2f9d63;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lembrete-entrar:hover { background: #38b273; }
+.lembrete-fechar {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 2px 4px;
+  font: inherit;
+}
+.lembrete-fechar:hover { opacity: 1; }
+.lembrete-entrar:focus-visible, .lembrete-fechar:focus-visible { outline: 2px solid #9be3bd; outline-offset: 2px; }
 
 /* ---- chamada marcada: a barra que fica por cima do mapa ---- */
 /* Em cima e no meio: a pessoa continua ANDANDO pela sede durante a chamada, e
@@ -1606,6 +1669,49 @@ video.mostrando-tela {
   cursor: pointer;
 }
 .barra-chamada-sair:hover { background: rgba(255, 255, 255, 0.24); }
+
+/* ---- visitantes da reuniao: pedido de entrada e quem ja esta la ----
+   Abaixo da barra de chamada e da mesma familia (verde escuro): e a mesma
+   coisa, a chamada, so que com gente de fora batendo na porta. */
+.painel-visitantes {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(560px, calc(100% - 28px));
+  border-radius: 14px;
+  background: rgba(24, 34, 29, 0.96);
+  color: #eaf3ee;
+  font-size: 12.5px;
+  box-shadow: 0 6px 20px rgba(12, 18, 15, 0.3);
+}
+.painel-visitantes-lista { list-style: none; margin: 0; padding: 4px 0; }
+.visitantes-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.visitantes-linha + .visitantes-linha { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.visitantes-nome { font-weight: 650; overflow-wrap: anywhere; }
+.visitantes-sufixo { flex: 1; min-width: 0; opacity: 0.72; overflow-wrap: anywhere; }
+.visitantes-acoes { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+.visitantes-botao {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 11px;
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.visitantes-botao:hover { background: rgba(255, 255, 255, 0.24); }
+.visitantes-botao.primario { background: #2f9d63; color: #fff; }
+.visitantes-botao.primario:hover { background: #38b273; }
+.visitantes-botao:focus-visible { outline: 2px solid #9be3bd; outline-offset: 2px; }
 
 /* "Ligar" no topo do canal */
 .chat-ligar {
@@ -1814,6 +1920,37 @@ video.mostrando-tela {
 .trello-link:hover { text-decoration: underline; }
 .trello-topo-acoes { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
+/* Os setores: um botao por diretoria, em fileira que rola de lado se nao couber */
+.trello-setores {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px 0;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.trello-setor {
+  flex-shrink: 0;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: var(--painel);
+  color: var(--texto-fraco);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.trello-setor:hover { color: var(--texto); border-color: var(--borda-forte); }
+.trello-setor.ativo {
+  background: var(--indigo);
+  border-color: var(--indigo);
+  color: #fff;
+}
+.trello-setor.restrito::after { content: ' 🔒'; font-size: 11px; }
+.trello-setor:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+.trello-nota { margin: 8px 18px 0; font-size: 12px; color: var(--texto-fraco); }
+.trello-vazio-geral { padding: 8px 4px; }
+
 .trello-aviso {
   margin: 10px 18px 0;
   padding: 9px 12px;
@@ -1889,7 +2026,8 @@ video.mostrando-tela {
 .trello-cartao-rodape {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
+  flex-wrap: wrap;
   margin-top: 7px;
   font-size: 11px;
   color: var(--texto-fraco);
@@ -1901,7 +2039,20 @@ video.mostrando-tela {
 }
 .trello-prazo.atrasado { background: #fdeceb; color: #b42318; font-weight: 700; }
 .trello-prazo.concluido { background: #e7f7ee; color: #11704a; }
-.trello-membros { margin-left: auto; font-weight: 700; }
+.trello-membros { margin-left: auto; font-weight: 700; white-space: nowrap; }
+/* Selinhos do Kanban do CRM: descricao, checklist, comentarios, anexos */
+.trello-selo { font-weight: 600; white-space: nowrap; }
+.trello-selo.completo { color: #11704a; }
+/* Coluna grande: a tela recebe so os primeiros cartoes, e este link leva ao resto */
+.trello-mais {
+  display: block;
+  padding: 6px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--indigo);
+  text-decoration: none;
+}
+.trello-mais:hover { text-decoration: underline; }
 
 .painel-chat {
   position: absolute;
@@ -2180,6 +2331,27 @@ video.mostrando-tela {
   justify-content: center;
 }
 .chat-enviar:hover { background: var(--indigo-escuro); }
+/* O contador so aparece perto do limite (ver chat.js) e pega a folga que era do
+   botao de enviar, que continua no canto. */
+.chat-contador {
+  margin-left: auto;
+  margin-right: 8px;
+  font-size: 11px;
+  color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+.chat-contador:not(.oculto) + .chat-enviar { margin-left: 0; }
+.chat-contador.no-limite { color: var(--vermelho); font-weight: 700; }
+.chat-aviso {
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #fff4e5;
+  border: 1px solid #f3d29b;
+  color: #7a4a00;
+  font-size: 12px;
+  line-height: 1.4;
+}
 
 .btn-icone-pequeno {
   width: 32px;
@@ -2649,9 +2821,9 @@ video.mostrando-tela {
   .estante-capa:hover { transform: none; }
 }
 
-/* ------------------------------------------------------ convidar visitante
-   Painel que a diretoria abre pra gerar o link de convite.
-   Ver docs/plano-convidado.md. */
+/* -------------------------------------------------------- painel de aviso
+   Cartao centrado sobre a sede: o WhatsApp, o link de um movel e a troca de
+   senha usam. (O nome vem de quando o "convidar visitante" era o unico.) */
 .painel-convite {
   position: fixed;
   inset: 0;
@@ -2775,23 +2947,6 @@ video.mostrando-tela {
   background: var(--indigo);
   border-color: var(--indigo);
   color: #fff;
-}
-
-/* Visitante ve a capa, mas o livro e so da sede: capa um pouco apagada e um
-   cadeado no canto, pra o clique nao parecer quebrado. */
-.estante-capa.so-membros { cursor: default; }
-.estante-capa.so-membros img,
-.estante-capa.so-membros .estante-capa-desenhada { filter: saturate(0.55) brightness(0.92); }
-.estante-capa.so-membros::after {
-  content: '';
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 3;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(16, 13, 9, 0.72) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='6' y='10.5' width='12' height='9' rx='2' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center / 13px no-repeat;
 }
 
 /* ---------- leitor de livros ---------- */
@@ -3147,6 +3302,7 @@ video.mostrando-tela {
     line-height: 1.35;
   }
   .aviso-permissao { bottom: calc(var(--abas-altura) + 72px); }
+  .lembretes-reuniao { bottom: calc(var(--abas-altura) + 76px); }
   .grade-chamada { inset: calc(60px + env(safe-area-inset-top, 0px)) 8px calc(var(--abas-altura) + 72px) 8px; padding: 8px; }
   .grade-chamada-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
   .cartao-pessoa { width: min(280px, calc(100vw - 24px)); }

@@ -5,6 +5,9 @@
 (function () {
   let painel, grade, previewLocal, videoLocal, controlesLocais, selfNomeEl, selfFallback;
   let ativo = false;
+  // Na pagina de quem entrou pelo link da reuniao, a grade abre mesmo sem camera
+  // nem microfone: ele pode so assistir. Na sede, sem camera nao ha chamada.
+  let semCameraTambem = false;
   const tilesRemotos = new Map(); // id -> { el, video, nomeEl, fallback }
 
   function iniciais(nome) {
@@ -78,7 +81,7 @@
 
   function atualizar() {
     const peers = Calls.getPeersConectados();
-    const deveEstarAtivo = Calls.isCameraAtiva() && peers.length > 0;
+    const deveEstarAtivo = (Calls.isCameraAtiva() || semCameraTambem) && peers.length > 0;
 
     if (deveEstarAtivo !== ativo) {
       ativo = deveEstarAtivo;
@@ -103,7 +106,7 @@
     tilesRemotos.forEach((_, id) => { if (!idsAtuais.has(id)) removerTile(id); });
 
     peers.forEach((p) => {
-      const player = players.get(p.id);
+      const player = players.get(p.id) || Calls.jogadorDe(p.id);
       const t = garantirTileRemoto(p.id);
       t.nomeEl.textContent = nomeExibido(player);
 
@@ -136,7 +139,8 @@
 
   function estaAtivo() { return ativo; }
 
-  function init() {
+  function init(opcoes) {
+    semCameraTambem = !!(opcoes && opcoes.semCamera);
     painel = document.getElementById('grade-chamada');
     grade = document.getElementById('grade-chamada-tiles');
     previewLocal = document.getElementById('preview-local');

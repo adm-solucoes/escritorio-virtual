@@ -117,6 +117,50 @@ try {
   conferir('desmarcar o que nao existe avisa',
     reunioes.remover(99999, CAIO).erro, 'Essa reuniao nao existe mais.');
 
+  // ------------------------------------------------------- o link da reuniao
+  // Quem e de fora entra pelo link (ver docs/plano-reuniao-por-link.md). Aqui, as
+  // regras do link em si; o caminho inteiro - visitante, sala de espera, membro
+  // que admite - esta em testes/reuniao-link.js.
+  const linkReuniao = require('../server/link-reuniao.js');
+  const tokenDe = (r) => r.link.slice('/r/'.length);
+  const rL = reunioes.criar(
+    { titulo: 'Com link', inicio: DAQUI_A_UMA_HORA + 5 * 3600e3, minutos: 60, sala: 'huddle1' }, CAIO).reuniao;
+
+  conferir('toda reuniao nasce com um link /r/<token>', /^\/r\/[\w.-]+$/.test(rL.link), true);
+  conferir('  e a lista traz o link de cada uma', reunioes.listar().every((r) => /^\/r\//.test(r.link)), true);
+  conferir('  o token diz qual e a reuniao', linkReuniao.ler(tokenDe(rL)).id, rL.id);
+  conferir('  e o link acha a reuniao', (reunioes.porLink(linkReuniao.ler(tokenDe(rL))) || {}).id, rL.id);
+  conferir('  link de outra reuniao nao acha esta',
+    (reunioes.porLink(linkReuniao.ler(tokenDe(reunioes.listar().find((r) => r.id !== rL.id)))) || {}).id === rL.id, false);
+  conferir('  id igual mas criada em outro momento (disco apagado, id reaproveitado): nao acha',
+    reunioes.porLink({ id: rL.id, criadaEm: rL.criadaEm + 1, versao: 1 }), null);
+  conferir('  lixo no lugar do token nao acha nada',
+    [linkReuniao.ler(''), linkReuniao.ler('a.b'), linkReuniao.ler(null), linkReuniao.ler('x'.repeat(500))], [null, null, null, null]);
+
+  // Quando o link vale: meia hora antes ate duas horas depois do fim
+  const ini = rL.inicio;
+  const fimR = rL.fim;
+  conferir('horario: um milissegundo antes da abertura ainda esta fechado',
+    reunioes.estadoDoLink(rL, ini - reunioes.LINK_ABRE_ANTES_MS - 1), 'antes');
+  conferir('  na abertura (meia hora antes) abre', reunioes.estadoDoLink(rL, ini - reunioes.LINK_ABRE_ANTES_MS), 'aberta');
+  conferir('  durante a reuniao esta aberta', reunioes.estadoDoLink(rL, ini + 10 * 60000), 'aberta');
+  conferir('  passou do fim marcado, ainda abre (reuniao estoura)', reunioes.estadoDoLink(rL, fimR + 60 * 60000), 'aberta');
+  conferir('  no limite (duas horas depois do fim) ainda abre', reunioes.estadoDoLink(rL, fimR + reunioes.LINK_FECHA_DEPOIS_MS), 'aberta');
+  conferir('  um milissegundo depois, encerrou', reunioes.estadoDoLink(rL, fimR + reunioes.LINK_FECHA_DEPOIS_MS + 1), 'encerrada');
+
+  // "Novo link"
+  const tokenAntigo = tokenDe(rL);
+  conferir('novo link: quem nao marcou nao troca', reunioes.novoLink(rL.id, ZE).erro, 'So quem marcou (ou a diretoria) troca o link.');
+  conferir('  o link continua o mesmo', tokenDe(reunioes.listar().find((r) => r.id === rL.id)), tokenAntigo);
+  const trocado = reunioes.novoLink(rL.id, { uid: CAIO.uid, isAdmin: false });
+  conferir('  quem marcou troca', !!trocado.reuniao && tokenDe(trocado.reuniao) !== tokenAntigo, true);
+  conferir('  o link velho para de achar a reuniao', reunioes.porLink(linkReuniao.ler(tokenAntigo)), null);
+  conferir('  o novo acha', (reunioes.porLink(linkReuniao.ler(tokenDe(trocado.reuniao))) || {}).id, rL.id);
+  conferir('  a diretoria troca a de outra pessoa', !!reunioes.novoLink(rL.id, { uid: 'u-outra', isAdmin: true }).reuniao, true);
+  conferir('  reuniao que nao existe avisa', reunioes.novoLink(99999, CAIO).erro, 'Essa reuniao nao existe mais.');
+  conferir('  desmarcada, o link some',
+    (reunioes.remover(rL.id, CAIO), reunioes.porLink(linkReuniao.ler(tokenDe(trocado.reuniao)))), null);
+
   // --------------------------------------------------------------- no disco
   conferir('a lista sai em ordem de horario',
     reunioes.listar().map((r) => r.titulo),

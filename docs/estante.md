@@ -57,7 +57,7 @@ fora o resultado.
 **O que protege a rota**, ja que a imagem vem de fora e passa a ser servida pra
 sede inteira:
 
-- so **membro** manda (visitante nem abre o livro);
+- so quem esta logado manda;
 - o id tem que estar **no acervo**;
 - teto de **400 KB** (a capa de 150px da uns 7 KB);
 - o tipo e decidido pelos **bytes**, nao pelo cabecalho: um HTML com
@@ -129,10 +129,12 @@ pedacos) so pra mostrar a capa.
 ## Quem ve e quem le
 
 - **Da sede** (conta normal): ve as capas, le e baixa.
-- **Visitante** (link de convite): ve as capas, com um cadeado, e **nao abre**.
-  O acervo e material interno, e parte dele pode ter direito autoral que nao
-  permite mostrar pra fora. A trava e no servidor (`exigirMembro` na rota do
-  arquivo), nao so na tela - `testes/convidado.js` confere.
+- **Quem e de fora** (link de reuniao): **nao ve a estante**. O acervo e material
+  interno, e parte dele pode ter direito autoral que nao permite mostrar pra fora.
+  Quem entra pelo link de uma reuniao nao tem conta nem cookie, entao nenhuma rota
+  da estante o reconhece (`docs/plano-reuniao-por-link.md`). Ate 20/09/2026 havia
+  um "visitante" que via as capas com um cadeado - saiu junto com a conta de
+  visitante.
 
 ## Setores
 
@@ -192,7 +194,7 @@ Cloud - um "robo" com quem a pasta e compartilhada **so pra leitura**.
 
 Por que nao o login Google de cada pessoa: a pasta e da EMPRESA. Com o login de
 cada um, toda pessoa precisaria ter a pasta compartilhada com ela, conectar a
-conta e aceitar escopo de Drive - e visitante nao leria nada. Com a conta de
+conta e aceitar escopo de Drive - e quem de fora nao leria nada. Com a conta de
 servico, a pasta continua **privada** no Drive, e o livro chega no navegador
 pelo nosso servidor: ninguem ve link do Drive, ninguem sai da sede.
 
@@ -291,8 +293,7 @@ manda pra todo mundo; vai junto no `init`, entao quem chega depois ja ve.
 servidor procura no acervo e usa o titulo que ele mesmo tem. Aceitar o titulo do
 cliente deixaria qualquer pessoa transmitir o texto que quisesse pra tela de
 todo mundo - e esse texto aparece na capa e em cima da cabeca do boneco. Id que
-nao esta no acervo e ignorado, e visitante nao entra na lista (ele nem abre o
-livro; sem essa linha ele apareceria "lendo" sem estar).
+nao esta no acervo e ignorado.
 
 Na placa do mapa, "lendo" **ganha do status**: quem esta com o leitor na cara
 nao esta vendo o escritorio, e isso e mais util saber do que se a pessoa se
@@ -335,7 +336,7 @@ livros de papel). Mesma busca (agora tambem por autor) e mesmo filtro por setor.
   no backup): quem e da sede clica "Peguei este livro"; o livro passa a mostrar
   "Com Fulano" pra todo mundo, na hora. Outra pessoa nao consegue pegar o mesmo
   livro. Devolve quem pegou - ou a diretoria, pro livro de quem saiu da EJ nao
-  ficar preso. Visitante ve a lista mas nao pega. `testes/emprestimos.js`.
+  ficar preso. `testes/emprestimos.js`.
 - Livro de papel que tem PDF legal mostra a marca **PDF** e o botao "Ler o PDF".
 
 ### PDFs dos livros da sala: o que foi procurado

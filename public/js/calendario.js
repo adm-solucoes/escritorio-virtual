@@ -300,6 +300,26 @@
 
   // ---------- reunioes internas ----------
 
+  // O link da reuniao e pra quem e de FORA (cliente, candidato, entrevistado): quem
+  // e da sede entra pela agenda. Abre so aquela chamada, e um membro tem que deixar
+  // a pessoa entrar. Ver docs/plano-reuniao-por-link.md.
+  async function copiarLinkDaReuniao(r, botao) {
+    // `r.link` vem do servidor, a origem vem do navegador: assim o link sai certo
+    // em localhost e no endereco publico, sem o servidor adivinhar o dominio.
+    const url = location.origin + r.link;
+    const original = botao.textContent;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (e) {
+      // Sem HTTPS (rede local, IP) o navegador nao libera a area de transferencia:
+      // mostra o link pra a pessoa copiar na mao.
+      window.prompt('Copie o link da reuniao (Ctrl+C):', url);
+      return;
+    }
+    botao.textContent = 'Link copiado';
+    setTimeout(() => { botao.textContent = original; }, 1800);
+  }
+
   function montarReunioes() {
     if (!reunioesEl) return;
     reunioesEl.innerHTML = '';
@@ -342,10 +362,56 @@
       entrar.addEventListener('click', () => entrarNaReuniao(r));
       acoes.appendChild(entrar);
 
+      // O sino: quem marcou a reuniao ja e lembrado (pode desligar); os outros ligam
+      // aqui. Ver js/lembretes.js.
+      if (window.Lembretes) {
+        const sino = document.createElement('button');
+        sino.type = 'button';
+        sino.className = 'cal-reuniao-link cal-reuniao-sino';
+        const pintarSino = () => {
+          const ligado = Lembretes.ativo(r);
+          sino.textContent = ligado ? '🔔 Ligado' : '🔔 Lembrar';
+          sino.setAttribute('aria-pressed', ligado ? 'true' : 'false');
+          sino.title = ligado
+            ? 'Voce sera avisado 5 minutos antes e na hora. Clique pra desligar.'
+            : 'Avisar 5 minutos antes e na hora da reuniao';
+          sino.classList.toggle('ligado', ligado);
+        };
+        pintarSino();
+        sino.addEventListener('click', () => {
+          Lembretes.alternar(r);
+          pintarSino();
+        });
+        acoes.appendChild(sino);
+      }
+
+      if (r.link) {
+        const copiar = document.createElement('button');
+        copiar.type = 'button';
+        copiar.className = 'cal-reuniao-link';
+        copiar.textContent = 'Copiar link';
+        copiar.title = 'Link pra quem e de fora entrar so nesta reuniao';
+        copiar.addEventListener('click', () => copiarLinkDaReuniao(r, copiar));
+        acoes.appendChild(copiar);
+      }
+
       // Desmarcar so aparece pra quem pode. Quem CONFERE e o servidor; isto
       // aqui e so pra nao mostrar botao que ja nasce dando erro.
       const eu = Game.getPlayers && Game.getPlayers().get(Game.getSelfId());
       if (r.criadaPorUid === meuUid || (eu && eu.isAdmin)) {
+        // O link que vazou (grupo de WhatsApp, e-mail encaminhado) para de abrir
+        const novo = document.createElement('button');
+        novo.type = 'button';
+        novo.className = 'cal-reuniao-link';
+        novo.textContent = 'Novo link';
+        novo.title = 'O link atual para de funcionar e um novo vale no lugar';
+        novo.addEventListener('click', () => {
+          if (!confirm('Trocar o link de "' + r.titulo + '"?\n\nO link que voce ja mandou para de abrir. '
+            + 'Quem ja esta na reuniao continua.')) return;
+          Network.novoLinkDaReuniao(r.id);
+        });
+        acoes.appendChild(novo);
+
         const x = document.createElement('button');
         x.type = 'button';
         x.className = 'cal-reuniao-desmarcar';

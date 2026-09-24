@@ -6,9 +6,6 @@ const usuarios = require('./usuarios');
 
 const NOME_COOKIE = 'adm_sessao';
 const DURACAO_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias
-// Visitante tem sessao curta de proposito: acabou a apresentacao, acabou o
-// acesso. Ver docs/plano-convidado.md, secao 4.
-const DURACAO_CONVIDADO_MS = 12 * 60 * 60 * 1000; // 12 horas
 const PRODUCAO = process.env.NODE_ENV === 'production';
 
 // Modo de desenvolvimento: pula a tela de login entrando sempre numa conta fixa.
@@ -154,19 +151,6 @@ function exigirLogin(req, res, next) {
   next();
 }
 
-// Barra tambem o visitante. Vai nas rotas que MUDAM a sede (pegar mesa, mexer na
-// estante, decorar): convidado ve tudo e conversa com todo mundo, mas nao deixa
-// marca no escritorio de quem mora nele.
-function exigirMembro(req, res, next) {
-  const usuario = usuarioDaRequisicao(req);
-  if (!usuario) return res.status(401).json({ erro: 'Faca login pra continuar.' });
-  if (usuario.convidado) {
-    return res.status(403).json({ erro: 'Visitante nao mexe na sede. Crie uma conta pra isso.' });
-  }
-  req.usuario = usuario;
-  next();
-}
-
 // Barra quem nao e diretoria.
 function exigirDiretoria(req, res, next) {
   const usuario = usuarioDaRequisicao(req);
@@ -184,9 +168,7 @@ module.exports = {
   usuarioDaRequisicao,
   usuarioDoSocket,
   exigirLogin,
-  exigirMembro,
   exigirDiretoria,
-  DURACAO_CONVIDADO_MS,
   SEM_LOGIN,
   definirUsuarioDev,
   definirUsuarioBot,

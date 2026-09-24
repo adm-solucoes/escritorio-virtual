@@ -90,7 +90,7 @@ function pedir(cabecalhos) {
       [limpo.corpo.node === process.versions.node, limpo.corpo.nodeSuficiente], [true, true]);
     conferir('  a pasta de dados aceita escrita', limpo.corpo.dadosGravavel, true);
     conferir('  nenhuma integracao configurada', limpo.corpo.integracoes,
-      { google: false, drive: false, trello: false, turn: false, backup: false, email: false, discador: false });
+      { google: false, drive: false, trello: false, kanban: false, turn: false, backup: false, email: false, discador: false });
 
     // Conexao direta: o IP que chega e o da pessoa mesmo.
     conferir('sem proxy no meio: IP por pessoa',
@@ -111,12 +111,13 @@ function pedir(cabecalhos) {
       // sem o endereco publico, em producao o e-mail fica desligado (testes/email.js)
       SITE_URL: 'https://acme.sedes.exemplo.com.br',
       CRM_URL: 'https://crm-secreto.exemplo.com.br', CRM_CHAVE_DISCADOR: 'chave-do-discador-com-mais-de-trinta-e-dois',
+      CRM_CHAVE_KANBAN: 'chave-do-kanban-com-mais-de-trinta-e-dois-caracteres',
       NODE_ENV: 'production',
     };
     await subir(segredos);
     const cheio = await pedir();
     conferir('com tudo configurado: diz que esta configurado', cheio.corpo.integracoes,
-      { google: true, drive: true, trello: true, turn: true, backup: true, email: true, discador: true });
+      { google: true, drive: true, trello: false, kanban: true, turn: true, backup: true, email: true, discador: true });
     conferir('  e sabe que esta em producao', cheio.corpo.producao, true);
 
     // A REGRA: nenhum valor sai daqui.

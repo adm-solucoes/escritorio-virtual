@@ -101,16 +101,18 @@
         : (d.diretoria === 0 ? 'NINGUEM e diretoria: ninguem consegue convidar, decorar nem gerenciar contas.' : ''),
     });
 
+    // "Quadros das diretorias" esta ligado se o Kanban do CRM OU o Trello estiver
+    const ligadas = Object.assign({}, d.integracoes, { quadros: !!((d.integracoes || {}).kanban || (d.integracoes || {}).trello) });
     const integracoes = [
       ['google', 'Entrar com o Google e a Agenda', 'sem isso, e-mail da empresa entra com senha - conferido so se o e-mail (abaixo) estiver ligado'],
       ['email', 'E-mail (confirmar cadastro e senha nova)', 'cadastro com senha entra sem conferir o e-mail, e quem esquece a senha depende da diretoria (em producao, precisa tambem de SITE_URL)'],
       ['drive', 'Biblioteca no Drive', 'sem isso a estante mostra so os PDFs que estiverem na pasta local'],
-      ['trello', 'Quadro do Trello', 'a aba abre com aviso de "nao configurado"'],
+      ['quadros', 'Quadros das diretorias (Kanban do CRM ou Trello)', 'a aba de quadros abre com aviso de "nao configurado"'],
       ['turn', 'TURN da Cloudflare', 'chamada de video pode nao conectar em rede de empresa/faculdade'],
       ['backup', 'Backup automatico no Drive', 'se o disco sumir, nao ha de onde restaurar'],
     ];
     integracoes.forEach(([chave, nome, consequencia]) => {
-      const ligada = !!(d.integracoes || {})[chave];
+      const ligada = !!ligadas[chave];
       linha(lista, {
         estado: ligada ? 'ok' : 'atencao',
         titulo: nome + (ligada ? ': configurado' : ': nao configurado'),

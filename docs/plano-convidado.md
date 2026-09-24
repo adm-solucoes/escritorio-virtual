@@ -1,5 +1,12 @@
 # Entrar por link, sem conta
 
+> **SUBSTITUIDO em 20/09/2026** por `docs/plano-reuniao-por-link.md`. Este modelo
+> (uma conta de visitante que anda pela sede inteira) foi retirado: na pratica o
+> visitante lia os tres canais do chat e entrava na chamada de qualquer reuniao, e
+> fechar isso checagem por checagem nao se sustenta. Hoje quem e de fora entra so
+> na chamada de UMA reuniao, pelo link dela, sem conta e sem cookie. O texto abaixo
+> fica como historia - nao descreve mais o que o codigo faz.
+
 Escrito em 11/09/2026.
 
 ## 1. O problema

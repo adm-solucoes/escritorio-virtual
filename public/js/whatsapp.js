@@ -126,7 +126,7 @@
 
   function mostrarPara(usuario) {
     usuarioAtual = usuario;
-    const membro = !!usuario && !usuario.convidado;
+    const membro = !!usuario;
     const item = document.getElementById('btn-meu-whatsapp');
     if (item) item.classList.toggle('oculto', !membro);
   }

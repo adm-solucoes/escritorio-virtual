@@ -24,7 +24,7 @@ Se o navegador bloquear pop-up, a sede avisa pra liberar pro site.
 
 - O numero **nao vai na lista de pessoas** que o servidor manda pra todo mundo
   pelo socket. O cartao pede um por vez (`GET /api/pessoas/:uid/whatsapp`).
-- So **membro** consulta e cadastra; visitante recebe 403 nas duas rotas.
+- So quem esta logado consulta e cadastra.
 - Guardado so em digitos, com o 55 do Brasil quando vier DDD + numero
   (`(85) 99999-9999` -> `5585999999999`); com `+` na frente vale o pais digitado.
 - `testes/contas.js` confere tudo isso contra o servidor, inclusive que o numero

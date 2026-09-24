@@ -248,14 +248,6 @@ async function registrar(nome, email, admin) {
     conferir('  e a senha nao entra mais', (await pedir('/api/entrar', { metodo: 'POST', corpo: { email: 'ana@adm.com', senha: 'senha-propria-da-ana' } })).status, 401);
     conferir('  mas o e-mail fica livre pra conta nova', (await registrar('Ana de novo', 'ana@adm.com', false)).status, 200);
 
-    // ------------------------------------------------------------ visitante
-    const convite = await pedir('/api/convite', { metodo: 'POST', cookie: chefe.cookie });
-    const visita = await pedir('/api/convite/entrar', { metodo: 'POST', corpo: { token: convite.corpo.token, nome: 'Cliente' } });
-    conferir('visitante nao tem senha pra trocar', (await pedir('/api/senha', { metodo: 'PUT', cookie: visita.cookie, corpo: { senhaAtual: '', novaSenha: 'qualquer-coisa' } })).status, 403);
-    conferir('visitante nao aparece na lista de membros', (await pedir('/api/membros', { cookie: chefe.cookie })).corpo.membros.some((m) => m.nome === 'Cliente'), false);
-    conferir('visitante NAO consulta WhatsApp de ninguem', (await pedir('/api/pessoas/' + idChefe + '/whatsapp', { cookie: visita.cookie })).status, 403);
-    conferir('visitante nao cadastra WhatsApp', (await pedir('/api/perfil/whatsapp', { metodo: 'PUT', cookie: visita.cookie, corpo: { numero: '85999998888' } })).status, 403);
-
     // ---------------------------------------- cookie de antes desta mudanca
     conferir('a diretoria segue logada do inicio ao fim', (await pedir('/api/eu', { cookie: chefe.cookie })).status, 200);
 

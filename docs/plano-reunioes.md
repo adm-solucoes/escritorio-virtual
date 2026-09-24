@@ -69,7 +69,8 @@ tem o botao de sair.
 A aba Agenda mostra o Google de cada pessoa, e isso continua. Mas a sede so **le**
 do Google, de proposito (`docs/plano-calendario.md`): ela nunca escreve na agenda
 de ninguem. Entao nao havia como marcar uma reuniao DA SEDE - e reuniao interna e
-justamente a que nao precisa de convite, link nem conta Google.
+justamente a que nao precisa de convite nem conta Google. (Quem e de FORA da sede -
+cliente, candidato - entra pelo link da reuniao: `docs/plano-reuniao-por-link.md`.)
 
 As duas convivem na mesma grade da semana, e nao em listas separadas: a pessoa
 precisa ver o choque entre a reuniao da sede e o compromisso dela, e isso so
@@ -103,7 +104,6 @@ os lugares sao contados no mapa, tile de assento por tile de assento.
 | de 15 minutos a 8 horas | |
 | ate um dia pra tras, aceito | marcar as 14h faltando cinco minutos, ou registrar a que acabou, sao casos de verdade |
 | ate um ano pra frente | |
-| visitante nao marca | ele passa, nao mora aqui - mesmo motivo de nao pegar mesa |
 | desmarca quem marcou, ou a diretoria | prender a chave so em quem marcou deixaria a sede travada quando a pessoa sai da empresa |
 
 Reuniao que acabou ha mais de 12 horas sai da lista sozinha: senao a agenda da
@@ -124,6 +124,8 @@ na hora precisa ler que a reuniao foi marcada.
 | `public/js/chamada.js` | a barra de "voce esta no ar" |
 | `public/js/calendario.js` | o formulario, a lista lateral e o bloco na grade |
 | `public/js/chat.js` | o botao Ligar e o Entrar do convite |
+| `public/js/lembretes.js` | o aviso "comeca em 5 minutos" e o sino do cartao |
+| `public/js/visitantes.js`, `server/visitantes.js` | quem entra pelo link: o pedido (Admitir/Recusar) e a sala de espera |
 | `testes/reunioes.js` | 23 conferencias das regras de marcar |
 | `testes/proximidade.js` | 7 conferencias da chamada marcada, contra o mapa de verdade |
 
@@ -159,11 +161,33 @@ Dois erros meus no caminho, os dois achados medindo e nao chutando:
    estava errada assim mesmo, pelo caso que nenhum teste meu cobria: a sala
    ocupada.
 
+## Lembrete (20/09/2026)
+
+Marcar uma reuniao pra daqui a 3 minutos e ficar esperando o aviso nao dava em nada: o
+"comeca em 5 minutos" so existia pros compromissos do Google, e dentro do painel da
+Agenda - que fica fechado. Agora (`public/js/lembretes.js`, `testes/lembretes.js`):
+
+- aviso **por cima do escritorio**, embaixo e no meio: "Entrevista X comeca em 5
+  minutos - Entrar na chamada". Duas vezes: 5 minutos antes e na hora ("comecou
+  agora"); o segundo toma o lugar do primeiro. Cada um aparece uma vez por aba
+  (`sessionStorage`), entao recarregar a pagina no meio nao repete. Mais o som e a
+  notificacao do sistema quando a aba esta escondida (a mesma via do `avisos.js`);
+- **quem e lembrado**: reuniao da sede nao tem lista de convidados, e lembrar a sede
+  inteira de toda reuniao viraria sirene. Entao quem **marcou** e lembrado sem fazer
+  nada, e qualquer outro liga o sino **"Lembrar"** no cartao da reuniao. A escolha da
+  pessoa vale nos dois sentidos (quem marcou pode desligar) e fica no navegador
+  (`localStorage`), com a chave `id:criadaEm` - o id volta a 1 se o disco do servidor
+  for apagado;
+- quem ja esta na chamada da reuniao nao e lembrado dela.
+
+## Pra quem e de fora: o link
+
+Cliente, candidato e entrevistado entram pelo **link da reuniao**, so na chamada dela, sem
+conta: `docs/plano-reuniao-por-link.md`. No cartao da agenda: **Copiar link** (qualquer
+membro) e **Novo link** (so quem marcou, ou a diretoria: o link que vazou para de abrir).
+
 ## O que ainda nao tem
 
-- **Lembrete** quando a reuniao esta pra comecar. A grade ja avisa dos
-  compromissos do Google (`conferirProximos`); falta ligar as reunioes da sede no
-  mesmo aviso.
-- **Convidar gente especifica.** Hoje a reuniao e da sede inteira: quem quiser
+- **Convidar gente especifica da sede.** Hoje a reuniao e da sede inteira: quem quiser
   entra. Faz sentido enquanto a ADM couber numa sala.
 - **Repetir toda semana.**

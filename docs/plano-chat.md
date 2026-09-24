@@ -198,3 +198,32 @@ pelo `uid` (secao 4). Testado com Caio e Maria em abas separadas:
 - Maria fecha a aba e Caio da F5 de novo → "Maria" continua na lista, apagada e com
   o pontinho cinza de offline, e o historico abre normal.
 - Reacao tambem passou a ser por uid, entao a marca de "reagi nessa" nao se perde.
+
+## Ritmo e tamanho da mensagem (20/09/2026)
+
+Achados no comparativo com o Gather (`docs/comparativo-gather.md`, parte 1), os dois
+ja corrigidos:
+
+**Freio de ritmo** (`server/freio.js`, `testes/freio.js` e `testes/chat-ritmo.js`).
+Uma conta mandava ~990 mensagens por segundo e o servidor aceitava todas: o canal guarda
+200, entao a enchente apagava o historico de todo mundo e ainda entregava cada mensagem
+a cada pessoa online. Agora:
+
+- no maximo **5 mensagens em 3 segundos por CONTA** (o uid, nao o socket: abrir outra aba
+  nao dobra o limite, e recarregar a pagina nao o zera). DM conta igual ao canal;
+- reacao (no chat e no mapa) e clique, mas cada uma vira um `io.emit` pra sede inteira:
+  teto de **10 em 3 s**;
+- mensagem invalida (vazia, canal que nao existe, texto que nao e texto) **nao gasta a
+  cota** de ninguem: o freio vem depois da validacao;
+- o servidor **responde** ao cliente (`socket.emit('chat-mensagem', dados, aoResponder)`):
+  `{ ok: true }` ou `{ erro: 'ritmo', esperarMs }`. Barrada, a mensagem **volta pra caixa**
+  (a menos que a pessoa ja tenha comecado outra) e aparece "Muitas mensagens seguidas.
+  Espere N segundos e envie de novo." Cliente que manda sem callback continua funcionando
+  e e freado do mesmo jeito;
+- sem conexao, a caixa **nao apaga** o texto (antes ele sumia calado).
+
+**Limite de 500 caracteres.** O campo ja cortava no 500 (`maxlength`), mas sem dizer nada -
+quem colava um texto grande via a mensagem sair pela metade. Agora aparece o contador
+`430/500` nos ultimos 100 caracteres (vermelho no limite) e, ao colar algo que nao cabe,
+um aviso com o tamanho do texto. O limite em si nao mudou.
+

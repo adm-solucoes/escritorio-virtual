@@ -15,10 +15,17 @@
 // porque todo mundo esta no mesmo lugar - que e como funciona num escritorio.
 //
 // Isso tambem e o que faz a reuniao "ficar salva": a sala existe sempre, entao
-// nao ha link que vence, nem chamada que morre quando o ultimo sai.
+// nao ha chamada que morre quando o ultimo sai.
+//
+// PRA QUEM E DE FORA, HA O LINK
+// Quem e da sede entra pela agenda. Quem NAO e - cliente, candidato, entrevistado
+// - entra pelo link da reuniao (`/r/<token>`, ver server/link-reuniao.js), como
+// no Meet: so naquela chamada, sem conta, sem ver o mapa nem o chat. Ver
+// docs/plano-reuniao-por-link.md.
 const fs = require('fs');
 const map = require('./map');
 const pastaDados = require('./dados');
+const linkReuniao = require('./link-reuniao');
 
 const ARQUIVO = pastaDados.arquivo('reunioes.json');
 
@@ -29,6 +36,14 @@ const REUNIOES_MAX = 200;
 // Reuniao que acabou ha mais de meio dia sai da lista sozinha. Sem isso a
 // agenda da sede viraria um arquivo morto que so cresce.
 const GUARDAR_DEPOIS_MS = 12 * 60 * 60 * 1000;
+
+// Quando o LINK vale: abre meia hora antes (quem chega cedo nao fica olhando pra
+// uma tela de erro) e fecha duas horas depois do fim marcado (reuniao estoura, e
+// quem estava nela nao pode ser barrado ao voltar do banheiro). Antes e depois
+// disso o link mostra a hora, em vez de "invalido". Quem esta DENTRO nao e
+// tirado no fim: isto so decide quem entra.
+const LINK_ABRE_ANTES_MS = 30 * 60 * 1000;
+const LINK_FECHA_DEPOIS_MS = 2 * 60 * 60 * 1000;
 
 let reunioes = [];
 let proximoId = 1;
@@ -134,9 +149,61 @@ function limpar() {
   if (reunioes.length !== antes) salvar();
 }
 
+// O link e CALCULADO, nunca guardado: o arquivo so tem a versao dele. Assim o
+// reunioes.json nao vira um cofre de links, e o botao "Novo link" e so um numero.
+function versaoDoLink(r) {
+  return Number(r.linkVersao) || 1;
+}
+
+function caminhoDoLink(r) {
+  return '/r/' + linkReuniao.criar({ id: r.id, criadaEm: r.criadaEm, versao: versaoDoLink(r) });
+}
+
 function listar() {
   limpar();
-  return reunioes.slice().sort((a, b) => a.inicio - b.inicio);
+  return reunioes
+    .slice()
+    .sort((a, b) => a.inicio - b.inicio)
+    .map((r) => Object.assign({}, r, { link: caminhoDoLink(r) }));
+}
+
+function obter(id) {
+  limpar();
+  return reunioes.find((r) => r.id === Number(id)) || null;
+}
+
+// A reuniao a que esse link se refere, ou null: assinatura boa (ja conferida por
+// quem chamou `link-reuniao.ler`), reuniao ainda existente, a MESMA reuniao (o id
+// pode ter sido reaproveitado) e a versao atual do link. Nao olha o horario -
+// isso e `estadoDoLink`, porque fora do horario o visitante precisa ver a hora e
+// nao um erro.
+function porLink(lido) {
+  if (!lido) return null;
+  const r = obter(lido.id);
+  if (!r || r.criadaEm !== lido.criadaEm) return null;
+  if (versaoDoLink(r) !== lido.versao) return null;
+  return r;
+}
+
+// 'antes' | 'aberta' | 'encerrada'
+function estadoDoLink(r, agora) {
+  const t = agora === undefined ? Date.now() : agora;
+  if (t < r.inicio - LINK_ABRE_ANTES_MS) return 'antes';
+  if (t > r.fim + LINK_FECHA_DEPOIS_MS) return 'encerrada';
+  return 'aberta';
+}
+
+// "Novo link": o link que vazou (grupo de WhatsApp, e-mail encaminhado) para de
+// abrir e o novo vale no lugar. E de quem marcou ou da diretoria, como desmarcar.
+function novoLink(id, autor) {
+  const r = reunioes.find((x) => x.id === Number(id));
+  if (!r) return { erro: 'Essa reuniao nao existe mais.' };
+  if (r.criadaPorUid !== autor.uid && !autor.isAdmin) {
+    return { erro: 'So quem marcou (ou a diretoria) troca o link.' };
+  }
+  r.linkVersao = versaoDoLink(r) + 1;
+  salvar();
+  return { reuniao: Object.assign({}, r, { link: caminhoDoLink(r) }) };
 }
 
 // Devolve { erro } ou { reuniao }. O texto do erro vai direto pra tela, entao
@@ -185,10 +252,11 @@ function criar({ titulo, inicio, minutos, sala }, autor) {
     criadaPorUid: autor.uid,
     criadaPorNome: autor.nome,
     criadaEm: Date.now(),
+    linkVersao: 1,
   };
   reunioes.push(reuniao);
   salvar();
-  return { reuniao };
+  return { reuniao: Object.assign({}, reuniao, { link: caminhoDoLink(reuniao) }) };
 }
 
 // Desmarcar e de quem marcou, ou da diretoria. Reuniao da sede nao pode ser
@@ -210,9 +278,15 @@ carregar();
 
 module.exports = {
   listar,
+  obter,
   criar,
   remover,
+  novoLink,
+  porLink,
+  estadoDoLink,
   salasDisponiveis,
+  LINK_ABRE_ANTES_MS,
+  LINK_FECHA_DEPOIS_MS,
   // pros testes
   _limpar: () => { reunioes = []; proximoId = 1; },
   _ARQUIVO: ARQUIVO,

@@ -439,6 +439,8 @@
       inputEl.focus();
       inputEl.setSelectionRange(ini + 2, ini + 2);
     }
+    // os marcadores entram no texto sem passar pelo `input`
+    atualizarContador();
   }
 
   function ajustarAltura() {
@@ -446,13 +448,74 @@
     inputEl.style.height = Math.min(140, inputEl.scrollHeight) + 'px';
   }
 
+  // ---------- avisos do campo de mensagem ----------
+
+  let avisoTimer = null;
+  function avisoDoChat(texto) {
+    const el = document.getElementById('chat-aviso');
+    if (!el) return;
+    clearTimeout(avisoTimer);
+    el.textContent = texto || '';
+    el.classList.toggle('oculto', !texto);
+    if (texto) avisoTimer = setTimeout(() => el.classList.add('oculto'), 5000);
+  }
+
+  // O limite (o mesmo do `maxlength` do campo e do servidor) era cortado sem
+  // avisar: quem colava um texto grande via a mensagem sair pela metade. Agora o
+  // contador aparece nos ultimos 100 caracteres, e a colagem que estoura diz o
+  // que aconteceu.
+  function limiteDoCampo() {
+    return Number(inputEl.getAttribute('maxlength')) || 500;
+  }
+
+  function atualizarContador() {
+    const el = document.getElementById('chat-contador');
+    if (!el) return;
+    const limite = limiteDoCampo();
+    const n = inputEl.value.length;
+    el.classList.toggle('oculto', n < limite - 100);
+    el.classList.toggle('no-limite', n >= limite);
+    el.textContent = n + '/' + limite;
+  }
+
+  function aoColar(ev) {
+    const dados = ev.clipboardData || window.clipboardData;
+    const colado = dados ? String(dados.getData('text') || '') : '';
+    const limite = limiteDoCampo();
+    const selecionado = inputEl.selectionEnd - inputEl.selectionStart;
+    const cabe = limite - (inputEl.value.length - selecionado);
+    if (colado.length > cabe) {
+      avisoDoChat('O texto colado tem ' + colado.length + ' caracteres e o limite e ' + limite
+        + ': o final foi cortado. Divida em duas mensagens.');
+    }
+  }
+
   function enviar(e) {
     if (e) e.preventDefault();
     const texto = inputEl.value.trim();
     if (!texto || !conversaAtual) return;
-    Network.sendChatMessage(conversaAtual, texto);
+
+    const saiu = Network.sendChatMessage(conversaAtual, texto, (resposta) => {
+      if (!resposta || resposta.erro !== 'ritmo') return;
+      // Barrada por mandar rapido demais: o texto nao pode sumir. Volta pra caixa,
+      // a menos que a pessoa ja tenha comecado outra mensagem.
+      if (!inputEl.value.trim()) {
+        inputEl.value = texto;
+        ajustarAltura();
+        atualizarContador();
+      }
+      const seg = Math.max(1, Math.ceil((resposta.esperarMs || 1000) / 1000));
+      avisoDoChat('Muitas mensagens seguidas. Espere ' + seg + (seg === 1 ? ' segundo' : ' segundos') + ' e envie de novo.');
+    });
+    if (!saiu) {
+      // Sem conexao a mensagem nao vai, e apagar o campo perderia o que a pessoa escreveu.
+      avisoDoChat('Sem conexao com a sede agora. Sua mensagem continua aqui - tente de novo em instantes.');
+      return;
+    }
+    avisoDoChat('');
     inputEl.value = '';
     ajustarAltura();
+    atualizarContador();
   }
 
   // ---------- abrir/fechar ----------
@@ -509,7 +572,11 @@
       });
     }
 
-    inputEl.addEventListener('input', ajustarAltura);
+    inputEl.addEventListener('input', () => {
+      ajustarAltura();
+      atualizarContador();
+    });
+    inputEl.addEventListener('paste', aoColar);
     inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) enviar(e);
     });

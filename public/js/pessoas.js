@@ -78,7 +78,7 @@
     // WhatsApp so aparece se a pessoa cadastrou o numero. Pedido na hora, um
     // cartao por vez: o numero nao anda na lista de gente (ver js/whatsapp.js).
     // Se o cartao ja trocou de pessoa quando a resposta chegar, nao poe nada.
-    if (window.WhatsApp && p.uid && !p.convidado && p.id !== Game.getSelfId()) {
+    if (window.WhatsApp && p.uid && p.id !== Game.getSelfId()) {
       WhatsApp.numeroDe(p.uid).then((numero) => {
         if (!numero || idDoCartao !== id) return;
         const btnZap = document.createElement('button');

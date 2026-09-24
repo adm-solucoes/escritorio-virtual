@@ -55,6 +55,24 @@ Acontece de verdade quando o outro lado recarrega a pagina no meio da
 negociacao. Agora, depois de 12s sem conectar, o par e derrubado e a proximidade
 refaz a chamada sozinha no quadro seguinte.
 
+### ...mas nao pra sempre (20/09/2026)
+
+Refazer no quadro seguinte curou o caso do recarregar - e criou outro: quem **nunca
+atende** (aba parada, sem camera, atras de uma rede que nao passa) era recontactado a
+cada 12 s, indefinidamente. Medido: ~30 conexoes fechadas em ~7 minutos pra dois
+bonecos que nunca respondiam, cada uma com oferta, candidatos ICE e conexao nova.
+Agora cada falha seguida com a **mesma pessoa dobra a espera**: 15 s, 30 s, 60 s, 120 s,
+240 s, teto de 5 minutos. Zera quando a conexao **conecta**, ou quando a pessoa sai do
+mapa (ou troca de id). Quem conectou e depois caiu (rede) reconecta na hora - nao e "quem
+nunca atende". So a proposta e adiada: se a outra pessoa chamar, a oferta e respondida
+como sempre. Um evento tardio de uma conexao ja trocada (o id e o mesmo) tambem nao
+derruba mais a conexao nova. `testes/calls-tentativas.js`.
+
+O `init` do jogo chega de novo a cada reconexao (servidor reiniciado, rede que volta), e
+o `Calls.init` empilhava um ouvinte de sinalizacao e um clique por botao a cada volta - o
+botao de microfone passava a "desligar e ligar". Agora ele so troca o id na volta.
+`testes/calls-visitantes.js`.
+
 ## 4. Sala fechada manda mais que distancia
 
 Depois dos tres acima, o que faltava do Gather: **area privativa**. A regra vale

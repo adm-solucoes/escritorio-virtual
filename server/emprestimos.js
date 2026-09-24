@@ -68,7 +68,6 @@ function listar() {
 function pegar(id, usuario) {
   const livro = catalogo.find((l) => l.id === id);
   if (!livro) return { erro: 'Esse livro nao esta no catalogo.', status: 404 };
-  if (usuario.convidado) return { erro: 'Visitante nao leva livro da sala.', status: 403 };
   const atual = emprestimos[id];
   if (atual && atual.uid !== usuario.id) {
     return { erro: 'Esse livro esta com ' + atual.nome + '.', status: 409 };

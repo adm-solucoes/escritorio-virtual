@@ -4810,7 +4810,9 @@
     Chat.init();
     if (window.Avisos) Avisos.init();
     Calendario.init();
+    if (window.Lembretes) Lembretes.init();
     if (window.Chamada) Chamada.init();
+    if (window.Visitantes) Visitantes.init();
     Trello.init();
     if (window.Discador) Discador.init();
     Estante.iniciar();

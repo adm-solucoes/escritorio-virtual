@@ -56,9 +56,6 @@
 
   function preencherMenu(usuario) {
     document.getElementById('menu-conta-nome').textContent = usuario.nome;
-    // "Convidar visitante" so pra diretoria (o servidor tambem recusa, mas
-    // botao que da 403 e botao quebrado).
-    Convite.mostrarPara(usuario);
     // Trocar senha (membro) e Membros da sede (diretoria); abre a troca
     // obrigatoria se a pessoa entrou com senha provisoria.
     Membros.mostrarPara(usuario);
@@ -71,13 +68,9 @@
     // "Entrou em 06/09/2026", como no cartao da referencia. Conta antiga sem a
     // data nao inventa nada: mostra o e-mail, que e o que sempre existe.
     const desde = document.getElementById('menu-conta-desde');
-    // Visitante nao ve "Entrou em 11/09" nem um e-mail sintetico que ele nunca
-    // digitou: ve o que ele e.
-    desde.textContent = usuario.convidado
-      ? 'Visitante'
-      : (usuario.criadoEm
-        ? 'Entrou em ' + new Date(usuario.criadoEm).toLocaleDateString('pt-BR')
-        : usuario.email);
+    desde.textContent = usuario.criadoEm
+      ? 'Entrou em ' + new Date(usuario.criadoEm).toLocaleDateString('pt-BR')
+      : usuario.email;
   }
 
   function fecharMenu() {
@@ -87,7 +80,6 @@
 
   CartaoMesa.init();
   ItemMesa.init();
-  Convite.init(fecharMenu);
   Membros.init(fecharMenu);
   WhatsApp.init(fecharMenu);
   Auth.init(depoisDoLogin);

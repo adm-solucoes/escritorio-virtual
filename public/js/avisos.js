@@ -230,5 +230,5 @@
     setTimeout(oferecerPermissao, 2500);
   }
 
-  window.Avisos = { init, _meMencionou: meMencionou };
+  window.Avisos = { init, avisar, _meMencionou: meMencionou };
 })();
