@@ -1,4 +1,4 @@
-// Chat da sede: canais fixos + mensagens diretas, no formato da referencia do
+// Chat da sede: canais (os de sempre e um por diretoria) + mensagens diretas, no formato da referencia do
 // Gather (coluna de conversas + conversa aberta). Ver docs/plano-chat.md.
 // Historico e presenca vivem em memoria no servidor: somem se ele reiniciar.
 (function () {
@@ -136,22 +136,32 @@
     return av;
   }
 
+  // "gestao" acha "Gente e Gestão": os canais das diretorias tem acento e maiuscula.
+  function semAcento(s) {
+    return String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  }
+
+  function secaoDeCanais(titulo, lista) {
+    if (!lista.length) return;
+    conversasEl.appendChild(textoEl('chat-secao', titulo));
+    lista.forEach((c) => {
+      const id = 'canal:' + c.id;
+      conversasEl.appendChild(montarItemConversa(id, [
+        textoEl('chat-conversa-cerquilha', '#'),
+        textoEl('chat-conversa-nome', c.nome),
+      ], naoLidas.get(id) || 0));
+    });
+  }
+
   function renderConversas() {
     if (!conversasEl) return;
-    const filtro = filtroBusca.trim().toLowerCase();
+    const filtro = semAcento(filtroBusca.trim());
     conversasEl.innerHTML = '';
 
-    const canaisFiltrados = canais.filter((c) => !filtro || c.nome.includes(filtro));
-    if (canaisFiltrados.length) {
-      conversasEl.appendChild(textoEl('chat-secao', 'Canais'));
-      canaisFiltrados.forEach((c) => {
-        const id = 'canal:' + c.id;
-        conversasEl.appendChild(montarItemConversa(id, [
-          textoEl('chat-conversa-cerquilha', '#'),
-          textoEl('chat-conversa-nome', c.nome),
-        ], naoLidas.get(id) || 0));
-      });
-    }
+    // Os de sempre em "Canais"; um por diretoria em "Diretorias" (server/canais.js).
+    const canaisFiltrados = canais.filter((c) => !filtro || semAcento(c.nome).includes(filtro));
+    secaoDeCanais('Canais', canaisFiltrados.filter((c) => c.grupo !== 'diretoria'));
+    secaoDeCanais('Diretorias', canaisFiltrados.filter((c) => c.grupo === 'diretoria'));
 
     // Quem esta online agora, mais as conversas antigas de quem ja saiu.
     const entradas = new Map(); // uid -> { uid, nome, jogador }
@@ -165,7 +175,7 @@
     });
 
     const pessoas = Array.from(entradas.values())
-      .filter((e) => !filtro || e.nome.toLowerCase().includes(filtro))
+      .filter((e) => !filtro || semAcento(e.nome).includes(filtro))
       // online primeiro, depois em ordem alfabetica
       .sort((a, b) => (!!b.jogador - !!a.jogador) || a.nome.localeCompare(b.nome));
 
@@ -524,6 +534,7 @@
     aberto = true;
     painel.classList.remove('oculto');
     document.getElementById('btn-chat').classList.add('ativo');
+    if (window.Paineis) Paineis.abriu('chat');
     if (conversaId) abrirConversa(conversaId);
     else if (conversaAtual) abrirConversa(conversaAtual);
     // Abrindo pelo botao do chat, no celular a pessoa cai na LISTA de conversas -
@@ -537,7 +548,9 @@
     aberto = false;
     painel.classList.add('oculto');
     document.getElementById('btn-chat').classList.remove('ativo');
+    if (window.Paineis) Paineis.fechou('chat');
   }
+  if (window.Paineis) Paineis.registrar('chat', { fechar, botao: 'btn-chat', esc: true });
 
   // Aceita o id do socket (vem do cartao da pessoa) ou o uid direto.
   function abrirDm(outroId) {

@@ -1,5 +1,6 @@
 // Gestao de conta: trocar a propria senha e, pra diretoria, a lista de membros
-// (redefinir senha, dar/tirar diretoria, remover quem saiu da ADM).
+// (redefinir senha, dar/tirar diretoria, remover quem saiu da ADM) - aberta pelo
+// painel Diretoria (js/diretoria.js).
 //
 // Existe porque a EJ troca de gente todo semestre. Sem isto, ex-membro seguia
 // com acesso ao chat, a biblioteca e ao Trello, e quem esquecia a senha ficava
@@ -227,7 +228,7 @@
     const membro = !!usuario;
     // quem entra com o Google nao tem senha pra trocar
     document.getElementById('btn-trocar-senha').classList.toggle('oculto', !(membro && usuario.temSenha));
-    document.getElementById('btn-membros').classList.toggle('oculto', !(membro && usuario.isAdmin));
+    // "Membros da sede" mora no painel Diretoria (js/diretoria.js), que chama abrirMembros.
     if (membro && usuario.senhaTemporaria) abrirSenha({ provisoria: true });
   }
 
@@ -245,10 +246,6 @@
       if (aoAbrir) aoAbrir();
       abrirSenha();
     });
-    document.getElementById('btn-membros').addEventListener('click', () => {
-      if (aoAbrir) aoAbrir();
-      abrirMembros();
-    });
     formSenha.addEventListener('submit', salvarSenha);
     document.getElementById('btn-fechar-senha').addEventListener('click', fecharSenha);
     document.getElementById('btn-fechar-membros').addEventListener('click', fecharMembros);
@@ -261,5 +258,5 @@
     });
   }
 
-  window.Membros = { init, mostrarPara, abrirSenha };
+  window.Membros = { init, mostrarPara, abrirSenha, abrirMembros };
 })();

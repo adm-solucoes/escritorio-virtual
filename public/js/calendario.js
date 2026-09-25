@@ -29,6 +29,14 @@
   let aberto = false;
   let jaAvisados = new Set();
 
+  // Prazos dos cartoes do Kanban do CRM (server/prazos.js): uma faixa em cima da grade
+  // e uma lista na lateral. "So os meus" e pelo NOME no CRM, e fica guardado no navegador.
+  const CHAVE_SO_MEUS = 'agenda:prazos-so-meus';
+  const PRAZOS_NA_LISTA_DIAS = 14;
+  let prazos = { ligado: false, prazos: [], aviso: null };
+  let soMeus = false;
+  try { soMeus = localStorage.getItem(CHAVE_SO_MEUS) === '1'; } catch (e) { /* sem storage: comeca com todos */ }
+
   function inicioDaSemana(d) {
     const c = new Date(d);
     c.setHours(0, 0, 0, 0);
@@ -47,6 +55,157 @@
   function horaDe(ts) {
     const d = new Date(ts);
     return doisDigitos(d.getHours()) + ':' + doisDigitos(d.getMinutes());
+  }
+
+  // ---------- prazos do Kanban (regras puras: testes/prazos.js) ----------
+
+  // O prazo do Kanban e um DIA ('AAAA-MM-DD'), sem hora: compara no fuso de quem olha.
+  function diaLocal(d) {
+    return d.getFullYear() + '-' + doisDigitos(d.getMonth() + 1) + '-' + doisDigitos(d.getDate());
+  }
+
+  function diasEntre(de, ate) {
+    const utc = (s) => { const [a, m, d] = s.split('-').map(Number); return Date.UTC(a, m - 1, d); };
+    return Math.round((utc(ate) - utc(de)) / 86400000);
+  }
+
+  // "hoje", "amanha", "em 3 dias", "atrasado 2 dias" - e "qua, 30/09" pra longe.
+  function rotuloDoPrazo(prazo, hoje) {
+    const n = diasEntre(hoje, prazo);
+    if (n === 0) return 'hoje';
+    if (n === 1) return 'amanha';
+    if (n === -1) return 'atrasado 1 dia';
+    if (n < 0) return 'atrasado ' + (-n) + ' dias';
+    if (n < 7) return 'em ' + n + ' dias';
+    const [a, m, d] = prazo.split('-').map(Number);
+    return DIAS[new Date(a, m - 1, d).getDay()] + ', ' + doisDigitos(d) + '/' + doisDigitos(m);
+  }
+
+  // A lista da lateral: o que falta fazer, dos atrasados ate daqui a duas semanas.
+  function prazosDaLista(lista, hoje, soOsMeus) {
+    return lista.filter((p) => !p.concluido && (!soOsMeus || p.meu)
+      && diasEntre(hoje, p.prazo) <= PRAZOS_NA_LISTA_DIAS);
+  }
+
+  function prazosVisiveis() {
+    return prazos.prazos.filter((p) => !soMeus || p.meu);
+  }
+
+  function linkDoPrazo(p, classe, hoje) {
+    const a = document.createElement('a');
+    a.href = p.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    const atrasado = !p.concluido && diasEntre(hoje, p.prazo) < 0;
+    a.className = classe + (atrasado ? ' atrasado' : '') + (p.concluido ? ' feito' : '') + (p.meu ? ' meu' : '');
+    a.title = p.nome + ' · ' + p.quadro + ' › ' + p.lista + ' · ' + (p.concluido ? 'feito' : rotuloDoPrazo(p.prazo, hoje))
+      + ' · abre no CRM';
+    return a;
+  }
+
+  // A faixa "Prazos" logo abaixo dos dias: so aparece na semana que tem algum.
+  function montarFaixaDePrazos() {
+    if (!prazos.ligado) return null;
+    const hoje = diaLocal(new Date());
+    const porDia = [];
+    let algum = false;
+    for (let i = 0; i < 7; i++) {
+      const dia = new Date(semanaBase);
+      dia.setDate(dia.getDate() + i);
+      const chave = diaLocal(dia);
+      const doDia = prazosVisiveis().filter((p) => p.prazo === chave);
+      if (doDia.length) algum = true;
+      porDia.push(doDia);
+    }
+    if (!algum) return null;
+
+    const faixa = document.createElement('div');
+    faixa.className = 'cal-prazos-faixa';
+    const rotulo = document.createElement('div');
+    rotulo.className = 'cal-prazos-faixa-rotulo';
+    rotulo.textContent = 'Prazos';
+    faixa.appendChild(rotulo);
+    porDia.forEach((doDia) => {
+      const cel = document.createElement('div');
+      cel.className = 'cal-prazos-dia';
+      doDia.slice(0, 3).forEach((p) => {
+        const a = linkDoPrazo(p, 'cal-prazo', hoje);
+        a.textContent = p.nome;
+        cel.appendChild(a);
+      });
+      if (doDia.length > 3) {
+        const mais = document.createElement('span');
+        mais.className = 'cal-prazo-mais';
+        mais.textContent = '+' + (doDia.length - 3);
+        mais.title = doDia.slice(3).map((p) => p.nome).join('\n');
+        cel.appendChild(mais);
+      }
+      faixa.appendChild(cel);
+    });
+    return faixa;
+  }
+
+  function montarPrazos() {
+    const rotuloEl = document.getElementById('cal-prazos-rotulo');
+    const caixa = document.getElementById('cal-prazos');
+    if (!rotuloEl || !caixa) return;
+    // Sede sem o Kanban do CRM: a secao nem aparece.
+    rotuloEl.classList.toggle('oculto', !prazos.ligado);
+    caixa.classList.toggle('oculto', !prazos.ligado);
+    if (!prazos.ligado) return;
+    caixa.innerHTML = '';
+
+    if (prazos.aviso) {
+      const aviso = document.createElement('p');
+      aviso.className = 'cal-vazio';
+      aviso.textContent = prazos.aviso;
+      caixa.appendChild(aviso);
+    }
+    const hoje = diaLocal(new Date());
+    const lista = prazosDaLista(prazos.prazos, hoje, soMeus);
+    if (!lista.length) {
+      if (prazos.aviso && !prazos.prazos.length) return;
+      const vazio = document.createElement('p');
+      vazio.className = 'cal-vazio';
+      vazio.textContent = soMeus
+        ? 'Nenhum prazo seu nas proximas duas semanas (pelo seu nome no CRM).'
+        : 'Nenhum prazo nas proximas duas semanas.';
+      caixa.appendChild(vazio);
+      return;
+    }
+    lista.slice(0, 12).forEach((p) => {
+      const item = linkDoPrazo(p, 'cal-item cal-prazo-item', hoje);
+      const barra = document.createElement('span');
+      barra.className = 'cal-item-cor';
+      item.appendChild(barra);
+      const txt = document.createElement('div');
+      const t = document.createElement('div');
+      t.className = 'cal-item-titulo';
+      t.textContent = p.nome;
+      const q = document.createElement('div');
+      q.className = 'cal-item-quando';
+      q.textContent = rotuloDoPrazo(p.prazo, hoje) + ' · ' + p.quadro;
+      txt.appendChild(t);
+      txt.appendChild(q);
+      item.appendChild(txt);
+      caixa.appendChild(item);
+    });
+    if (lista.length > 12) {
+      const mais = document.createElement('p');
+      mais.className = 'cal-vazio';
+      mais.textContent = 'e mais ' + (lista.length - 12) + ' no Kanban do CRM.';
+      caixa.appendChild(mais);
+    }
+  }
+
+  function receberPrazos(dados) {
+    prazos = {
+      ligado: !!(dados && dados.ligado),
+      prazos: (dados && Array.isArray(dados.prazos)) ? dados.prazos : [],
+      aviso: (dados && dados.aviso) || null,
+    };
+    montarPrazos();
+    if (aberto) montarGrade();
   }
 
   // ---------- grade ----------
@@ -76,6 +235,9 @@
       cabecalho.appendChild(cel);
     }
     gradeEl.appendChild(cabecalho);
+
+    const faixaDePrazos = montarFaixaDePrazos();
+    if (faixaDePrazos) gradeEl.appendChild(faixaDePrazos);
 
     // corpo: regua de horas + sete colunas
     const corpo = document.createElement('div');
@@ -287,7 +449,9 @@
   function abrir() {
     aberto = true;
     painel.classList.remove('oculto');
+    if (window.Paineis) Paineis.abriu('agenda');
     Network.pedirAgenda();
+    if (Network.pedirPrazos) Network.pedirPrazos();
     atualizarStatusGoogle();
     montarGrade();
     montarLista();
@@ -296,7 +460,9 @@
   function fechar() {
     aberto = false;
     painel.classList.add('oculto');
+    if (window.Paineis) Paineis.fechou('agenda');
   }
+  if (window.Paineis) Paineis.registrar('agenda', { fechar, botao: 'btn-calendario', esc: true });
 
   // ---------- reunioes internas ----------
 
@@ -574,6 +740,18 @@
 
     Network.on('agenda', receberAgenda);
     Network.on('reunioes', receberReunioes);
+    Network.on('prazos', receberPrazos);
+
+    const soMeusEl = document.getElementById('cal-prazos-meus');
+    if (soMeusEl) {
+      soMeusEl.checked = soMeus;
+      soMeusEl.addEventListener('change', () => {
+        soMeus = soMeusEl.checked;
+        try { localStorage.setItem(CHAVE_SO_MEUS, soMeus ? '1' : '0'); } catch (e) { /* so nao lembra */ }
+        montarPrazos();
+        montarGrade();
+      });
+    }
     // O servidor recusou (choque de horario, titulo vazio, sala errada): o
     // formulario volta com o motivo dele, nao com um texto meu inventado aqui.
     Network.on('reuniao-recusada', (motivo) => {
@@ -586,5 +764,9 @@
     setInterval(conferirProximos, 30 * 1000);
   }
 
-  window.Calendario = { init, abrir };
+  window.Calendario = {
+    init, abrir,
+    // pro testes/prazos.js
+    _rotuloDoPrazo: rotuloDoPrazo, _prazosDaLista: prazosDaLista, _diasEntre: diasEntre,
+  };
 })();

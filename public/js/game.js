@@ -4805,10 +4805,10 @@
     Network.on('chat-historico', (data) => Chat.receberHistorico(data));
     Network.on('chat-reacao', (data) => Chat.receberReacao(data));
 
-    Rooms.init();
     CallGrid.init();
     Chat.init();
     if (window.Avisos) Avisos.init();
+    if (window.Central) Central.init();
     Calendario.init();
     if (window.Lembretes) Lembretes.init();
     if (window.Chamada) Chamada.init();

@@ -272,6 +272,7 @@
   function abrir() {
     aberto = true;
     painel.classList.remove('oculto');
+    if (window.Paineis) Paineis.abriu('quadros');
     if (!carregado) {
       avisoEl.textContent = 'Carregando o quadro...';
       avisoEl.classList.remove('oculto');
@@ -282,7 +283,9 @@
   function fechar() {
     aberto = false;
     painel.classList.add('oculto');
+    if (window.Paineis) Paineis.fechou('quadros');
   }
+  if (window.Paineis) Paineis.registrar('quadros', { fechar, botao: 'btn-trello', esc: true });
 
   function init() {
     painel = document.getElementById('painel-trello');

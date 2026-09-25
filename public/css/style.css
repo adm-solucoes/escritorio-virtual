@@ -838,6 +838,28 @@ button { font-family: inherit; }
   margin-top: 1px;
 }
 .trilho-espaco { flex: 1; }
+/* Nome curto embaixo de cada icone: so o desenho nao dizia o que cada botao faz, e a
+   dica do mouse (title) nao existe no celular. A largura do trilho continua 62 px. */
+.trilho-btn { width: 56px; height: 50px; gap: 3px; flex-shrink: 0; }
+.trilho-nome {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.1;
+  max-width: 54px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* No computador o grupo do "Mais" nao existe: os botoes ficam no trilho, na ordem. */
+.trilho-mais-grupo { display: contents; }
+.trilho-so-celular { display: none; }
+/* Janela baixa: os nomes saem e os botoes voltam ao tamanho de antes, pra caber tudo.
+   (Sem rolagem no trilho: o menu da conta mora dentro dele e seria cortado.) */
+@media (min-width: 641px) and (max-height: 660px) {
+  .trilho { gap: 4px; }
+  .trilho-btn { width: 42px; height: 42px; }
+  .trilho-nome { display: none; }
+}
 .chat-badge {
   position: absolute;
   top: 5px;
@@ -1170,71 +1192,73 @@ video.mostrando-tela {
   gap: 6px;
 }
 
-/* ---- paineis laterais/modais ---- */
-.painel-salas {
+/* ---- Pessoas: quem esta na sede, agrupado por sala (js/pessoas.js) ----
+   A Diretoria (js/diretoria.js) e os Avisos (js/central.js) usam a mesma casca. */
+.painel-pessoas,
+.painel-diretoria,
+.painel-avisos {
   position: absolute;
-  inset: 0;
-  background: rgba(17,24,39,0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-.painel-salas-card {
+  top: 0;
+  left: 62px;
+  bottom: 0;
+  width: min(360px, calc(100vw - 62px));
   background: var(--painel);
-  border-radius: 16px;
-  padding: 20px;
-  width: min(760px, 92%);
-  max-height: 82vh;
-  overflow-y: auto;
+  border-right: 1px solid var(--borda);
+  display: flex;
+  flex-direction: column;
+  z-index: 9;
   box-shadow: var(--sombra-painel);
 }
-.painel-salas-topo {
+.pessoas-topo {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+  align-items: baseline;
+  gap: 8px;
+  padding: 16px 14px 10px;
 }
-.painel-salas-topo h2 { margin: 0; font-size: 18px; font-weight: 800; }
-
-.grade-salas {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 12px;
-}
-.sala-card {
+.pessoas-topo h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.pessoas-conta { color: var(--texto-fraco); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pessoas-topo .btn-fechar-painel { margin-left: auto; align-self: center; }
+.pessoas-busca {
+  margin: 0 14px 8px;
   border: 1px solid var(--borda);
-  border-radius: 12px;
-  padding: 12px;
-  background: #fff;
+  background: var(--painel-alt);
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--texto);
 }
-.sala-card.sala-atual { border-color: var(--indigo); box-shadow: 0 0 0 3px var(--indigo-claro); }
-.sala-header {
+.pessoas-busca:focus { outline: none; border-color: var(--indigo); background: var(--painel); }
+.pessoas-lista { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
+.pessoas-grupo + .pessoas-grupo { margin-top: 4px; }
+.pessoas-sala {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-.sala-nome { display: flex; align-items: center; gap: 7px; font-weight: 700; }
-.sala-ponto { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.sala-contagem {
-  background: var(--painel-alt);
+  gap: 7px;
+  padding: 12px 6px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   color: var(--texto-fraco);
-  border-radius: 999px;
-  padding: 1px 9px;
-  font-size: 12px;
-  font-weight: 700;
 }
-.sala-pessoas { display: flex; flex-wrap: wrap; gap: 6px; }
-.sala-vazia { color: #9ca3af; font-size: 13px; font-style: italic; }
-
-.avatar-chip {
-  position: relative;
+.pessoas-sala-ponto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.pessoas-sala-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pessoas-sala-conta { margin-left: auto; font-variant-numeric: tabular-nums; }
+.pessoa-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px;
+  border-radius: 10px;
+}
+.pessoa-linha:hover, .pessoa-linha.destacada { background: var(--indigo-claro); }
+.pessoa-avatar {
   width: 34px;
   height: 34px;
+  flex-shrink: 0;
   border-radius: 50%;
-  border: 2px solid var(--verde);
+  border: 2.5px solid var(--verde);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1242,9 +1266,426 @@ video.mostrando-tela {
   font-weight: 800;
   color: #1f2430;
 }
-.avatar-chip-voce { box-shadow: 0 0 0 2px var(--indigo); }
-.avatar-chip-texto { pointer-events: none; }
-.avatar-chip-coroa { position: absolute; top: -9px; right: -5px; font-size: 11px; }
+.pessoa-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pessoa-nome {
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pessoa-voce {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--painel-alt);
+  color: var(--texto-fraco);
+  font-size: 10.5px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+.pessoa-status {
+  font-size: 12px;
+  color: var(--texto-fraco);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pessoa-acoes { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.pessoa-acao {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto-fraco);
+  cursor: pointer;
+}
+.pessoa-acao:hover { background: var(--painel); color: var(--texto); }
+.pessoa-acao.feito { color: var(--verde); }
+.pessoa-acao.espera { color: var(--texto-fraco); opacity: 0.5; }
+.pessoa-ir {
+  margin-left: 2px;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: var(--indigo);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pessoa-ir:hover { background: var(--indigo-escuro); }
+.pessoa-acao:focus-visible, .pessoa-ir:focus-visible { outline: 2px solid var(--indigo); outline-offset: 1px; }
+.pessoas-vazio { margin: 14px 6px; color: var(--texto-fraco); font-size: 13px; }
+.pessoas-livres { margin: 14px 6px 0; color: var(--texto-fraco); font-size: 12px; line-height: 1.45; }
+.pessoas-rodape {
+  padding: 9px 14px;
+  border-top: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  font-size: 11.5px;
+}
+
+/* ---- Diretoria (js/diretoria.js) ---- */
+.dir-corpo { flex: 1; overflow-y: auto; padding: 0 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.dir-rotulo {
+  padding-top: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+.dir-rotulo-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-top: 14px; }
+.dir-acao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--painel);
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dir-acao:hover { border-color: var(--indigo); background: var(--indigo-claro); }
+.dir-acao:focus-visible { outline: 2px solid var(--indigo); outline-offset: 1px; }
+.dir-acao svg { flex-shrink: 0; color: var(--indigo); }
+.dir-acao span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dir-acao strong { font-size: 14px; }
+.dir-acao small { font-size: 12px; color: var(--texto-fraco); }
+.dir-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--indigo);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  text-decoration: none;
+  cursor: pointer;
+}
+.dir-link:hover { text-decoration: underline; }
+.dir-contas { margin: 0; font-size: 12.5px; color: var(--texto-fraco); font-variant-numeric: tabular-nums; }
+.dir-contas:empty { display: none; }
+.dir-situacao { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.dir-linha { display: flex; align-items: flex-start; gap: 10px; padding: 7px 2px; border-bottom: 1px solid var(--borda); }
+.dir-marca {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--painel-alt);
+  color: var(--texto-fraco);
+}
+.dir-linha.ligado .dir-marca { background: #dcf5e7; color: #1c7c4a; }
+.dir-linha-texto { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dir-linha-nome { font-size: 13px; font-weight: 650; }
+.dir-linha-sub { font-size: 11.5px; color: var(--texto-fraco); overflow-wrap: anywhere; }
+.dir-alerta {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fdecec;
+  color: #9b1c1c;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.dir-carregando { font-size: 12.5px; color: var(--texto-fraco); padding: 6px 2px; }
+
+/* ---- Spotify de cada um, no canto do escritorio (js/spotify.js) ----
+   Escuro como os outros controles que flutuam sobre o mapa (a barra da chamada, os
+   lembretes); os paineis sao brancos. Embaixo a direita, que e o canto livre. */
+.spotify-mini {
+  --sp-fundo: #16181f;
+  --sp-elevado: #22252e;
+  --sp-hover: #2c303a;
+  --sp-borda: rgba(255, 255, 255, 0.08);
+  --sp-texto: #f4f5f8;
+  --sp-fraco: #a0a5b1;
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  width: min(340px, calc(100% - 32px));
+  z-index: 28;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background: var(--sp-fundo);
+  color: var(--sp-texto);
+  border: 1px solid var(--sp-borda);
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgba(8, 10, 16, 0.38);
+}
+.spotify-topo { display: flex; align-items: center; gap: 2px; cursor: grab; touch-action: none; user-select: none; }
+/* a alca de pontinhos: diz "da pra arrastar" (e move pelo teclado) */
+.spotify-alca {
+  width: 18px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #5d6270;
+  cursor: grab;
+}
+.spotify-alca:hover { color: var(--sp-texto); background: var(--sp-elevado); }
+.spotify-mini.arrastando { box-shadow: 0 26px 64px rgba(8, 10, 16, 0.5); }
+.spotify-mini.arrastando, .spotify-mini.arrastando * { cursor: grabbing; }
+/* com o iframe por baixo do ponteiro, o arraste "cai" dentro do Spotify */
+.spotify-mini.arrastando .spotify-player iframe { pointer-events: none; }
+.spotify-atual {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.spotify-atual:hover { background: var(--sp-elevado); }
+.spotify-capa-caixa {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--sp-elevado);
+  color: var(--sp-fraco);
+  overflow: hidden;
+}
+.spotify-capa { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.spotify-textos { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.spotify-nome { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spotify-tipo { font-size: 11.5px; color: var(--sp-fraco); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spotify-seta { margin-left: auto; flex-shrink: 0; color: var(--sp-fraco); transition: transform 0.15s ease; }
+.spotify-atual[aria-expanded="true"] .spotify-seta { transform: rotate(180deg); }
+.spotify-mini.vazio .spotify-seta { display: none; }
+.spotify-icone {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--sp-fraco);
+  cursor: pointer;
+}
+.spotify-icone:hover { background: var(--sp-elevado); color: var(--sp-texto); }
+.spotify-mini button:focus-visible, .spotify-form input:focus-visible { outline: 2px solid #ffffff; outline-offset: 1px; }
+
+/* o menu do nome: trocar, adicionar, tirar */
+.spotify-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  max-height: 264px;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: var(--sp-elevado);
+}
+.spotify-menu-itens { display: flex; flex-direction: column; gap: 2px; }
+.spotify-menu-itens:empty { display: none; }
+.spotify-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.spotify-menu-item:hover, .spotify-menu-item.atual { background: var(--sp-hover); }
+.spotify-menu-capa { width: 30px; height: 30px; flex-shrink: 0; border-radius: 6px; object-fit: cover; }
+.spotify-sem-capa { display: flex; align-items: center; justify-content: center; background: var(--sp-hover); color: var(--sp-fraco); font-size: 13px; }
+.spotify-menu-texto { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.spotify-menu-nome { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spotify-menu-tipo { font-size: 11px; color: var(--sp-fraco); }
+.spotify-menu-acao {
+  padding: 9px 8px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--sp-texto);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.spotify-menu-acao:hover { background: var(--sp-hover); }
+.spotify-menu-tirar { color: #ff9f9f; font-weight: 500; }
+
+/* o player: fundo proprio enquanto o do Spotify carrega */
+.spotify-player { position: relative; height: 152px; border-radius: 12px; background: var(--sp-elevado); overflow: hidden; }
+.spotify-player iframe { position: relative; display: block; border: 0; border-radius: 12px; }
+.spotify-carregando { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--sp-fraco); }
+.spotify-mini.vazio .spotify-player { display: none; }
+
+/* colar um link: so quando nao tem musica ou quando a pessoa pede "+ Adicionar" */
+.spotify-form { display: none; flex-direction: column; gap: 8px; padding: 2px 4px 0; }
+.spotify-mini.vazio .spotify-form, .spotify-mini.adicionando .spotify-form { display: flex; }
+.spotify-dica { font-size: 12px; color: var(--sp-fraco); line-height: 1.45; }
+.spotify-dica b { color: var(--sp-texto); font-weight: 600; }
+.spotify-form-linha { display: flex; gap: 6px; }
+.spotify-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--sp-borda);
+  border-radius: 10px;
+  background: var(--sp-elevado);
+  color: var(--sp-texto);
+  font: inherit;
+  font-size: 13px;
+}
+.spotify-form input::placeholder { color: #6f7481; }
+.spotify-form input:focus { outline: none; border-color: rgba(255, 255, 255, 0.35); }
+.spotify-tocar {
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111318;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.spotify-tocar:hover { background: #e6e7ec; }
+.spotify-erro { margin: 0; font-size: 12px; color: #ff9f9f; line-height: 1.4; }
+.spotify-cancelar {
+  display: none;
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--sp-fraco);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.spotify-mini.adicionando:not(.vazio) .spotify-cancelar { display: inline; }
+.spotify-cancelar:hover { color: var(--sp-texto); }
+
+/* o Spotify completo da pessoa: sempre a um clique */
+.spotify-completo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--sp-texto);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.spotify-completo:hover { background: var(--sp-elevado); border-color: rgba(255, 255, 255, 0.3); }
+.spotify-nota-rodape { display: none; margin: 0 4px 2px; font-size: 11px; color: var(--sp-fraco); line-height: 1.45; }
+.spotify-mini.vazio .spotify-nota-rodape, .spotify-mini.adicionando .spotify-nota-rodape { display: block; }
+
+/* minimizado: so a pilula com a capa e o nome. O player fica na pagina (altura
+   zero), entao a musica continua. */
+.spotify-mini.minimizado { width: auto; max-width: min(300px, calc(100% - 32px)); gap: 0; padding: 5px; border-radius: 16px; }
+.spotify-mini.minimizado .spotify-so-aberto:not(.spotify-player) { display: none; }
+.spotify-mini.minimizado .spotify-player { height: 0; }
+.spotify-mini.minimizado .spotify-seta { transform: rotate(180deg); }
+.spotify-mini.minimizado .spotify-atual { padding-right: 10px; }
+@media (prefers-reduced-motion: reduce) { .spotify-seta { transition: none; } }
+/* tela estreita de computador: a barra da chamada (no meio, embaixo) chega ate aqui -
+   o Spotify sobe e fica em cima dela */
+@media (min-width: 641px) and (max-width: 1100px) { .spotify-mini { bottom: 86px; } }
+
+/* ---- Central de avisos (js/central.js) ---- */
+.central-limpar { margin-left: auto; align-self: center; }
+.painel-avisos .pessoas-topo .btn-fechar-painel { margin-left: 6px; }
+.central-lista { flex: 1; overflow-y: auto; padding: 0 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+.central-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 8px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.central-item:hover { background: var(--painel-alt); }
+.central-item:focus-visible { outline: 2px solid var(--indigo); outline-offset: -2px; }
+.central-item.nao-lido { background: var(--indigo-claro); }
+.central-icone {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--painel-alt);
+  color: var(--texto-fraco);
+  font-size: 14px;
+  font-weight: 800;
+}
+.central-mencao, .central-dm { background: var(--indigo); color: #fff; }
+.central-chamada, .central-reuniao { background: #dcf5e7; color: #1c7c4a; }
+.central-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.central-titulo { font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
+.central-corpo {
+  font-size: 12.5px;
+  color: var(--texto-fraco);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.central-quando { font-size: 11px; color: var(--texto-fraco); font-variant-numeric: tabular-nums; }
+.central-vazio { margin: 14px 8px; color: var(--texto-fraco); font-size: 13px; line-height: 1.5; }
 
 /* ---- chat: duas colunas (conversas + mensagens), no formato da referencia ---- */
 /* ============ Decorador (painel "Decorator" da referencia) ============ */
@@ -1610,6 +2051,9 @@ video.mostrando-tela {
   cursor: pointer;
 }
 .lembrete-entrar:hover { background: #38b273; }
+/* segunda acao do aviso (o "Mensagem" do aceno): mesma forma, sem disputar com a principal */
+.lembrete-secundario { background: rgba(255, 255, 255, 0.12); }
+.lembrete-secundario:hover { background: rgba(255, 255, 255, 0.2); }
 .lembrete-fechar {
   border: 0;
   background: transparent;
@@ -1856,6 +2300,71 @@ video.mostrando-tela {
   line-height: 24px;
   margin: 2px auto 0;
 }
+
+/* ---- prazos do Kanban do CRM (js/calendario.js, server/prazos.js) ----
+   Faixa de "dia inteiro" logo abaixo dos dias: o prazo do cartao e um dia, sem hora. */
+.cal-prazos-faixa {
+  display: grid;
+  grid-template-columns: 44px repeat(7, 1fr);
+  border-bottom: 1px solid var(--borda);
+  background: var(--painel);
+}
+.cal-prazos-faixa-rotulo {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--texto-fraco);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 7px 4px 0 0;
+  text-align: right;
+}
+.cal-prazos-dia {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px 3px;
+  border-left: 1px solid var(--borda);
+}
+.cal-prazo {
+  display: block;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--borda-forte);
+  background: var(--painel-alt);
+  color: var(--texto);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-prazo:hover { border-color: var(--indigo); }
+.cal-prazo.meu { border-color: var(--indigo); background: var(--indigo-claro); }
+.cal-prazo.atrasado { border-color: var(--vermelho); color: var(--vermelho); background: var(--painel); }
+.cal-prazo.feito { color: var(--texto-fraco); text-decoration: line-through; background: var(--painel); }
+.cal-prazo-mais { font-size: 10.5px; color: var(--texto-fraco); padding-left: 4px; cursor: default; }
+
+.cal-prazos-rotulo { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.cal-prazos-meus {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.cal-prazos { flex: none; max-height: 260px; }
+.cal-prazo-item { color: inherit; text-decoration: none; }
+.cal-prazo-item:hover { border-color: var(--indigo); }
+.cal-prazo-item .cal-item-cor { background: var(--borda-forte); }
+.cal-prazo-item.meu .cal-item-cor { background: var(--indigo); }
+.cal-prazo-item.atrasado .cal-item-cor { background: var(--vermelho); }
+.cal-prazo-item.atrasado .cal-item-quando { color: var(--vermelho); font-weight: 600; }
 
 .cal-corpo { position: relative; }
 .cal-regua { display: flex; flex-direction: column; }
@@ -2423,53 +2932,6 @@ video.mostrando-tela {
 .cartao-sub { color: var(--texto-fraco); font-size: 12px; }
 .cartao-acoes { display: flex; gap: 8px; }
 .cartao-acoes .btn { flex: 1; }
-
-.busca-rapida {
-  position: absolute;
-  inset: 0;
-  background: rgba(17,24,39,0.4);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 12vh;
-  z-index: 12;
-}
-.busca-card {
-  background: var(--painel);
-  border-radius: 14px;
-  width: min(520px, 92%);
-  box-shadow: var(--sombra-painel);
-  overflow: hidden;
-}
-.busca-card input {
-  width: 100%;
-  border: none;
-  border-bottom: 1px solid var(--borda);
-  padding: 16px 18px;
-  font-family: inherit;
-  font-size: 15px;
-  color: var(--texto);
-}
-.busca-card input:focus { outline: none; }
-.busca-lista { max-height: 320px; overflow-y: auto; }
-.busca-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 18px;
-  cursor: pointer;
-}
-.busca-item:hover, .busca-item.ativo { background: var(--indigo-claro); }
-.busca-ponto { width: 9px; height: 9px; border-radius: 50%; }
-.busca-nome { font-weight: 700; font-size: 14px; }
-.busca-local { color: var(--texto-fraco); font-size: 12px; margin-left: auto; }
-.busca-vazio { padding: 18px; color: var(--texto-fraco); font-size: 14px; }
-.busca-rodape {
-  padding: 10px 18px;
-  border-top: 1px solid var(--borda);
-  color: var(--texto-fraco);
-  font-size: 12px;
-}
 
 @media (max-width: 820px) {
   .editor-corpo { flex-wrap: wrap; }
@@ -3276,6 +3738,28 @@ video.mostrando-tela {
   }
   .trilho-logo, .trilho-espaco, .trilho-atalho { display: none; }
   .trilho-btn { width: 44px; height: 44px; flex: none; }
+  .trilho-nome { font-size: 9.5px; max-width: 100%; }
+
+  /* O "Mais": WhatsApp, Discador, Estante e Decorar num menu em cima da barra -
+     9 botoes nao cabiam num celular de 360 px. */
+  .trilho-so-celular { display: flex; }
+  .trilho-mais-grupo { display: none; }
+  .trilho.mais-aberto .trilho-mais-grupo {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(var(--abas-altura) + 8px);
+    padding: 10px;
+    background: var(--painel);
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(15, 18, 25, 0.18);
+    z-index: 33;
+  }
+  .trilho.mais-aberto .trilho-mais-grupo .trilho-btn { width: auto; max-width: none; height: 58px; }
 
   /* menu da conta abre em cima da barra, na largura da tela */
   .menu-conta {
@@ -3303,13 +3787,23 @@ video.mostrando-tela {
   }
   .aviso-permissao { bottom: calc(var(--abas-altura) + 72px); }
   .lembretes-reuniao { bottom: calc(var(--abas-altura) + 76px); }
+  /* o Spotify fica em cima da barra de abas, na largura da tela */
+  /* acima da barra da chamada, que no celular fica logo em cima das abas */
+  .spotify-mini { left: 8px; right: 8px; bottom: calc(var(--abas-altura) + 76px); width: auto; z-index: 31; }
+  .spotify-mini.minimizado { left: auto; max-width: calc(100% - 16px); }
+  /* no celular fica fixo em cima da barra: a alca some */
+  .spotify-alca { display: none; }
+  .spotify-topo { cursor: default; }
+  .spotify-form input { font-size: 16px; }
   .grade-chamada { inset: calc(60px + env(safe-area-inset-top, 0px)) 8px calc(var(--abas-altura) + 72px) 8px; padding: 8px; }
   .grade-chamada-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
   .cartao-pessoa { width: min(280px, calc(100vw - 24px)); }
   .cartao-mesa { left: 8px; right: 8px; top: calc(8px + env(safe-area-inset-top, 0px)); width: auto; }
-  .busca-rapida { padding-top: 8vh; }
 
   /* ---- paineis: tela inteira, com a barra de abas aparecendo ---- */
+  .painel-pessoas,
+  .painel-diretoria,
+  .painel-avisos,
   .painel-chat,
   .painel-calendario,
   .painel-trello,
@@ -3347,7 +3841,11 @@ video.mostrando-tela {
   .chat-conversa-topo { padding: 10px 12px; }
   .chat-form { padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
   /* 16px no campo: abaixo disso o iPhone da zoom na pagina ao tocar pra digitar */
-  #chat-input, .chat-busca, .login-campo input, .senha-campo input, #busca-input { font-size: 16px; }
+  #chat-input, .chat-busca, .login-campo input, .senha-campo input, #pessoas-busca { font-size: 16px; }
+  /* no dedo, as acoes da pessoa precisam de alvo maior */
+  .pessoa-acao { width: 38px; height: 38px; }
+  .pessoa-ir { padding: 9px 12px; }
+  .pessoas-rodape { display: none; }
 
   /* ---- agenda: a lateral vira faixa de cima ---- */
   .painel-calendario { flex-direction: column; overflow: auto; }

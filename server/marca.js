@@ -236,4 +236,4 @@ function manifesto() {
   };
 }
 
-module.exports = { marca, escaparHtml, aplicar, paginaInicial, paginaDeReuniao, manifesto, cores, mote, corValida, caminhoDeArquivo };
+module.exports = { marca, ehAdm: EH_ADM, escaparHtml, aplicar, paginaInicial, paginaDeReuniao, manifesto, cores, mote, corValida, caminhoDeArquivo };

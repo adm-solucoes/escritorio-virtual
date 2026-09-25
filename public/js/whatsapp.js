@@ -22,35 +22,16 @@
   let painel, campo, erroEl, aoAbrir;
 
   function noCelular() {
-    return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) && window.innerWidth < 900;
+    return JanelaAoLado.noCelular();
   }
 
-  // Janela do lado direito, na altura da tela. O navegador pode ignorar
-  // tamanho/posicao (cada um tem sua regra pra popup); o nome fixo garante ao
-  // menos que e sempre a MESMA janela.
+  // Janela do lado direito, na altura da tela, sempre a MESMA (js/janela.js).
   function abrirJanela(url) {
-    if (noCelular()) {
-      window.open(url, '_blank', 'noopener');
-      return true;
-    }
-    const tela = window.screen || {};
-    const largura = Math.min(560, Math.round((tela.availWidth || 1280) * 0.42));
-    const altura = tela.availHeight || 800;
-    const esquerda = (tela.availLeft || 0) + (tela.availWidth || 1280) - largura;
-    const recursos = 'popup=yes,width=' + largura + ',height=' + altura + ',left=' + esquerda + ',top=' + (tela.availTop || 0);
-    const w = window.open(url, JANELA, recursos);
-    if (!w) return false;
-    try { w.opener = null; } catch (e) { /* ja navegou */ }
-    try { w.focus(); } catch (e) { /* segue */ }
-    return true;
+    return JanelaAoLado.abrir(url, { nome: JANELA });
   }
 
   function avisarBloqueio() {
-    const aviso = document.getElementById('aviso-camera');
-    if (!aviso) return;
-    aviso.textContent = 'O navegador bloqueou a janela do WhatsApp. Libere pop-ups pra este site e clique de novo.';
-    aviso.classList.remove('oculto');
-    setTimeout(() => aviso.classList.add('oculto'), 6000);
+    JanelaAoLado.avisarBloqueio('WhatsApp');
   }
 
   function abrirMeuWhatsApp() {

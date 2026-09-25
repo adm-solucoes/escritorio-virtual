@@ -587,6 +587,7 @@
     e.aberto = true;
     painel.classList.remove('oculto');
     botao.classList.add('ativo');
+    if (window.Paineis) Paineis.abriu('discador');
     if (e.tela !== 'sessao' && e.tela !== 'resumo') abrirECarregar(false);
     else render();
   }
@@ -599,7 +600,9 @@
     // pessoa volta a ouvir a sede. Com a ligacao em andamento, fica como esta -
     // ela esta no telefone, e o resultado espera o painel abrir de novo.
     if (e.tela === 'sessao' && e.fase !== 'ligando' && itemAtual() && !e.pausado) alternarPausa();
+    if (window.Paineis) Paineis.fechou('discador');
   }
+  if (window.Paineis) Paineis.registrar('discador', { fechar, botao: 'btn-discador', esc: false });
 
   async function init() {
     painel = document.getElementById('painel-discador');

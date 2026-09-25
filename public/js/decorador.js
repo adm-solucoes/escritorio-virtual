@@ -638,7 +638,8 @@
     if (!souAdmin && !tenhoMesa) return;
     aberto = true;
     painel.classList.remove('oculto');
-    document.getElementById('btn-decorar').classList.add('ativo');
+    // O botao marcado (o "Decorar" ou, pra diretoria, o "Diretoria") quem pinta e o Paineis.
+    if (window.Paineis) Paineis.abriu('decorador');
     render();
   }
 
@@ -649,11 +650,12 @@
     if (window.EditorAreas && EditorAreas.estaAtivo()) EditorAreas.desligar();
     atualizarBotaoLink();
     painel.classList.add('oculto');
-    document.getElementById('btn-decorar').classList.remove('ativo');
     // Se o painel foi aberto pela plantinha do cartao, a camera ficou colada na
     // mesa. Fechar aqui e o fim daquele passeio.
     Game.soltarFoco();
+    if (window.Paineis) Paineis.fechou('decorador');
   }
+  if (window.Paineis) Paineis.registrar('decorador', { fechar, botao: 'btn-decorar', esc: false });
 
   function init(ehAdmin) {
     souAdmin = !!ehAdmin;
@@ -671,9 +673,14 @@
     // A diretoria decora a casa toda; quem tem mesa decora a propria. Quem nao
     // e nem uma coisa nem outra nao ve o botao (o servidor recusa de qualquer
     // jeito - o botao escondido e so conforto).
+    //
+    // A diretoria abre o decorador pelo painel Diretoria (js/diretoria.js): no
+    // trilho, este botao fica so pra quem personaliza a propria mesa, e o botao
+    // marcado com o decorador aberto passa a ser o "Diretoria".
+    if (souAdmin && window.Paineis) Paineis.registrar('decorador', { fechar, botao: 'btn-diretoria', esc: false });
     function atualizarBotao() {
       const podeAbrir = souAdmin || tenhoMesa;
-      botao.classList.toggle('oculto', !podeAbrir);
+      botao.classList.toggle('oculto', souAdmin || !tenhoMesa);
       botao.title = souAdmin ? 'Decorar o escritorio' : 'Personalizar a minha mesa';
       if (titulo) titulo.textContent = souAdmin ? 'Decorador' : 'Minha mesa';
       // Perdeu a mesa com o painel aberto: fecha, senao ficaria um painel que
@@ -729,7 +736,7 @@
   }
 
   window.Decorador = {
-    init, estaPintando, pintarEm, podeColocarEm, desenharPreviaNoMapa, pintandoEmCima,
+    init, abrir, estaPintando, pintarEm, podeColocarEm, desenharPreviaNoMapa, pintandoEmCima,
     abrirEmCima, noModoLink,
   };
 })();

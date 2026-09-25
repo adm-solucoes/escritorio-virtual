@@ -145,7 +145,8 @@
 
     // Som e notificacao do sistema (aba escondida): a mesma via dos outros avisos
     if (window.Avisos && Avisos.avisar) {
-      Avisos.avisar(item.reuniao.titulo + ' ' + textoDe(item), 'Reuniao da sede', { tag: 'lembrete-' + item.chave });
+      // `reuniao`: o clique na central de avisos (js/central.js) entra na chamada dela.
+      Avisos.avisar(item.reuniao.titulo + ' ' + textoDe(item), 'Reuniao da sede', { tag: 'lembrete-' + item.chave, reuniao: item.reuniao.id });
     }
   }
 

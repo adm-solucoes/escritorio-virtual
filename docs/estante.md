@@ -183,6 +183,34 @@ com as mesmas subpastas** - com o Drive ligado, a estante le so o Drive.
 **CC BY-NC-SA** permite copiar e distribuir **sem fim comercial**, citando a
 fonte: ler e estudar dentro da ADM pode; vender ou cobrar pelo acesso, nao.
 
+### Consultoria: os 12 que entraram em 24/09/2026
+
+O Caio pediu "os melhores livros de consultoria". Os classicos (Block, Minto, *The
+McKinsey Way*, Maister, Weiss, Djalma de Oliveira) sao comerciais e nao tem versao
+legal gratuita: ficaram de fora. Estes 12 sao de fonte oficial, e cada PDF foi
+conferido (e o documento inteiro, nao folheto). Entraram nos setores pelo que cada
+diretoria faz numa empresa junior: quem executa consultoria e Projetos; estrategia e
+cultura ficam com Gente e Gestao; a visao de quem contrata consultor ajuda o Comercial.
+
+| Setor | Livro | Fonte | Licenca |
+|---|---|---|---|
+| Projetos | Management Consulting: A Guide to the Profession (Kubr, ed. 1980, 353 p.) | [acervo digital da OIT](https://webapps.ilo.org/public/libdoc/ilo/1980/80B09_73_engl.pdf) | publicacao da OIT, distribuida pela propria OIT |
+| Comercial | How to Select and Use Consultants: A Client's Guide (Kubr, 192 p.) | [acervo digital da OIT](https://webapps.ilo.org/public/libdoc/ilo/1992/92B09_22_engl.pdf) | publicacao da OIT, distribuida pela propria OIT |
+| Projetos | Referenciais de Consultoria do SEBRAE (96 p.) | [biblioteca do SEBRAE](https://bibliotecas.sebrae.com.br/chronus/ARQUIVOS_CHRONUS/bds/bds.nsf/C08A566FFBE7EE29832579CF0049C370/$File/NT000474F2.pdf) | publicacao gratuita do SEBRAE |
+| Projetos | Manual de Consultoria Estruturada (28 p.) | [SEBRAE](https://sebrae.com.br/content/dam/portal-sebrae/ms/midias/documentos/pdfs/Credenciamento%20SGF/06_Manual_Consultoria_Estruturada_Sebrae.pdf) | publicacao gratuita do SEBRAE |
+| Projetos | Como Elaborar um Plano de Negocios (2021, 164 p.) | [biblioteca do SEBRAE](https://bibliotecas.sebrae.com.br/chronus/ARQUIVOS_CHRONUS/bds/bds.nsf/5f6dba19baaf17a98b4763d4327bfb6c/$File/2021.pdf) | publicacao gratuita do SEBRAE |
+| Projetos | Guia Metodologico de Gestao de Processos (25 p.) | [gov.br - Planejamento](https://www.gov.br/planejamento/pt-br/acesso-a-informacao/governanca/gestao-estrategica/documentos/caderno-1-processos.pdf) | publicacao do governo federal, uso livre |
+| Projetos | Analise e Melhoria de Processos (MASP, 2016, 114 p.) | [Repositorio Enap](https://repositorio.enap.gov.br/handle/1/2457) | publicacao da Enap |
+| Projetos | Organizacao, Processos e Tomada de Decisao (158 p.) | eduCAPES - PNAP/UFSC/CAPES | recurso educacional aberto |
+| Gente e Gestao | Administracao Estrategica (3a ed., 172 p.) | eduCAPES - PNAP/UFSC/CAPES | recurso educacional aberto |
+| Gente e Gestao | Cultura e Mudanca Organizacional (106 p.) | eduCAPES - PNAP/UFSC/CAPES | recurso educacional aberto |
+| Gente e Gestao | Principles of Management (605 p.) | [OpenStax](https://openstax.org/details/books/principles-management) | CC BY-NC-SA 4.0 |
+| Gente e Gestao | Mastering Strategic Management (492 p., 217 MB) | [BCcampus](https://opentextbc.ca/strategicmanagement/) | CC BY-NC-SA |
+
+Ficaram de fora de proposito: a 4a edicao do Kubr (o PDF do site da OIT tem 2 paginas -
+o livro e vendido; a copia completa que circula e de terceiro) e *Design Thinking:
+inovacao em negocios* (MJV, so vendido).
+
 ## De onde vem os livros
 
 `server/acervo.js`. Duas origens, a mesma cara pro navegador:

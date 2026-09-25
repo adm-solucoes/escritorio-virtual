@@ -1,4 +1,5 @@
-// Avisos: a sede chama a pessoa quando a aba NAO esta na frente.
+// Avisos: a sede chama a pessoa quando a aba NAO esta na frente. E cada aviso fica
+// guardado na central de avisos (js/central.js).
 //
 // POR QUE EXISTE
 // No dia a dia a sede fica numa aba enquanto a pessoa trabalha no Docs, no CRM,
@@ -128,6 +129,8 @@
     const naFrente = abaNaFrente();
     // Com a aba na frente e a conversa aberta na tela, a pessoa ja esta vendo.
     if (naFrente && dados.conversa && window.Chat && Chat.estaVendo(dados.conversa)) return;
+    // O que tocou fica guardado na central (js/central.js): o som passa, o aviso fica.
+    if (window.Central) Central.guardar(titulo, corpo, dados);
     tocar();
     if (naFrente) return;       // na frente: o som e o badge do chat bastam
     pendentes++;

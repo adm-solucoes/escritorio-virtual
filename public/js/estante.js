@@ -534,6 +534,7 @@
     if (!painel || aberto) return;
     aberto = true;
     painel.classList.remove('oculto');
+    if (window.Paineis) Paineis.abriu('estante');
     // Desenha o que ja tem e busca de novo: livro que acabou de entrar na pasta
     // precisa aparecer sem recarregar a pagina.
     render();
@@ -558,7 +559,9 @@
     filtro = '';
     if (buscaEl) buscaEl.value = '';
     fecharDetalhe();
+    if (window.Paineis) Paineis.fechou('estante');
   }
+  if (window.Paineis) Paineis.registrar('estante', { fechar, botao: 'btn-estante', esc: false });
 
   // ------------------------------------------------------------------ init
 

@@ -56,9 +56,10 @@
 
   function preencherMenu(usuario) {
     document.getElementById('menu-conta-nome').textContent = usuario.nome;
-    // Trocar senha (membro) e Membros da sede (diretoria); abre a troca
-    // obrigatoria se a pessoa entrou com senha provisoria.
+    // Trocar senha (membro); abre a troca obrigatoria se a pessoa entrou com
+    // senha provisoria. O botao Diretoria (membros, decorar, situacao) so pra ela.
     Membros.mostrarPara(usuario);
+    Diretoria.mostrarPara(usuario);
     WhatsApp.mostrarPara(usuario);
     const avatar = document.getElementById('conta-avatar');
     avatar.textContent = (usuario.nome || '?').trim().slice(0, 1).toUpperCase();
@@ -81,7 +82,9 @@
   CartaoMesa.init();
   ItemMesa.init();
   Membros.init(fecharMenu);
+  Diretoria.init();
   WhatsApp.init(fecharMenu);
+  Spotify.init();
   Auth.init(depoisDoLogin);
   Entrada.init(entrarNoJogo, abrirCriador);
 

@@ -16,6 +16,8 @@ const marcaDaSede = require('./marca');
 const google = require('./google');
 const agenda = require('./agenda');
 const quadros = require('./quadros');
+const kanbanCrm = require('./kanban-crm');
+const prazos = require('./prazos');
 const discador = require('./discador');
 const acervo = require('./acervo');
 const turn = require('./turn');
@@ -26,6 +28,8 @@ const reunioes = require('./reunioes');
 const visitantes = require('./visitantes');
 const chatDisco = require('./chat-disco');
 const freio = require('./freio');
+const canais = require('./canais');
+const spotify = require('./spotify');
 const backup = require('./backup');
 
 const PORT = process.env.PORT || 3500;
@@ -75,11 +79,13 @@ const CSP = [
   "font-src 'self' https://fonts.gstatic.com",
   // data: e blob: sao as capas que o proprio navegador desenha do PDF, e o
   // canvas do avatar. media: o video do WebRTC chega como blob.
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://i.scdn.co",
   "media-src 'self' blob:",
   // o socket e o proprio servidor; o Cloudflare TURN e chamado do SERVIDOR,
   // nunca do navegador
   "connect-src 'self'",
+  // o unico iframe da sede e o player incorporado do Spotify (public/js/spotify.js)
+  "frame-src https://open.spotify.com",
   // ninguem coloca a sede dentro de um iframe: com camera, microfone e botao de
   // diretoria na tela, clickjacking aqui custa caro
   "frame-ancestors 'none'",
@@ -128,6 +134,11 @@ const EMOJIS_REACAO = ['👍', '😂', '❤️', '🎉', '👏'];
 // teto mais folgado.
 const freioDeChat = freio.criar({ max: 5, janelaMs: 3000 });
 const freioDeReacao = freio.criar({ max: 10, janelaMs: 3000 });
+// Aceno PRA alguem (painel Pessoas, cartao da pessoa) toca som e pode virar
+// notificacao na outra ponta: um por par a cada 10 s, e no maximo 5 por conta a
+// cada 30 s (senao dava pra acenar pra sede inteira em fila).
+const freioDeAcenoPorPar = freio.criar({ max: 1, janelaMs: 10 * 1000 });
+const freioDeAceno = freio.criar({ max: 5, janelaMs: 30 * 1000 });
 
 // O cliente pode pedir confirmacao (`socket.emit(evento, dados, aoResponder)`);
 // quem manda sem callback (o teste, um cliente antigo) continua funcionando.
@@ -135,11 +146,12 @@ function responder(ack, resposta) {
   if (typeof ack === 'function') ack(resposta);
 }
 
-const CANAIS = [
-  { id: 'geral', nome: 'geral', descricao: 'Avisos e assuntos gerais da ' + marcaDaSede.marca.nome },
-  { id: 'social', nome: 'social', descricao: 'Conversa fiada, memes e combinados' },
-  { id: 'projetos', nome: 'projetos', descricao: 'Andamento dos projetos e clientes' },
-];
+// geral, social, projetos e um canal por diretoria. Ver server/canais.js.
+const CANAIS = canais.montar({
+  nomeEmpresa: marcaDaSede.marca.nome,
+  ehAdm: marcaDaSede.ehAdm,
+  lista: process.env.CANAIS_DIRETORIAS,
+});
 
 // O historico vem do disco: reiniciar o servidor nao apaga mais a conversa.
 // Ver server/chat-disco.js e docs/plano-chat-no-disco.md.
@@ -712,6 +724,23 @@ io.on('connection', (socket) => {
     io.emit('reacao', { id: socket.id, emoji: data.emoji });
   });
 
+  // Aceno pra UMA pessoa: so ela recebe, com o nome de quem acenou. O 'reagir'
+  // acima aparece em cima do proprio boneco - de outra sala a pessoa nem via. O
+  // nome sai daqui, nao do cliente.
+  socket.on('acenar', (data, ack) => {
+    const player = players.get(socket.id);
+    if (!player || !data) return responder(ack, { erro: 'invalido' });
+    const alvo = players.get(String(data.para || ''));
+    // a mesma conta em outra aba tambem e "eu"
+    if (!alvo || alvo.uid === player.uid) return responder(ack, { erro: 'invalido' });
+    const geral = freioDeAceno.tentar(player.uid);
+    if (!geral.ok) return responder(ack, { erro: 'ritmo', esperarMs: geral.esperarMs });
+    const par = freioDeAcenoPorPar.tentar(player.uid + '>' + alvo.uid);
+    if (!par.ok) return responder(ack, { erro: 'ritmo', esperarMs: par.esperarMs });
+    io.to(alvo.id).emit('aceno', { de: socket.id, nome: player.name });
+    responder(ack, { ok: true });
+  });
+
   // Agenda do time, vinda do CRM. Sob demanda (so quem abre o painel pede) e
   // com cache no agenda.js, entao abrir o painel nao vira chamada ao Google.
   // A agenda aqui nao e a sua: e a de TODO MUNDO que conectou o Google - titulo,
@@ -853,6 +882,31 @@ io.on('connection', (socket) => {
       diretoria: !!player.isAdmin,
       email: conta && conta.emailVerificado === true && conta.email ? conta.email : null,
     }));
+  });
+
+  // Os prazos dos cartoes do Kanban do CRM, pra Agenda (server/prazos.js). Os mesmos
+  // quadros da aba Quadros, com a mesma regra do e-mail PROVADO e o mesmo cache: abrir
+  // a Agenda nao vira chamada nova ao CRM.
+  socket.on('prazos-pedir', async () => {
+    const player = players.get(socket.id);
+    if (!player) return;
+    if (!kanbanCrm.configurado()) return socket.emit('prazos', { ligado: false, prazos: [] });
+    const conta = usuariosStore.porId(player.uid);
+    const email = conta && conta.emailVerificado === true && conta.email ? conta.email : null;
+    if (!email) {
+      return socket.emit('prazos', {
+        ligado: true, prazos: [],
+        aviso: 'Entre uma vez com o Google da ' + marcaDaSede.marca.sigla + ' (ou confirme seu e-mail) pra ver os prazos do Kanban.',
+      });
+    }
+    const r = await kanbanCrm.quadrosDe(email);
+    if (!r.ok) return socket.emit('prazos', { ligado: true, prazos: [], aviso: r.erro });
+    socket.emit('prazos', {
+      ligado: true,
+      prazos: prazos.extrair(r.quadros, { meuNome: conta.nome, hoje: new Date().toISOString().slice(0, 10) }),
+      atualizadoEm: r.atualizadoEm,
+      aviso: r.aviso || null,
+    });
   });
 
   // Reivindicar/largar uma mesa. So vale em tile de mesa e cada pessoa fica com
@@ -1185,6 +1239,17 @@ app.post('/api/google/desconectar', sessao.exigirLogin, (req, res) => {
 // acontecem dentro da sede.
 
 // A lista (titulo e capa) de quem esta logado.
+// Nome e capa de um link do Spotify, pro mini-player (server/spotify.js). So membro, e
+// com freio: cada link novo vira um pedido ao Spotify.
+const freioDeSpotify = freio.criar({ max: 20, janelaMs: 60 * 1000 });
+app.get('/api/spotify/:tipo/:id', sessao.exigirLogin, async (req, res) => {
+  if (!spotify.valido(req.params.tipo, req.params.id)) return res.status(400).json({ erro: 'Link do Spotify invalido.' });
+  if (!freioDeSpotify.tentar(req.usuario ? req.usuario.id : req.ip).ok) return res.status(429).json({ erro: 'Muitos pedidos seguidos.' });
+  const r = await spotify.obter(req.params.tipo, req.params.id);
+  if (!r) return res.status(404).json({ erro: 'O Spotify nao deu o nome desse link.' });
+  res.json(r);
+});
+
 app.get('/api/estante', sessao.exigirLogin, async (req, res) => {
   try {
     const { origem, livros } = await acervo.listar();

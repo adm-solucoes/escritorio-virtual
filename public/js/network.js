@@ -60,6 +60,7 @@
     });
     socket.on('player-status', (data) => emitLocal('player-status', data));
     socket.on('reacao', (data) => emitLocal('reacao', data));
+    socket.on('aceno', (data) => emitLocal('aceno', data));
     socket.on('rtc-signal', (data) => emitLocal('rtc-signal', data));
     socket.on('chat-mensagem', (data) => emitLocal('chat-mensagem', data));
     socket.on('chat-historico', (data) => emitLocal('chat-historico', data));
@@ -82,6 +83,7 @@
     socket.on('chamadas', (data) => emitLocal('chamadas', data));
     socket.on('visitantes-mudou', (data) => emitLocal('visitantes-mudou', data));
     socket.on('trello', (data) => emitLocal('trello', data));
+    socket.on('prazos', (data) => emitLocal('prazos', data));
     socket.on('acervo-fisico-mudou', (data) => emitLocal('acervo-fisico-mudou', data));
   }
 
@@ -158,6 +160,14 @@
     if (socket && socket.connected) socket.emit('reagir', { emoji });
   }
 
+  // Aceno pra UMA pessoa (so ela recebe). Mesmo contrato do sendChatMessage:
+  // false sem conexao; a resposta e { ok: true } ou { erro: 'ritmo', esperarMs }.
+  function acenarPara(id, aoResponder) {
+    if (!socket || !socket.connected) return false;
+    socket.emit('acenar', { para: id }, typeof aoResponder === 'function' ? aoResponder : () => {});
+    return true;
+  }
+
   function sendRtcSignal(to, signal) {
     if (socket && socket.connected) socket.emit('rtc-signal', { to, signal });
   }
@@ -215,6 +225,11 @@
     if (socket && socket.connected) socket.emit('trello-pedir', opcoes || {});
   }
 
+  // Os prazos dos cartoes do Kanban, pra Agenda (server/prazos.js).
+  function pedirPrazos() {
+    if (socket && socket.connected) socket.emit('prazos-pedir');
+  }
+
   function editarMapa(c, r, t) {
     if (socket && socket.connected) socket.emit('mapa-editar', { c, r, t });
   }
@@ -264,9 +279,9 @@
   }
 
   window.Network = {
-    connect, on, sendMove, enviarVista, sendStatus, dividirTela, estouLendo, marcarReuniao, desmarcarReuniao, novoLinkDaReuniao, decidirVisitante, removerVisitante, entrarNaChamada, sairDaChamada, ligarProGrupo, sendReaction, sendRtcSignal, sendChatMessage,
+    connect, on, sendMove, enviarVista, sendStatus, dividirTela, estouLendo, marcarReuniao, desmarcarReuniao, novoLinkDaReuniao, decidirVisitante, removerVisitante, entrarNaChamada, sairDaChamada, ligarProGrupo, sendReaction, acenarPara, sendRtcSignal, sendChatMessage,
     pedirHistorico, reagirMensagem, reivindicarMesa, largarMesa, itemNaMinhaMesa, moverItemDaMesa, tirarItemDaMesa,
     editarMapa, editarObjetoMapa, porConteudoNoMapa, editarArea, restaurarArea, criarArea, apagarArea,
-    pedirAgenda, pedirTrello,
+    pedirAgenda, pedirTrello, pedirPrazos,
   };
 })();
