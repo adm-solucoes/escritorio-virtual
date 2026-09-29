@@ -10,6 +10,16 @@ const ARQUIVO = path.join(PASTA, 'usuarios.json');
 const ARQUIVO_CONFIG = path.join(PASTA, 'config.json');
 
 const SCRYPT_KEYLEN = 64;
+// Custo do scrypt. N=2^15 e o minimo que a OWASP recomenda hoje - o dobro do
+// padrao do Node (2^14) -, e continua barato pra um login, que e raro (a sessao
+// dura 30 dias). `maxmem` precisa acompanhar: o scrypt usa ~128*N*r bytes, acima
+// do teto padrao de 32 MB do Node, senao ele estoura. `scryptSync` bloqueia,
+// entao so um hash roda por vez - nao ha risco de varios logins somarem memoria.
+const SCRYPT = { N: 32768, r: 8, p: 1 };
+// Hash criado antes deste custo nao guardava parametro nenhum: era o padrao do
+// Node. Conta antiga continua conferindo com ele e so migra pro custo novo
+// quando a pessoa trocar (ou redefinir) a senha - ninguem fica trancado fora.
+const SCRYPT_LEGADO = { N: 16384, r: 8, p: 1 };
 
 let usuarios = []; // carregado uma vez e mantido em memoria
 let segredoSessao = null;
@@ -69,15 +79,21 @@ function getSegredoSessao() {
 
 // ---------- senha ----------
 
-function hashSenha(senha, salt) {
-  return crypto.scryptSync(senha, salt, SCRYPT_KEYLEN).toString('hex');
+function hashSenha(senha, salt, params) {
+  const p = params || SCRYPT;
+  return crypto.scryptSync(senha, salt, SCRYPT_KEYLEN, {
+    cost: p.N, blockSize: p.r, parallelization: p.p,
+    maxmem: 128 * p.N * p.r * 2, // folga sobre o necessario (128*N*r)
+  }).toString('hex');
 }
 
 function senhaConfere(senha, usuario) {
   // Conta do Google nasce SEM senha (senhaHash null). Sem esta linha, uma conta
   // sem hash seria uma conta em que qualquer um entra pelo formulario.
   if (!usuario || !usuario.senhaHash || !usuario.salt) return false;
-  const tentativa = Buffer.from(hashSenha(senha, usuario.salt), 'hex');
+  // Confere com o custo que ESTE hash usou: conta antiga nao guarda `scrypt` e
+  // cai no legado; conta nova (ou que trocou de senha) traz o custo novo.
+  const tentativa = Buffer.from(hashSenha(senha, usuario.salt, usuario.scrypt || SCRYPT_LEGADO), 'hex');
   const guardado = Buffer.from(usuario.senhaHash, 'hex');
   if (tentativa.length !== guardado.length) return false;
   return crypto.timingSafeEqual(tentativa, guardado);
@@ -134,6 +150,7 @@ function criar({ nome, email, senha, isAdmin, emailVerificado }) {
     emailChave: chaveEmail(email),
     salt,
     senhaHash: hashSenha(senha, salt),
+    scrypt: SCRYPT,     // custo usado neste hash, pra senhaConfere saber conferir
     isAdmin: !!isAdmin,
     appearance: null,
     criadoEm: Date.now(),
@@ -227,6 +244,7 @@ function versaoSessao(usuario) {
 function definirSenha(usuario, senha) {
   usuario.salt = crypto.randomBytes(16).toString('hex');
   usuario.senhaHash = hashSenha(senha, usuario.salt);
+  usuario.scrypt = SCRYPT;   // troca de senha ja migra pro custo novo
   usuario.versaoSessao = versaoSessao(usuario) + 1;
 }
 
