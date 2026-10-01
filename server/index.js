@@ -39,9 +39,27 @@ const server = http.createServer(app);
 // A sessao anda em cookie, entao a origem tem que ser a propria pagina.
 const io = new Server(server);
 
-// Atras do proxy do Render/Railway, pra `req.ip` ser o IP de verdade (o freio de
-// forca bruta depende disso) e o cookie Secure funcionar.
-app.set('trust proxy', 1);
+// Atras do proxy do Render/Railway, `req.ip` precisa ser o IP real: o freio de
+// forca bruta conta por IP e o cookie Secure depende disso. O valor e QUANTOS
+// proxies confiaveis ha na frente (Render/Railway = 1). Errar aqui quebra o
+// freio de dois jeitos: com proxies DEMAIS confiados, da pra forjar
+// X-Forwarded-For e furar o limite; com proxies DE MENOS, todo mundo vira o IP
+// do proxy e dez erros de gente diferente trancam a sede inteira. Por isso e
+// configuravel (TRUST_PROXY) - cada hospedagem tem a sua topologia. O
+// /api/diagnostico ajuda a conferir se ficou certo.
+app.set('trust proxy', lerTrustProxy(process.env.TRUST_PROXY));
+
+// TRUST_PROXY: numero de proxies confiaveis na frente (padrao 1), ou 'true' /
+// 'false', ou uma lista de IPs/sub-redes que o Express entende ('loopback',
+// '10.0.0.0/8', ...). Vazio mantem o 1 de antes.
+function lerTrustProxy(bruto) {
+  const v = String(bruto == null ? '' : bruto).trim();
+  if (!v) return 1;
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  if (/^\d+$/.test(v)) return Number(v);
+  return v; // 'loopback', lista de IPs/CIDR - o Express resolve
+}
 
 // Nao anunciar o que roda aqui. Nao impede nada sozinho, mas "x-powered-by:
 // Express" e a primeira linha de qualquer varredura automatica: e dizer de
