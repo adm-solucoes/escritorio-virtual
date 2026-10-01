@@ -10,7 +10,13 @@
 // dominio": ninguem cria conta por e-mail. Antes, vazio tambem caia no padrao -
 // e a sede de um cliente criado sem dominio aceitaria cadastro de qualquer
 // @admsolucoes. Com varias empresas no mesmo servidor, isso e vazamento.
-const DOMINIOS_PADRAO = ['admsolucoes.com.br', 'admsolucoes.com'];
+// `aluno.uece.br` (POR ENQUANTO): os membros novos ainda nao tem o e-mail da
+// ADM, so o de aluno da UECE. Entao o e-mail da UECE tambem conta como "da sede"
+// - entra pelo mesmo caminho do e-mail da ADM. Com o Google ligado, isso quer
+// dizer "Entrar com o Google da UECE" (a conta @aluno.uece.br e Google Workspace,
+// entao o Google prova quem e, igual a da ADM). Tirar esta entrada da lista
+// quando todo mundo ja tiver o e-mail da ADM.
+const DOMINIOS_PADRAO = ['admsolucoes.com.br', 'admsolucoes.com', 'aluno.uece.br'];
 const bruto = process.env.DOMINIOS_SEDE;
 const DOMINIOS = bruto === undefined
   ? DOMINIOS_PADRAO
