@@ -439,6 +439,10 @@
       </section>
 
       <div id="grade-chamada" class="grade-chamada oculto">
+        <button id="grade-chamada-minimizar" class="grade-chamada-minimizar" type="button" title="Minimizar a chamada (a conversa continua)" aria-label="Minimizar a chamada">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Minimizar</span>
+        </button>
         <div id="grade-chamada-tiles" class="grade-chamada-tiles"></div>
       </div>
 
@@ -456,6 +460,12 @@
 
       <!-- barra de controle inferior, no formato da referencia do Gather -->
       <div class="barra-controle">
+        <button id="chamada-mostrar" class="chamada-mostrar oculto" type="button" title="Mostrar a chamada" aria-label="Mostrar a chamada">
+          <span class="chamada-mostrar-ponto"></span>
+          <span id="chamada-mostrar-texto" class="chamada-mostrar-texto">Em chamada</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
         <div id="preview-local" class="preview-local oculto">
           <video id="video-local" autoplay muted playsinline></video>
           <div id="preview-local-controles" class="preview-local-controles">

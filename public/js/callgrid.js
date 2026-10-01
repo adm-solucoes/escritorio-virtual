@@ -4,7 +4,18 @@
 // CallGrid.estaAtivo() pra saber quando parar de desenhar as bolhas).
 (function () {
   let painel, grade, previewLocal, videoLocal, controlesLocais, selfNomeEl, selfFallback;
+  let botaoMinimizar, botaoMostrar, textoMostrar;
   let ativo = false;
+  // A grade ocupa quase o mapa todo. Quem prefere andar com a chamada recolhida
+  // minimiza, e a escolha vale tambem nas proximas chamadas (a pessoa que
+  // minimizou uma vez nao quer a grade tampando o mapa toda vez que chega perto
+  // de alguem). So existe na sede: na pagina de quem entrou pelo link da reuniao
+  // a grade e a tela inteira, e recolher deixaria a pagina vazia.
+  let minimizada = false;
+  let podeMinimizar = false;
+  // A grade esta de fato aberta na frente do mapa (em chamada E nao minimizada).
+  let mostrando = false;
+  const CHAVE_MINIMIZADA = 'sede-chamada-minimizada';
   // Na pagina de quem entrou pelo link da reuniao, a grade abre mesmo sem camera
   // nem microfone: ele pode so assistir. Na sede, sem camera nao ha chamada.
   let semCameraTambem = false;
@@ -85,9 +96,12 @@
 
     if (deveEstarAtivo !== ativo) {
       ativo = deveEstarAtivo;
-      alternarVisibilidade();
+      aplicarVisibilidade();
     }
     if (!ativo) return;
+
+    // +1: voce. O texto so aparece com a grade recolhida (e no celular nem isso).
+    if (textoMostrar) textoMostrar.textContent = 'Em chamada · ' + (peers.length + 1);
 
     const players = Game.getPlayers();
 
@@ -122,19 +136,48 @@
     });
   }
 
-  function alternarVisibilidade() {
-    painel.classList.toggle('oculto', !ativo);
+  function lerMinimizada() {
+    try { return localStorage.getItem(CHAVE_MINIMIZADA) === '1'; } catch (e) { return false; }
+  }
 
-    if (ativo) {
-      previewLocal.style.display = 'none';
-      document.getElementById('chamada-tile-self').appendChild(videoLocal);
-      document.getElementById('chamada-tile-self').appendChild(controlesLocais);
-    } else {
-      previewLocal.style.display = '';
-      previewLocal.insertBefore(videoLocal, previewLocal.firstChild);
-      previewLocal.appendChild(controlesLocais);
-      limparTilesRemotos();
+  function guardarMinimizada() {
+    try { localStorage.setItem(CHAVE_MINIMIZADA, minimizada ? '1' : '0'); } catch (e) { /* sem armazenamento: vale so ate recarregar */ }
+  }
+
+  // Minimizada, a grade fica no DOM mas invisivel (os <video> dos outros levam o
+  // audio, a chamada nao cai) e o seu video e os botoes de mic/camera voltam pra
+  // barra de baixo, como quando nao ha grade.
+  function aplicarVisibilidade() {
+    const recolhida = ativo && minimizada;
+    painel.classList.toggle('oculto', !ativo);
+    painel.classList.toggle('minimizada', recolhida);
+    if (botaoMostrar) botaoMostrar.classList.toggle('oculto', !recolhida);
+
+    const deveMostrar = ativo && !minimizada;
+    if (deveMostrar !== mostrando) {
+      mostrando = deveMostrar;
+      if (mostrando) {
+        previewLocal.style.display = 'none';
+        document.getElementById('chamada-tile-self').appendChild(videoLocal);
+        document.getElementById('chamada-tile-self').appendChild(controlesLocais);
+      } else {
+        previewLocal.style.display = '';
+        previewLocal.insertBefore(videoLocal, previewLocal.firstChild);
+        previewLocal.appendChild(controlesLocais);
+      }
     }
+    if (!ativo) limparTilesRemotos();
+  }
+
+  function definirMinimizada(valor) {
+    if (!podeMinimizar || minimizada === valor) return;
+    minimizada = valor;
+    guardarMinimizada();
+    aplicarVisibilidade();
+    // O botao em que a pessoa clicou acabou de sumir: o foco do teclado vai pro
+    // que apareceu no lugar dele.
+    const alvo = valor ? botaoMostrar : botaoMinimizar;
+    if (alvo) alvo.focus();
   }
 
   function estaAtivo() { return ativo; }
@@ -146,6 +189,17 @@
     previewLocal = document.getElementById('preview-local');
     videoLocal = document.getElementById('video-local');
     controlesLocais = document.getElementById('preview-local-controles');
+    botaoMinimizar = document.getElementById('grade-chamada-minimizar');
+    botaoMostrar = document.getElementById('chamada-mostrar');
+    textoMostrar = document.getElementById('chamada-mostrar-texto');
+
+    // A pagina da reuniao por link nao tem os dois botoes: la a grade e fixa.
+    podeMinimizar = !!(botaoMinimizar && botaoMostrar);
+    if (podeMinimizar) {
+      minimizada = lerMinimizada();
+      botaoMinimizar.addEventListener('click', () => definirMinimizada(true));
+      botaoMostrar.addEventListener('click', () => definirMinimizada(false));
+    }
 
     montarTileSelf();
     setInterval(atualizar, 500);
