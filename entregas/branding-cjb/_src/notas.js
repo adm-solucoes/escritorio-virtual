@@ -4,11 +4,11 @@ module.exports = [
 {
  titulo: `Capa institucional`,
  objetivo: `Abrir a reunião com tom profissional e acolhedor, deixando claro que esta é uma conversa de trabalho e não a entrega de um resultado final.`,
- explicacao: `A capa já comunica o enquadramento: "andamento inicial". A direção do colégio precisa entender, desde o primeiro minuto, que as pesquisas ainda estão em curso e que sua participação é parte do método. Os espaços tracejados são reservados para as logos oficiais da ADM Soluções e do Colégio João Batista, que devem ser inseridas antes da reunião (não redesenhamos nenhuma logo).`,
+ explicacao: `A capa já comunica o enquadramento: "andamento inicial". A direção do colégio precisa entender, desde o primeiro minuto, que as pesquisas ainda estão em curso e que sua participação é parte do método. As logos oficiais da ADM Soluções e do Colégio João Batista estão aplicadas a partir dos arquivos enviados pela equipe, sem alterações; a logo do colégio fica sobre uma placa branca para manter o contraste no fundo roxo.`,
  fala: `Boa tarde, e obrigada por nos receberem. Eu sou da ADM Soluções, a empresa júnior da UECE, e hoje a gente veio mostrar como está o diagnóstico de branding do Colégio João Batista. Quero já combinar uma coisa: o que vocês vão ver é um retrato do começo do trabalho. A gente trouxe observações, perguntas e algumas hipóteses, e precisa muito da visão de vocês para confirmar, corrigir e completar.`,
  transicao: `Vou começar mostrando o que queremos construir juntos nesta conversa e como ela está organizada.`,
  pergunta: `Antes de começar: existe algum tema que vocês gostariam de garantir que fosse discutido hoje?`,
- cuidados: `Inserir as logos oficiais antes da reunião. Não afirmar que há resultados: tudo é preliminar. Conferir se a data impressa ("outubro/2026") corresponde ao dia real da reunião.`,
+ cuidados: `Não afirmar que há resultados: tudo é preliminar. Conferir se a data impressa ("outubro/2026") corresponde ao dia real da reunião.`,
  se: `Se a direção perguntar "já tem a conclusão?": responder que não, e que a reunião existe justamente para evitar conclusões sem ouvir quem conhece o colégio por dentro.`
 },
 {
@@ -184,7 +184,7 @@ module.exports = [
 {
  titulo: `Encerramento e alinhamento final`,
  objetivo: `Garantir que a reunião termine com três alinhamentos claros e responsáveis para cada pendência.`,
- explicacao: `Os três alinhamentos são: (1) correções e aprofundamentos solicitados pela direção, (2) dados e materiais a enviar, com um contato definido, e (3) pesquisa e próxima conversa. A frase de encerramento reforça o princípio do trabalho: ouvir bem antes de definir. Os campos de contato ficam como placeholders para preenchimento.`,
+ explicacao: `Os três alinhamentos são: (1) correções e aprofundamentos solicitados pela direção, (2) dados e materiais a enviar, com um contato definido, e (3) pesquisa e próxima conversa. A frase de encerramento reforça o princípio do trabalho: ouvir bem antes de definir. As logos oficiais aparecem no rodapé do slide; o campo de contato fica como placeholder para preenchimento.`,
  fala: `Para fechar, três combinados. Primeiro, o que precisa ser corrigido ou aprofundado no que mostramos. Segundo, os dados e materiais que vocês podem nos enviar e quem será a pessoa de contato. Terceiro, como e quando aplicamos a pesquisa e quando nos falamos de novo. Muito obrigada pela conversa. Quanto mais a gente ouvir vocês e as famílias, mais fiel será a marca que vamos construir.`,
  transicao: `Encerrar agradecendo e confirmando por escrito os combinados, com um resumo enviado após a reunião.`,
  pergunta: `Ficou alguma dúvida, ou algo que vocês gostariam que a gente tivesse mostrado?`,

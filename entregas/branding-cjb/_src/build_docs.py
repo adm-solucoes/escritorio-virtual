@@ -60,10 +60,13 @@ def rodape(d, texto):
     for r in p.runs: r.font.size = Pt(8.5); r.font.color.rgb = CINZA
 
 def capa(d, titulo, sub):
+    lg = d.add_paragraph(); r = lg.add_run()
+    r.add_picture(os.path.join(HERE, "assets/adm-solucoes-logo.png"), height=Cm(1.4)); lg.add_run("   ")
+    lg.add_run().add_picture(os.path.join(HERE, "assets/cjb-logo-horizontal.png"), height=Cm(1.0))
     p = d.add_paragraph(); r = p.add_run("ADM SOLUÇÕES · EMPRESA JÚNIOR DA UECE"); r.bold = True; r.font.size = Pt(9); r.font.color.rgb = VERM
     d.add_heading(titulo, 0).runs[0].font.color.rgb = ROXO_ESC
     p = d.add_paragraph(sub); p.runs[0].font.color.rgb = CINZA
-    for r in d.paragraphs[1].runs: r.font.name = "DM Sans"
+    for r in d.paragraphs[2].runs: r.font.name = "DM Sans"
 
 # ====================== ROTEIRO ======================
 d = novo(); rodape(d, "ADM Soluções · Roteiro de apresentação · Diagnóstico de Branding · Colégio João Batista · Material preliminar")
@@ -92,7 +95,7 @@ tabela(d, ["Categoria", "Significado", "Exemplo neste projeto"], [
 ], [3.2, 6.3, 7])
 d.add_heading("Antes da reunião (checar)", 2)
 for t in [
-    "Inserir as logos oficiais da ADM Soluções e do Colégio João Batista nos espaços reservados (capa e encerramento) e preencher o contato no slide 19.",
+    "Preencher o contato da ADM Soluções no slide 19 (as logos oficiais já estão aplicadas na capa e no encerramento).",
     "Instalar as fontes da identidade (DM Sans, Inter, Lovelo, Bree Serif e Contrail One). Sem elas, o PowerPoint substitui por fontes próximas e os textos podem mudar ligeiramente de largura.",
     "Reler os sites e redes oficiais dos três concorrentes em um navegador comum e atualizar o slide 13 com data e fonte. Na consulta de 21/10/2026 a partir do ambiente de trabalho da equipe os três sites não puderam ser abertos, e só foram usadas fontes secundárias.",
     "Repetir o teste dos canais digitais (slide 9) e registrar data e hora. Só anexar capturas de tela se representarem os canais corretos e puderem ser exibidas.",

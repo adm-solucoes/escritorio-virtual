@@ -147,6 +147,19 @@ function logoSlot(s, txt, x, y, w, h, dark = true, g = 1) {
   });
 }
 
+// logos oficiais (arquivos enviados pela equipe; não redesenhados)
+const LOGO_ADM = "image/png;base64," + fs.readFileSync(path.join(__dirname, "assets/adm-solucoes-logo.png")).toString("base64");
+const LOGO_CJB = "image/png;base64," + fs.readFileSync(path.join(__dirname, "assets/cjb-logo-horizontal.png")).toString("base64");
+const CJB_RATIO = 1280 / 262;
+// ADM: ícone quadrado com fundo roxo próprio; CJB: logo em azul sobre placa branca para manter contraste no fundo escuro
+function logos(s, x, y, h, g) {
+  s.addImage({ data: LOGO_ADM, x, y, w: h, h, altText: "Logo ADM Soluções", objectName: nm(g, "f", "LogoADM") });
+  const pad = 0.16, lh = h - 2 * pad, lw = lh * CJB_RATIO, px = x + h + 0.2;
+  s.addShape(S.ROUNDED_RECTANGLE, { x: px, y, w: lw + 2 * pad + 0.1, h, rectRadius: 0.08, fill: { color: BRANCO }, line: { color: BRANCO, width: 0.5 }, objectName: nm(g, "f", "PlacaCJB") });
+  s.addImage({ data: LOGO_CJB, x: px + pad + 0.05, y: y + pad, w: lw, h: lh, altText: "Logo Colégio João Batista", objectName: nm(g, "f", "LogoCJB") });
+  return px + lw + 2 * pad + 0.1; // borda direita
+}
+
 (async () => {
   const ico = {
     insta: await icon(fa.FaInstagram, BRANCO), face: await icon(fa.FaFacebookF, BRANCO), whats: await icon(fa.FaWhatsapp, BRANCO),
@@ -160,8 +173,7 @@ function logoSlot(s, txt, x, y, w, h, dark = true, g = 1) {
     s.addShape(S.OVAL, { x: 8.6, y: -1.4, w: 7.4, h: 7.4, fill: { color: ROXO2 }, line: { color: ROXO2, width: 0.5 }, objectName: nm(1, "f", "CirculoGrande") });
     s.addShape(S.OVAL, { x: 10.4, y: 3.7, w: 4.6, h: 4.6, fill: { color: ROXO }, line: { color: ROXO, width: 0.5 }, objectName: nm(2, "f", "CirculoMedio") });
     s.addShape(S.OVAL, { x: 9.55, y: 5.25, w: 0.42, h: 0.42, fill: { color: VERM }, line: { color: VERM, width: 0.5 }, objectName: nm(3, "f", "PontoVermelho") });
-    logoSlot(s, "Espaço para logo\nADM Soluções", 0.8, 0.6, 2.3, 0.85, true, 1);
-    logoSlot(s, "Espaço para logo\nColégio João Batista", 3.3, 0.6, 2.6, 0.85, true, 1);
+    logos(s, 0.8, 0.6, 0.85, 1);
     s.addText("ADM SOLUÇÕES · EMPRESA JÚNIOR DA UECE", { x: 0.8, y: 2.35, w: 7.4, h: 0.3, fontSize: 12, bold: true, color: LAV, fontFace: "Inter", charSpacing: 2, margin: 0, isTextBox: true, objectName: nm(2, "f", "Kicker") });
     s.addText("Diagnóstico\nde Branding", { x: 0.8, y: 2.75, w: 7.6, h: 1.9, fontSize: 46, bold: true, color: BRANCO, fontFace: "Lovelo", margin: 0, valign: "top", isTextBox: true, objectName: nm(2, "f", "Titulo") });
     s.addText("Colégio João Batista · Messejana, Fortaleza-CE", { x: 0.8, y: 4.75, w: 7.6, h: 0.4, fontSize: 20, bold: true, color: BRANCO, fontFace: "DM Sans", margin: 0, isTextBox: true, objectName: nm(3, "f", "Subtitulo") });
@@ -606,8 +618,8 @@ function logoSlot(s, txt, x, y, w, h, dark = true, g = 1) {
       num(s, i + 1, x + 0.18, 2.58, g, { d: 0.46, fill: BRANCO, color: ROXO });
     });
     s.addText("Marca forte começa por ouvir bem.", { x: 0.8, y: 5.05, w: 8.5, h: 0.6, fontSize: 28, color: BRANCO, fontFace: "Contrail One", margin: 0, isTextBox: true, objectName: nm(5, "f", "Frase") });
-    logoSlot(s, "Espaço para logo\nADM Soluções", 0.8, 6.0, 2.3, 0.85, true, 6);
-    logoSlot(s, "Contato ADM Soluções\n[a preencher]", 3.3, 6.0, 2.9, 0.85, true, 6);
+    const fim = logos(s, 0.8, 6.0, 0.85, 6);
+    logoSlot(s, "Contato ADM Soluções\n[a preencher]", fim + 0.2, 6.0, 2.9, 0.85, true, 6);
   }
 
   const out = path.join(__dirname, "tmp_semanim.pptx");
